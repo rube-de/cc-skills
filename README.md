@@ -7,11 +7,13 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 
 ## Plugins
 
-| Plugin | Category | Description |
-|--------|----------|-------------|
-| [council](./plugins/council/) | Code Review | Orchestrate Gemini, Codex, Qwen, GLM-4.7, and Kimi K2.5 for consensus-driven reviews |
-| [claude-dev-team](./plugins/claude-dev-team/) | Development | Multi-agent dev team with four modes: plan, dev, full, and auto via Agent Teams |
-| [project-manager](./plugins/project-manager/) | Productivity | Interactive issue creation optimized for LLM agent teams |
+| Plugin | Category | Install | Description |
+|--------|----------|---------|-------------|
+| [council](./plugins/council/) | Code Review | Plugin or Skill | Orchestrate Gemini, Codex, Qwen, GLM-4.7, and Kimi K2.5 for consensus-driven reviews |
+| [claude-dev-team](./plugins/claude-dev-team/) | Development | Plugin only | Multi-agent dev team with four modes: plan, dev, full, and auto via Agent Teams |
+| [project-manager](./plugins/project-manager/) | Productivity | Plugin or Skill | Interactive issue creation optimized for LLM agent teams |
+
+> **Plugin vs Skill**: Plugins use the full Claude Code plugin system (hooks, agents, commands, scripts). Skills install only SKILL.md definitions via [skills.sh](https://skills.sh). Plugins that rely on hooks, commands, or agent definitions need plugin install. See each plugin's README for details.
 
 ## Installation
 
@@ -82,7 +84,7 @@ claude plugin list | grep rube-cc-skills
 
 ### Skills (via [skills.sh](https://skills.sh))
 
-Alternatively, install as standalone skills (no marketplace required):
+Alternatively, install as standalone skills (no marketplace required). This installs only skill definitions — no hooks, agents, or commands.
 
 ```bash
 # List available skills
@@ -95,6 +97,9 @@ npx skills add rube-de/cc-skills --skill council
 # Install all skills
 npx skills add rube-de/cc-skills --skill '*'
 ```
+
+> [!NOTE]
+> **Not all plugins work as standalone skills.** `claude-dev-team` requires plugin install because its interface is command-based (`/plan-task`, `/dev-task`, etc.). `council` works as a skill but loses preflight hooks and JSON validation. `project-manager` is fully equivalent either way.
 
 ## Structure
 
