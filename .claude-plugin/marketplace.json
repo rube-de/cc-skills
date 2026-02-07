@@ -12,16 +12,16 @@
     {
       "name": "council",
       "source": {
-        "source": "github",
-        "repo": "rube-de/claude-council"
+        "source": "local",
+        "path": "./plugins/council"
       },
       "category": "code-review"
     },
     {
       "name": "claude-dev-team",
       "source": {
-        "source": "github",
-        "repo": "Chalet-Labs/chalet-agent-dev-team"
+        "source": "local",
+        "path": "./plugins/claude-dev-team"
       },
       "category": "development"
     },
