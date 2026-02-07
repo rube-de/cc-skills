@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/rube-de/cc-skills/compare/v1.0.0...v1.0.1) (2026-02-07)
+
+
+### Bug Fixes
+
+* align versions to v1.0.0 and add semantic-release version bumping ([beac101](https://github.com/rube-de/cc-skills/commit/beac1010c5f32ab3216af0ecffbc7be1de7d6e35))
+
 # 1.0.0 (2026-02-07)
 
 
