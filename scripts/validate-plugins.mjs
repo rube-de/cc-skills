@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
-import { readFileSync, readdirSync, existsSync } from "fs";
-import { resolve, dirname, join } from "path";
+import { readFileSync, readdirSync, existsSync, statSync } from "fs";
+import { resolve, dirname, join, relative } from "path";
 import { fileURLToPath } from "url";
 import Ajv from "ajv";
 
@@ -78,6 +78,99 @@ if (orphanedDirs.length === 0) {
   console.log("  ✓ No orphaned plugin directories");
 } else {
   console.log(`  ⚠ Orphaned directories: ${orphanedDirs.join(", ")}`);
+  hasErrors = true;
+}
+
+// 4. Validate SKILL.md frontmatter
+const KEBAB_RE = /^[a-z0-9-]+$/;
+const COMPONENT_DIRS = ["skills", "hooks", "commands", "agents"];
+
+function parseFrontmatter(content) {
+  const match = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!match) return null;
+  const raw = match[1];
+
+  // Extract name
+  const nameMatch = raw.match(/^name:\s*["']?([^"'\n]+)["']?\s*$/m);
+  const name = nameMatch ? nameMatch[1].trim() : null;
+
+  // Extract description — handles inline, quoted, and block scalars (>- / |)
+  let description = null;
+  const inlineMatch = raw.match(/^description:\s*["'](.+?)["']\s*$/m);
+  const unquotedMatch = raw.match(/^description:\s*([^>|"'\n].+)$/m);
+  const blockMatch = raw.match(/^description:\s*[>|]-?\s*\n((?:[ \t]+.+\n?)+)/m);
+
+  if (inlineMatch) {
+    description = inlineMatch[1].trim();
+  } else if (unquotedMatch) {
+    description = unquotedMatch[1].trim();
+  } else if (blockMatch) {
+    description = blockMatch[1]
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return { name, description };
+}
+
+let skillErrors = [];
+
+plugins.forEach((plugin) => {
+  const pluginDir = resolve(rootDir, plugin.source);
+  if (!existsSync(pluginDir)) return; // already caught in step 2
+
+  // Check component dirs
+  const hasComponent = COMPONENT_DIRS.some((d) =>
+    existsSync(join(pluginDir, d))
+  );
+  if (!hasComponent) {
+    skillErrors.push(
+      `${plugin.name}: no component directory (needs skills/, hooks/, commands/, or agents/)`
+    );
+  }
+
+  // Find and validate SKILL.md files
+  const skillsDir = join(pluginDir, "skills");
+  if (!existsSync(skillsDir)) return;
+
+  const skillDirs = readdirSync(skillsDir, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name);
+
+  for (const skillDir of skillDirs) {
+    const skillFile = join(skillsDir, skillDir, "SKILL.md");
+    if (!existsSync(skillFile)) continue;
+
+    const relPath = relative(rootDir, skillFile);
+    const content = readFileSync(skillFile, "utf-8");
+    const fm = parseFrontmatter(content);
+
+    if (!fm) {
+      skillErrors.push(`${relPath}: missing YAML frontmatter`);
+      continue;
+    }
+
+    if (!fm.name) {
+      skillErrors.push(`${relPath}: missing "name" field`);
+    } else if (!KEBAB_RE.test(fm.name)) {
+      skillErrors.push(
+        `${relPath}: name "${fm.name}" is not kebab-case (must match ^[a-z0-9-]+$)`
+      );
+    }
+
+    if (!fm.description) {
+      skillErrors.push(`${relPath}: missing or empty "description" field`);
+    }
+  }
+});
+
+if (skillErrors.length === 0) {
+  console.log("  ✓ SKILL.md frontmatter valid");
+} else {
+  console.log("  ✗ SKILL.md frontmatter issues:");
+  skillErrors.forEach((e) => console.log(`    - ${e}`));
   hasErrors = true;
 }
 

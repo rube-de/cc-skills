@@ -64,6 +64,23 @@
         "issue-creation",
         "task-planning"
       ]
+    },
+    {
+      "name": "plugin-dev",
+      "description": "Plugin development tools: scaffold new plugins, validate SKILL.md frontmatter, audit hooks for silent failures",
+      "version": "1.0.0",
+      "source": "./plugins/plugin-dev",
+      "category": "development",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "plugin-development",
+        "scaffolding",
+        "validation",
+        "skill-authoring"
+      ]
     }
   ]
 }
