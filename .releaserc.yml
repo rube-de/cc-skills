@@ -11,6 +11,18 @@ plugins:
         - { type: "test", release: "patch" }
   - "@semantic-release/release-notes-generator"
   - "@semantic-release/changelog"
+  - - "@semantic-release/npm"
+    - npmPublish: false
+  - - "@semantic-release/exec"
+    - prepareCmd: |
+        node -e "
+          const fs = require('fs');
+          for (const f of ['plugin.json', '.claude-plugin/marketplace.json']) {
+            const j = JSON.parse(fs.readFileSync(f, 'utf8'));
+            j.version = '${nextRelease.version}';
+            fs.writeFileSync(f, JSON.stringify(j, null, 2) + '\n');
+          }
+        "
   - - "@semantic-release/git"
     - assets:
         - CHANGELOG.md
