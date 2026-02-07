@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Claude Code skills marketplace: **3 plugins** for multi-agent development, AI council reviews, and project management.
+Claude Code skills marketplace: **4 plugins** for multi-agent development, AI council reviews, project management, and plugin development.
 
 ## Navigation
 
@@ -17,6 +17,7 @@ Claude Code skills marketplace: **3 plugins** for multi-agent development, AI co
 | [council](./plugins/council/) | Code Review | 1.1.0 | `/council` |
 | [claude-dev-team](./plugins/claude-dev-team/) | Development | 1.0.0 | `/claude-dev-team` |
 | [project-manager](./plugins/project-manager/) | Productivity | `/project-manager` |
+| [plugin-dev](./plugins/plugin-dev/) | Development | 1.0.0 | `/plugin-dev`, `/plugin-dev:create` |
 
 ## Directory Structure
 
@@ -37,8 +38,12 @@ cc-skills/
 │   │   ├── hooks/               # Session start validation
 │   │   ├── scripts/             # Agent teams prerequisite check
 │   │   └── skills/              # claude-dev-team
-│   └── project-manager/         ← GitHub issue creation
-│       └── skills/              # project-manager
+│   ├── project-manager/         ← GitHub issue creation
+│   │   └── skills/              # project-manager
+│   └── plugin-dev/              ← Plugin development tools
+│       ├── commands/            # create (scaffolding)
+│       ├── scripts/             # audit-hooks.sh
+│       └── skills/              # plugin-dev
 ├── scripts/
 │   ├── validate-plugins.mjs     ← Plugin validation
 │   └── marketplace.schema.json  ← JSON Schema for marketplace.json
