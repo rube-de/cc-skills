@@ -1,19 +1,23 @@
-# Claude Marketplace
+# CC Skills
 
-A curated collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins.
+A curated collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins and skills.
 
 ## Quick Start
 
 ```sh
-# Add the marketplace
-/plugin marketplace add rube-de/claude-marketplace
+# Install a skill via npx skills
+npx skills add rube-de/cc-skills --list
+npx skills add rube-de/cc-skills --skill project-manager
+
+# Or add the marketplace for plugins
+/plugin marketplace add rube-de/cc-skills
 
 # Install a plugin
 /plugin install council@rube-marketplace
 /plugin install claude-dev-team@rube-marketplace
 ```
 
-## Plugins
+## Plugins & Skills
 
 | Plugin | Category | Source | Description |
 |--------|----------|--------|-------------|
