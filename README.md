@@ -32,12 +32,15 @@ Run these commands in your **terminal** (not inside Claude Code):
 # 1. Add the marketplace
 claude plugin marketplace add rube-de/cc-skills
 
-# 2. Install all plugins
+# 2. Install all plugins (user scope — local to your machine)
 for p in council cdt project-manager plugin-dev; do claude plugin install "$p@rube-cc-skills"; done
 
 # 3. Restart Claude Code to activate
 claude
 ```
+
+> [!TIP]
+> For cloud agents or shared teams, use `--scope project` instead — see [Installation Scopes](#installation-scopes).
 
 ### Step-by-Step Installation
 
@@ -102,6 +105,41 @@ npx skills add rube-de/cc-skills --skill '*'
 
 > [!NOTE]
 > **Not all plugins work as standalone skills.** `cdt` requires plugin install because its interface is command-based (`/cdt:plan-task`, `/cdt:dev-task`, etc.). `council` works as a skill but loses preflight hooks and JSON validation. `project-manager` is fully equivalent either way.
+
+### Installation Scopes
+
+By default, `claude plugin install` installs plugins at the **user** level (`~/.claude/`). This means plugins are only available to your local user and won't be picked up by cloud agents or teammates checking out the repo.
+
+The `--scope` flag controls where plugins are installed:
+
+| Scope | Location | Shared | Use Case |
+|-------|----------|--------|----------|
+| `user` (default) | `~/.claude/plugins/` | No | Personal local development |
+| `project` | `.claude/plugins/` in project root | Yes (committable) | Teams, cloud agents, CI/CD |
+| `local` | `.claude/plugins/` (gitignored) | No | Local project-specific overrides |
+
+#### Project-Scoped Installation (for cloud agents)
+
+To make plugins available to Claude cloud agents, CI runners, or teammates without requiring each person to install manually:
+
+```bash
+# 1. Add the marketplace (one-time, user-level)
+claude plugin marketplace add rube-de/cc-skills
+
+# 2. Install plugins at project scope
+for p in council cdt project-manager plugin-dev; do
+  claude plugin install "$p@rube-cc-skills" --scope project
+done
+
+# 3. Commit the .claude/ directory
+git add .claude/
+git commit -m "chore: add plugins at project scope"
+```
+
+This creates a `.claude/plugins/` directory in your project root. Any agent or developer checking out the repo will have the plugins available automatically — no manual install needed.
+
+> [!TIP]
+> Use **project scope** when you want plugins to travel with the repo (cloud agents, shared teams). Use **user scope** (the default) when you only need plugins for yourself.
 
 ## Structure
 
