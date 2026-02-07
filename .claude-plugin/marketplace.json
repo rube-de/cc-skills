@@ -1,0 +1,29 @@
+{
+  "name": "rube-marketplace",
+  "owner": {
+    "name": "rube-de"
+  },
+  "metadata": {
+    "description": "A curated collection of Claude Code plugins",
+    "version": "0.1.0",
+    "pluginRoot": "./plugins"
+  },
+  "plugins": [
+    {
+      "name": "council",
+      "source": {
+        "source": "github",
+        "repo": "rube-de/claude-council"
+      },
+      "description": "AI Council - Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-4.7, Kimi K2.5) for consensus-driven code reviews, plan validation, and architectural decisions",
+      "version": "1.1.0",
+      "author": {
+        "name": "rube-de"
+      },
+      "homepage": "https://github.com/rube-de/claude-council",
+      "license": "MIT",
+      "keywords": ["ai-council", "code-review", "multi-model", "consensus"],
+      "category": "code-review"
+    }
+  ]
+}
