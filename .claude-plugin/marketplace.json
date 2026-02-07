@@ -24,6 +24,14 @@
         "repo": "Chalet-Labs/chalet-agent-dev-team"
       },
       "category": "development"
+    },
+    {
+      "name": "project-manager",
+      "source": {
+        "source": "local",
+        "path": "./plugins/project-manager"
+      },
+      "category": "productivity"
     }
   ]
 }

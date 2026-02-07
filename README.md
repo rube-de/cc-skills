@@ -19,6 +19,7 @@ A curated collection of [Claude Code](https://docs.anthropic.com/en/docs/claude-
 |--------|----------|--------|-------------|
 | [council](https://github.com/rube-de/claude-council) | Code Review | `rube-de/claude-council` | Orchestrate Gemini, Codex, Qwen, and GLM-4.7 for consensus-driven reviews |
 | [claude-dev-team](https://github.com/Chalet-Labs/chalet-agent-dev-team) | Development | `Chalet-Labs/chalet-agent-dev-team` | Multi-agent development team for Claude Code |
+| project-manager | Productivity | local | Interactive issue creation optimized for LLM agent teams |
 
 ## Adding a Plugin
 
