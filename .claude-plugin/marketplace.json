@@ -11,6 +11,23 @@
   "plugins": [
     {
       "name": "council",
+      "description": "AI Council - Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-4.7, Kimi K2.5) for consensus-driven code reviews, plan validation, and architectural decisions",
+      "version": "1.1.0",
+      "author": {
+        "name": "rube-de"
+      },
+      "keywords": [
+        "ai-council",
+        "code-review",
+        "multi-model",
+        "consensus",
+        "gemini",
+        "codex",
+        "qwen",
+        "glm",
+        "kimi"
+      ],
+      "license": "MIT",
       "source": {
         "source": "local",
         "path": "./plugins/council"
@@ -19,6 +36,20 @@
     },
     {
       "name": "claude-dev-team",
+      "description": "Multi-agent development workflow with four modes: plan, dev, full, and auto. Uses Agent Teams for collaborative roles (Architect, PM, Developer, Tester, Reviewer) and a Researcher subagent for documentation lookups via Context7.",
+      "version": "1.0.0",
+      "author": {
+        "name": "rube-de"
+      },
+      "keywords": [
+        "agent-teams",
+        "multi-agent",
+        "planning",
+        "development",
+        "code-review",
+        "testing"
+      ],
+      "license": "MIT",
       "source": {
         "source": "local",
         "path": "./plugins/claude-dev-team"
@@ -27,6 +58,18 @@
     },
     {
       "name": "project-manager",
+      "description": "Interactive issue creation optimized for LLM agent teams with type-specific question flows and structured GitHub issues",
+      "version": "0.1.0",
+      "author": {
+        "name": "rube-de"
+      },
+      "keywords": [
+        "project-management",
+        "github-issues",
+        "issue-creation",
+        "task-planning"
+      ],
+      "license": "MIT",
       "source": {
         "source": "local",
         "path": "./plugins/project-manager"
