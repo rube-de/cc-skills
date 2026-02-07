@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/Skills-1-blue.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
+[![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
 Interactive GitHub issue creation optimized for LLM agent teams. Guides users through type-specific question flows and produces structured, machine-parseable issues that AI coding agents can execute autonomously.
 
@@ -95,9 +96,25 @@ Before drafting, the plugin explores the repo to ensure:
 
 ## Installation
 
+This is a **skills-only plugin** — no hooks, agents, or commands. Both install methods are equivalent.
+
+### Plugin Install
+
 ```bash
-# Via Claude Code marketplace
-claude plugin install rube-de/cc-skills --plugin project-manager
+# 1. Add the marketplace (once)
+claude plugin marketplace add rube-de/cc-skills
+
+# 2. Install the plugin
+claude plugin install project-manager@rube-cc-skills
+
+# 3. Restart Claude Code
+claude
+```
+
+### Skill Install (via [skills.sh](https://skills.sh))
+
+```bash
+npx skills add rube-de/cc-skills --skill project-manager
 ```
 
 ## Usage Examples

@@ -5,6 +5,7 @@
 [![Agents](https://img.shields.io/badge/Agents-11-green.svg)]()
 [![Hooks](https://img.shields.io/badge/Hooks-1-orange.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
+[![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
 Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-4.7, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
@@ -120,10 +121,36 @@ Built-in taxonomy auto-rejects:
 
 ## Installation
 
+This is a **Claude Code plugin** with hooks, agents, and scripts. Full plugin install is recommended. A lighter skills-only install is available but loses hooks and agent definitions.
+
+### Plugin Install (Recommended)
+
+Installs everything: skills, agents, hooks (preflight checks, JSON validation), and scripts.
+
 ```bash
-# Via Claude Code marketplace
-claude plugin install rube-de/cc-skills --plugin council
+# 1. Add the marketplace (once)
+claude plugin marketplace add rube-de/cc-skills
+
+# 2. Install the plugin
+claude plugin install council@rube-cc-skills
+
+# 3. Restart Claude Code
+claude
 ```
+
+### Skill Install (via [skills.sh](https://skills.sh))
+
+Installs only the skill definitions — no hooks or agent definitions.
+
+```bash
+npx skills add rube-de/cc-skills --skill council
+```
+
+> [!WARNING]
+> **What you lose with skill-only install:**
+> - `preflight.sh` — no automatic CLI availability check on session start
+> - `validate-json-output.sh` — no PostToolUse JSON validation for consultant output
+> - Agent `.md` definitions — subagent types (codex-consultant, gemini-consultant, etc.) won't be registered
 
 ### Prerequisites
 
@@ -134,9 +161,9 @@ At least one external CLI must be installed:
 command -v gemini && command -v codex && command -v qwen && command -v opencode
 
 # Install as needed
-# gemini — https://github.com/google-gemini/gemini-cli
-# codex  — https://github.com/openai/codex
-# qwen   — https://github.com/QwenLM/qwen-cli
+# gemini  — https://github.com/google-gemini/gemini-cli
+# codex   — https://github.com/openai/codex
+# qwen    — https://github.com/QwenLM/qwen-cli
 # opencode — https://github.com/opencode-ai/opencode (GLM-4.7 + Kimi)
 ```
 

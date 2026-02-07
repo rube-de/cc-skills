@@ -6,6 +6,7 @@
 [![Agents](https://img.shields.io/badge/Agents-1-green.svg)]()
 [![Hooks](https://img.shields.io/badge/Hooks-1-orange.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
+[![Install](https://img.shields.io/badge/Install-Plugin%20Only-critical.svg)]()
 
 Multi-agent development workflow using Claude Code Agent Teams. Four operating modes (plan, dev, full, auto) with collaborative roles — Architect, PM, Developer, Tester, Reviewer — and a Researcher subagent for documentation lookups via Context7.
 
@@ -100,9 +101,19 @@ The Researcher is always a subagent (not a teammate) — the Lead relays finding
 
 ## Installation
 
+This is a **Claude Code plugin only** — it cannot be installed as a standalone skill via skills.sh. The plugin depends on commands (`/plan-task`, `/dev-task`, `/full-task`, `/auto-task`), hooks, and an agent definition that are not available through skill-only install.
+
+### Plugin Install
+
 ```bash
-# Via Claude Code marketplace
-claude plugin install rube-de/cc-skills --plugin claude-dev-team
+# 1. Add the marketplace (once)
+claude plugin marketplace add rube-de/cc-skills
+
+# 2. Install the plugin
+claude plugin install claude-dev-team@rube-cc-skills
+
+# 3. Restart Claude Code
+claude
 ```
 
 ### Prerequisites
