@@ -1,3 +1,10 @@
+## [1.2.4](https://github.com/rube-de/cc-skills/compare/v1.2.3...v1.2.4) (2026-02-08)
+
+
+### Bug Fixes
+
+* **cdt:** use Teammate tool instead of Task tool for spawning agent teammates ([23e9feb](https://github.com/rube-de/cc-skills/commit/23e9feb7350373daee99b63eb14f6210800fe06a))
+
 ## [1.2.3](https://github.com/rube-de/cc-skills/compare/v1.2.2...v1.2.3) (2026-02-08)
 
 ## [1.2.2](https://github.com/rube-de/cc-skills/compare/v1.2.1...v1.2.2) (2026-02-08)
