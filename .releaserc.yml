@@ -20,6 +20,9 @@ plugins:
           for (const f of ['plugin.json', '.claude-plugin/marketplace.json']) {
             const j = JSON.parse(fs.readFileSync(f, 'utf8'));
             j.version = '${nextRelease.version}';
+            if (j.plugins) {
+              for (const p of j.plugins) { p.version = '${nextRelease.version}'; }
+            }
             fs.writeFileSync(f, JSON.stringify(j, null, 2) + '\n');
           }
         "
