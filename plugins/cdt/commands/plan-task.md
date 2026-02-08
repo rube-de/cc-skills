@@ -1,5 +1,5 @@
 ---
-allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
+allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
 description: "Create an agent team to plan: Architect teammate + PM teammate + Researcher subagent → outputs plan.md"
 ---
 
@@ -55,7 +55,7 @@ Spawn all three simultaneously:
 
 **Architect teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "plan-team"
   name: "architect"
   model: opus
@@ -75,7 +75,7 @@ Task tool:
 
 **PM teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "plan-team"
   name: "product-manager"
   model: sonnet

@@ -1,5 +1,5 @@
 ---
-allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
+allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
 description: "Create an agent team to develop: Developer teammate + Code-tester teammate + Reviewer teammate + optional UX-tester teammate + Researcher subagent → implements plan.md in waves"
 ---
 
@@ -55,7 +55,7 @@ TaskCreate for each plan task (preserve `depends_on` via `addBlockedBy`). Also c
 
 **Developer teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "developer"
   model: opus
@@ -79,7 +79,7 @@ Task tool:
 
 **Code-tester teammate** (always spawned):
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "code-tester"
   model: sonnet
@@ -101,7 +101,7 @@ Task tool:
 
 **UX-tester teammate** (conditional — only spawn when plan involves UI/frontend/user-facing changes):
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "ux-tester"
   model: sonnet
@@ -131,7 +131,7 @@ Task tool:
 
 **Reviewer teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "reviewer"
   model: opus
