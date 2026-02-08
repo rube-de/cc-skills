@@ -42,7 +42,7 @@ Produces `.claude/plans/plan-YYYYMMDD-HHMM.md`. Does NOT implement.
 
 **Architect teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "plan-team"
   name: "architect"
   model: opus
@@ -62,7 +62,7 @@ Task tool:
 
 **PM teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "plan-team"
   name: "product-manager"
   model: sonnet
@@ -113,7 +113,7 @@ Implements an existing plan file (passed as argument, e.g. `.claude/plans/plan-2
 
 **Developer teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "developer"
   model: opus
@@ -137,7 +137,7 @@ Task tool:
 
 **Code-tester teammate** (always spawned):
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "code-tester"
   model: sonnet
@@ -159,7 +159,7 @@ Task tool:
 
 **UX-tester teammate** (conditional — only spawn when plan involves UI/frontend/user-facing changes):
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "ux-tester"
   model: sonnet
@@ -189,7 +189,7 @@ Task tool:
 
 **Reviewer teammate**:
 ```
-Task tool:
+Teammate tool:
   team_name: "dev-team"
   name: "reviewer"
   model: opus
