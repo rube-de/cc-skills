@@ -2,7 +2,7 @@
 
 A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins and [agent skills](https://agentskills.io).
 
-[![Plugins](https://img.shields.io/badge/plugins-4-green.svg)](#plugins)
+[![Plugins](https://img.shields.io/badge/plugins-6-green.svg)](#plugins)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 
 ## Plugins
@@ -13,6 +13,8 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 | [cdt](./plugins/cdt/) | Development | Plugin only | Multi-agent dev team with four modes: plan, dev, full, and auto via Agent Teams |
 | [project-manager](./plugins/project-manager/) | Productivity | Plugin or Skill | Interactive issue creation optimized for LLM agent teams |
 | [plugin-dev](./plugins/plugin-dev/) | Development | Plugin or Skill | Scaffold plugins, validate SKILL.md frontmatter, audit hooks |
+| [temporal](./plugins/temporal/) | Development | Plugin or Skill | Temporal durable execution: CLI, SDK patterns, workflow orchestration |
+| [doppler](./plugins/doppler/) | DevOps | Plugin or Skill | Doppler secrets management: CLI, secrets injection, CI/CD integrations |
 
 > **Plugin vs Skill**: Plugins use the full Claude Code plugin system (hooks, agents, commands, scripts). Skills install only SKILL.md definitions via [skills.sh](https://skills.sh). Plugins that rely on hooks, commands, or agent definitions need plugin install. See each plugin's README for details.
 
@@ -33,7 +35,7 @@ Run these commands in your **terminal** (not inside Claude Code):
 claude plugin marketplace add rube-de/cc-skills
 
 # 2. Install all plugins (user scope — local to your machine)
-for p in council cdt project-manager plugin-dev; do claude plugin install "$p@rube-cc-skills"; done
+for p in council cdt project-manager plugin-dev temporal doppler; do claude plugin install "$p@rube-cc-skills"; done
 
 # 3. Restart Claude Code to activate
 claude
@@ -67,6 +69,8 @@ claude plugin install council@rube-cc-skills
 claude plugin install cdt@rube-cc-skills
 claude plugin install project-manager@rube-cc-skills
 claude plugin install plugin-dev@rube-cc-skills
+claude plugin install temporal@rube-cc-skills
+claude plugin install doppler@rube-cc-skills
 ```
 
 #### Step 3: Restart Claude Code
@@ -84,7 +88,7 @@ claude
 claude plugin list | grep rube-cc-skills
 
 # Inside Claude Code, type "/" and look for:
-#   /council, /cdt, /project-manager, /plugin-dev
+#   /council, /cdt, /project-manager, /plugin-dev, /temporal, /doppler
 ```
 
 ### Skills (via [skills.sh](https://skills.sh))
@@ -127,7 +131,7 @@ To make plugins available to Claude cloud agents, CI runners, or teammates witho
 claude plugin marketplace add rube-de/cc-skills
 
 # 2. Install plugins at project scope
-for p in council cdt project-manager plugin-dev; do
+for p in council cdt project-manager plugin-dev temporal doppler; do
   claude plugin install "$p@rube-cc-skills" --scope project
 done
 
@@ -162,10 +166,14 @@ cc-skills/
 │   │   └── skills/          # cdt
 │   ├── project-manager/     # Issue creation
 │   │   └── skills/          # project-manager
-│   └── plugin-dev/          # Plugin development tools
-│       ├── commands/        # Scaffolding command
-│       ├── scripts/         # Hook audit script
-│       └── skills/          # plugin-dev
+│   ├── plugin-dev/          # Plugin development tools
+│   │   ├── commands/        # Scaffolding command
+│   │   ├── scripts/         # Hook audit script
+│   │   └── skills/          # plugin-dev
+│   ├── temporal/            # Temporal durable execution
+│   │   └── skills/          # temporal + references
+│   └── doppler/             # Doppler secrets management
+│       └── skills/          # doppler + references
 ├── scripts/
 │   └── validate-plugins.mjs # Plugin validation
 ├── CLAUDE.md                # Claude Code context
