@@ -93,7 +93,7 @@ Task tool:
    - PM teammate validates → if NEEDS_REVISION, forward to architect teammate (max 2 cycles)
    - Disagreement → you decide based on requirements + research
 7. **Write plan** to `.claude/plans/plan-$TIMESTAMP.md` (see Plan Template below)
-8. **Cleanup** — shutdown teammates, TeamDelete
+8. **Cleanup** — send each teammate a shutdown request via SendMessage, wait for all to confirm shutdown (if rejected, resolve the issue first), then once all have stopped, run TeamDelete to clean up the team
 9. **Present** — tell the user the plan path, summarize task count, waves, key decisions, risks
 
 ---
@@ -186,7 +186,7 @@ Task tool:
 7. **Testing** — message tester teammate: "Implementation complete. Files: [list]. Begin testing." Developer teammate↔Tester teammate iterate directly. Intervene only on escalation.
 8. **Review** — message reviewer teammate: "Tests passing. Files: [list]. Begin review." Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 9. **Final verification** — full test suite, build, stub scan (`rg "TODO|FIXME|HACK|XXX|stub" --type-not md`), update plan to final state
-10. **Cleanup** — shutdown teammates, TeamDelete
+10. **Cleanup** — send each teammate a shutdown request via SendMessage, wait for all to confirm shutdown (if rejected, resolve the issue first), then once all have stopped, run TeamDelete to clean up the team
 11. **Report** to `.claude/files/dev-report-$TIMESTAMP.md` (see Report Template below)
 
 ### Wrap Up

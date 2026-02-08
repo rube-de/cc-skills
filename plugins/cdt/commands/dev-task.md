@@ -144,7 +144,9 @@ After APPROVED:
 
 ### 8. Cleanup
 
-Shutdown all teammates, TeamDelete.
+1. Send each teammate a shutdown request via SendMessage
+2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
+3. Once all teammates have stopped, run TeamDelete to clean up the team
 
 ### 9. Report
 

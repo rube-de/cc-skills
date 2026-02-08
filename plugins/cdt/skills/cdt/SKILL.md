@@ -75,5 +75,6 @@ Reviews changed files for completeness, correctness, security, quality, plan adh
 - Avoid file conflicts between parallel tasks
 - Testing + review are mandatory quality gates
 - Always cleanup team before finishing
+- In dev/full/auto modes, use delegate mode (Shift+Tab) to keep the lead focused on coordination
 - Plan mode: do NOT implement — only plan
 - If stuck — ask user, don't loop
