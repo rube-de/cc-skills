@@ -1,22 +1,23 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
-description: "Create an agent team to develop: Developer teammate + Tester teammate + Reviewer teammate + Researcher subagent → implements plan.md in waves"
+description: "Create an agent team to develop: Developer teammate + Code-tester teammate + Reviewer teammate + optional UX-tester teammate + Researcher subagent → implements plan.md in waves"
 ---
 
 # /dev-task — Development Phase
 
 **Target:** $ARGUMENTS (pass the plan file path, e.g. `.claude/plans/plan-20260207-1430.md`)
 
-You are the **Lead** for the development phase. Create an agent team where developer teammate, tester teammate, and reviewer teammate collaborate with direct peer messaging for iteration loops.
+You are the **Lead** for the development phase. Create an agent team where developer teammate, code-tester teammate, reviewer teammate, and (conditionally) ux-tester teammate collaborate with direct peer messaging for iteration loops.
 
 ## Team
 
-| Role | How | Why |
-|------|-----|-----|
-| Developer teammate | **Teammate** | Iterates with tester teammate on failures, reviewer teammate on issues |
-| Tester teammate | **Teammate** | Messages developer teammate directly with failure details |
-| Reviewer teammate | **Teammate** | Messages developer teammate directly with fix requests |
-| Researcher subagent | **Subagent** (`researcher`) | On-demand doc lookups, Lead relays |
+| Role | How | When | Why |
+|------|-----|------|-----|
+| Developer teammate | **Teammate** | Always | Iterates with code-tester teammate on failures, reviewer teammate on issues |
+| Code-tester teammate | **Teammate** | Always | Messages developer teammate directly with unit/integration test failure details |
+| UX-tester teammate | **Teammate** | UI tasks only | Writes Storybook stories + tests user flows via agent-browser; messages developer teammate with UX issues |
+| Reviewer teammate | **Teammate** | Always | Messages developer teammate directly with fix requests |
+| Researcher subagent | **Subagent** (`researcher`) | Always | On-demand doc lookups, Lead relays |
 
 ## Process
 
@@ -46,8 +47,9 @@ TeamCreate: team_name "dev-team"
 ### 4. Create Tasks
 
 TaskCreate for each plan task (preserve `depends_on` via `addBlockedBy`). Also create:
-- "Test all implementations" — blocked by all impl tasks
-- "Review all implementations" — blocked by test task
+- "Test all implementations (code)" — blocked by all impl tasks (always)
+- "Test all implementations (UX)" — blocked by all impl tasks (only if ux-tester is spawned)
+- "Review all implementations" — blocked by all active test tasks
 
 ### 5. Spawn Teammates
 
@@ -65,23 +67,25 @@ Task tool:
     2. Read plan section for your task — architecture, interfaces, dependencies
     3. Implement completely — no stubs, no TODOs, match existing patterns
     4. Run build/lint if available
-    5. Message the tester: what changed, what to test
-    6. If tester reports failures — fix, message them to re-run
-    7. If reviewer requests changes — fix, message them to re-review
-    8. Mark task complete, check TaskList for next
-    9. When done, message the lead
+    5. Message the code-tester teammate: what changed, what to test
+    6. If code-tester reports failures — fix, message them to re-run
+    7. If ux-tester teammate exists and reports UX issues — fix, message them to re-test
+    8. If reviewer requests changes — fix, message them to re-review
+    9. Mark task complete, check TaskList for next
+    10. When done, message the lead
 
     Stay within files specified in each task. Need docs? Message the lead.
 ```
 
-**Tester teammate**:
+**Code-tester teammate** (always spawned):
 ```
 Task tool:
   team_name: "dev-team"
-  name: "tester"
+  name: "code-tester"
   model: sonnet
   prompt: >
-    You are the tester. Plan: [plan-path] — read Testing Strategy.
+    You are the code tester. Plan: [plan-path] — read Testing Strategy.
+    Focus on unit tests, integration tests, and API contracts.
 
     1. Check TaskList — your task is blocked until implementation completes
     2. Wait for developer to message what they changed
@@ -93,6 +97,36 @@ Task tool:
     6. Mark task complete
 
     Test behavior, not implementation details.
+```
+
+**UX-tester teammate** (conditional — only spawn when plan involves UI/frontend/user-facing changes):
+```
+Task tool:
+  team_name: "dev-team"
+  name: "ux-tester"
+  model: sonnet
+  prompt: >
+    You are the UX tester. Plan: [plan-path] — read Testing Strategy and UI-related tasks.
+    You test user-facing behavior using agent-browser via Bash. Ask lead if unsure about app URL.
+
+    agent-browser commands (all via `npx agent-browser`):
+    - open <url>, snapshot -i, click @ref, fill @ref "text", screenshot, scroll down/up
+
+    Workflow:
+    1. Check TaskList — your task is blocked until implementation completes
+    2. Wait for developer to message what changed
+    3. Read plan for UI expectations
+    4. Write Storybook stories for new/changed components (match existing story patterns)
+    5. Run Storybook and verify stories render correctly
+    6. Open app URL via agent-browser, snapshot to verify page loads
+    7. Test user flows: navigation, forms, buttons, error states
+    8. Screenshots as evidence for each scenario
+    9. UX issues or broken stories → message developer with: what failed, expected vs actual, screenshot ref
+       Wait for fix, re-test (max 3 cycles, then escalate to lead)
+    10. When all stories render and UX checks pass, message lead with results + screenshots
+    11. Mark task complete
+
+    Focus on what the user sees and does — not internal implementation. Storybook stories are your test artifacts.
 ```
 
 **Reviewer teammate**:
@@ -127,12 +161,14 @@ For each wave:
 5. Verify wave: check build, update plan file (status, log, files_changed)
 
 After all impl waves:
-6. Message tester teammate: "Implementation complete. Files: [list]. Begin testing."
-7. Developer teammate↔Tester teammate iterate directly. Intervene only on escalation.
+6. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing."
+7. If ux-tester was spawned, message ux-tester teammate: "Implementation complete. App URL: [url]. Files changed: [list]. Begin UX testing."
+8. Code-tester and ux-tester run in parallel — they test different aspects.
+9. Developer teammate↔Code-tester teammate and Developer teammate↔UX-tester teammate iterate directly. Intervene only on escalation.
 
-After tests pass:
-8. Message reviewer teammate: "Tests passing. Files: [list]. Begin review."
-9. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+After all test tasks complete:
+10. Message reviewer teammate: "Tests passing. Files: [list]. Begin review."
+11. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 
 ### 7. Final Verification
 
@@ -174,8 +210,11 @@ Write `.claude/files/dev-report-$TIMESTAMP.md`:
 ## Review
 [Verdict, cycles, issues fixed]
 
-## Developer↔Tester Iterations
+## Developer↔Code-Tester Iterations
 [Cycle count, key fixes]
+
+## Developer↔UX-Tester Iterations (if applicable)
+[Cycle count, UX issues found, Storybook stories written, screenshots taken]
 
 ## Known Limitations
 ```
@@ -202,7 +241,8 @@ If commit & push only:
 
 ## Rules
 
-- Teammates iterate directly — Developer teammate↔Tester teammate, Developer teammate↔Reviewer teammate
+- Teammates iterate directly — Developer teammate↔Code-tester teammate, Developer teammate↔UX-tester teammate (if spawned), Developer teammate↔Reviewer teammate
+- UX-tester is conditional — only spawn when the task involves UI, web pages, or user-facing changes
 - Researcher is a subagent — Lead relays
 - Parallel within waves, sequential between
 - Verify between waves

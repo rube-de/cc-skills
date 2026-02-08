@@ -1,6 +1,6 @@
 ---
 name: cdt
-description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
+description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + optional ux-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
 compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
 allowed-tools: Read Grep Glob Bash Task TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch
@@ -27,15 +27,16 @@ Before executing any mode, read [references/WORKFLOW.md](references/WORKFLOW.md)
 ```
 Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
   Lead (You)                      Lead (You)
-  ├── architect  [teammate]       ├── developer  [teammate]
-  ├── prod-mgr   [teammate]      ├── tester     [teammate]
-  └── researcher [subagent]       ├── reviewer   [teammate]
-                                  └── researcher [subagent]
+  ├── architect  [teammate]       ├── developer    [teammate]
+  ├── prod-mgr   [teammate]      ├── code-tester  [teammate]
+  └── researcher [subagent]       ├── ux-tester    [teammate, conditional]
+                                  ├── reviewer     [teammate]
+                                  └── researcher   [subagent]
          │                                │
          └──── plan.md (handoff) ─────────┘
 ```
 
-**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Tester teammate↔Reviewer teammate).
+**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔UX-tester teammate, Developer teammate↔Reviewer teammate).
 **Researcher** is a subagent — Lead relays results.
 
 ## Roles
@@ -54,11 +55,15 @@ Validates architecture against requirements. Challenges design with concerns. Pr
 
 ### Developer (teammate — dev phase)
 
-Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with tester teammate on failures, reviewer teammate on issues.
+Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, ux-tester teammate on UX issues, reviewer teammate on code quality.
 
-### Tester (teammate — dev phase)
+### Code-Tester (teammate — dev phase, always)
 
-Writes and runs tests matching existing patterns. Messages developer teammate with specific failures + root cause. Max 3 fix cycles, then escalates to lead.
+Unit/integration tests. Messages developer teammate with failures + root cause. Max 3 cycles.
+
+### UX-Tester (teammate — dev phase, conditional)
+
+Spawned only for UI/frontend tasks. Writes Storybook stories for new/changed components, then tests user flows via `npx agent-browser`. Messages developer teammate with UX issues + screenshot evidence. Max 3 cycles.
 
 ### Reviewer (teammate — dev phase)
 
@@ -67,7 +72,8 @@ Reviews changed files for completeness, correctness, security, quality, plan adh
 ## Rules
 
 - One team at a time — cleanup plan-team before starting dev-team
-- Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Tester teammate, Developer teammate↔Reviewer teammate)
+- Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔UX-tester teammate (if spawned), Developer teammate↔Reviewer teammate)
+- UX-tester is conditional — only spawn when the task involves UI, web pages, or user-facing changes
 - Researcher is always a subagent — Lead relays results
 - Plan.md is the single source of truth and handoff artifact
 - Every task declares `depends_on`; parallel within waves, sequential between

@@ -155,6 +155,7 @@ Write `.claude/plans/plan-$TIMESTAMP.md`:
 
 ## Testing Strategy
 [Framework, scenarios, acceptance criteria]
+[If UI/frontend work: include UX test scenarios — user flows, interactions, navigation. This signals the Lead to spawn the UX-tester.]
 
 ## Risks & Mitigations
 

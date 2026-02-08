@@ -1,6 +1,6 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
-description: "Create an agent team for autonomous workflow: plan (Architect teammate + PM teammate) → develop (Developer teammate + Tester teammate + Reviewer teammate) → report (no approval gate)"
+description: "Create an agent team for autonomous workflow: plan (Architect teammate + PM teammate) → develop (Developer teammate + Code-tester teammate + optional UX-tester teammate + Reviewer teammate) → report (no approval gate)"
 ---
 
 # /auto-task — Autonomous Workflow
@@ -11,13 +11,14 @@ Two-phase orchestration like `/cdt:full-task`, but without a user approval gate.
 
 ```
 Phase 1: plan-team               Phase 2: dev-team
-┌──────────────────────┐         ┌──────────────────────┐
-│  Lead (You)          │         │  Lead (You)          │
-│  ├── architect  [tm] │ plan.md │  ├── developer  [tm] │
-│  ├── prod-mgr   [tm] │──────→ │  ├── tester     [tm] │
-│  └── researcher [sa] │         │  ├── reviewer   [tm] │
-└──────────────────────┘         │  └── researcher [sa] │
-                                 └──────────────────────┘
+┌──────────────────────┐         ┌───────────────────────────┐
+│  Lead (You)          │         │  Lead (You)               │
+│  ├── architect  [tm] │ plan.md │  ├── developer   [tm]     │
+│  ├── prod-mgr   [tm] │──────→ │  ├── code-tester [tm]     │
+│  └── researcher [sa] │         │  ├── ux-tester   [tm?]    │
+└──────────────────────┘         │  ├── reviewer    [tm]     │
+                                 │  └── researcher  [sa]     │
+                                 └───────────────────────────┘
 ```
 
 `[tm]` = teammate (Agent Team)  `[sa]` = subagent
@@ -53,9 +54,9 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 Execute `/cdt:dev-task` workflow using the plan path from Phase 1:
 1. TeamCreate "dev-team"
 2. Parse plan, create tasks with dependencies
-3. Spawn developer teammate + tester teammate + reviewer teammate
+3. Spawn developer teammate + code-tester teammate + reviewer teammate (+ ux-tester teammate if plan involves UI)
 4. Execute waves, assign to developer teammate
-5. After impl: activate tester teammate (Developer teammate↔Tester teammate iterate via messaging)
+5. After impl: activate code-tester teammate (+ ux-tester if spawned). Both run in parallel.
 6. After tests: activate reviewer teammate (Developer teammate↔Reviewer teammate iterate via messaging)
 7. Final verification: build, tests, stub scan
 8. Shutdown teammates, TeamDelete
