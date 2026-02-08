@@ -24,7 +24,7 @@ RUN apt-get update && apt-get install -y apt-transport-https ca-certificates cur
     gpg --dearmor -o /usr/share/keyrings/doppler-archive-keyring.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/doppler-archive-keyring.gpg] https://packages.doppler.com/public/cli/deb/debian any-version main" | \
     tee /etc/apt/sources.list.d/doppler-cli.list && \
-    apt-get update && apt-get install -y doppler
+    apt-get update && apt-get install -y doppler && rm -rf /var/lib/apt/lists/*
 
 # Use service token at runtime
 ENTRYPOINT ["doppler", "run", "--"]
