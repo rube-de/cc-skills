@@ -40,7 +40,7 @@ Produces `.claude/plans/plan-YYYYMMDD-HHMM.md`. Does NOT implement.
 4. **TaskCreate** — "Research libraries" (you via subagent), "Design architecture" (architect), "Validate requirements" (PM, blocked by design)
 5. **Spawn all three in parallel:**
 
-**Architect** teammate:
+**Architect teammate**:
 ```
 Task tool:
   team_name: "plan-team"
@@ -56,11 +56,11 @@ Task tool:
     3. If you need library docs, message the lead
     4. Design: components, interfaces, file changes, data flow, testing strategy
     5. Message your design to the lead AND the product-manager
-    6. Iterate on PM feedback
+    6. Iterate on PM teammate feedback
     7. Mark task complete
 ```
 
-**PM** teammate:
+**PM teammate**:
 ```
 Task tool:
   team_name: "plan-team"
@@ -70,8 +70,8 @@ Task tool:
     You are the PM. Requirements: [task description]
 
     1. Check TaskList — your task is blocked until the architect finishes
-    2. When the architect messages you their design, validate against requirements
-    3. Message the architect directly with concerns
+    2. When the architect teammate messages you their design, validate against requirements
+    3. Message the architect teammate directly with concerns
     4. Produce validation report: APPROVED or NEEDS_REVISION with specifics
     5. Share report with the lead
     6. Mark task complete
@@ -87,10 +87,10 @@ Task tool:
 ```
 
 6. **Coordinate:**
-   - Researcher returns → relay findings to architect
-   - Architect needs more docs → spawn another Researcher subagent, relay results
-   - Architect shares design → verify against research
-   - PM validates → if NEEDS_REVISION, forward to architect (max 2 cycles)
+   - Researcher returns → relay findings to architect teammate
+   - Architect teammate needs more docs → spawn another Researcher subagent, relay results
+   - Architect teammate shares design → verify against research
+   - PM teammate validates → if NEEDS_REVISION, forward to architect teammate (max 2 cycles)
    - Disagreement → you decide based on requirements + research
 7. **Write plan** to `.claude/plans/plan-$TIMESTAMP.md` (see Plan Template below)
 8. **Cleanup** — shutdown teammates, TeamDelete
@@ -111,7 +111,7 @@ Implements an existing plan file (passed as argument, e.g. `.claude/plans/plan-2
 4. **TaskCreate** — one per plan task (preserve `depends_on` via `addBlockedBy`), plus "Test all" and "Review all"
 5. **Spawn teammates:**
 
-**Developer**:
+**Developer teammate**:
 ```
 Task tool:
   team_name: "dev-team"
@@ -134,7 +134,7 @@ Task tool:
     Stay within files specified in each task. Need docs? Message the lead.
 ```
 
-**Tester**:
+**Tester teammate**:
 ```
 Task tool:
   team_name: "dev-team"
@@ -155,7 +155,7 @@ Task tool:
     Test behavior, not implementation details.
 ```
 
-**Reviewer**:
+**Reviewer teammate**:
 ```
 Task tool:
   team_name: "dev-team"
@@ -178,13 +178,13 @@ Task tool:
 ```
 
 6. **Execute waves:**
-   - Assign tasks to developer (TaskUpdate `owner`)
-   - Message developer: "Wave N ready. Tasks: [list]. Context from prior waves: [results]"
+   - Assign tasks to developer teammate (TaskUpdate `owner`)
+   - Message developer teammate: "Wave N ready. Tasks: [list]. Context from prior waves: [results]"
    - Monitor TaskList
-   - If developer needs docs — spawn Researcher subagent, relay results
+   - If developer teammate needs docs — spawn Researcher subagent, relay results
    - Verify wave: check build, update plan file (status, log, files_changed)
-7. **Testing** — message tester: "Implementation complete. Files: [list]. Begin testing." Dev↔Tester iterate directly. Intervene only on escalation.
-8. **Review** — message reviewer: "Tests passing. Files: [list]. Begin review." Dev↔Reviewer iterate directly. Intervene only on escalation.
+7. **Testing** — message tester teammate: "Implementation complete. Files: [list]. Begin testing." Developer teammate↔Tester teammate iterate directly. Intervene only on escalation.
+8. **Review** — message reviewer teammate: "Tests passing. Files: [list]. Begin review." Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 9. **Final verification** — full test suite, build, stub scan (`rg "TODO|FIXME|HACK|XXX|stub" --type-not md`), update plan to final state
 10. **Cleanup** — shutdown teammates, TeamDelete
 11. **Report** to `.claude/files/dev-report-$TIMESTAMP.md` (see Report Template below)
@@ -336,7 +336,7 @@ Write to `.claude/files/dev-report-$TIMESTAMP.md`:
 ## Review
 [Verdict, cycles, issues fixed]
 
-## Dev↔Test Iterations
+## Developer↔Tester Iterations
 [Cycle count, key fixes]
 
 ## Known Limitations

@@ -1,6 +1,6 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
-description: "Autonomous workflow: plan → develop → test → review → report (no approval gate)"
+description: "Create an agent team for autonomous workflow: plan (Architect teammate + PM teammate) → develop (Developer teammate + Tester teammate + Reviewer teammate) → report (no approval gate)"
 ---
 
 # /auto-task — Autonomous Workflow
@@ -38,8 +38,8 @@ Generate a timestamp `$TIMESTAMP` in `YYYYMMDD-HHMM` format at the start.
 Execute `/cdt:plan-task` workflow:
 1. Explore codebase
 2. TeamCreate "plan-team"
-3. Spawn architect + PM as teammates, researcher as subagent
-4. Coordinate: relay research, facilitate Architect↔PM debate
+3. Spawn architect teammate + PM teammate, researcher as subagent
+4. Coordinate: relay research, facilitate architect teammate↔PM teammate debate
 5. Synthesize into plan
 6. Save `.claude/plans/plan-$TIMESTAMP.md`
 7. Shutdown teammates, TeamDelete
@@ -53,10 +53,10 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 Execute `/cdt:dev-task` workflow using the plan path from Phase 1:
 1. TeamCreate "dev-team"
 2. Parse plan, create tasks with dependencies
-3. Spawn developer + tester + reviewer as teammates
-4. Execute waves, assign to developer
-5. After impl: activate tester (Dev↔Tester iterate via messaging)
-6. After tests: activate reviewer (Dev↔Reviewer iterate via messaging)
+3. Spawn developer teammate + tester teammate + reviewer teammate
+4. Execute waves, assign to developer teammate
+5. After impl: activate tester teammate (Developer teammate↔Tester teammate iterate via messaging)
+6. After tests: activate reviewer teammate (Developer teammate↔Reviewer teammate iterate via messaging)
 7. Final verification: build, tests, stub scan
 8. Shutdown teammates, TeamDelete
 9. Report to `.claude/files/dev-report-$TIMESTAMP.md` (use same or new timestamp)

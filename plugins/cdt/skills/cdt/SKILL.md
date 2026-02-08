@@ -1,6 +1,6 @@
 ---
 name: cdt
-description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect + PM debate → plan.md), dev (developer + tester + reviewer iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent roles with peer messaging."
+description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
 compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
 allowed-tools: Read Grep Glob Bash Task TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch
@@ -35,7 +35,7 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
          └──── plan.md (handoff) ─────────┘
 ```
 
-**Teammates** message each other directly (Architect↔PM, Dev↔Tester↔Reviewer).
+**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Tester teammate↔Reviewer teammate).
 **Researcher** is a subagent — Lead relays results.
 
 ## Roles
@@ -46,7 +46,7 @@ Research specialist for doc lookups. Queries Context7 for library docs, searches
 
 ### Architect (teammate — plan phase)
 
-Designs architecture: components, interfaces, file changes, data flow, testing strategy. Debates tradeoffs with PM. Messages design to lead and PM.
+Designs architecture: components, interfaces, file changes, data flow, testing strategy. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate.
 
 ### Product Manager (teammate — plan phase)
 
@@ -54,20 +54,20 @@ Validates architecture against requirements. Challenges design with concerns. Pr
 
 ### Developer (teammate — dev phase)
 
-Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with tester on failures, reviewer on issues.
+Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with tester teammate on failures, reviewer teammate on issues.
 
 ### Tester (teammate — dev phase)
 
-Writes and runs tests matching existing patterns. Messages developer with specific failures + root cause. Max 3 fix cycles, then escalates to lead.
+Writes and runs tests matching existing patterns. Messages developer teammate with specific failures + root cause. Max 3 fix cycles, then escalates to lead.
 
 ### Reviewer (teammate — dev phase)
 
-Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer with file:line + fix suggestions. Max 3 cycles.
+Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles.
 
 ## Rules
 
 - One team at a time — cleanup plan-team before starting dev-team
-- Teammates debate directly (Architect↔PM, Dev↔Tester, Dev↔Reviewer)
+- Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Tester teammate, Developer teammate↔Reviewer teammate)
 - Researcher is always a subagent — Lead relays results
 - Plan.md is the single source of truth and handoff artifact
 - Every task declares `depends_on`; parallel within waves, sequential between

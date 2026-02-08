@@ -1,22 +1,22 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
-description: "Spawn dev team: Orchestrator + Developer + Tester + Reviewer → implements plan.md in waves"
+description: "Create an agent team to develop: Developer teammate + Tester teammate + Reviewer teammate + Researcher subagent → implements plan.md in waves"
 ---
 
 # /dev-task — Development Phase
 
 **Target:** $ARGUMENTS (pass the plan file path, e.g. `.claude/plans/plan-20260207-1430.md`)
 
-You are the **Lead** for the development phase. Create an agent team where Developer, Tester, and Reviewer collaborate as teammates with direct peer messaging for iteration loops.
+You are the **Lead** for the development phase. Create an agent team where developer teammate, tester teammate, and reviewer teammate collaborate with direct peer messaging for iteration loops.
 
 ## Team
 
 | Role | How | Why |
 |------|-----|-----|
-| Developer | **Teammate** | Iterates with Tester on failures, Reviewer on issues |
-| Tester | **Teammate** | Messages Developer directly with failure details |
-| Reviewer | **Teammate** | Messages Developer directly with fix requests |
-| Researcher | **Subagent** (`researcher`) | On-demand doc lookups, Lead relays |
+| Developer teammate | **Teammate** | Iterates with tester teammate on failures, reviewer teammate on issues |
+| Tester teammate | **Teammate** | Messages developer teammate directly with failure details |
+| Reviewer teammate | **Teammate** | Messages developer teammate directly with fix requests |
+| Researcher subagent | **Subagent** (`researcher`) | On-demand doc lookups, Lead relays |
 
 ## Process
 
@@ -51,7 +51,7 @@ TaskCreate for each plan task (preserve `depends_on` via `addBlockedBy`). Also c
 
 ### 5. Spawn Teammates
 
-**Developer**:
+**Developer teammate**:
 ```
 Task tool:
   team_name: "dev-team"
@@ -74,7 +74,7 @@ Task tool:
     Stay within files specified in each task. Need docs? Message the lead.
 ```
 
-**Tester**:
+**Tester teammate**:
 ```
 Task tool:
   team_name: "dev-team"
@@ -95,7 +95,7 @@ Task tool:
     Test behavior, not implementation details.
 ```
 
-**Reviewer**:
+**Reviewer teammate**:
 ```
 Task tool:
   team_name: "dev-team"
@@ -107,7 +107,7 @@ Task tool:
     1. Check TaskList — your task is blocked until tests pass
     2. Wait for lead to activate you
     3. Review all changed files: completeness, correctness, security, quality, plan adherence
-    4. Use /council to validate your review (fast mode for routine, full mode for complex architectural concerns)
+    4. Use /council to validate your review (quick quality for routine, review security or review architecture for critical concerns)
     5. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub"
     6. Blocking issues → message developer with file:line + fix suggestion
        Wait for fix, re-review (max 3 cycles, then escalate to lead)
@@ -120,19 +120,19 @@ Task tool:
 ### 6. Execute Waves
 
 For each wave:
-1. Assign tasks to developer (TaskUpdate `owner`)
-2. Message developer: "Wave N ready. Tasks: [list]. Context from prior waves: [results]"
+1. Assign tasks to developer teammate (TaskUpdate `owner`)
+2. Message developer teammate: "Wave N ready. Tasks: [list]. Context from prior waves: [results]"
 3. Monitor TaskList
-4. If developer needs docs — spawn Researcher subagent, relay results
+4. If developer teammate needs docs — spawn Researcher subagent, relay results
 5. Verify wave: check build, update plan file (status, log, files_changed)
 
 After all impl waves:
-6. Message tester: "Implementation complete. Files: [list]. Begin testing."
-7. Dev↔Tester iterate directly. Intervene only on escalation.
+6. Message tester teammate: "Implementation complete. Files: [list]. Begin testing."
+7. Developer teammate↔Tester teammate iterate directly. Intervene only on escalation.
 
 After tests pass:
-8. Message reviewer: "Tests passing. Files: [list]. Begin review."
-9. Dev↔Reviewer iterate directly. Intervene only on escalation.
+8. Message reviewer teammate: "Tests passing. Files: [list]. Begin review."
+9. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 
 ### 7. Final Verification
 
@@ -172,7 +172,7 @@ Write `.claude/files/dev-report-$TIMESTAMP.md`:
 ## Review
 [Verdict, cycles, issues fixed]
 
-## Dev↔Test Iterations
+## Developer↔Tester Iterations
 [Cycle count, key fixes]
 
 ## Known Limitations
@@ -200,7 +200,7 @@ If commit & push only:
 
 ## Rules
 
-- Teammates iterate directly — Dev↔Tester, Dev↔Reviewer
+- Teammates iterate directly — Developer teammate↔Tester teammate, Developer teammate↔Reviewer teammate
 - Researcher is a subagent — Lead relays
 - Parallel within waves, sequential between
 - Verify between waves

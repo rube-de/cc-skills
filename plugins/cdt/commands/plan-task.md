@@ -1,21 +1,21 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
-description: "Spawn planning team: Orchestrator + Architect + Researcher + PM → outputs plan.md"
+description: "Create an agent team to plan: Architect teammate + PM teammate + Researcher subagent → outputs plan.md"
 ---
 
 # /plan-task — Planning Phase
 
 **Target:** $ARGUMENTS
 
-You are the **Lead** for the planning phase. Create an agent team with an Architect and PM as teammates, plus a Researcher subagent for doc lookups.
+You are the **Lead** for the planning phase. Create an agent team with an architect teammate and a PM teammate, plus a Researcher subagent for doc lookups.
 
 ## Team
 
 | Role | How | Why |
 |------|-----|-----|
-| Architect | **Teammate** | Needs to debate tradeoffs with PM |
-| Product Manager | **Teammate** | Needs to challenge Architect's design |
-| Researcher | **Subagent** (`researcher`) | Focused lookup, no collaboration needed |
+| Architect teammate | **Teammate** | Needs to debate tradeoffs with PM teammate |
+| Product Manager teammate | **Teammate** | Needs to challenge architect teammate's design |
+| Researcher subagent | **Subagent** (`researcher`) | Focused lookup, no collaboration needed |
 
 ## Process
 
@@ -53,7 +53,7 @@ TaskCreate:
 
 Spawn all three simultaneously:
 
-**Architect** teammate:
+**Architect teammate**:
 ```
 Task tool:
   team_name: "plan-team"
@@ -69,11 +69,11 @@ Task tool:
     3. If you need library docs, message the lead
     4. Design: components, interfaces, file changes, data flow, testing strategy
     5. Message your design to the lead AND the product-manager
-    6. Iterate on PM feedback
+    6. Iterate on PM teammate feedback
     7. Mark task complete
 ```
 
-**PM** teammate:
+**PM teammate**:
 ```
 Task tool:
   team_name: "plan-team"
@@ -83,8 +83,8 @@ Task tool:
     You are the PM. Requirements: [task description]
 
     1. Check TaskList — your task is blocked until the architect finishes
-    2. When the architect messages you their design, validate against requirements
-    3. Message the architect directly with concerns
+    2. When the architect teammate messages you their design, validate against requirements
+    3. Message the architect teammate directly with concerns
     4. Produce validation report: APPROVED or NEEDS_REVISION with specifics
     5. Share report with the lead
     6. Mark task complete
@@ -101,10 +101,10 @@ Task tool:
 
 ### 6. Coordinate
 
-1. **When Researcher returns** — SendMessage findings to "architect"
-2. **When Architect needs docs** — spawn another Researcher subagent, relay results
-3. **When Architect shares design** — verify it aligns with research findings
-4. **When PM validates** — if NEEDS_REVISION, forward feedback to Architect (max 2 cycles)
+1. **When Researcher returns** — SendMessage findings to architect teammate
+2. **When architect teammate needs docs** — spawn another Researcher subagent, relay results
+3. **When architect teammate shares design** — verify it aligns with research findings
+4. **When PM teammate validates** — if NEEDS_REVISION, forward feedback to architect teammate (max 2 cycles)
 5. **If they disagree** — you decide based on requirements + research
 
 ### 7. Save Plan
@@ -174,7 +174,7 @@ Summarize: task count, waves, key decisions, risks.
 
 ## Rules
 
-- Architect + PM are teammates — they debate directly
+- Architect teammate + PM teammate debate directly
 - Researcher is a subagent — Lead relays results
 - Write plan to disk — handoff artifact for `/cdt:dev-task`
 - Every task declares `depends_on`
