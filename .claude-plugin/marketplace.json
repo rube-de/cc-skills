@@ -101,6 +101,26 @@
         "sdk",
         "cli"
       ]
+    },
+    {
+      "name": "doppler",
+      "description": "Doppler secrets management: CLI operations, project/config/environment management, secrets injection, CI/CD integrations, and security best practices",
+      "version": "1.0.0",
+      "source": "./plugins/doppler",
+      "category": "devops",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "doppler",
+        "secrets",
+        "secrets-management",
+        "environment-variables",
+        "ci-cd",
+        "security",
+        "cli"
+      ]
     }
   ]
 }
