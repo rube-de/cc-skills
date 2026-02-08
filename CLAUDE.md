@@ -4,12 +4,14 @@
 
 ## Plugins (Claude Code skills)
 
-| Plugin | Category | Version | Skill Triggers |
-|--------|----------|---------|----------------|
-| council | Code Review | 1.1.0 | `/council` |
-| cdt | Development | 1.0.0 | `/cdt` |
-| project-manager | Productivity | — | `/project-manager` |
-| plugin-dev | Development | 1.0.0 | `/plugin-dev`, `/plugin-dev:create` |
+| Plugin | Category | Skill Triggers |
+|--------|----------|----------------|
+| council | Code Review | `/council` |
+| cdt | Development | `/cdt` |
+| project-manager | Productivity | `/project-manager` |
+| plugin-dev | Development | `/plugin-dev`, `/plugin-dev:create` |
+| temporal | Development | `/temporal` |
+| doppler | DevOps | `/doppler` |
 
 ## Navigation
 
