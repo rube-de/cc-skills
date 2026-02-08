@@ -396,11 +396,12 @@ Files bumped on release:
 
 ## Contributing
 
+The easiest way to create a new plugin is to use the `/plugin-dev:create` skill inside Claude Code — it scaffolds the directory structure, manifests, and marketplace registration for you.
+
 1. Fork the repository
-2. Create a plugin in `plugins/your-plugin/`
-3. Add an entry to `.claude-plugin/marketplace.json`
-4. Run `bun scripts/validate-plugins.mjs`
-5. Submit a pull request
+2. Run `/plugin-dev:create` in Claude Code to scaffold your plugin
+3. Run `bun scripts/validate-plugins.mjs` to validate
+4. Submit a pull request
 
 ## Acknowledgments
 
