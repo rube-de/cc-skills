@@ -1,3 +1,10 @@
+## [1.6.2](https://github.com/rube-de/cc-skills/compare/v1.6.1...v1.6.2) (2026-02-09)
+
+
+### Bug Fixes
+
+* **cdt:** move shared plan/dev workflows to skill references ([c3a65c1](https://github.com/rube-de/cc-skills/commit/c3a65c193dbb2106d2c0c5110fab6cf3347b856f))
+
 ## [1.6.1](https://github.com/rube-de/cc-skills/compare/v1.6.0...v1.6.1) (2026-02-09)
 
 
