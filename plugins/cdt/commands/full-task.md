@@ -35,14 +35,7 @@ Phase 1: plan-team               Phase 2: dev-team
 
 Generate a timestamp `$TIMESTAMP` in `YYYYMMDD-HHMM` format at the start.
 
-Execute `/cdt:plan-task` workflow:
-1. Explore codebase
-2. TeamCreate "plan-team"
-3. Spawn architect teammate + PM teammate, researcher as subagent
-4. Coordinate: relay research, facilitate architect teammate↔PM teammate debate
-5. Synthesize into plan
-6. Save `.claude/plans/plan-$TIMESTAMP.md`
-7. Shutdown teammates, TeamDelete
+Follow the planning workflow defined in @plan-task.md (skip Step 0 — Git Check was already done above).
 
 ## Gate: User Approval
 
@@ -57,16 +50,7 @@ Do NOT proceed without approval. If revisions: update plan, re-present.
 
 ## Phase 2: Development
 
-Execute `/cdt:dev-task` workflow using the plan path from Phase 1:
-1. TeamCreate "dev-team"
-2. Parse plan, create tasks with dependencies
-3. Spawn developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate
-4. Execute waves, assign to developer teammate
-5. After impl: activate code-tester teammate + qa-tester teammate. Both run in parallel.
-6. After tests: activate reviewer teammate (Developer teammate↔Reviewer teammate iterate via messaging)
-7. Final verification: build, tests, stub scan
-8. Shutdown teammates, TeamDelete
-9. Report to `.claude/files/dev-report-$TIMESTAMP.md` (use same or new timestamp)
+Follow the development workflow defined in @dev-task.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above).
 
 ## Wrap Up
 
