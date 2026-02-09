@@ -1,3 +1,11 @@
+# [1.4.0](https://github.com/rube-de/cc-skills/compare/v1.3.0...v1.4.0) (2026-02-09)
+
+
+### Features
+
+* add oasis-dev plugin for Oasis Network development ([7354d8e](https://github.com/rube-de/cc-skills/commit/7354d8ef5c07a33366a59512778783a75b7962f7))
+* **plugin-dev:** auto-update root docs when scaffolding new plugins ([5e1d314](https://github.com/rube-de/cc-skills/commit/5e1d314c23c7416beeb5e8d754a31278afe39148))
+
 # [1.3.0](https://github.com/rube-de/cc-skills/compare/v1.2.6...v1.3.0) (2026-02-09)
 
 
