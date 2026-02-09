@@ -8,7 +8,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20Only-critical.svg)]()
 
-Multi-agent development workflow using Claude Code Agent Teams. Four operating modes (plan, dev, full, auto) with collaborative roles — Architect, PM, Developer, Code-Tester, UX-Tester (conditional), Reviewer — and a Researcher subagent for documentation lookups via Context7.
+Multi-agent development workflow using Claude Code Agent Teams. Four operating modes (plan, dev, full, auto) with collaborative roles — Architect, PM, Developer, Code-Tester, QA-Tester, Reviewer — and a Researcher subagent for documentation lookups via Context7.
 
 > [!IMPORTANT]
 > **Requires Agent Teams**: This plugin requires the experimental Agent Teams feature. Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in your environment before use.
@@ -25,8 +25,8 @@ Planning Phase                    Development Phase
 │  Architect ↔ PM     │          │  Developer ↔ Code-Tester  │
 │  (design debate)    │          │  (fix cycles, max 3)      │
 │                     │          │                           │
-│  Researcher         │          │  Developer ↔ UX-Tester    │
-│  (subagent, relayed)│          │  (conditional, UI tasks)  │
+│  Researcher         │          │  Developer ↔ QA-Tester    │
+│  (subagent, relayed)│          │  (always, adapts to task)  │
 ├─────────────────────┤          │                           │
 │  Output: plan.md    │───────→  │  Developer ↔ Reviewer     │
 └─────────────────────┘          │  (review cycles, max 3)   │
@@ -46,14 +46,14 @@ Planning Phase                    Development Phase
 | **Product Manager** | Teammate | Sonnet | Always | Requirements validation, architecture challenges |
 | **Developer** | Teammate | Opus | Always | Full implementation — no stubs, no TODOs |
 | **Code-Tester** | Teammate | Sonnet | Always | Unit/integration test writing and execution, failure reporting |
-| **UX-Tester** | Teammate | Sonnet | UI tasks only | Storybook stories + user flow testing via agent-browser, screenshot evidence |
+| **QA-Tester** | Teammate | Sonnet | Always | UX testing (Storybook + agent-browser) for UI tasks; integration/smoke testing for non-UI tasks |
 | **Reviewer** | Teammate | Opus | Always | Code quality, security, completeness, plan adherence |
 | **Researcher** | Subagent | Sonnet | Always | Documentation via Context7, web research |
 
 ### Quality Gates
 
 - **Code Testing**: Code-Tester writes and runs unit/integration tests, iterates with Developer (max 3 cycles)
-- **UX Testing** (conditional): UX-Tester writes Storybook stories + tests user flows via agent-browser, iterates with Developer (max 3 cycles)
+- **QA Testing**: QA-Tester adapts to task type — UX testing (Storybook + agent-browser) for UI tasks, integration/smoke tests for non-UI tasks. Iterates with Developer (max 3 cycles)
 - **Review**: Reviewer checks quality, security, and scans for stubs (TODO/FIXME/HACK/XXX)
 - **Build Verification**: Build is verified between execution waves
 
@@ -74,7 +74,7 @@ Spawns Architect + PM + Researcher. The Architect designs the solution, the PM v
 
 ### `/cdt:dev-task` — Implementation Phase
 
-Spawns Developer + Code-Tester + Reviewer + Researcher (+ UX-Tester if plan involves UI). Executes tasks wave-by-wave from the plan, with parallel tasks within each wave and sequential ordering between waves.
+Spawns Developer + Code-Tester + Reviewer + Researcher + QA-Tester. Executes tasks wave-by-wave from the plan, with parallel tasks within each wave and sequential ordering between waves.
 
 **Output**: Updated plan + `.claude/files/dev-report-YYYYMMDD-HHMM.md` with execution summary, changes made, test results, and review outcomes.
 

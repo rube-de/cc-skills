@@ -20,9 +20,8 @@ Before any mode begins, check the current branch:
 
 1. Run `git branch --show-current`
 2. If on `main` or `master`:
-   - AskUserQuestion: "You're on the main branch. Create a feature branch before starting?"
-     Options: Create branch (Recommended) | Continue on main
-   - If create: suggest a branch name based on the task (e.g. `feat/rate-limiting`), then `git checkout -b <branch> origin/main`
+   - Suggest a branch name based on the task (e.g. `feat/rate-limiting`)
+   - Run `git checkout -b <branch> origin/main` to create the feature branch automatically
 3. Run `git fetch origin && git pull` to ensure up-to-date
 
 ---
@@ -53,11 +52,18 @@ Teammate tool:
 
     1. Check TaskList, claim your task
     2. Analyze codebase structure and patterns (Glob, Grep, Read)
-    3. If you need library docs, message the lead
-    4. Design: components, interfaces, file changes, data flow, testing strategy
-    5. Message your design to the lead AND the product-manager
-    6. Iterate on PM teammate feedback
-    7. Mark task complete
+    3. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
+    4. If you need library docs, message the lead
+    5. Design: components, interfaces, file changes, data flow, testing strategy
+    6. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
+       - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
+       - Number sequentially from existing ADRs (start at 0001 if none exist)
+       - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
+       - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
+    7. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, add a reference so future agents discover the ADR directory
+    8. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
+    9. Iterate on PM teammate feedback
+    10. Mark task complete
 ```
 
 **PM teammate**:
@@ -108,7 +114,7 @@ Implements an existing plan file (passed as argument, e.g. `.claude/plans/plan-2
 1. **Parse plan** — extract tasks, dependencies, waves. Check files-per-task for conflict avoidance.
 2. **Generate Timestamp** — `YYYYMMDD-HHMM` format for dev report, store as `$TIMESTAMP`
 3. **TeamCreate** "dev-team"
-4. **TaskCreate** — one per plan task (preserve `depends_on` via `addBlockedBy`), plus "Test all (code)", "Test all (UX)" (if ux-tester spawned), and "Review all"
+4. **TaskCreate** — one per plan task (preserve `depends_on` via `addBlockedBy`), plus "Test all (code)", "Test all (QA)", and "Review all"
 5. **Spawn teammates:**
 
 **Developer teammate**:
@@ -127,7 +133,7 @@ Teammate tool:
     4. Run build/lint if available
     5. Message the code-tester teammate: what changed, what to test
     6. If code-tester reports failures — fix, message them to re-run
-    7. If ux-tester teammate exists and reports UX issues — fix, message them to re-test
+    7. If qa-tester teammate reports issues — fix, message them to re-test
     8. If reviewer requests changes — fix, message them to re-review
     9. Mark task complete, check TaskList for next
     10. When done, message the lead
@@ -157,34 +163,46 @@ Teammate tool:
     Test behavior, not implementation details.
 ```
 
-**UX-tester teammate** (conditional — only spawn when plan involves UI/frontend/user-facing changes):
+**QA-tester teammate** (always spawned):
 ```
 Teammate tool:
   team_name: "dev-team"
-  name: "ux-tester"
+  name: "qa-tester"
   model: sonnet
   prompt: >
-    You are the UX tester. Plan: [plan-path] — read Testing Strategy and UI-related tasks.
+    You are the QA tester. Plan: [plan-path] — read Testing Strategy.
+    You adapt your testing approach based on the task type.
+
+    **For UI/frontend tasks:**
     You test user-facing behavior using agent-browser via Bash. Ask lead if unsure about app URL.
 
     agent-browser commands (all via `npx agent-browser`):
     - open <url>, snapshot -i, click @ref, fill @ref "text", screenshot, scroll down/up
 
-    Workflow:
+    1. Read plan for UI expectations
+    2. Write Storybook stories for new/changed components (match existing story patterns)
+    3. Run Storybook and verify stories render correctly
+    4. Open app URL via agent-browser, snapshot to verify page loads
+    5. Test user flows: navigation, forms, buttons, error states
+    6. Screenshots as evidence for each scenario
+
+    **For non-UI tasks:**
+    1. Run integration and smoke tests to verify the change works end-to-end
+    2. Verify the change doesn't break existing functionality (regression testing)
+    3. Test API contracts and cross-service behavior where applicable
+    4. Validate edge cases and error handling
+
+    **Common workflow (all tasks):**
     1. Check TaskList — your task is blocked until implementation completes
     2. Wait for developer to message what changed
-    3. Read plan for UI expectations
-    4. Write Storybook stories for new/changed components (match existing story patterns)
-    5. Run Storybook and verify stories render correctly
-    6. Open app URL via agent-browser, snapshot to verify page loads
-    7. Test user flows: navigation, forms, buttons, error states
-    8. Screenshots as evidence for each scenario
-    9. UX issues or broken stories → message developer with: what failed, expected vs actual, screenshot ref
+    3. Read plan for expectations and acceptance criteria
+    4. Execute the appropriate testing mode above
+    5. Issues found → message developer with: what failed, expected vs actual, evidence
        Wait for fix, re-test (max 3 cycles, then escalate to lead)
-    10. When all stories render and UX checks pass, message lead with results + screenshots
-    11. Mark task complete
+    6. When all checks pass, message lead with results
+    7. Mark task complete
 
-    Focus on what the user sees and does — not internal implementation. Storybook stories are your test artifacts.
+    Focus on behavior and correctness — not internal implementation details.
 ```
 
 **Reviewer teammate**:
@@ -216,8 +234,8 @@ Teammate tool:
    - If developer teammate needs docs — spawn Researcher subagent, relay results
    - Verify wave: check build, update plan file (status, log, files_changed)
 7. **Code Testing** — message code-tester teammate: "Implementation complete. Files: [list]. Begin testing."
-7b. **UX Testing** (conditional) — if ux-tester was spawned, message ux-tester teammate: "Implementation complete. App URL: [url]. Files changed: [list]. Begin UX testing." Code-tester and ux-tester run in parallel.
-   Developer teammate↔Code-tester teammate and Developer teammate↔UX-tester teammate iterate directly. Intervene only on escalation.
+7b. **QA Testing** — message qa-tester teammate: "Implementation complete. Files changed: [list]. Begin QA testing." Code-tester and qa-tester run in parallel.
+   Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly. Intervene only on escalation.
 8. **Review** — after all test tasks complete, message reviewer teammate: "Tests passing. Files: [list]. Begin review." Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 9. **Final verification** — full test suite, build, stub scan (`rg "TODO|FIXME|HACK|XXX|stub" --type-not md`), update plan to final state
 10. **Cleanup** — send each teammate a shutdown request via SendMessage, wait for all to confirm shutdown (if rejected, resolve the issue first), then once all have stopped, run TeamDelete to clean up the team
@@ -313,6 +331,10 @@ Write to `.claude/plans/plan-$TIMESTAMP.md`:
 ### Data Flow
 [How data moves through the system]
 
+## Architecture Decision Records
+[Link to each ADR created or referenced during planning]
+- [ADR-NNNN: Title](docs/adrs/adr-NNNN-slug.md) — status
+
 ## Research Findings
 [Library versions, APIs, code examples, pitfalls]
 
@@ -337,7 +359,7 @@ Write to `.claude/plans/plan-$TIMESTAMP.md`:
 
 ## Testing Strategy
 [Framework, scenarios, acceptance criteria]
-[If UI/frontend work: include UX test scenarios — user flows, interactions, navigation. This signals the Lead to spawn the UX-tester.]
+[Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
 
 ## Risks & Mitigations
 
@@ -374,8 +396,8 @@ Write to `.claude/files/dev-report-$TIMESTAMP.md`:
 ## Developer↔Code-Tester Iterations
 [Cycle count, key fixes]
 
-## Developer↔UX-Tester Iterations (if applicable)
-[Cycle count, UX issues found, Storybook stories written, screenshots taken]
+## Developer↔QA-Tester Iterations
+[Cycle count, issues found, tests written, screenshots taken (if UI)]
 
 ## Known Limitations
 ```
