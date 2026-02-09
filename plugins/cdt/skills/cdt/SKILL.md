@@ -20,7 +20,7 @@ Multi-agent development workflow with four modes. Pick one based on the user's n
 | **full** | End-to-end with user approval gate between plan and dev |
 | **auto** | End-to-end without approval gate |
 
-Before executing any mode, read [references/WORKFLOW.md](references/WORKFLOW.md) for detailed step-by-step instructions, spawn prompts, and output templates.
+Before executing any mode, read [references/plan-workflow.md](references/plan-workflow.md) and [references/dev-workflow.md](references/dev-workflow.md) for detailed step-by-step instructions, spawn prompts, and output templates.
 
 ## Architecture
 

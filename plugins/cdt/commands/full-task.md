@@ -33,7 +33,7 @@ Phase 1: plan-team               Phase 2: dev-team
 
 ## Phase 1: Planning
 
-Follow the planning workflow defined in @plan-task.md (skip Step 0 — Git Check was already done above). plan-task.md generates its own `$TIMESTAMP` for the plan path.
+Follow the planning workflow defined in @plan-workflow.md (skip Step 0 — Git Check was already done above). plan-workflow.md generates its own `$TIMESTAMP` for the plan path.
 
 ## Gate: User Approval
 
@@ -48,7 +48,7 @@ Do NOT proceed without approval. If revisions: update plan, re-present.
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-task.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above). dev-task.md generates its own timestamp for the dev report.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above). dev-workflow.md generates its own timestamp for the dev report.
 
 ## Wrap Up
 
