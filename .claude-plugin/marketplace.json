@@ -121,6 +121,28 @@
         "security",
         "cli"
       ]
+    },
+    {
+      "name": "oasis-dev",
+      "description": "Oasis Network development: Sapphire confidential EVM, ROFL off-chain apps, CLI operations, SDK patterns (Rust, Go, TypeScript, Python), and ParaTime development",
+      "version": "1.0.0",
+      "source": "./plugins/oasis-dev",
+      "category": "development",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "oasis",
+        "sapphire",
+        "rofl",
+        "blockchain",
+        "confidential-computing",
+        "evm",
+        "paratime",
+        "sdk",
+        "cli"
+      ]
     }
   ]
 }
