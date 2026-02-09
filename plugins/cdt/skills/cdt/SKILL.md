@@ -1,6 +1,6 @@
 ---
 name: cdt
-description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + optional ux-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
+description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
 compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
 allowed-tools: Read Grep Glob Bash Task Teammate TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch
@@ -29,14 +29,14 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
   Lead (You)                      Lead (You)
   ├── architect  [teammate]       ├── developer    [teammate]
   ├── prod-mgr   [teammate]      ├── code-tester  [teammate]
-  └── researcher [subagent]       ├── ux-tester    [teammate, conditional]
+  └── researcher [subagent]       ├── qa-tester    [teammate]
                                   ├── reviewer     [teammate]
                                   └── researcher   [subagent]
          │                                │
          └──── plan.md (handoff) ─────────┘
 ```
 
-**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔UX-tester teammate, Developer teammate↔Reviewer teammate).
+**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate).
 **Researcher** is a subagent — Lead relays results.
 
 ## Roles
@@ -47,7 +47,7 @@ Research specialist for doc lookups. Queries Context7 for library docs, searches
 
 ### Architect (teammate — spawn via Teammate tool, plan phase)
 
-Designs architecture: components, interfaces, file changes, data flow, testing strategy. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate.
+Reads existing Architecture Decision Records (ADRs) from `docs/adrs/` before designing. Designs architecture: components, interfaces, file changes, data flow, testing strategy. Writes new ADRs to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision. References existing ADRs when relevant and supersedes old ones when decisions change. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate.
 
 ### Product Manager (teammate — spawn via Teammate tool, plan phase)
 
@@ -55,15 +55,15 @@ Validates architecture against requirements. Challenges design with concerns. Pr
 
 ### Developer (teammate — spawn via Teammate tool, dev phase)
 
-Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, ux-tester teammate on UX issues, reviewer teammate on code quality.
+Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality.
 
 ### Code-Tester (teammate — spawn via Teammate tool, dev phase, always)
 
 Unit/integration tests. Messages developer teammate with failures + root cause. Max 3 cycles.
 
-### UX-Tester (teammate — spawn via Teammate tool, dev phase, conditional)
+### QA-Tester (teammate — spawn via Teammate tool, dev phase, always)
 
-Spawned only for UI/frontend tasks. Writes Storybook stories for new/changed components, then tests user flows via `npx agent-browser`. Messages developer teammate with UX issues + screenshot evidence. Max 3 cycles.
+Always spawned. Adapts testing approach based on task type: for UI tasks, writes Storybook stories and tests user flows via `npx agent-browser`; for non-UI tasks, runs integration/smoke tests, verifies regression safety, and tests API contracts. Messages developer teammate with issues + evidence. Max 3 cycles.
 
 ### Reviewer (teammate — spawn via Teammate tool, dev phase)
 
@@ -72,8 +72,7 @@ Reviews changed files for completeness, correctness, security, quality, plan adh
 ## Rules
 
 - One team at a time — cleanup plan-team before starting dev-team
-- Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔UX-tester teammate (if spawned), Developer teammate↔Reviewer teammate)
-- UX-tester is conditional — only spawn when the task involves UI, web pages, or user-facing changes
+- Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate)
 - Researcher is always a subagent — Lead relays results
 - Plan.md is the single source of truth and handoff artifact
 - Every task declares `depends_on`; parallel within waves, sequential between

@@ -21,12 +21,11 @@ You are the **Lead** for the planning phase. Create an agent team with an archit
 
 ### 0. Git Check
 
-1. Run `git branch --show-current`
-2. If on `main` or `master`:
-   - AskUserQuestion: "You're on the main branch. Create a feature branch before starting?"
-     Options: Create branch (Recommended) | Continue on main
-   - If create: suggest a branch name based on the task (e.g. `feat/rate-limiting`), then `git checkout -b <branch> origin/main`
-3. Run `git fetch origin && git pull` to ensure up-to-date
+1. Run `git fetch origin`
+2. Ensure you are on `main` or `master` — if not, run `git checkout main` (or `master`, whichever exists)
+3. Suggest a branch name based on the task (e.g. `feat/rate-limiting`)
+4. Run `git checkout -b <branch> origin/<default-branch>` to create the feature branch from the latest remote default branch
+5. Run `git pull` to ensure up-to-date
 
 ### 1. Generate Timestamp
 
@@ -66,11 +65,18 @@ Teammate tool:
 
     1. Check TaskList, claim your task
     2. Analyze codebase structure and patterns (Glob, Grep, Read)
-    3. If you need library docs, message the lead
-    4. Design: components, interfaces, file changes, data flow, testing strategy
-    5. Message your design to the lead AND the product-manager
-    6. Iterate on PM teammate feedback
-    7. Mark task complete
+    3. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
+    4. If you need library docs, message the lead
+    5. Design: components, interfaces, file changes, data flow, testing strategy
+    6. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
+       - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
+       - Number sequentially from existing ADRs (start at 0001 if none exist)
+       - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
+       - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
+    7. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, add a reference so future agents discover the ADR directory
+    8. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
+    9. Iterate on PM teammate feedback
+    10. Mark task complete
 ```
 
 **PM teammate**:
@@ -131,6 +137,10 @@ Write `.claude/plans/plan-$TIMESTAMP.md`:
 ### Data Flow
 [How data moves through the system]
 
+## Architecture Decision Records
+[Link to each ADR created or referenced during planning]
+- [ADR-NNNN: Title](docs/adrs/adr-NNNN-slug.md) — status
+
 ## Research Findings
 [Library versions, APIs, code examples, pitfalls]
 
@@ -155,7 +165,7 @@ Write `.claude/plans/plan-$TIMESTAMP.md`:
 
 ## Testing Strategy
 [Framework, scenarios, acceptance criteria]
-[If UI/frontend work: include UX test scenarios — user flows, interactions, navigation. This signals the Lead to spawn the UX-tester.]
+[Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
 
 ## Risks & Mitigations
 
