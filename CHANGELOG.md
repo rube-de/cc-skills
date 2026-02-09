@@ -1,3 +1,15 @@
+# [1.5.0](https://github.com/rube-de/cc-skills/compare/v1.4.0...v1.5.0) (2026-02-09)
+
+
+### Bug Fixes
+
+* **project-manager:** address review feedback on requirements challenge phase ([51cd604](https://github.com/rube-de/cc-skills/commit/51cd6048ea1c1b133a3359d6ec1580c7886fa00a))
+
+
+### Features
+
+* **project-manager:** add critical requirements challenge phase with -quick mode ([94dae45](https://github.com/rube-de/cc-skills/commit/94dae4549a8b345efd998ecb81d91b8d259dd95e)), closes [#20](https://github.com/rube-de/cc-skills/issues/20)
+
 # [1.4.0](https://github.com/rube-de/cc-skills/compare/v1.3.0...v1.4.0) (2026-02-09)
 
 
