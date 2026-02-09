@@ -1,3 +1,16 @@
+# [1.6.0](https://github.com/rube-de/cc-skills/compare/v1.5.0...v1.6.0) (2026-02-09)
+
+
+### Bug Fixes
+
+* **cdt:** address review feedback on auto-branching and task naming ([1ca3d23](https://github.com/rube-de/cc-skills/commit/1ca3d23a4cc5791a10fa73321da65312fa19d550))
+* **cdt:** Git Check ensures default branch before branching ([690a246](https://github.com/rube-de/cc-skills/commit/690a2464a266b2e9d3f5287271484dacb27e9d4c))
+
+
+### Features
+
+* **cdt:** add ADR documentation, auto-branching, always-on QA-tester ([85b3c4a](https://github.com/rube-de/cc-skills/commit/85b3c4aeea1063579f15543cec23827ef08d3704)), closes [#25](https://github.com/rube-de/cc-skills/issues/25)
+
 # [1.5.0](https://github.com/rube-de/cc-skills/compare/v1.4.0...v1.5.0) (2026-02-09)
 
 
