@@ -71,7 +71,7 @@ Built-in taxonomy auto-rejects:
 | `/council plan` | Implementation plan validation |
 | `/council adversarial` | Advocates vs critics comparison |
 | `/council consensus [topic]` | Multi-round consensus building |
-| `/council quick` | Hierarchical escalation — Gemini Flash → Claude subagent → full council |
+| `/council quick` | Parallel triage — Gemini Flash + Claude subagent in parallel, escalates to full council if needed |
 
 ## Hooks
 
@@ -181,7 +181,7 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | "No consultants available" | No external CLIs installed | Install at least one: gemini, codex, qwen, or opencode |
 | Consultant returns empty output | Rate limiting or timeout | Automatic retry with exponential backoff; check API quotas |
 | Low confidence scores | Vague review scope | Use concern-specific mode: `/council review security` |
-| Too many false positives | Broad review on large diff | Use `/council quick` for hierarchical escalation |
+| Too many false positives | Broad review on large diff | Use `/council quick` for parallel triage (2-agent lightweight review) |
 | JSON validation warnings | Consultant output malformed | PostToolUse hook retries; check CLI version |
 | Pre-flight warning on start | CLI not in PATH | Verify installation: `which gemini codex qwen opencode` |
 

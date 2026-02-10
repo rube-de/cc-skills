@@ -2,7 +2,7 @@
 name: jules-review
 description: >-
   Review Jules (Google AI agent) pull requests using AI council.
-  Supports -quick flag for lightweight reviews via hierarchical escalation.
+  Supports -quick flag for lightweight reviews via parallel triage.
 argument-hint: "[-quick] [PR#]"
 allowed-tools: [Bash, Read, Grep, Glob, Skill]
 user-invocable: true
@@ -22,7 +22,7 @@ Before posting any review (Step 6), read [references/WORKFLOW.md](references/WOR
 ## Triggers
 
 - `/jules-review` — review the current branch's PR
-- `/jules-review -quick` — quick review via hierarchical escalation
+- `/jules-review -quick` — quick review via parallel triage
 - `/jules-review 42` — review PR #42
 - `/jules-review -quick 123` — quick review of PR #123
 
@@ -30,7 +30,7 @@ Before posting any review (Step 6), read [references/WORKFLOW.md](references/WOR
 
 Extract from the user's input:
 
-- **`-quick` flag** (boolean): If present, force quick mode (hierarchical escalation)
+- **`-quick` flag** (boolean): If present, force quick mode (parallel triage)
 - **PR number** (optional integer): If present, use as target PR
 
 ```

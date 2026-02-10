@@ -17,7 +17,7 @@ claude plugin install jules-review@rube-cc-skills
 # Review the current branch's PR (auto-detects Jules PRs)
 /jules-review
 
-# Quick review using hierarchical escalation
+# Quick review using parallel triage
 /jules-review -quick
 
 # Review a specific PR by number
@@ -31,7 +31,7 @@ claude plugin install jules-review@rube-cc-skills
 
 - Auto-detects Jules PRs from branch name or PR author
 - Smart mode selection: auto-quick for small diffs (≤100 lines), full review for larger changes
-- Delegates to `/council review` (full) or `/council quick` (hierarchical escalation)
+- Delegates to `/council review` (full) or `/council quick` (parallel triage)
 - Posts GitHub PR reviews with inline line comments on diff-relevant findings
 - Tags `@jules` in review body and inline comments for Jules to act on
 - Maps council severity to GitHub review events (APPROVE, COMMENT, REQUEST_CHANGES)

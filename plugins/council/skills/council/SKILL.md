@@ -334,18 +334,31 @@ Return JSON: [{finding_id, score, reasoning}]
 6. Present unified report
 ```
 
-### Pattern B: Hierarchical Escalation (Efficient)
+### Pattern B: Dual-Layer Code Review (Comprehensive)
+
+Full review with both layers running in parallel:
+- Layer 1: All 5 external consultants (same prompt, model diversity)
+- Layer 2: 2 Claude subagents (different concerns, native tool access)
+- Layer 3: Sonnet scoring agent (deduplicate, score 0-100, filter >= 80)
+
+See "Dual-Layer Architecture" section above and WORKFLOWS.md Workflow B for details.
+
+### Pattern C: Parallel Triage (Efficient)
 
 ```
-1. Start with Gemini Flash (gemini -m flash) — fastest external model
-2. If confidence < 0.7 OR findings.severity == "critical":
-   → Add claude-codebase-context (sonnet) — native codebase access
-3. If still unresolved → full council
+1. Launch BOTH in parallel:
+   - Gemini Flash (gemini -m flash) — fastest external model
+   - claude-codebase-context (sonnet) — native codebase access
+2. If BOTH confident (>= 0.7) AND no critical findings:
+   → DONE (synthesize dual-perspective report)
+3. If disagreement, confidence < 0.7, OR severity == "critical":
+   → Escalate to full council
 ```
 
-**Use for**: Quick validations, cost-sensitive reviews
+**Use for**: Quick validations, cost-sensitive reviews, time-critical decisions
+**API calls**: Always 2, escalates to full council only if needed
 
-### Pattern C: Adversarial Review (Thorough)
+### Pattern D: Adversarial Review (Thorough)
 
 ```
 1. Assign roles:
@@ -360,7 +373,7 @@ Return JSON: [{finding_id, score, reasoning}]
 
 **Use for**: Critical decisions, security reviews, architecture choices
 
-### Pattern D: Sequential Rounds (Consensus)
+### Pattern E: Sequential Rounds (Consensus)
 
 ```
 Round 1: Independent opinions (parallel)
@@ -457,7 +470,7 @@ Not every decision needs full council.
 ## When NOT to Use Council
 
 - Trivial decisions (use single consultant)
-- Time-critical (use hierarchical escalation)
+- Time-critical (use parallel triage — /council quick)
 - Subjective preferences (council can't resolve taste)
 - When human expert input is actually needed
 - When you're hitting rate limits frequently (wait or stagger)

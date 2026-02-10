@@ -300,94 +300,84 @@ fi
 
 ---
 
-## Workflow C: Hierarchical Escalation (Efficient)
+## Workflow C: Parallel Triage (Efficient)
 
 ### When to Use
-- Quick validations
+- Quick validations (`/council quick`)
 - Time-critical decisions
-- When rate limits are being hit (fewer parallel calls)
+- Cost-sensitive reviews (always 2 calls, rarely more)
 
 ### Step-by-Step
 
-1. **Start with Gemini Flash**
+1. **Launch Both Agents in Parallel**
+
+   Launch simultaneously:
+
    ```
    Task(gemini-consultant, flags="-m flash"):
    "Quick review of [artifact]. Return JSON with:
-   - confidence: 0-1 (how confident the artifact is correct/safe)
-   - severity: none|low|medium|high|critical (worst issue found)
-   - summary: 1-3 sentence overview of key findings"
-   ```
-   Gemini Flash is purpose-built for speed — fastest external model available.
+   - confidence: 0-1
+   - severity: none|low|medium|high|critical
+   - findings: [{type, severity, description, recommendation}]
+   - summary: 1-3 sentence overview"
 
-2. **Evaluate Response**
+   Task(claude-codebase-context, model=sonnet):
+   "Quick review of [artifact]. Use tool access to check against
+   codebase conventions, CLAUDE.md rules, git history, and documentation.
+   Return JSON with same structure."
    ```
-   IF confidence >= 0.7 AND severity != "critical":
-     → DONE (single consultant sufficient)
 
-   IF confidence < 0.7 OR severity == "critical":
+   Both run simultaneously. Gemini Flash provides fast external model
+   perspective; claude-codebase-context provides codebase-aware depth.
+
+2. **Evaluate Responses**
+
+   ```
+   IF both confidence >= 0.7 AND neither severity == "critical":
+     → DONE (dual-perspective triage sufficient)
+     → Synthesize findings from both into unified report
+
+   IF either confidence < 0.7 OR either severity == "critical"
+      OR they disagree on severity for the same finding:
      → Escalate to Step 3
    ```
 
-3. **Add Claude Subagent (codebase-aware)**
-   ```
-   Task(claude-codebase-context, model=sonnet):
-   "Gemini Flash found: [summary]. Validate or challenge.
-   Use your tool access to verify claims against actual code,
-   CLAUDE.md rules, and git history. Return confidence."
-   ```
-   Unlike external CLIs, this subagent has native codebase access
-   (Read, Grep, Glob, Bash) — it can verify findings by reading
-   actual files, checking git blame, and inspecting CLAUDE.md.
+3. **Full Council (Rare)**
 
-4. **Evaluate Agreement**
    ```
-   IF both agree (confidence >= 0.7) AND severity != "critical":
-     → DONE (external + codebase-aware internal sufficient)
-
-   IF disagree OR confidence < 0.7 OR severity == "critical":
-     → Escalate to Step 5
-   ```
-
-5. **Full Council**
-   ```
-   → Full council (rare, <5% of cases)
+   → Launch full council (all 5 external + 2 Claude subagents + scoring)
    → Or escalate to human decision
    ```
-   If Gemini Flash (fast external) + claude-codebase-context
-   (codebase-aware internal) can't resolve it, a single additional
-   blind CLI won't help — go straight to full council.
 
-### Escalation Decision Tree
+   If 2 independent perspectives (fast external + codebase-aware internal)
+   can't resolve it, escalate to the complete review pipeline.
+
+### Decision Tree
 
 ```
                     Start
                       │
-                      ▼
-              ┌──────────────┐
-              │ Gemini Flash │
-              │ (confidence) │
-              └──────┬───────┘
+            ┌─────────┴──────────┐
+            ▼                    ▼
+     ┌──────────────┐   ┌──────────────────┐
+     │ Gemini Flash │   │ claude-codebase-  │
+     │ (external)   │   │ context (sonnet)  │
+     └──────┬───────┘   └────────┬─────────┘
+            └────────┬───────────┘
+                     ▼
+              ┌─────────────┐
+              │ Both ≥ 0.7  │
+              │ no critical │
+              │ no disagree │
+              └──────┬──────┘
                      │
-         ┌───────────┴───────────┐
-         │                       │
-    conf ≥ 0.7              conf < 0.7
-    no critical              or critical
-         │                       │
-         ▼                       ▼
-       DONE              ┌──────────────┐
-                         │   Claude     │
-                         │  codebase-   │
-                         │  context     │
-                         │  (sonnet)    │
-                         └──────┬───────┘
-                                │
-                    ┌───────────┴───────────┐
-                    │                       │
-                 Agree                  Disagree
-                    │                       │
-                    ▼                       ▼
-                  DONE              Full Council
-                                    or Human
+          ┌──────────┴──────────┐
+          │                     │
+         Yes                    No
+          │                     │
+          ▼                     ▼
+        DONE             Full Council
+   (synthesize)          or Human
 ```
 
 ---
@@ -646,4 +636,4 @@ Users want insights, not five reports. Always synthesize.
 
 ### ❌ Endless Rounds If Round 3 doesn't resolve it, more rounds won't help. Escalate to human.
 
-### ❌ Ignoring Rate Limits If hitting rate limits, switch to hierarchical or staggered launch. Don't keep hammering.
+### ❌ Ignoring Rate Limits If hitting rate limits, stop and wait. Don't keep hammering.

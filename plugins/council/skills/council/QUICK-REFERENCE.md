@@ -13,7 +13,7 @@
 | `/council plan` | Plan validation mode | 5 parallel |
 | `/council consensus [topic]` | Multi-round consensus | 4-12 (multi-round) |
 | `/council adversarial` | Adversarial review | 5 parallel |
-| `/council quick` | Hierarchical (1→3) | 1-3 (escalates) |
+| `/council quick` | Parallel Triage (2→full) | 2+ (escalates if needed) |
 
 **Note**: Does NOT auto-trigger. Requires explicit invocation.
 
@@ -84,11 +84,8 @@ done
 │        │                        + concern modes (security, bugs...)  │
 │        │                        + auto-escalation + scoring          │
 │        │                                                             │
-│  Quick validation?  ─────────► Hierarchical (Gemini Flash → Claude) │
-│        │                              Calls: 1-3 (escalates)        │
-│        │                                                             │
-│  Rate limits?  ──────────────► Hierarchical or staggered            │
-│        │                              Calls: 1-3 (sequential)       │
+│  Quick validation?  ─────────► Parallel Triage (Flash + Claude)     │
+│        │                              Calls: 2+ (escalates if needed)│
 │        │                                                             │
 │  Need trade-offs? ───────────► Adversarial                          │
 │        │                              Calls: 4 (parallel)           │
