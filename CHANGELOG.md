@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/rube-de/cc-skills/compare/v1.7.4...v1.8.0) (2026-02-10)
+
+
+### Features
+
+* **dlc:** add Dev Life Cycle quality gates plugin ([ef02cef](https://github.com/rube-de/cc-skills/commit/ef02cef4787c497d656ce330d5e2c4f953a9ce83)), closes [#39](https://github.com/rube-de/cc-skills/issues/39)
+
 ## [1.7.4](https://github.com/rube-de/cc-skills/compare/v1.7.3...v1.7.4) (2026-02-10)
 
 
