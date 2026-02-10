@@ -14,6 +14,7 @@
 | doppler | DevOps | `/doppler` |
 | oasis-dev | Development | `/oasis-dev` |
 | jules-review | Code Review | `/jules-review` |
+| dlc | Quality | `/dlc`, `/dlc:security`, `/dlc:quality`, `/dlc:perf`, `/dlc:test`, `/dlc:pr-check` |
 
 ## Navigation
 
