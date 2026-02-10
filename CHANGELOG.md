@@ -1,3 +1,10 @@
+## [1.6.3](https://github.com/rube-de/cc-skills/compare/v1.6.2...v1.6.3) (2026-02-10)
+
+
+### Bug Fixes
+
+* **council:** address review — add documentation type, fix Kimi gaps ([96a0a3c](https://github.com/rube-de/cc-skills/commit/96a0a3c6639e175be484b5ab35978540feb02a09))
+
 ## [1.6.2](https://github.com/rube-de/cc-skills/compare/v1.6.1...v1.6.2) (2026-02-09)
 
 
