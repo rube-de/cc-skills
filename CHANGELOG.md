@@ -1,3 +1,15 @@
+# [1.7.0](https://github.com/rube-de/cc-skills/compare/v1.6.3...v1.7.0) (2026-02-10)
+
+
+### Bug Fixes
+
+* **jules-review:** address review feedback from Copilot and Claude ([e8fae51](https://github.com/rube-de/cc-skills/commit/e8fae511a497c8ca12addc973bf7d1f078ec1bdb))
+
+
+### Features
+
+* **jules-review:** add Jules PR review plugin ([fb22261](https://github.com/rube-de/cc-skills/commit/fb222611851d0851b5e7066d0ae6b6e195bf33b9)), closes [#29](https://github.com/rube-de/cc-skills/issues/29)
+
 ## [1.6.3](https://github.com/rube-de/cc-skills/compare/v1.6.2...v1.6.3) (2026-02-10)
 
 
