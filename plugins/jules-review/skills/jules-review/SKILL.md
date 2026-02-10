@@ -157,7 +157,7 @@ WORKFLOW.md covers:
 **Critical format rules** (specified in WORKFLOW.md — repeated here for emphasis):
 
 - Review body first line must be `` `@jules` `` (backtick-wrapped, standalone line)
-- Inline comment format: `**[<severity>] <type>** \`@jules\``
+- Inline comment format: ``**[<severity>] <type>** `@jules` ``
 - Review header: `## Council Review — <VERDICT>`
 
 ## Step 7: Present Results

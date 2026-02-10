@@ -45,7 +45,7 @@ Place read directives at **two points**:
 
 A single directive at the bottom of a long skill is easily lost in context.
 
-> Source: Observed in [`jules-review` SKILL.md](../plugins/jules-review/skills/jules-review/SKILL.md) — single passive reference at line 144 was consistently skipped; adding a second directive at line 20 fixed it. Pattern also used in [`cdt` skill](../plugins/cdt/skills/cdt/SKILL.md) (line 23).
+> Source: Observed in [`jules-review` SKILL.md](../plugins/jules-review/skills/jules-review/SKILL.md) — a single passive reference near the end of the file was consistently skipped; adding a second directive near the top fixed it. Pattern also used in the setup section of the [`cdt` skill](../plugins/cdt/skills/cdt/SKILL.md).
 
 ---
 
