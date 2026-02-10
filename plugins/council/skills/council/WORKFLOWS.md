@@ -312,13 +312,16 @@ fi
 1. **Start with Gemini Flash**
    ```
    Task(gemini-consultant, flags="-m flash"):
-   "Quick review of [artifact]. Return confidence score 0-1."
+   "Quick review of [artifact]. Return JSON with:
+   - confidence: 0-1 (how confident the artifact is correct/safe)
+   - severity: none|low|medium|high|critical (worst issue found)
+   - summary: 1-3 sentence overview of key findings"
    ```
    Gemini Flash is purpose-built for speed — fastest external model available.
 
 2. **Evaluate Response**
    ```
-   IF confidence >= 0.8 AND severity != "critical":
+   IF confidence >= 0.7 AND severity != "critical":
      → DONE (single consultant sufficient)
 
    IF confidence < 0.7 OR severity == "critical":
@@ -338,10 +341,10 @@ fi
 
 4. **Evaluate Agreement**
    ```
-   IF both agree (confidence >= 0.7):
+   IF both agree (confidence >= 0.7) AND severity != "critical":
      → DONE (external + codebase-aware internal sufficient)
 
-   IF disagree:
+   IF disagree OR confidence < 0.7 OR severity == "critical":
      → Escalate to Step 5
    ```
 
@@ -367,7 +370,7 @@ fi
                      │
          ┌───────────┴───────────┐
          │                       │
-    conf ≥ 0.8              conf < 0.7
+    conf ≥ 0.7              conf < 0.7
     no critical              or critical
          │                       │
          ▼                       ▼
