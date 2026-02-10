@@ -17,6 +17,8 @@ metadata:
 
 Review Jules (Google's AI coding agent) pull requests with council-powered multi-model review. Posts structured GitHub PR reviews with inline line comments tagging `@jules`.
 
+Before posting any review (Step 6), read [references/WORKFLOW.md](references/WORKFLOW.md) for the exact review format, `@jules` tag placement, inline comment structure, and error handling. Do not guess at the format.
+
 ## Triggers
 
 - `/jules-review` — review the current branch's PR
@@ -141,7 +143,9 @@ Wait for the council to complete and collect its output (findings, verdict, summ
 
 After the council returns its findings, post them as a proper GitHub PR review.
 
-**See [WORKFLOW.md](references/WORKFLOW.md) for the detailed PR review posting logic**, including:
+**Read [references/WORKFLOW.md](references/WORKFLOW.md) now** and follow its posting format exactly. Do not invent your own format.
+
+WORKFLOW.md covers:
 
 - Parsing council findings into structured data
 - Mapping verdict severity to GitHub review events (APPROVE, COMMENT, REQUEST_CHANGES)
@@ -149,6 +153,12 @@ After the council returns its findings, post them as a proper GitHub PR review.
 - Building the review body with `@jules` tag
 - Posting via `gh api` with inline comments
 - Fallback to `gh pr comment` on permission failure
+
+**Critical format rules** (specified in WORKFLOW.md — repeated here for emphasis):
+
+- Review body first line must be `` `@jules` `` (backtick-wrapped, standalone line)
+- Inline comment format: ``**[<severity>] <type>** `@jules` ``
+- Review header: `## Council Review — <VERDICT>`
 
 ## Step 7: Present Results
 
