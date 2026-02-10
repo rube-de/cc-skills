@@ -1,3 +1,11 @@
+## [1.7.3](https://github.com/rube-de/cc-skills/compare/v1.7.2...v1.7.3) (2026-02-10)
+
+
+### Bug Fixes
+
+* address Copilot review comments ([80a3168](https://github.com/rube-de/cc-skills/commit/80a3168d73ddfcf7e6c8f41829c69d47ed1a430b))
+* **jules-review:** use imperative directives for WORKFLOW.md loading ([047e265](https://github.com/rube-de/cc-skills/commit/047e265a9294206ba792d3cb11c4d36cc622c9bd))
+
 ## [1.7.2](https://github.com/rube-de/cc-skills/compare/v1.7.1...v1.7.2) (2026-02-10)
 
 
