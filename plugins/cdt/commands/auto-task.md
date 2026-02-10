@@ -3,6 +3,8 @@ allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, 
 description: "Create an agent team for autonomous workflow: plan (Architect teammate + PM teammate) → develop (Developer teammate + Code-tester teammate + QA-tester teammate + Reviewer teammate) → report (no approval gate)"
 ---
 
+> **ROLE: Coordinator only.** You do NOT edit source code or test files. You delegate all implementation, testing, and review to teammates. You may only edit plan files, reports, ADRs, and config files.
+
 # /auto-task — Autonomous Workflow
 
 **Target:** $ARGUMENTS

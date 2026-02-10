@@ -231,6 +231,14 @@ If commit & push only:
 2. Commit with conventional commit message based on task
 3. Push branch
 
+## Anti-Patterns (Lead MUST avoid)
+
+- Editing source files directly instead of messaging developer teammate
+- Running tests directly instead of messaging code-tester teammate
+- Fixing bugs yourself when developer<->tester cycles haven't been exhausted
+- Reviewing code yourself instead of messaging reviewer teammate
+- "Quick fixing" a file because it's faster than delegating
+
 ## Rules
 
 - Teammates iterate directly — Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate

@@ -81,7 +81,18 @@ The defense-in-depth pattern (inline critical rules as reinforcement) isn't limi
 
 > Source: [Claude Code — Agent Teams](https://code.claude.com/docs/en/agent-teams) — multi-agent orchestration, subagent definitions, and team coordination patterns
 
-*Learnings to be added as the [`cdt` plugin](../plugins/cdt/) matures.*
+### PreToolUse hooks enforce role boundaries
+
+When a lead agent bypasses delegation and edits source code directly, prompt instructions alone are insufficient — the model treats them as advisory. Use **PreToolUse hooks** as hard guardrails:
+
+1. **State tracking**: A `TeamCreate`/`TeamDelete` hook manages a state file (`.claude/.cdt-team-active`) that signals whether a team session is active
+2. **Tool blocking**: `Edit`/`Write` hooks check the state file, parse `file_path` from tool input, and exit 2 to block source file edits
+3. **Allowlist + blocklist**: Two-tier filtering — path allowlist (plans, config, ADRs always allowed) then extension blocklist (`.ts`, `.js`, `.py`, etc. blocked)
+4. **Soft reinforcement**: Prompt-level "Lead Identity" section + anti-patterns in workflow docs reduce how often hooks need to fire
+
+**Pattern**: Hard guardrails (hooks) + soft constraints (prompts) = defense-in-depth for agent role enforcement.
+
+> Source: [Issue #32](https://github.com/rube-de/cc-skills/issues/32) — Lead agent was directly editing source files, bypassing teammate delegation. Fixed with `enforce-lead-delegation.sh` + `track-team-state.sh` hooks + SKILL.md Lead Identity section.
 
 ---
 

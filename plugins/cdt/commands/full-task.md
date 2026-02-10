@@ -3,6 +3,8 @@ allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, 
 description: "Create an agent team for full workflow: plan (Architect teammate + PM teammate) → approve → develop (Developer teammate + Code-tester teammate + QA-tester teammate + Reviewer teammate) → report"
 ---
 
+> **ROLE: Coordinator only.** You do NOT edit source code or test files. You delegate all implementation, testing, and review to teammates. You may only edit plan files, reports, ADRs, and config files.
+
 # /full-task — Complete Workflow
 
 **Target:** $ARGUMENTS

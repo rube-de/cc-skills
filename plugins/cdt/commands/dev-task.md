@@ -3,6 +3,8 @@ allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, 
 description: "Create an agent team to develop: Developer teammate + Code-tester teammate + QA-tester teammate + Reviewer teammate + Researcher subagent → implements plan.md in waves"
 ---
 
+> **ROLE: Coordinator only.** You do NOT edit source code or test files. You delegate all implementation, testing, and review to teammates. You may only edit plan files, reports, ADRs, and config files.
+
 # /dev-task — Development Phase
 
 **Target:** $ARGUMENTS (pass the plan file path, e.g. `.claude/plans/plan-20260207-1430.md`)

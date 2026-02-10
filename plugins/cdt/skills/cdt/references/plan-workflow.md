@@ -168,6 +168,13 @@ Tell the user the plan path: `.claude/plans/plan-$TIMESTAMP.md`
 
 Summarize: task count, waves, key decisions, risks.
 
+## Anti-Patterns (Lead MUST avoid)
+
+- Designing architecture yourself instead of delegating to architect teammate
+- Writing ADRs yourself instead of having the architect teammate write them
+- Validating requirements yourself instead of delegating to PM teammate
+- Resolving architect<->PM disagreements by implementing your own design
+
 ## Rules
 
 - Architect teammate + PM teammate debate directly
