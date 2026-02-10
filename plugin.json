@@ -1,6 +1,6 @@
 {
   "name": "cc-skills",
-  "version": "1.7.0",
+  "version": "1.7.1",
   "description": "A curated collection of Claude Code plugins: multi-agent dev team, AI council code reviews, project management, and Temporal workflow orchestration",
   "author": {
     "name": "rube-de",

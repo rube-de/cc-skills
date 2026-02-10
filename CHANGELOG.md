@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/rube-de/cc-skills/compare/v1.7.0...v1.7.1) (2026-02-10)
+
+
+### Bug Fixes
+
+* **jules-review:** use backtick-wrapped [@jules](https://github.com/jules) for AI recognition ([4765a1a](https://github.com/rube-de/cc-skills/commit/4765a1a87bf4efa54ad76d3c2ffbd563f1f6a23a))
+
 # [1.7.0](https://github.com/rube-de/cc-skills/compare/v1.6.3...v1.7.0) (2026-02-10)
 
 
