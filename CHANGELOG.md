@@ -1,3 +1,11 @@
+## [1.7.4](https://github.com/rube-de/cc-skills/compare/v1.7.3...v1.7.4) (2026-02-10)
+
+
+### Bug Fixes
+
+* **council:** address Copilot review comments ([6b499b5](https://github.com/rube-de/cc-skills/commit/6b499b5a0e90ba960a8c44ad61f72a3214725497))
+* **council:** replace hierarchical escalation with parallel triage in /council quick ([cecf2c1](https://github.com/rube-de/cc-skills/commit/cecf2c19d4607e4577f3d995f638009ac51ecd7c))
+
 ## [1.7.3](https://github.com/rube-de/cc-skills/compare/v1.7.2...v1.7.3) (2026-02-10)
 
 
