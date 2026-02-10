@@ -5,11 +5,11 @@
 | Command | Action | API Calls |
 |---------|--------|-----------|
 | `/council` | General council invocation | 5 parallel |
-| `/council review` | Code review (broad + auto-escalation) | 4 + scoring + escalation |
-| `/council review security` | Focused security review | 4 + scoring |
-| `/council review architecture` | Focused architecture review | 4 + scoring |
-| `/council review bugs` | Focused bug detection | 4 + scoring |
-| `/council review quality` | Focused quality/CLAUDE.md review | 4 + scoring |
+| `/council review` | Code review (broad + auto-escalation) | 5 + scoring + escalation |
+| `/council review security` | Focused security review | 5 + scoring |
+| `/council review architecture` | Focused architecture review | 5 + scoring |
+| `/council review bugs` | Focused bug detection | 5 + scoring |
+| `/council review quality` | Focused quality/CLAUDE.md review | 5 + scoring |
 | `/council plan` | Plan validation mode | 5 parallel |
 | `/council consensus [topic]` | Multi-round consensus | 4-12 (multi-round) |
 | `/council adversarial` | Adversarial review | 5 parallel |
@@ -172,7 +172,7 @@ done
 
 ```json
 {
-  "consultant": "gemini|codex|qwen|glm",
+  "consultant": "gemini|codex|qwen|glm|kimi|claude-deep-review|claude-codebase-context",
   "success": true,
   "confidence": 0.85,
   "severity": "high",

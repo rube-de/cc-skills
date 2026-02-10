@@ -189,7 +189,7 @@ Return the standard council JSON:
   "severity": "critical|high|medium|low|none",
   "findings": [
     {
-      "type": "quality",
+      "type": "quality|documentation",
       "severity": "medium",
       "description": "...",
       "location": "file:line",

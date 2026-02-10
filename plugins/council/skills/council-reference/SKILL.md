@@ -20,7 +20,7 @@ Every council agent MUST return this JSON structure:
   "severity": "critical|high|medium|low|none",
   "findings": [
     {
-      "type": "security|performance|quality|architecture|bug",
+      "type": "security|performance|quality|architecture|bug|documentation",
       "severity": "critical|high|medium|low",
       "description": "...",
       "location": "file:line",

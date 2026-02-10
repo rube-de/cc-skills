@@ -201,6 +201,7 @@ fi
    | Gemini | 0.85 |
    | Qwen | 0.80 |
    | GLM | 0.75 |
+   | Kimi | 0.80 |
 
    **Layer 2: Claude Subagents (parallel, 120s timeout each)**
 
