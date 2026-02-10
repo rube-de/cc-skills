@@ -337,12 +337,10 @@ Return JSON: [{finding_id, score, reasoning}]
 ### Pattern B: Hierarchical Escalation (Efficient)
 
 ```
-1. Start with 1 consultant (Qwen - fastest for quality)
+1. Start with Gemini Flash (gemini -m flash) — fastest external model
 2. If confidence < 0.7 OR findings.severity == "critical":
-   → Add Gemini for security perspective
-3. If disagreement OR confidence still < 0.8:
-   → Add Codex for tiebreak
-4. Full council only if still unresolved
+   → Add claude-codebase-context (sonnet) — native codebase access
+3. If still unresolved → full council
 ```
 
 **Use for**: Quick validations, cost-sensitive reviews

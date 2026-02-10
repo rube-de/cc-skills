@@ -309,11 +309,12 @@ fi
 
 ### Step-by-Step
 
-1. **Start with Single Consultant**
+1. **Start with Gemini Flash**
    ```
-   Task(qwen-consultant):
+   Task(gemini-consultant, flags="-m flash"):
    "Quick review of [artifact]. Return confidence score 0-1."
    ```
+   Gemini Flash is purpose-built for speed — fastest external model available.
 
 2. **Evaluate Response**
    ```
@@ -324,32 +325,34 @@ fi
      → Escalate to Step 3
    ```
 
-3. **Add Second Consultant**
+3. **Add Claude Subagent (codebase-aware)**
    ```
-   Task(gemini-consultant):
-   "Qwen found: [summary]. Validate or challenge. Return confidence."
+   Task(claude-codebase-context, model=sonnet):
+   "Gemini Flash found: [summary]. Validate or challenge.
+   Use your tool access to verify claims against actual code,
+   CLAUDE.md rules, and git history. Return confidence."
    ```
+   Unlike external CLIs, this subagent has native codebase access
+   (Read, Grep, Glob, Bash) — it can verify findings by reading
+   actual files, checking git blame, and inspecting CLAUDE.md.
 
 4. **Evaluate Agreement**
    ```
    IF both agree (confidence >= 0.7):
-     → DONE (two consultants sufficient)
+     → DONE (external + codebase-aware internal sufficient)
 
    IF disagree:
      → Escalate to Step 5
    ```
 
-5. **Add Tiebreaker**
-   ```
-   Task(codex-consultant):
-   "Qwen says: [X]. Gemini says: [Y]. Provide tiebreak."
-   ```
-
-6. **If Still Unresolved**
+5. **Full Council**
    ```
    → Full council (rare, <5% of cases)
    → Or escalate to human decision
    ```
+   If Gemini Flash (fast external) + claude-codebase-context
+   (codebase-aware internal) can't resolve it, a single additional
+   blind CLI won't help — go straight to full council.
 
 ### Escalation Decision Tree
 
@@ -358,7 +361,7 @@ fi
                       │
                       ▼
               ┌──────────────┐
-              │    Qwen      │
+              │ Gemini Flash │
               │ (confidence) │
               └──────┬───────┘
                      │
@@ -369,7 +372,10 @@ fi
          │                       │
          ▼                       ▼
        DONE              ┌──────────────┐
-                         │   + Gemini   │
+                         │   Claude     │
+                         │  codebase-   │
+                         │  context     │
+                         │  (sonnet)    │
                          └──────┬───────┘
                                 │
                     ┌───────────┴───────────┐
@@ -377,17 +383,8 @@ fi
                  Agree                  Disagree
                     │                       │
                     ▼                       ▼
-                  DONE              ┌──────────────┐
-                                    │   + Codex    │
-                                    └──────┬───────┘
-                                           │
-                               ┌───────────┴───────────┐
-                               │                       │
-                           Resolved               Still Split
-                               │                       │
-                               ▼                       ▼
-                             DONE              Full Council
-                                               or Human
+                  DONE              Full Council
+                                    or Human
 ```
 
 ---

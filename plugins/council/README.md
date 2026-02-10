@@ -71,7 +71,7 @@ Built-in taxonomy auto-rejects:
 | `/council plan` | Implementation plan validation |
 | `/council adversarial` | Advocates vs critics comparison |
 | `/council consensus [topic]` | Multi-round consensus building |
-| `/council quick` | Hierarchical escalation (cost-efficient) |
+| `/council quick` | Hierarchical escalation — Gemini Flash → Claude subagent → full council |
 
 ## Hooks
 
