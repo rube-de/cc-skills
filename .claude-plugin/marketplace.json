@@ -162,6 +162,26 @@
         "ai-agent",
         "code-review"
       ]
+    },
+    {
+      "name": "dlc",
+      "description": "Dev Life Cycle quality gates: security scans, code quality, performance analysis, test coverage, and PR review compliance with automated GitHub issue creation",
+      "version": "1.7.4",
+      "source": "./plugins/dlc",
+      "category": "quality",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "dev-lifecycle",
+        "security",
+        "quality",
+        "performance",
+        "testing",
+        "pr-review",
+        "github-issues"
+      ]
     }
   ]
 }

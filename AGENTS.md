@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Claude Code skills marketplace: **8 plugins** for multi-agent development, AI council reviews, project management, plugin development, and platform-specific tooling.
+Claude Code skills marketplace: **9 plugins** for multi-agent development, AI council reviews, project management, plugin development, quality gates, and platform-specific tooling.
 
 ## Directory Structure
 
@@ -33,8 +33,10 @@ cc-skills/
 │   │   └── skills/              # doppler + references
 │   ├── oasis-dev/               ← Oasis Network development
 │   │   └── skills/              # oasis-dev + references
-│   └── jules-review/            ← Jules PR review via council
-│       └── skills/              # jules-review + references
+│   ├── jules-review/            ← Jules PR review via council
+│   │   └── skills/              # jules-review + references
+│   └── dlc/                     ← Dev Life Cycle quality gates
+│       └── skills/              # dlc, security, quality, perf, test, pr-check
 ├── scripts/
 │   ├── validate-plugins.mjs     ← Plugin validation
 │   └── marketplace.schema.json  ← JSON Schema for marketplace.json
@@ -106,6 +108,8 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 Accumulated lessons from developing skills and plugins live in [`docs/learnings.md`](docs/learnings.md).
 
 **Update it automatically**: When you fix a bug, discover a pitfall, or learn something non-obvious about skill authoring, plugin structure, or agent teams — append it to `docs/learnings.md` with a `> Source:` linking to the relevant file, PR, or docs page. Don't wait to be asked.
+
+**PR review feedback is a learning trigger**: When you fix issues raised by PR reviewers (Copilot, external reviewers, council), add the underlying pattern to `docs/learnings.md` — not just the fix, but the *generalizable mistake* so it's caught at authoring time next round. Include the bad/good pattern and link to the PR. If the fix touches multiple files for the same root cause, document the root cause once (not per file).
 
 ## Conventions
 
