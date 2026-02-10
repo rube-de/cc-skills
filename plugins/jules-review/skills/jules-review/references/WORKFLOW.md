@@ -100,14 +100,14 @@ For each finding eligible for an inline comment, create a comment object:
 {
   "path": "src/api.ts",
   "line": 42,
-  "body": "**[critical] security** @jules\n\nSQL injection vulnerability in query builder.\n\n**Recommendation:** Use parameterized queries instead of string concatenation."
+  "body": "**[critical] security** `@jules`\n\nSQL injection vulnerability in query builder.\n\n**Recommendation:** Use parameterized queries instead of string concatenation."
 }
 ```
 
 ### Comment Body Format
 
 ```
-**[<severity>] <type>** @jules
+**[<severity>] <type>** `@jules`
 
 <description>
 
@@ -123,7 +123,7 @@ The review body includes the overall summary, verdict, and any findings that cou
 ### Body Structure
 
 ```markdown
-@jules
+`@jules`
 
 ## Council Review — <VERDICT>
 
@@ -146,7 +146,7 @@ If all findings are posted as inline comments, the "Findings (not in diff)" sect
 If there are no findings at all, the body should be:
 
 ```markdown
-@jules
+`@jules`
 
 ## Council Review — APPROVE
 
