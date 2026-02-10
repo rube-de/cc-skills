@@ -101,6 +101,12 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 - CI will run the same validation — make sure it passes locally first
 - Semantic-release handles versioning on merge — do not edit version numbers manually
 
+## Learnings
+
+Accumulated lessons from developing skills and plugins live in [`docs/learnings.md`](docs/learnings.md).
+
+**Update it automatically**: When you fix a bug, discover a pitfall, or learn something non-obvious about skill authoring, plugin structure, or agent teams — append it to `docs/learnings.md` with a `> Source:` linking to the relevant file, PR, or docs page. Don't wait to be asked.
+
 ## Conventions
 
 - **Marketplace SSoT**: All plugin metadata lives in `.claude-plugin/marketplace.json`
