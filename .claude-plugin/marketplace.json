@@ -1,6 +1,6 @@
 {
   "name": "rube-cc-skills",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "A curated collection of Claude Code plugins",
   "owner": {
     "name": "rube-de",
@@ -10,7 +10,7 @@
     {
       "name": "council",
       "description": "AI Council - Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-4.7, Kimi K2.5) for consensus-driven code reviews, plan validation, and architectural decisions",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/council",
       "category": "code-review",
       "author": {
@@ -32,7 +32,7 @@
     {
       "name": "cdt",
       "description": "Multi-agent development workflow with four modes: plan, dev, full, and auto. Uses Agent Teams for collaborative roles (Architect, PM, Developer, Tester, Reviewer) and a Researcher subagent for documentation lookups via Context7.",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/cdt",
       "category": "development",
       "author": {
@@ -51,7 +51,7 @@
     {
       "name": "project-manager",
       "description": "Interactive issue creation optimized for LLM agent teams with type-specific question flows and structured GitHub issues",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/project-manager",
       "category": "productivity",
       "author": {
@@ -68,7 +68,7 @@
     {
       "name": "plugin-dev",
       "description": "Plugin development tools: scaffold new plugins, validate SKILL.md frontmatter, audit hooks for silent failures",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/plugin-dev",
       "category": "development",
       "author": {
@@ -85,7 +85,7 @@
     {
       "name": "temporal",
       "description": "Temporal durable execution platform: CLI commands, SDK patterns (Go, TypeScript, Python, Java), workflow orchestration, and architectural guidance for reliable distributed applications",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/temporal",
       "category": "development",
       "author": {
@@ -105,7 +105,7 @@
     {
       "name": "doppler",
       "description": "Doppler secrets management: CLI operations, project/config/environment management, secrets injection, CI/CD integrations, and security best practices",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/doppler",
       "category": "devops",
       "author": {
@@ -125,7 +125,7 @@
     {
       "name": "oasis-dev",
       "description": "Oasis Network development: Sapphire confidential EVM, ROFL off-chain apps, CLI operations, SDK patterns (Rust, Go, TypeScript, Python), and ParaTime development",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/oasis-dev",
       "category": "development",
       "author": {
@@ -147,7 +147,7 @@
     {
       "name": "jules-review",
       "description": "Review Jules AI agent pull requests using council review with smart quick/full mode selection and GitHub PR review posting",
-      "version": "1.7.1",
+      "version": "1.7.2",
       "source": "./plugins/jules-review",
       "category": "code-review",
       "author": {

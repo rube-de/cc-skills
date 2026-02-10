@@ -1,3 +1,10 @@
+## [1.7.2](https://github.com/rube-de/cc-skills/compare/v1.7.1...v1.7.2) (2026-02-10)
+
+
+### Bug Fixes
+
+* **council:** align quick escalation thresholds and structured prompt ([9897958](https://github.com/rube-de/cc-skills/commit/9897958f21983f904efa097a500943ab2838e449))
+
 ## [1.7.1](https://github.com/rube-de/cc-skills/compare/v1.7.0...v1.7.1) (2026-02-10)
 
 
