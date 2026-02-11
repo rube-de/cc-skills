@@ -163,7 +163,7 @@ All CDT state is branch-scoped under `.claude/<branch-slug>/` (where `<branch-sl
 **Key decisions**:
 - Branch-scoped directory (`.claude/<branch>/`) holds all 3 state files: `.cdt-issue`, `.cdt-team-active`, `.cdt-scripts-path`
 - `.cdt-team-active` is cleaned on TeamDelete; `.cdt-issue` and `.cdt-scripts-path` persist for Wrap Up
-- Wrap Up cleans up the entire branch directory: `rm -rf .claude/$BRANCH`
+- `/full-task` and `/auto-task` Wrap Up cleans up the entire branch directory: `rm -rf ".claude/$BRANCH"`
 - `sync-github-issue.sh` runs in background (`&`) on `start` to avoid blocking team creation
 - All GitHub API calls are best-effort (`|| exit 0`) — never block the main workflow
 

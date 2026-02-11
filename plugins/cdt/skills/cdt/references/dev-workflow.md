@@ -235,8 +235,8 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"` and include `Closes #$ISSUE_NO` in the PR body.
-5. After PR creation, if the branch-scoped issue file exists, move the issue to "In Review":
+4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"` and include `Closes #$ISSUE_NO` in the PR body.
+5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:

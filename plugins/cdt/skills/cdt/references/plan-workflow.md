@@ -177,6 +177,8 @@ Write `.claude/plans/plan-$TIMESTAMP.md`:
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
+> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.claude/$BRANCH/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
+
 ## 9. Present
 
 Tell the user the plan path: `.claude/plans/plan-$TIMESTAMP.md`
