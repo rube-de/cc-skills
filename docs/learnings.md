@@ -81,7 +81,32 @@ The defense-in-depth pattern (inline critical rules as reinforcement) isn't limi
 
 > Source: [Claude Code — Agent Teams](https://code.claude.com/docs/en/agent-teams) — multi-agent orchestration, subagent definitions, and team coordination patterns
 
-*Learnings to be added as the [`cdt` plugin](../plugins/cdt/) matures.*
+### PreToolUse hooks enforce role boundaries
+
+When a lead agent bypasses delegation and edits source code directly, prompt instructions alone are insufficient — the model treats them as advisory. Use **PreToolUse hooks** as hard guardrails:
+
+1. **State tracking**: A `TeamCreate`/`TeamDelete` hook manages a branch-scoped state file (`.claude/<branch-slug>/.cdt-team-active`) that signals whether a team session is active
+2. **Tool blocking**: `Edit`/`Write` hooks check the state file, parse `file_path` from tool input, and exit 2 to block source file edits
+3. **Allowlist + blocklist**: Two-tier filtering — path allowlist (plans, config, ADRs always allowed) then extension blocklist (`.ts`, `.js`, `.py`, etc. blocked)
+4. **Soft reinforcement**: Prompt-level "Lead Identity" section + anti-patterns in workflow docs reduce how often hooks need to fire
+
+**Pattern**: Hard guardrails (hooks) + soft constraints (prompts) = defense-in-depth for agent role enforcement.
+
+> Source: [Issue #32](https://github.com/rube-de/cc-skills/issues/32) — Lead agent was directly editing source files, bypassing teammate delegation. Fixed with `enforce-lead-delegation.sh` + `track-team-state.sh` hooks + SKILL.md Lead Identity section.
+
+### Hook scripts must fail-closed, not fail-open
+
+Security-critical hooks should **block when uncertain** (fail-closed) rather than **allow when uncertain** (fail-open). Three failure modes surfaced during review of `enforce-lead-delegation.sh`:
+
+| Failure mode | Fail-open (bad) | Fail-closed (good) |
+|---|---|---|
+| Missing `jq` | `FILE_PATH` empty → edit allowed | `exit 2` with "jq not found" error |
+| Detached HEAD | `BRANCH` empty → hook exits 0 | Check for any sentinel → `exit 2` with "checkout a branch" message |
+| Ambiguous state | Pick arbitrary branch's sentinel | Block and require explicit branch checkout |
+
+**Rule of thumb**: When a hook can't determine context (missing tool, empty variable, ambiguous state), block and explain — don't guess and proceed. Over-blocking is annoying but recoverable; under-blocking is a security bypass.
+
+> Source: [PR #41](https://github.com/rube-de/cc-skills/pull/41) — Copilot and CodeRabbit reviews caught fail-open jq dependency, detached HEAD bypass, and arbitrary branch glob selection across rounds 7-10.
 
 ---
 
@@ -139,6 +164,38 @@ Also watch for:
 
 ---
 
+## GitHub Issue Integration in Agent Teams
+
+### Bridging hooks and prompts with state files
+
+Hooks receive only the tool_input JSON (e.g., `team_name`), not the user's original `$ARGUMENTS`. When a workflow needs data from arguments at hook time, the prompt-level workflow must write a state file **before** the hook fires.
+
+**Pattern**: Prompt writes `.claude/<branch-slug>/.cdt-issue` → TeamCreate hook reads it → triggers `sync-github-issue.sh`
+
+All CDT state is branch-scoped under `.claude/<branch-slug>/` (where `<branch-slug>` = branch name with `/` → `-`). This prevents cross-branch contamination — running `/cdt:plan-task` on a new branch won't find stale state from a previous issue's branch.
+
+**Key decisions**:
+- Branch-scoped directory (`.claude/<branch-slug>/`) holds all 3 state files: `.cdt-issue`, `.cdt-team-active`, `.cdt-scripts-path`
+- `.cdt-team-active` is cleaned on TeamDelete; `.cdt-issue` and `.cdt-scripts-path` persist for Wrap Up
+- `/full-task` and `/auto-task` Wrap Up cleans up the entire branch directory: `rm -rf ".claude/<branch-slug>"`
+- `sync-github-issue.sh` runs in background (`&`) on `start` to avoid blocking team creation
+- All GitHub API calls are best-effort (`|| exit 0`) — never block the main workflow
+
+> Source: [PR #41](https://github.com/rube-de/cc-skills/pull/41) — CDT GitHub issue integration via `sync-github-issue.sh` + `track-team-state.sh` bridge
+
+### GitHub Projects v2 requires GraphQL
+
+REST API doesn't support project board operations. The `sync-github-issue.sh` script uses three GraphQL queries:
+1. Find issue's project items (issue → projectItems)
+2. Get the Status field and its options (project → field → options)
+3. Update the field value (mutation)
+
+The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensitive matching against common project column naming conventions ("In Progress", "in-progress", "In progress").
+
+> Source: [GitHub Projects v2 API docs](https://docs.github.com/en/graphql/guides/managing-project-items)
+
+---
+
 ## Common Pitfalls
 
 | Pitfall | Symptom | Fix |
@@ -150,6 +207,13 @@ Also watch for:
 | Manual version edits | Conflicts with semantic-release | Never edit versions — CI handles it |
 | `\|\|` chaining for tool fallback | Double runs, mixed output when primary tool finds issues | Use `command -v` to select tool by availability |
 | `\s` in grep patterns | No match on POSIX grep | Use `[[:space:]]` instead |
+| Mixed `\|\|`/`&&` guards | Ambiguous precedence in POSIX shell | Use explicit `if/fi` for compound conditions |
+| Redundant `.gitignore` appends | Dirty working tree when parent dir already ignored | Check if parent directory is already in `.gitignore` before appending |
+| `<->` in Markdown | Rendered as broken HTML tag | Use `↔` Unicode arrow or wrap in backticks |
 | Brace expansion in `--include` | grep ignores the filter silently | Use separate `--include` flags per extension |
+| Blanket `*.config.*` in allowlist | Matches source files like `src/db.config.ts`, bypassing blocklist | Enumerate explicit tool config patterns (`eslint.config.*`, `vite.config.*`, etc.) |
+| Missing tool dependency in hook | Hook silently allows action (fail-open) | `command -v` check → `exit 2` with error when tool is missing |
+| Empty variable → early exit in guard | Security bypass via unexpected state (e.g., detached HEAD) | Block and explain; don't exit 0 when context is ambiguous |
+| Glob fallback picks arbitrary state | Wrong branch's sentinel used for enforcement | Fail-closed: detect ambiguity, block, require explicit action |
 
-> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40)
+> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41)

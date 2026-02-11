@@ -10,6 +10,21 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 4. Run `git checkout -b <branch> origin/<default-branch>` to create the feature branch from the latest remote default branch
 5. Run `git pull` to ensure up-to-date
 
+## 0a. Issue Detection
+
+**Branch-scoped state**: CDT state lives in `.claude/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+
+If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
+
+1. Extract the issue number (digits only) and store it in `$ISSUE_NUM`
+2. Write: `mkdir -p ".claude/$BRANCH" && echo "$ISSUE_NUM" > ".claude/$BRANCH/.cdt-issue"`
+3. Fetch issue context: `gh issue view "$ISSUE_NUM" --json title,body,labels,assignees`
+4. Use the issue title and body as additional context for planning
+
+The team creation hook will attempt to assign the issue and move it to "In Progress" in GitHub Projects (best-effort — may no-op if no project item exists or permissions are insufficient).
+
+If no issue reference is found, skip this step.
+
 ## 1. Generate Timestamp
 
 Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this for the plan output path. Store as `$TIMESTAMP`.
@@ -162,11 +177,20 @@ Write `.claude/plans/plan-$TIMESTAMP.md`:
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
+> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.claude/$BRANCH/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
+
 ## 9. Present
 
 Tell the user the plan path: `.claude/plans/plan-$TIMESTAMP.md`
 
 Summarize: task count, waves, key decisions, risks.
+
+## Anti-Patterns (Lead MUST avoid)
+
+- Designing architecture yourself instead of delegating to architect teammate
+- Writing ADRs yourself instead of having the architect teammate write them
+- Validating requirements yourself instead of delegating to PM teammate
+- Resolving architect↔PM disagreements by implementing your own design
 
 ## Rules
 

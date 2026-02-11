@@ -10,6 +10,17 @@ Detailed execution steps for the development phase. The Lead reads this before r
 4. Run `git checkout -b <branch> origin/<default-branch>` to create the feature branch from the latest remote default branch
 5. Run `git pull` to ensure up-to-date
 
+## 0a. Issue Detection
+
+**Branch-scoped state**: CDT state lives in `.claude/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+
+1. First, check `$ARGUMENTS` and the plan file for GitHub issue references (`#N`, URL).
+2. If found, extract the number into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".claude/$BRANCH" && echo "$ISSUE_NUM" > ".claude/$BRANCH/.cdt-issue"`
+3. Otherwise, if `".claude/$BRANCH/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
+4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for the dev report: `gh issue view "$ISSUE_NUM" --json title,body`
+
+The team creation hook will attempt to assign and move to "In Progress" (best-effort — may no-op if no project item exists).
+
 ## 1. Parse Plan
 
 Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves. Check files-per-task for conflict avoidance.
@@ -224,12 +235,22 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description
+4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
+5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
+   `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
+
+## Anti-Patterns (Lead MUST avoid)
+
+- Editing source files directly instead of messaging developer teammate
+- Running tests directly instead of messaging code-tester teammate
+- Fixing bugs yourself when developer↔tester cycles haven't been exhausted
+- Reviewing code yourself instead of messaging reviewer teammate
+- "Quick fixing" a file because it's faster than delegating
 
 ## Rules
 
