@@ -1,3 +1,31 @@
+# [1.9.0](https://github.com/rube-de/cc-skills/compare/v1.8.0...v1.9.0) (2026-02-11)
+
+
+### Bug Fixes
+
+* **cdt:** add */ prefix to config allowlist for monorepo support ([8c3a7bc](https://github.com/rube-de/cc-skills/commit/8c3a7bcfe38e16fc4e793604d0a67b85ab7d2b35))
+* **cdt:** add detached HEAD guard note to workflow docs ([158ed73](https://github.com/rube-de/cc-skills/commit/158ed732c4556e8dd7f057da207b4f7de587b434))
+* **cdt:** add existence guards and document state lifecycle ([8a1de86](https://github.com/rube-de/cc-skills/commit/8a1de8612d9f934da49eb008e26ba0e87db924a1))
+* **cdt:** address Copilot review feedback on hooks and docs ([9a34adc](https://github.com/rube-de/cc-skills/commit/9a34adcf6dc8140ca0a6f974b6185b87c8d45ace))
+* **cdt:** address round-2 Copilot review feedback ([3b6dca5](https://github.com/rube-de/cc-skills/commit/3b6dca562baccc8e5c21ce1d373efaf38fdf02dd))
+* **cdt:** address round-3 Copilot review feedback ([8b86171](https://github.com/rube-de/cc-skills/commit/8b86171b1d6639c4891d5246ff6c0cb19fc25730))
+* **cdt:** address round-7 review feedback ([52fdc9a](https://github.com/rube-de/cc-skills/commit/52fdc9ad3ff42146460056c62f54b94d3f5cfb29))
+* **cdt:** address round-8 review — fail-closed jq guard, root-anchored configs, silent background sync ([346ec39](https://github.com/rube-de/cc-skills/commit/346ec396ba63be5b402a3de5fe3b85df11f9815e))
+* **cdt:** close detached HEAD bypass in enforce-lead-delegation ([b460015](https://github.com/rube-de/cc-skills/commit/b4600158faf8b8987ef3f6c363bbf091100d1f77))
+* **cdt:** fail-closed on detached HEAD instead of glob fallback ([d3eb50c](https://github.com/rube-de/cc-skills/commit/d3eb50cad83c0c045e7f0d54fb4653e7df0462b3))
+* **cdt:** fail-closed on jq parse errors and add .mjs/.cjs to blocklist ([8033d84](https://github.com/rube-de/cc-skills/commit/8033d84f3d976ed9e058c593c36ce225e0b61c0c))
+* **cdt:** quote branch-scoped paths and guard cleanup operations ([7efe8c5](https://github.com/rube-de/cc-skills/commit/7efe8c59b6ecbc44bae56cd612c09c4721e91299))
+* **cdt:** tighten config allowlist and fix Closes #N literal ([be40e43](https://github.com/rube-de/cc-skills/commit/be40e439823c5a3ef9ba5925e8a2ec8c986da138)), closes [#N](https://github.com/rube-de/cc-skills/issues/N)
+* **cdt:** use branch-scoped state directories for cross-branch safety ([5e30d2a](https://github.com/rube-de/cc-skills/commit/5e30d2a3c54406775e905487b6e700af1733330c))
+* **cdt:** use explicit if/fi guards and jq fallback in hook scripts ([18c77c1](https://github.com/rube-de/cc-skills/commit/18c77c1723f067d78313d4b93e54858c02ddf825))
+* **docs:** correct PR reference [#42](https://github.com/rube-de/cc-skills/issues/42) → [#41](https://github.com/rube-de/cc-skills/issues/41) in learnings.md ([f62b79c](https://github.com/rube-de/cc-skills/commit/f62b79cb45a9ec3b3f4d840dcb789b066b652c75))
+
+
+### Features
+
+* **cdt:** enforce lead delegation via PreToolUse hooks ([76b9de9](https://github.com/rube-de/cc-skills/commit/76b9de98c50d5d795586d6b2f4a49a76c41a52bc)), closes [#32](https://github.com/rube-de/cc-skills/issues/32)
+* **cdt:** integrate GitHub issue lifecycle with team workflows ([dafc290](https://github.com/rube-de/cc-skills/commit/dafc290e62ca1771fea6b7a970c0428c76ebbd57))
+
 # [1.8.0](https://github.com/rube-de/cc-skills/compare/v1.7.4...v1.8.0) (2026-02-10)
 
 
