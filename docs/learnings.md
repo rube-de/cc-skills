@@ -162,7 +162,7 @@ Similarly, hooks know their own script directory (`dirname "$0"`), but prompt-le
 
 **Key decisions**:
 - `.cdt-issue` persists after TeamDelete — needed for `Closes #N` in the PR and the `review` action
-- `.cdt-scripts-path` is cleaned on TeamDelete — only relevant during active sessions
+- `.cdt-scripts-path` persists after TeamDelete — needed for Wrap Up to call `sync-github-issue.sh review` (Wrap Up runs after Cleanup)
 - `sync-github-issue.sh` runs in background (`&`) on `start` to avoid blocking team creation
 - All GitHub API calls are best-effort (`|| exit 0`) — never block the main workflow
 

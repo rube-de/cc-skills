@@ -88,11 +88,11 @@ Reviews changed files for completeness, correctness, security, quality, plan adh
 
 You are a **coordinator**, not an implementer. During active team phases:
 
-### NEVER — hook-enforced (Edit/Write blocked on these)
+### NEVER — hook-enforced (Edit/Write blocked on these extensions)
 - Edit or write source code files (*.ts, *.js, *.py, *.go, *.rs, *.tsx, *.jsx, *.vue, *.svelte, *.css, *.scss, *.html)
-- Edit or write test files (*.test.*, *.spec.*, __tests__/*)
 
 ### NEVER — policy (delegate to teammates)
+- Edit or write test files (*.test.*, *.spec.*, __tests__/*) — delegate to code-tester teammate
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate
 
@@ -106,5 +106,5 @@ You are a **coordinator**, not an implementer. During active team phases:
 - Plan files: .claude/plans/*
 - Reports: .claude/files/*
 - ADRs: docs/adrs/*
-- Config: CLAUDE.md, AGENTS.md, README.md
+- Config: CLAUDE.md, AGENTS.md, README.md, *.config.*, package.json
 - Git operations: commit, push, branch, PR creation
