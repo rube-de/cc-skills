@@ -65,7 +65,9 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description
+4. Create PR with plan summary as description. If `.claude/.cdt-issue` exists, include `Closes #N` in the PR body.
+5. After PR creation, if `.claude/.cdt-issue` exists, move the issue to "In Review":
+   `"$(cat .claude/.cdt-scripts-path)/sync-github-issue.sh" review`
 
 ## Bridge
 

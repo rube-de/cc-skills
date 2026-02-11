@@ -150,6 +150,37 @@ Also watch for:
 
 ---
 
+## GitHub Issue Integration in Agent Teams
+
+### Bridging hooks and prompts with state files
+
+Hooks receive only the tool_input JSON (e.g., `team_name`), not the user's original `$ARGUMENTS`. When a workflow needs data from arguments at hook time, the prompt-level workflow must write a state file **before** the hook fires.
+
+**Pattern**: Prompt writes `.claude/.cdt-issue` → TeamCreate hook reads it → triggers `sync-github-issue.sh`
+
+Similarly, hooks know their own script directory (`dirname "$0"`), but prompt-level instructions don't. Solution: the hook writes the absolute scripts path to `.claude/.cdt-scripts-path` so the Wrap Up can call scripts later.
+
+**Key decisions**:
+- `.cdt-issue` persists after TeamDelete — needed for `Closes #N` in the PR and the `review` action
+- `.cdt-scripts-path` is cleaned on TeamDelete — only relevant during active sessions
+- `sync-github-issue.sh` runs in background (`&`) on `start` to avoid blocking team creation
+- All GitHub API calls are best-effort (`|| exit 0`) — never block the main workflow
+
+> Source: [PR #42](https://github.com/rube-de/cc-skills/pull/42) — CDT GitHub issue integration via `sync-github-issue.sh` + `track-team-state.sh` bridge
+
+### GitHub Projects v2 requires GraphQL
+
+REST API doesn't support project board operations. The `sync-github-issue.sh` script uses three GraphQL queries:
+1. Find issue's project items (issue → projectItems)
+2. Get the Status field and its options (project → field → options)
+3. Update the field value (mutation)
+
+The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensitive matching against common project column naming conventions ("In Progress", "in-progress", "In progress").
+
+> Source: [GitHub Projects v2 API docs](https://docs.github.com/en/graphql/guides/managing-project-items)
+
+---
+
 ## Common Pitfalls
 
 | Pitfall | Symptom | Fix |

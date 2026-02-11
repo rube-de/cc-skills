@@ -10,6 +10,19 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 4. Run `git checkout -b <branch> origin/<default-branch>` to create the feature branch from the latest remote default branch
 5. Run `git pull` to ensure up-to-date
 
+## 0a. Issue Detection
+
+If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
+
+1. Extract the issue number (digits only)
+2. Run: `mkdir -p .claude && echo "N" > .claude/.cdt-issue`
+3. Fetch issue context: `gh issue view N --json title,body,labels,assignees`
+4. Use the issue title and body as additional context for planning
+
+The team creation hook will automatically assign the issue and move it to "In Progress" in GitHub Projects.
+
+If no issue reference is found, skip this step.
+
 ## 1. Generate Timestamp
 
 Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this for the plan output path. Store as `$TIMESTAMP`.
