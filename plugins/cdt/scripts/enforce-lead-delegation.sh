@@ -5,18 +5,21 @@
 # Derive branch-scoped state directory
 BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
 
-STATE_FILE=""
-if [ -n "$BRANCH" ]; then
-  STATE_FILE=".claude/${BRANCH}/.cdt-team-active"
-else
-  # Detached HEAD fallback: check if ANY branch has an active team sentinel
+if [ -z "$BRANCH" ]; then
+  # Detached HEAD: fail-closed if any team is active
   for f in .claude/*/.cdt-team-active; do
-    [ -f "$f" ] && STATE_FILE="$f" && break
+    if [ -f "$f" ]; then
+      echo "BLOCKED: Detached HEAD during active team session. Checkout a branch before editing." >&2
+      exit 2
+    fi
   done
+  exit 0
 fi
 
+STATE_FILE=".claude/${BRANCH}/.cdt-team-active"
+
 # No team active -> allow everything
-if [ -z "$STATE_FILE" ] || [ ! -f "$STATE_FILE" ]; then
+if [ ! -f "$STATE_FILE" ]; then
   exit 0
 fi
 
