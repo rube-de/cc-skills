@@ -16,7 +16,9 @@ else
 fi
 
 # No team active -> allow everything
-[ -z "$STATE_FILE" ] || [ ! -f "$STATE_FILE" ] && exit 0
+if [ -z "$STATE_FILE" ] || [ ! -f "$STATE_FILE" ]; then
+  exit 0
+fi
 
 # Require jq — fail-closed (block) if missing during active team
 if ! command -v jq >/dev/null 2>&1; then

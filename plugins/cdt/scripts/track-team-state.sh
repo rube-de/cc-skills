@@ -14,7 +14,13 @@ BRANCH_DIR=".claude/${BRANCH}"
 case "$ACTION" in
   create)
     mkdir -p "$BRANCH_DIR"
-    TEAM_NAME=$(cat | jq -r '.tool_input.team_name // "unknown"' 2>/dev/null)
+    if command -v jq >/dev/null 2>&1; then
+      TEAM_NAME=$(cat | jq -r '.tool_input.team_name // "unknown"' 2>/dev/null)
+    else
+      TEAM_NAME=""
+      cat >/dev/null  # drain stdin
+    fi
+    [ -z "$TEAM_NAME" ] && TEAM_NAME="unknown"
     echo "$TEAM_NAME" > "${BRANCH_DIR}/.cdt-team-active"
     # Store plugin scripts path for prompt-level access
     SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
