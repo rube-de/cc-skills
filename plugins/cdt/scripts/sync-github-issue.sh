@@ -37,7 +37,9 @@ esac
 REPO_INFO=$(gh repo view --json owner,name 2>/dev/null) || exit 0
 OWNER=$(echo "$REPO_INFO" | jq -r '.owner.login' 2>/dev/null)
 REPO=$(echo "$REPO_INFO" | jq -r '.name' 2>/dev/null)
-[ -z "$OWNER" ] || [ -z "$REPO" ] && exit 0
+if [ -z "$OWNER" ] || [ -z "$REPO" ]; then
+  exit 0
+fi
 
 # Find issue's project items
 ITEMS_JSON=$(gh api graphql -f query='
@@ -59,7 +61,9 @@ echo "$ITEMS_JSON" | jq -r '
   .data.repository.issue.projectItems.nodes[]
   | "\(.id) \(.project.id)"
 ' 2>/dev/null | while read -r ITEM_ID PROJECT_ID; do
-  [ -z "$ITEM_ID" ] || [ -z "$PROJECT_ID" ] && continue
+  if [ -z "$ITEM_ID" ] || [ -z "$PROJECT_ID" ]; then
+    continue
+  fi
 
   # Get Status field ID and target option ID
   FIELD_JSON=$(gh api graphql -f query='

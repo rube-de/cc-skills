@@ -16,8 +16,8 @@ Check for existing issue context (may already exist from plan phase):
 
 1. If `.claude/.cdt-issue` exists → read the issue number, skip to step 4
 2. Otherwise, check `$ARGUMENTS` and the plan file for GitHub issue references (`#N`, URL)
-3. If found, extract the number and write: `mkdir -p .claude && echo "N" > .claude/.cdt-issue`
-4. If an issue is linked, fetch details for the dev report: `gh issue view N --json title,body`
+3. If found, extract the number into `$ISSUE_NUM` and write: `mkdir -p .claude && echo "$ISSUE_NUM" > .claude/.cdt-issue`
+4. If an issue is linked, fetch details for the dev report: `gh issue view "$ISSUE_NUM" --json title,body`
 
 The team creation hook will automatically assign and move to "In Progress" if not already done.
 

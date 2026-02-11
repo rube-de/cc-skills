@@ -22,7 +22,6 @@ case "$ACTION" in
     ;;
   delete)
     rm -f "$STATE_FILE"
-    rm -f "${STATE_DIR}/.cdt-scripts-path"
     ;;
   *)
     echo "track-team-state.sh: unexpected or missing action '$ACTION'; expected 'create' or 'delete'" >&2
