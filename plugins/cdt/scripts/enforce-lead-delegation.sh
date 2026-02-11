@@ -10,6 +10,12 @@ STATE_FILE=".claude/${BRANCH}/.cdt-team-active"
 # No team active -> allow everything
 [ ! -f "$STATE_FILE" ] && exit 0
 
+# Require jq — fail-closed (block) if missing during active team
+if ! command -v jq >/dev/null 2>&1; then
+  echo "enforce-lead-delegation.sh: jq not found — blocking edit during active team (fail-closed)" >&2
+  exit 2
+fi
+
 # Parse file_path from tool input (pipe stdin directly to avoid echo fragility on large Write payloads)
 FILE_PATH=$(cat | jq -r '.tool_input.file_path // ""' 2>/dev/null)
 
@@ -28,9 +34,12 @@ case "$FILE_PATH" in
   */README.md|README.md)                   exit 0 ;;
   */package.json|package.json)             exit 0 ;;
   */tsconfig*.json|tsconfig*.json)         exit 0 ;;
-  *eslint.config.*|*vite.config.*|*jest.config.*|*vitest.config.*) exit 0 ;;
-  *next.config.*|*postcss.config.*|*tailwind.config.*) exit 0 ;;
-  *webpack.config.*|*rollup.config.*|*babel.config.*) exit 0 ;;
+  eslint.config.*|./eslint.config.*|vite.config.*|./vite.config.*) exit 0 ;;
+  jest.config.*|./jest.config.*|vitest.config.*|./vitest.config.*) exit 0 ;;
+  next.config.*|./next.config.*|postcss.config.*|./postcss.config.*) exit 0 ;;
+  tailwind.config.*|./tailwind.config.*) exit 0 ;;
+  webpack.config.*|./webpack.config.*|rollup.config.*|./rollup.config.*) exit 0 ;;
+  babel.config.*|./babel.config.*) exit 0 ;;
 esac
 
 # --- Extension blocklist (source/test files) ---

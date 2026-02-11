@@ -22,7 +22,7 @@ case "$ACTION" in
     # State files live under .claude/ which should already be gitignored
     # Sync GitHub issue state (assign + move to In Progress)
     if [ -x "$SCRIPT_DIR/sync-github-issue.sh" ]; then
-      "$SCRIPT_DIR/sync-github-issue.sh" start 2>/dev/null &
+      "$SCRIPT_DIR/sync-github-issue.sh" start >/dev/null 2>&1 &
     fi
     ;;
   delete)
