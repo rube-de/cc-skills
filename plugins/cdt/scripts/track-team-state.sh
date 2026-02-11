@@ -14,18 +14,7 @@ case "$ACTION" in
     # Store plugin scripts path for prompt-level access
     SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
     echo "$SCRIPT_DIR" > "${STATE_DIR}/.cdt-scripts-path"
-    # Ensure state files are gitignored
-    if [ -f .gitignore ]; then
-      if ! grep -qF '.claude/.cdt-team-active' .gitignore; then
-        printf '\n.claude/.cdt-team-active\n' >> .gitignore
-      fi
-      if ! grep -qF '.claude/.cdt-issue' .gitignore; then
-        printf '.claude/.cdt-issue\n' >> .gitignore
-      fi
-      if ! grep -qF '.claude/.cdt-scripts-path' .gitignore; then
-        printf '.claude/.cdt-scripts-path\n' >> .gitignore
-      fi
-    fi
+    # State files live under .claude/ which should already be gitignored
     # Sync GitHub issue state (assign + move to In Progress)
     if [ -x "$SCRIPT_DIR/sync-github-issue.sh" ]; then
       "$SCRIPT_DIR/sync-github-issue.sh" start 2>/dev/null &
@@ -34,6 +23,10 @@ case "$ACTION" in
   delete)
     rm -f "$STATE_FILE"
     rm -f "${STATE_DIR}/.cdt-scripts-path"
+    ;;
+  *)
+    echo "track-team-state.sh: unexpected or missing action '$ACTION'; expected 'create' or 'delete'" >&2
+    exit 1
     ;;
 esac
 

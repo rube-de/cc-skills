@@ -186,7 +186,7 @@ Summarize: task count, waves, key decisions, risks.
 - Designing architecture yourself instead of delegating to architect teammate
 - Writing ADRs yourself instead of having the architect teammate write them
 - Validating requirements yourself instead of delegating to PM teammate
-- Resolving architect<->PM disagreements by implementing your own design
+- Resolving architect↔PM disagreements by implementing your own design
 
 ## Rules
 

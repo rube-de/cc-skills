@@ -192,6 +192,9 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Manual version edits | Conflicts with semantic-release | Never edit versions — CI handles it |
 | `\|\|` chaining for tool fallback | Double runs, mixed output when primary tool finds issues | Use `command -v` to select tool by availability |
 | `\s` in grep patterns | No match on POSIX grep | Use `[[:space:]]` instead |
+| Mixed `\|\|`/`&&` guards | Ambiguous precedence in POSIX shell | Use explicit `if/fi` for compound conditions |
+| Redundant `.gitignore` appends | Dirty working tree when parent dir already ignored | Check if parent directory is already in `.gitignore` before appending |
+| `<->` in Markdown | Rendered as broken HTML tag | Use `↔` Unicode arrow or wrap in backticks |
 | Brace expansion in `--include` | grep ignores the filter silently | Use separate `--include` flags per extension |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40)

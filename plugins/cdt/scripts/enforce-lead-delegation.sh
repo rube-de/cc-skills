@@ -12,7 +12,9 @@ INPUT=$(cat)
 FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null)
 
 # No file path -> allow (shouldn't happen for Edit/Write)
-[ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ] && exit 0
+if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
+  exit 0
+fi
 
 # --- Path allowlist (lead may edit these during active team) ---
 case "$FILE_PATH" in

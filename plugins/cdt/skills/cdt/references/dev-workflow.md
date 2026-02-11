@@ -248,7 +248,7 @@ If commit & push only:
 
 - Editing source files directly instead of messaging developer teammate
 - Running tests directly instead of messaging code-tester teammate
-- Fixing bugs yourself when developer<->tester cycles haven't been exhausted
+- Fixing bugs yourself when developer↔tester cycles haven't been exhausted
 - Reviewing code yourself instead of messaging reviewer teammate
 - "Quick fixing" a file because it's faster than delegating
 
