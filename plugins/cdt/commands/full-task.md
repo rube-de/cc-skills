@@ -11,7 +11,7 @@ description: "Create an agent team for full workflow: plan (Architect teammate +
 
 Two-phase orchestration: plan team → user approval → dev team. One team per session, so plan team must be fully cleaned up before dev team starts.
 
-```
+```text
 Phase 1: plan-team               Phase 2: dev-team
 ┌──────────────────────┐         ┌───────────────────────────┐
 │  Lead (You)          │         │  Lead (You)               │
@@ -65,7 +65,7 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"` and include `Closes #$ISSUE_NO` in the PR body.
+4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
 5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 6. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`

@@ -64,10 +64,14 @@ query($owner: String!, $repo: String!, $num: Int!) {
 echo "$ITEMS_JSON" | jq -r '
   .data.repository.issue.projectItems.nodes[]
   | "\(.id) \(.project.id)"
-' 2>/dev/null | while read -r ITEM_ID PROJECT_ID; do
-  if [ -z "$ITEM_ID" ] || [ -z "$PROJECT_ID" ]; then
+' 2>/dev/null | while IFS= read -r line; do
+  # Validate exactly two space-separated fields
+  set -- $line
+  if [ "$#" -ne 2 ]; then
     continue
   fi
+  ITEM_ID=$1
+  PROJECT_ID=$2
 
   # Get Status field ID and target option ID
   FIELD_JSON=$(gh api graphql -f query='
