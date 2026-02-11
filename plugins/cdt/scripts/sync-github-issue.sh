@@ -6,7 +6,11 @@
 # Best-effort — always exits 0, never blocks
 
 ACTION="${1:-start}"
-ISSUE_FILE=".claude/.cdt-issue"
+
+# Derive branch-scoped issue file
+BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
+[ -z "$BRANCH" ] && exit 0
+ISSUE_FILE=".claude/${BRANCH}/.cdt-issue"
 
 # No issue file → nothing to sync
 [ ! -f "$ISSUE_FILE" ] && exit 0
@@ -98,7 +102,7 @@ echo "$ITEMS_JSON" | jq -r '
       projectId: $pid, itemId: $iid, fieldId: $fid
       value: { singleSelectOptionId: $oid }
     }) { projectV2Item { id } }
-  }' -f pid="$PROJECT_ID" -f iid="$ITEM_ID" -f fid="$FIELD_ID" -f oid="$OPTION_ID" 2>/dev/null
+  }' -f pid="$PROJECT_ID" -f iid="$ITEM_ID" -f fid="$FIELD_ID" -f oid="$OPTION_ID" >/dev/null 2>&1
 done
 
 exit 0

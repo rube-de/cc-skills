@@ -51,10 +51,10 @@ Automatically finalize without user interaction:
 1. Stage all changed files
 2. Commit with conventional commit message based on task
 3. Push branch to remote
-4. Create PR via `gh pr create` with plan summary as description. If `.claude/.cdt-issue` exists, include `Closes #N` in the PR body.
-5. After PR creation, if `.claude/.cdt-issue` exists, move the issue to "In Review":
-   `"$(cat .claude/.cdt-scripts-path)/sync-github-issue.sh" review`
-6. Clean up issue state: `rm -f .claude/.cdt-issue .claude/.cdt-scripts-path`
+4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `.claude/$BRANCH/.cdt-issue` exists, include `Closes #N` in the PR body.
+5. After PR creation, if the branch-scoped issue file exists, move the issue to "In Review":
+   `"$(cat .claude/$BRANCH/.cdt-scripts-path)/sync-github-issue.sh" review`
+6. Clean up branch state: `rm -rf .claude/$BRANCH`
 7. Print PR URL to user
 
 ## Bridge

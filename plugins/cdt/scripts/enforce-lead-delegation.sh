@@ -2,7 +2,10 @@
 # Blocks lead from editing source files during active team sessions
 # Called on PreToolUse for Edit and Write tools
 
-STATE_FILE=".claude/.cdt-team-active"
+# Derive branch-scoped state directory
+BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
+[ -z "$BRANCH" ] && exit 0
+STATE_FILE=".claude/${BRANCH}/.cdt-team-active"
 
 # No team active -> allow everything
 [ ! -f "$STATE_FILE" ] && exit 0

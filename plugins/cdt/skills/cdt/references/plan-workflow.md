@@ -12,14 +12,16 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 
 ## 0a. Issue Detection
 
+**Branch-scoped state**: CDT state lives in `.claude/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`
+
 If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
 
 1. Extract the issue number (digits only) and store it in `$ISSUE_NUM`
-2. Run: `mkdir -p .claude && echo "$ISSUE_NUM" > .claude/.cdt-issue`
+2. Write: `mkdir -p .claude/$BRANCH && echo "$ISSUE_NUM" > .claude/$BRANCH/.cdt-issue`
 3. Fetch issue context: `gh issue view "$ISSUE_NUM" --json title,body,labels,assignees`
 4. Use the issue title and body as additional context for planning
 
-The team creation hook will automatically assign the issue and move it to "In Progress" in GitHub Projects.
+The team creation hook will attempt to assign the issue and move it to "In Progress" in GitHub Projects (best-effort — may no-op if no project item exists or permissions are insufficient).
 
 If no issue reference is found, skip this step.
 

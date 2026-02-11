@@ -12,14 +12,14 @@ Detailed execution steps for the development phase. The Lead reads this before r
 
 ## 0a. Issue Detection
 
-Check for existing issue context (may already exist from plan phase):
+**Branch-scoped state**: CDT state lives in `.claude/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`
 
-1. If `.claude/.cdt-issue` exists → read the issue number, skip to step 4
-2. Otherwise, check `$ARGUMENTS` and the plan file for GitHub issue references (`#N`, URL)
-3. If found, extract the number into `$ISSUE_NUM` and write: `mkdir -p .claude && echo "$ISSUE_NUM" > .claude/.cdt-issue`
-4. If an issue is linked, fetch details for the dev report: `gh issue view "$ISSUE_NUM" --json title,body`
+1. First, check `$ARGUMENTS` and the plan file for GitHub issue references (`#N`, URL).
+2. If found, extract the number into `$ISSUE_NUM` and write/overwrite: `mkdir -p .claude/$BRANCH && echo "$ISSUE_NUM" > .claude/$BRANCH/.cdt-issue`
+3. Otherwise, if `.claude/$BRANCH/.cdt-issue` exists → read the issue number from it into `$ISSUE_NUM`.
+4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for the dev report: `gh issue view "$ISSUE_NUM" --json title,body`
 
-The team creation hook will automatically assign and move to "In Progress" if not already done.
+The team creation hook will attempt to assign and move to "In Progress" (best-effort — may no-op if no project item exists).
 
 ## 1. Parse Plan
 
@@ -235,9 +235,9 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description. If `.claude/.cdt-issue` exists, include `Closes #N` in the PR body.
-5. After PR creation, if `.claude/.cdt-issue` exists, move the issue to "In Review":
-   `"$(cat .claude/.cdt-scripts-path)/sync-github-issue.sh" review`
+4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `.claude/$BRANCH/.cdt-issue` exists, include `Closes #N` in the PR body.
+5. After PR creation, if the branch-scoped issue file exists, move the issue to "In Review":
+   `"$(cat .claude/$BRANCH/.cdt-scripts-path)/sync-github-issue.sh" review`
 
 If commit & push only:
 1. Stage changed files

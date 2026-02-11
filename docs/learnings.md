@@ -156,13 +156,14 @@ Also watch for:
 
 Hooks receive only the tool_input JSON (e.g., `team_name`), not the user's original `$ARGUMENTS`. When a workflow needs data from arguments at hook time, the prompt-level workflow must write a state file **before** the hook fires.
 
-**Pattern**: Prompt writes `.claude/.cdt-issue` → TeamCreate hook reads it → triggers `sync-github-issue.sh`
+**Pattern**: Prompt writes `.claude/<branch>/.cdt-issue` → TeamCreate hook reads it → triggers `sync-github-issue.sh`
 
-Similarly, hooks know their own script directory (`dirname "$0"`), but prompt-level instructions don't. Solution: the hook writes the absolute scripts path to `.claude/.cdt-scripts-path` so the Wrap Up can call scripts later.
+All CDT state is branch-scoped under `.claude/<branch-slug>/` (where `<branch-slug>` = branch name with `/` → `-`). This prevents cross-branch contamination — running `/cdt:plan-task` on a new branch won't find stale state from a previous issue's branch.
 
 **Key decisions**:
-- `.cdt-issue` persists after TeamDelete — needed for `Closes #N` in the PR and the `review` action
-- `.cdt-scripts-path` persists after TeamDelete — needed for Wrap Up to call `sync-github-issue.sh review` (Wrap Up runs after Cleanup)
+- Branch-scoped directory (`.claude/<branch>/`) holds all 3 state files: `.cdt-issue`, `.cdt-team-active`, `.cdt-scripts-path`
+- `.cdt-team-active` is cleaned on TeamDelete; `.cdt-issue` and `.cdt-scripts-path` persist for Wrap Up
+- Wrap Up cleans up the entire branch directory: `rm -rf .claude/$BRANCH`
 - `sync-github-issue.sh` runs in background (`&`) on `start` to avoid blocking team creation
 - All GitHub API calls are best-effort (`|| exit 0`) — never block the main workflow
 
