@@ -85,7 +85,7 @@ The defense-in-depth pattern (inline critical rules as reinforcement) isn't limi
 
 When a lead agent bypasses delegation and edits source code directly, prompt instructions alone are insufficient — the model treats them as advisory. Use **PreToolUse hooks** as hard guardrails:
 
-1. **State tracking**: A `TeamCreate`/`TeamDelete` hook manages a state file (`.claude/.cdt-team-active`) that signals whether a team session is active
+1. **State tracking**: A `TeamCreate`/`TeamDelete` hook manages a branch-scoped state file (`.claude/<branch-slug>/.cdt-team-active`) that signals whether a team session is active
 2. **Tool blocking**: `Edit`/`Write` hooks check the state file, parse `file_path` from tool input, and exit 2 to block source file edits
 3. **Allowlist + blocklist**: Two-tier filtering — path allowlist (plans, config, ADRs always allowed) then extension blocklist (`.ts`, `.js`, `.py`, etc. blocked)
 4. **Soft reinforcement**: Prompt-level "Lead Identity" section + anti-patterns in workflow docs reduce how often hooks need to fire
@@ -197,5 +197,6 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Redundant `.gitignore` appends | Dirty working tree when parent dir already ignored | Check if parent directory is already in `.gitignore` before appending |
 | `<->` in Markdown | Rendered as broken HTML tag | Use `↔` Unicode arrow or wrap in backticks |
 | Brace expansion in `--include` | grep ignores the filter silently | Use separate `--include` flags per extension |
+| Blanket `*.config.*` in allowlist | Matches source files like `src/db.config.ts`, bypassing blocklist | Enumerate explicit tool config patterns (`eslint.config.*`, `vite.config.*`, etc.) |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40)

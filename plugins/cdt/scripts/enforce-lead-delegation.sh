@@ -10,9 +10,8 @@ STATE_FILE=".claude/${BRANCH}/.cdt-team-active"
 # No team active -> allow everything
 [ ! -f "$STATE_FILE" ] && exit 0
 
-# Parse file_path from tool input
-INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // ""' 2>/dev/null)
+# Parse file_path from tool input (pipe stdin directly to avoid echo fragility on large Write payloads)
+FILE_PATH=$(cat | jq -r '.tool_input.file_path // ""' 2>/dev/null)
 
 # No file path -> allow (shouldn't happen for Edit/Write)
 if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
@@ -27,8 +26,11 @@ case "$FILE_PATH" in
   */CLAUDE.md|CLAUDE.md)                   exit 0 ;;
   */AGENTS.md|AGENTS.md)                   exit 0 ;;
   */README.md|README.md)                   exit 0 ;;
-  *.config.*|*.config)                     exit 0 ;;
   */package.json|package.json)             exit 0 ;;
+  */tsconfig*.json|tsconfig*.json)         exit 0 ;;
+  *eslint.config.*|*vite.config.*|*jest.config.*|*vitest.config.*) exit 0 ;;
+  *next.config.*|*postcss.config.*|*tailwind.config.*) exit 0 ;;
+  *webpack.config.*|*rollup.config.*|*babel.config.*) exit 0 ;;
 esac
 
 # --- Extension blocklist (source/test files) ---

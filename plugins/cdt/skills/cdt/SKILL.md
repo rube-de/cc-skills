@@ -106,5 +106,6 @@ You are a **coordinator**, not an implementer. During active team phases:
 - Plan files: .claude/plans/*
 - Reports: .claude/files/*
 - ADRs: docs/adrs/*
-- Config: CLAUDE.md, AGENTS.md, README.md, *.config.*, package.json
+- Config: CLAUDE.md, AGENTS.md, README.md, package.json, tsconfig*.json
+- Tool configs: eslint.config.*, vite.config.*, jest.config.*, vitest.config.*, next.config.*, postcss.config.*, tailwind.config.*, webpack.config.*, rollup.config.*, babel.config.*
 - Git operations: commit, push, branch, PR creation
