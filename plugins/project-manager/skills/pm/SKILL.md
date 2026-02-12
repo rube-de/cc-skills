@@ -11,6 +11,7 @@ user-invocable: true
 argument-hint: "[next | update | -quick <description>]"
 allowed-tools:
   - Task
+  - Skill
   - Read
   - Write
   - Edit
