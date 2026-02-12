@@ -27,7 +27,7 @@ Audit open GitHub issues for staleness, drift, and hygiene problems. Categorize 
 
 ## Workflow
 
-```
+```text
 1. Auth Check → 2. Detect Repo → 3. Fetch Issues → 4. Pass 1: Metadata Audit
 → 5. Pass 2: Codebase-Aware Audit → 6. Categorize → 7. Present Report
 → 8. Interactive Remediation → 9. Execute Actions → 10. Summary
@@ -124,7 +124,7 @@ Sort issues into five categories based on findings:
 
 Show a structured report by category:
 
-```
+```markdown
 ## Issue Audit Report
 
 ### Close Candidates (3 issues)
@@ -169,7 +169,7 @@ Show a structured report by category:
 For each non-healthy category, use `AskUserQuestion` to get approval:
 
 **Close Candidates:**
-```
+```text
 Question: "How should I handle close candidates?"
 Options:
   - Close all 3 with a comment
@@ -178,7 +178,7 @@ Options:
 ```
 
 **Update Needed:**
-```
+```text
 Question: "Should I fix the metadata issues?"
 Options:
   - Fix all automatically
@@ -187,7 +187,7 @@ Options:
 ```
 
 **Needs Triage:**
-```
+```text
 Question: "Should I add missing labels?"
 Options:
   - Add suggested labels to all
@@ -196,7 +196,7 @@ Options:
 ```
 
 **Stale Issues:**
-```
+```text
 Question: "How should I handle stale issues?"
 Options:
   - Add 'stale' label to all

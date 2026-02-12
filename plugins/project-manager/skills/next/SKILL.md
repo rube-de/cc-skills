@@ -25,7 +25,7 @@ Analyze open GitHub issues, build a dependency graph, and recommend the highest-
 
 ## Workflow
 
-```
+```text
 1. Auth Check → 2. Detect Repo → 3. Fetch Issues → 4. Build Dependency Graph
 → 5. Detect Cycles → 6. Rank Issues → 7. Present Recommendations → 8. Select & Assign
 ```
@@ -112,7 +112,7 @@ Sort by total score descending. Break ties by issue number (lower = older = firs
 
 Show the top 3-5 issues in a structured table:
 
-```
+```text
 ## Recommended Next Issues
 
 | Rank | Issue | Title | Score | Key Factor |
@@ -136,7 +136,7 @@ For each recommendation, show a brief rationale:
 
 Use `AskUserQuestion` to let the user choose:
 
-```
+```text
 Question: "Which issue do you want to work on?"
 Options:
   - #42: Fix auth token refresh (Score: 24)

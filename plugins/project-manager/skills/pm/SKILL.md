@@ -39,7 +39,7 @@ GitHub issue lifecycle: **create**, **triage**, and **audit**.
 
 ## Usage
 
-```
+```text
 /pm                       → Create a new issue (interactive flow)
 /pm -quick fix the login  → Create issue with smart defaults
 /pm next                  → Triage: recommend next issue to work on
@@ -93,7 +93,7 @@ Parse the first argument for `-quick`. If present, activate quick mode. Everythi
 
 ### Core Workflow
 
-```
+```text
 1. Classify → 2. Discover → 3. Challenge → 4. Explore Codebase → 5. Draft → 6. Review → 7. Create
 ```
 
@@ -101,7 +101,7 @@ Parse the first argument for `-quick`. If present, activate quick mode. Everythi
 
 Use `AskUserQuestion` to determine the issue type:
 
-```
+```text
 Question: "What type of work is this?"
 Options:
   - Bug: Something is broken or behaving incorrectly
