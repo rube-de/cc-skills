@@ -1,3 +1,18 @@
+# [1.10.0](https://github.com/rube-de/cc-skills/compare/v1.9.0...v1.10.0) (2026-02-12)
+
+
+### Bug Fixes
+
+* **pm:** add language tags to fenced code blocks and reply to PR comments ([dac042a](https://github.com/rube-de/cc-skills/commit/dac042af25a1d81647c3d4f21f5fe0f14dbc5dba))
+* **pm:** add Skill to allowed-tools for sub-skill routing ([46d5b5f](https://github.com/rube-de/cc-skills/commit/46d5b5f7a427d8498a91577ac8be224a295ef7a7))
+* **pm:** address council review findings for scoring, placeholders, and routing ([a993c5f](https://github.com/rube-de/cc-skills/commit/a993c5f16fb61782ec0069c33a341c608e68577f)), closes [N/#M](https://github.com/rube-de/cc-skills/issues/M) [#M](https://github.com/rube-de/cc-skills/issues/M)
+* **pm:** address PR review comments for shell safety and docs accuracy ([0f64de3](https://github.com/rube-de/cc-skills/commit/0f64de33bb1c0e8bc3b46226633911934d5f63fe)), closes [#N](https://github.com/rube-de/cc-skills/issues/N)
+
+
+### Features
+
+* **pm:** convert project-manager to multi-skill router with next and update sub-skills ([b299c16](https://github.com/rube-de/cc-skills/commit/b299c16e88f8086d01225b6d7883f2df899cff22))
+
 # [1.9.0](https://github.com/rube-de/cc-skills/compare/v1.8.0...v1.9.0) (2026-02-11)
 
 
