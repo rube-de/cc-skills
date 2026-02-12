@@ -11,7 +11,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 |--------|----------|---------|-------------|
 | [council](./plugins/council/) | Code Review | Plugin or Skill | Orchestrate Gemini, Codex, Qwen, GLM-4.7, and Kimi K2.5 for consensus-driven reviews |
 | [cdt](./plugins/cdt/) | Development | Plugin only | Multi-agent dev team with four modes: plan, dev, full, and auto via Agent Teams |
-| [project-manager](./plugins/project-manager/) | Productivity | Plugin or Skill | Interactive issue creation optimized for LLM agent teams |
+| [project-manager](./plugins/project-manager/) | Productivity | Plugin or Skill | GitHub issue lifecycle: create, triage, and audit issues for LLM agent teams |
 | [plugin-dev](./plugins/plugin-dev/) | Development | Plugin or Skill | Scaffold plugins, validate SKILL.md frontmatter, audit hooks |
 | [temporal](./plugins/temporal/) | Development | Plugin or Skill | Temporal durable execution: CLI, SDK patterns, workflow orchestration |
 | [doppler](./plugins/doppler/) | DevOps | Plugin or Skill | Doppler secrets management: CLI, secrets injection, CI/CD integrations |
@@ -44,7 +44,7 @@ This clones the marketplace to `~/.claude/plugins/marketplaces/rube-cc-skills/`.
 </details>
 
 > [!TIP]
-> After installing, restart Claude Code (fresh session) to activate the plugins. Type `/` and look for `/council`, `/cdt`, `/project-manager`, etc.
+> After installing, restart Claude Code (fresh session) to activate the plugins. Type `/` and look for `/council`, `/cdt`, `/pm`, etc.
 
 <details>
 <summary><strong>Alternative: Install from the terminal</strong></summary>
@@ -172,8 +172,8 @@ cc-skills/
 │   │   ├── hooks/           # Session start hooks
 │   │   ├── scripts/         # Agent team checks
 │   │   └── skills/          # cdt
-│   ├── project-manager/     # Issue creation
-│   │   └── skills/          # project-manager
+│   ├── project-manager/     # Issue lifecycle
+│   │   └── skills/          # pm, next, update
 │   ├── plugin-dev/          # Plugin development tools
 │   │   ├── commands/        # Scaffolding command
 │   │   ├── scripts/         # Hook audit script

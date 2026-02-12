@@ -156,6 +156,27 @@ fi
 
 This separates "is the tool installed?" from "did the tool find problems?" and ensures only one tool runs.
 
+### `#N` in bash code blocks is a shell comment
+
+Issue references like `#42` are valid in GitHub Markdown, but in bash code blocks they're treated as **comments** — everything from `#` onward is silently stripped:
+
+```bash
+# BAD — bash parses #42 as a comment, effective command is just "gh issue close"
+gh issue close #42 --comment "Closing as resolved."
+
+# GOOD — bare number, no ambiguity
+gh issue close 42 --comment "Closing as resolved."
+
+# GOOD — placeholder for LLM templates
+gh issue close ISSUE_NUMBER --comment "Closing as resolved."
+```
+
+This is especially dangerous in SKILL.md bash templates because LLMs mimic the template format. If the template shows `gh issue edit #N`, the LLM may produce `gh issue edit #42` which silently becomes `gh issue edit`.
+
+The `gh` CLI accepts bare issue numbers — the `#` prefix is never needed.
+
+> Source: [PR #43](https://github.com/rube-de/cc-skills/pull/43) — Copilot caught this across 6 locations in `next/SKILL.md` and `update/SKILL.md`. Confirmed via `bash -c 'echo gh issue close #42 --comment "reason"'` → outputs `gh issue close`.
+
 Also watch for:
 - **`grep` portability**: `\s` isn't POSIX — use `[[:space:]]`; brace expansion (`*.{ts,js}`) doesn't work in `--include` — use separate `--include` flags
 - **Unguarded command sequences**: listing multiple commands without `if`/`elif` causes the agent to run all of them, not just the first match
@@ -215,5 +236,56 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Missing tool dependency in hook | Hook silently allows action (fail-open) | `command -v` check → `exit 2` with error when tool is missing |
 | Empty variable → early exit in guard | Security bypass via unexpected state (e.g., detached HEAD) | Block and explain; don't exit 0 when context is ambiguous |
 | Glob fallback picks arbitrary state | Wrong branch's sentinel used for enforcement | Fail-closed: detect ambiguity, block, require explicit action |
+| `#N` in bash code blocks | `gh issue close #42` silently becomes `gh issue close` | Use bare numbers or `ISSUE_NUMBER` placeholder — `gh` CLI doesn't need `#` |
+| Router says "invoke with Skill" but `Skill` not in `allowed-tools` | Space-syntax dispatch (`/pm next`) may be blocked | Add `Skill` to `allowed-tools` if routing explicitly uses it |
 
-> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41)
+> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43)
+
+---
+
+## Multi-Skill Router Patterns
+
+### Router vs sub-skill model invocation depends on usage pattern
+
+When converting a single-skill plugin to a multi-skill router, `disable-model-invocation` should be set based on **how users express intent**, not on a blanket rule:
+
+**Keep model invocation enabled** when users naturally express the intent in conversation:
+- "Create an issue for this bug" → `/pm` (create)
+- "What should I work on next?" → `/pm:next`
+- "Clean up the old issues" → `/pm:update`
+
+**Disable model invocation** when the skill is purely tool-like and only invoked explicitly:
+- `/dlc:security` — nobody says "run a security scan" to a PM
+- `/dlc:perf` — explicitly commanded, not conversationally triggered
+
+The `description` field's trigger phrases drive model invocation matching. If the phrases match natural language patterns, keep it enabled. If they only match explicit commands, disable it.
+
+**Bad** — blanket rule from DLC applied to PM:
+```yaml
+disable-model-invocation: true  # Copied from DLC without considering usage
+```
+
+**Good** — PM sub-skills keep invocation enabled with natural trigger phrases:
+```yaml
+description: >-
+  Triage open GitHub issues and recommend what to work on next. ...
+  Triggers: what should I work on next, triage backlog, next issue...
+user-invocable: true  # Users naturally say these things
+```
+
+> Source: [Issue #42](https://github.com/rube-de/cc-skills/issues/42) — PM router conversion. DLC uses `disable-model-invocation: true` for all sub-skills; PM intentionally diverges because its sub-skills map to natural language.
+
+### Routers that explicitly dispatch need `Skill` in `allowed-tools`
+
+If a router skill's instructions say "invoke the sub-skill with `Skill`", then `Skill` **must** be in `allowed-tools`. Without it, the space-syntax dispatch (`/pm next`) may be blocked.
+
+**Don't compare blindly across routers.** DLC's router (`allowed-tools: [Read, Bash]`) works without `Skill` because it never explicitly instructs the LLM to call the `Skill` tool — it relies on the user typing colon-syntax (`/dlc:security`) which the framework dispatches directly. PM's router explicitly says "invoke it with `Skill`", so it needs the permission.
+
+| Router style | Dispatches via | Needs `Skill`? |
+|---|---|---|
+| Passive (DLC) | User types `/dlc:security` → framework dispatch | No |
+| Active (PM) | LLM reads `/pm next` → calls `Skill` tool | **Yes** |
+
+**Rule**: If your routing section contains "invoke with `Skill`", add `Skill` to `allowed-tools`. If you only document colon-syntax, you don't need it.
+
+> Source: [PR #43](https://github.com/rube-de/cc-skills/pull/43) — CodeRabbit caught this; initially dismissed based on flawed DLC comparison. Confirmed by checking `jules-review` which already uses `Skill` in `allowed-tools`.

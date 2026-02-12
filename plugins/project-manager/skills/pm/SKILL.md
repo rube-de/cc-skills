@@ -1,14 +1,16 @@
 ---
-name: project-manager
+name: pm
 description: >-
-  Interactive issue creation optimized for LLM agent teams. Guides users through
-  type-specific question flows (bug, feature, epic, refactor, new project, chore,
-  research spike) and produces structured, machine-parseable GitHub issues that
-  AI coding agents can execute autonomously. Triggers: create issue, plan work,
-  new task, project manager, write ticket, draft issue, plan feature, plan project,
-  start project, create ticket, pm.
+  Project manager for GitHub issues: create structured issues optimized for LLM
+  agent teams, triage and recommend what to work on next, or audit and clean up
+  stale issues. Triggers: create issue, plan work, new task, project manager,
+  write ticket, draft issue, plan feature, plan project, start project, create
+  ticket, pm.
+user-invocable: true
+argument-hint: "[next | update | -quick <description>]"
 allowed-tools:
   - Task
+  - Skill
   - Read
   - Write
   - Edit
@@ -20,10 +22,48 @@ allowed-tools:
   - WebFetch
 metadata:
   author: claude-pm
-  version: "1.0"
+  version: "2.0"
 ---
 
-# Project Manager Skill
+# Project Manager
+
+GitHub issue lifecycle: **create**, **triage**, and **audit**.
+
+## Sub-Skills
+
+| Skill | Command | Description |
+|-------|---------|-------------|
+| Create | `/pm` or `/pm -quick <desc>` | Create structured issues optimized for agent execution |
+| Next | `/pm:next` | Triage open issues — recommend what to work on next |
+| Update | `/pm:update` | Audit open issues — find stale, orphaned, and drift |
+
+## Usage
+
+```text
+/pm                       → Create a new issue (interactive flow)
+/pm -quick fix the login  → Create issue with smart defaults
+/pm next                  → Triage: recommend next issue to work on
+/pm:next                  → Same (alternate syntax)
+/pm update                → Audit: find stale/orphaned issues
+/pm:update                → Same (alternate syntax)
+```
+
+## Routing
+
+Parse the first argument:
+
+| Argument | Route to |
+|----------|----------|
+| `next` | `/pm:next` sub-skill |
+| `update` | `/pm:update` sub-skill |
+| `-quick [desc]` | Create Issue Workflow (quick mode) below |
+| anything else / empty | Create Issue Workflow below |
+
+If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. Otherwise, continue with the Create Issue Workflow below.
+
+---
+
+## Create Issue Workflow
 
 Create structured GitHub issues optimized for **LLM agent execution first, human readability second**.
 
@@ -31,7 +71,7 @@ Every issue produced by this skill follows the Agent-Optimized Issue Format — 
 with consistent headers, machine-parseable acceptance criteria, explicit file paths, verification
 methods, and clear scope boundaries.
 
-## Activation
+### Activation
 
 This skill activates when users want to create work items for an agent team. Recognize these signals:
 
@@ -41,27 +81,27 @@ This skill activates when users want to create work items for an agent team. Rec
 | Implicit | "we need to fix...", "let's add...", "can we refactor..." |
 | Shorthand | "/pm", "project manager", "create task" |
 
-## Arguments
+### Arguments
 
 | Flag | Description |
 |------|-------------|
 | `-quick` | Quick mode — propose smart defaults instead of blocking on ambiguity |
 
-**Usage:** `/project-manager -quick add a delete button to user profiles`
+**Usage:** `/pm -quick add a delete button to user profiles`
 
 Parse the first argument for `-quick`. If present, activate quick mode. Everything after the flag is the task description.
 
-## Core Workflow
+### Core Workflow
 
-```
+```text
 1. Classify → 2. Discover → 3. Challenge → 4. Explore Codebase → 5. Draft → 6. Review → 7. Create
 ```
 
-### Step 1: Classify Issue Type
+#### Step 1: Classify Issue Type
 
 Use `AskUserQuestion` to determine the issue type:
 
-```
+```text
 Question: "What type of work is this?"
 Options:
   - Bug: Something is broken or behaving incorrectly
@@ -75,7 +115,7 @@ Options:
 If the user's initial message already makes the type obvious (e.g., "there's a crash when..."),
 skip this step and classify automatically. State your classification and proceed.
 
-### Step 2: Type-Specific Discovery
+#### Step 2: Type-Specific Discovery
 
 Run the question flow for the classified type. See [references/WORKFLOWS.md](references/WORKFLOWS.md).
 
@@ -90,7 +130,7 @@ Run the question flow for the classified type. See [references/WORKFLOWS.md](ref
   If a user says "fix the bug", ask: What exact behavior? What's expected vs actual? What triggers it?
   Treat every underspecified detail as a blocker.
 
-### Step 3: Requirements Challenge
+#### Step 3: Requirements Challenge
 
 After discovery, systematically check for underspecified requirements. See the
 **Requirements Challenge Checklist** in [references/WORKFLOWS.md](references/WORKFLOWS.md)
@@ -129,7 +169,7 @@ for the full dimension list.
 > - States: default (red outline), hover (red fill), loading (spinner), disabled (greyed, no permission)
 > - Errors: toast notification with retry option
 
-### Step 4: Codebase Exploration
+#### Step 4: Codebase Exploration
 
 Before drafting, explore the codebase to enrich the issue with concrete details:
 
@@ -141,7 +181,7 @@ Before drafting, explore the codebase to enrich the issue with concrete details:
 This step is critical — agents executing the issue will perform better with accurate file paths
 and pattern-aware implementation hints.
 
-### Step 5: Draft the Issue
+#### Step 5: Draft the Issue
 
 Use the appropriate template from [references/TEMPLATES.md](references/TEMPLATES.md).
 
@@ -157,7 +197,7 @@ Use the appropriate template from [references/TEMPLATES.md](references/TEMPLATES
 
 Write the draft to a temp file: `/tmp/issue-body.md`
 
-### Step 6: Review
+#### Step 6: Review
 
 Present the draft to the user with a summary:
 - Title
@@ -169,7 +209,7 @@ Ask: "Ready to create this issue, or want to adjust anything?"
 
 For epics: also present the sub-issue breakdown before creating.
 
-### Step 7: Create
+#### Step 7: Create
 
 ```bash
 gh issue create --repo OWNER/REPO \
@@ -195,7 +235,7 @@ For epics: create the parent issue first, then sub-issues with `Part of #EPIC_NU
 
 Report all created issue URLs to the user.
 
-## Quality Checklist
+### Quality Checklist
 
 Before creating any issue, verify:
 
@@ -208,7 +248,7 @@ Before creating any issue, verify:
 - [ ] Uncertainty is marked with `[NEEDS CLARIFICATION: ...]`
 - [ ] Agent-decided items are marked with `[AGENT-DECIDED: rationale]`
 
-## Duplicate Check
+### Duplicate Check
 
 Before creating, always search for existing issues:
 
@@ -218,7 +258,7 @@ gh issue list --search "keywords" --state all --limit 10
 
 If similar issue exists → inform user, suggest linking instead of duplicating.
 
-## Repo Detection
+### Repo Detection
 
 Detect the current repo automatically:
 
@@ -228,7 +268,7 @@ gh repo view --json nameWithOwner -q .nameWithOwner
 
 If not in a git repo or no remote → ask user for the target repo.
 
-## Templates & Workflows
+### Templates & Workflows
 
 - [references/WORKFLOWS.md](references/WORKFLOWS.md) — Type-specific question flows
 - [references/TEMPLATES.md](references/TEMPLATES.md) — Agent-optimized issue templates

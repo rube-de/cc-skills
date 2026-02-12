@@ -50,7 +50,7 @@
     },
     {
       "name": "project-manager",
-      "description": "Interactive issue creation optimized for LLM agent teams with type-specific question flows and structured GitHub issues",
+      "description": "GitHub issue lifecycle: create structured issues for LLM agent teams, triage and recommend next issues, audit and clean up stale backlogs",
       "version": "1.9.0",
       "source": "./plugins/project-manager",
       "category": "productivity",
@@ -62,7 +62,10 @@
         "project-management",
         "github-issues",
         "issue-creation",
-        "task-planning"
+        "task-planning",
+        "issue-triage",
+        "issue-audit",
+        "backlog-management"
       ]
     },
     {
