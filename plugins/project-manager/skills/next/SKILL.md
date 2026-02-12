@@ -71,7 +71,7 @@ Build two maps:
 - `blockedBy[issue] → Set<issue>` — what blocks this issue
 - `blocks[issue] → Set<issue>` — what this issue unblocks
 
-Filter out references to closed issues — they no longer block anything.
+Filter out references to closed issues — they no longer block anything. Since Step 3 only fetches open issues, treat any referenced issue number absent from the open set as resolved. For higher confidence, verify ambiguous references via `gh issue view N --json state -q .state`.
 
 **Edge case — no dependency markers found:** Skip Steps 5-6 ranking adjustments for dependency weight. Rank purely on priority, type, age, and milestone.
 
@@ -145,10 +145,10 @@ Options:
 
 After selection:
 
-1. Show the full issue details (`gh issue view #N`)
+1. Show the full issue details (`gh issue view ISSUE_NUMBER`)
 2. Ask: "Want me to assign this to you?"
 3. If yes:
    ```bash
-   gh issue edit #N --add-assignee @me
+   gh issue edit ISSUE_NUMBER --add-assignee @me
    ```
 4. Suggest: "Run `/pm:update` periodically to audit stale issues."

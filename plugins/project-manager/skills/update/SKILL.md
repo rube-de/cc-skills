@@ -65,7 +65,7 @@ Check each issue for these problems:
 |-------|-----------|----------|
 | **Stale** | No updates in 30+ days | Medium |
 | **Ancient** | No updates in 90+ days | High |
-| **Orphaned blocker** | References `Blocked by: #N` where #N is closed | Medium |
+| **Orphaned blocker** | References `Blocked by: #N` where #N is closed (verify via `gh issue view N --json state -q .state`) | Medium |
 | **Completed sub-tasks** | All `- [x]` checkboxes checked but issue still open | High |
 | **Missing labels** | No type label (bug, enhancement, etc.) | Low |
 | **Missing priority** | No priority label (P0-P3) | Low |
@@ -207,24 +207,23 @@ Run approved actions using `gh` CLI:
 
 **Closing issues:**
 ```bash
-gh issue close #N --comment "Closing: [reason]. Identified by /pm:update audit."
+gh issue close ISSUE_NUMBER --comment "Closing: [reason]. Identified by /pm:update audit."
 ```
 
 **Editing issue metadata:**
 ```bash
-gh issue edit #N --add-label "label-name"
-gh issue edit #N --remove-assignee "@username"
+gh issue edit ISSUE_NUMBER --add-label "label-name"
+gh issue edit ISSUE_NUMBER --remove-assignee "username"
 ```
 
 **Removing stale blocker references:**
 ```bash
-# Comment explaining the update
-gh issue comment #N --body "Removed stale blocker reference to #M (now closed). Issue is unblocked."
+gh issue comment ISSUE_NUMBER --body "Removed stale blocker reference to #M (now closed). Issue is unblocked."
 ```
 
 **Pinging stale assignees:**
 ```bash
-gh issue comment #N --body "@username — This issue hasn't been updated in [X] days. Are you still working on it? If not, I can unassign so someone else can pick it up."
+gh issue comment ISSUE_NUMBER --body "@username — This issue hasn't been updated in [X] days. Are you still working on it? If not, I can unassign so someone else can pick it up."
 ```
 
 ### Step 10: Print Summary

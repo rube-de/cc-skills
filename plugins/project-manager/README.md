@@ -1,11 +1,11 @@
 # project-manager
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-1-blue.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-3-blue.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-Interactive GitHub issue creation optimized for LLM agent teams. Guides users through type-specific question flows and produces structured, machine-parseable issues that AI coding agents can execute autonomously.
+GitHub issue lifecycle for LLM agent teams: **create** structured issues, **triage** what to work on next, and **audit** stale/orphaned issues. Produces machine-parseable issues that AI coding agents can execute autonomously.
 
 > [!NOTE]
 > **Agent-First Design**: Every template section is a contract that agents parse. Acceptance criteria use `VERIFY:` prefixes for testable assertions, and scope boundaries are always explicit to prevent over-engineering.
@@ -50,15 +50,26 @@ Before drafting, the plugin explores the repo to ensure:
 
 ## Skills
 
-| Skill | Purpose | Triggers |
-|-------|---------|----------|
-| **project-manager** | Interactive issue creation workflow | `create issue`, `write ticket`, `plan work`, `/pm` |
+| Skill | Command | Purpose | Triggers |
+|-------|---------|---------|----------|
+| **pm** | `/pm` | Create structured issues | `create issue`, `write ticket`, `plan work`, `/pm` |
+| **next** | `/pm:next` | Triage & recommend next issue | `what should I work on next`, `triage backlog` |
+| **update** | `/pm:update` | Audit & clean up issues | `audit issues`, `clean up issues`, `backlog cleanup` |
 
-## Workflow
+## Usage
+
+```bash
+/pm                       # Create a new issue (interactive flow)
+/pm -quick fix the login  # Create issue with smart defaults
+/pm:next                  # Triage: recommend next issue to work on
+/pm:update                # Audit: find stale/orphaned issues
+```
+
+## Create Workflow
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│            /project-manager [-quick]                 │
+│            /pm [-quick]                              │
 ├─────────────────────────────────────────────────────┤
 │                                                     │
 │  1. Classify — determine issue type                 │
@@ -123,14 +134,17 @@ npx skills add rube-de/cc-skills --skill project-manager
 ## Usage Examples
 
 ```bash
-# Direct invocation
-/pm
+# Issue creation
+/pm                            # Interactive flow
+/pm -quick fix login redirect  # Quick mode with smart defaults
 
-# Natural language triggers
-"Create an issue for the login bug"
-"Write a ticket for the new caching feature"
-"Plan the database migration as an epic"
-"Let's add rate limiting" → auto-detects as feature request
+# Triage
+/pm:next                       # Recommend highest-impact issue
+"What should I work on next?"  # Natural language trigger
+
+# Audit
+/pm:update                     # Find stale/orphaned issues
+"Clean up the backlog"         # Natural language trigger
 ```
 
 ## Dependencies
@@ -152,9 +166,11 @@ npx skills add rube-de/cc-skills --skill project-manager
 
 ## References
 
-- [SKILL.md](skills/project-manager/SKILL.md) — Full skill definition
-- [TEMPLATES.md](skills/project-manager/references/TEMPLATES.md) — All 8 issue templates
-- [WORKFLOWS.md](skills/project-manager/references/WORKFLOWS.md) — Type-specific question flows
+- [pm/SKILL.md](skills/pm/SKILL.md) — Router + create workflow
+- [next/SKILL.md](skills/next/SKILL.md) — Triage & recommendation workflow
+- [update/SKILL.md](skills/update/SKILL.md) — Audit & cleanup workflow
+- [TEMPLATES.md](skills/pm/references/TEMPLATES.md) — All 8 issue templates
+- [WORKFLOWS.md](skills/pm/references/WORKFLOWS.md) — Type-specific question flows
 
 ## License
 
