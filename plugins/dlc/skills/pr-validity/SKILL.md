@@ -64,7 +64,7 @@ For each extracted construct, record:
 - `signature`: parameter list and return type (if available)
 - `body_snippet`: first 5 lines of the body (for similarity matching)
 
-**Edge case**: If no code additions are found (e.g., the PR only modifies docs, configs, or deletes code), create a single Info finding: "No new code constructs detected in PR diff — only non-code or deletion changes." Then skip to Step 6.
+**Edge case**: If no code additions are found (e.g., the PR only modifies docs, configs, or deletes code), create a single Info finding: "No new code constructs detected in PR diff — only non-code or deletion changes." Then skip to Step 7 (Report).
 
 ## Step 3: Codebase Search
 
@@ -166,6 +166,7 @@ If the threshold is met, use `AskUserQuestion`:
 - Title: `[DLC] PR Validity: {n} redundancies in PR #{number}`
 - Label: `dlc-pr-validity`
 - Body must contain: Scan Metadata table, Findings Summary table, Findings Detail grouped by severity, Recommended Actions
+- In the Scan Metadata table, set **Project Type** to `PR analysis` (this skill is PR-focused and does not detect codebase project types)
 
 **Additional section** — add after Findings Detail:
 
@@ -201,7 +202,7 @@ BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
 
 gh issue create \
   --repo "$REPO" \
-  --title "[DLC] PR Validity: {n} redundancies in PR {number}" \
+  --title "[DLC] PR Validity: {n} redundancies in PR #{number}" \
   --body-file "$BODY_FILE" \
   --label "dlc-pr-validity"
 ```
