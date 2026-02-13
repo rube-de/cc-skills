@@ -4,7 +4,6 @@ description: >-
   Security scan: dependency audits, SAST analysis, and secret detection.
   Detects project type, runs available security tools, classifies findings
   by severity, and creates a structured GitHub issue.
-disable-model-invocation: true
 allowed-tools: [Bash, Read, Grep, Glob]
 ---
 

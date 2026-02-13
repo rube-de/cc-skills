@@ -2,10 +2,9 @@
 name: pr-check
 description: >-
   PR review compliance: fetch review comments from an open PR,
-  categorize as resolved/unresolved/dismissed, implement fixes
-  for unresolved items, reply inline, and create a summary issue.
-disable-model-invocation: true
-allowed-tools: [Bash, Read, Grep, Glob, Write, Edit]
+  categorize as resolved/unresolved/dismissed, critically evaluate
+  fixable items, implement approved fixes, and reply inline.
+allowed-tools: [Bash, Read, Grep, Glob, Write, Edit, AskUserQuestion]
 ---
 
 # DLC: PR Review Compliance
@@ -69,19 +68,46 @@ For unresolved comments, further classify by actionability:
 | **Discussion** | Comment asks a question or raises a concern that needs human judgment |
 | **Blocked** | Fix requires information or access the agent doesn't have |
 
-## Step 4: Implement Fixes for Fixable Items
+## Step 4: Critically Evaluate and Implement Fixable Items
 
-For each **fixable unresolved** comment:
+For each **fixable unresolved** comment, follow a three-phase workflow:
 
-1. Read the file at the referenced path and line
-2. Understand the reviewer's request
-3. Implement the fix using `Edit` or `Write`
-4. Stage the change: `git add <file>`
+### 4a. Read Context
+
+1. Read the file at the referenced path
+2. Read at least 20 lines of surrounding context (before and after the target line)
+3. Read the full comment thread (including any replies)
+
+### 4b. Critically Evaluate
+
+Assess the suggestion against these criteria:
+
+| Criterion | Question |
+|-----------|----------|
+| Technical correctness | Is the suggestion factually correct? |
+| Project alignment | Does it match existing patterns in this codebase? |
+| Regression risk | Could implementing it break other functionality? |
+| Scope appropriateness | Is the change proportional to the problem? |
+
+Assign a confidence level:
+- **High**: All four criteria pass — the suggestion is clearly correct and safe
+- **Medium**: One or two criteria are uncertain — the suggestion is plausible but not obvious
+- **Low**: Multiple criteria fail or the suggestion appears technically incorrect
+
+### 4c. Confidence-Gated Implementation
+
+- **High confidence** → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
+- **Medium or Low confidence** → Use `AskUserQuestion` to present:
+  - The quoted reviewer comment
+  - Your assessment (which criteria passed/failed and why)
+  - Options: "Implement as suggested" / "Skip this comment" / "Implement with modification"
+  - If "Implement with modification" is chosen, ask for guidance before proceeding
 
 **Guardrails:**
 - Only modify files that are part of the PR's diff
 - Do not make changes the reviewer didn't request
 - If unsure about intent, classify as **Discussion** instead of guessing
+- Never implement a suggestion assessed as technically incorrect without explicit user approval
 
 ## Step 5: Reply to Comments
 
@@ -97,15 +123,26 @@ gh api repos/{owner}/{repo}/pulls/{number}/comments \
 
 For **Discussion** items, post:
 ```
-This requires human input — flagged in the DLC summary issue.
+Flagged for human review — see PR check summary below.
 ```
 
 For **Blocked** items, post:
 ```
-Unable to fix automatically — flagged in the DLC summary issue with details.
+Flagged for human review — see PR check summary below.
 ```
 
-## Step 6: Create Summary Issue (if unresolved items remain)
+## Step 6: User-Gated Issue Creation
+
+If no Discussion or Blocked items remain after Step 4, **skip this step entirely**.
+
+If out-of-scope items remain (Discussion, Blocked, or items the user chose to skip), use `AskUserQuestion` to ask:
+
+- Present the count and a brief summary of remaining items
+- Options: "Yes, create follow-up issue" / "No, I'll handle manually" / "Show me details first"
+
+If the user selects "Show me details first", display each remaining item with your assessment, then re-ask with the first two options.
+
+**If the user approves issue creation**, proceed:
 
 **Read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/ISSUE-TEMPLATE.md) now** and format the issue body exactly as specified.
 
@@ -132,6 +169,7 @@ Unable to fix automatically — flagged in the DLC summary issue with details.
 |--------|-------|
 | Resolved | {n} |
 | Fixed by DLC | {n} |
+| Skipped (user decision) | {n} |
 | Discussion (needs human) | {n} |
 | Blocked | {n} |
 | Dismissed | {n} |
@@ -152,12 +190,14 @@ gh issue create \
 
 If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
+**If the user declines**, skip issue creation and proceed to Step 7.
+
 ## Step 7: Commit and Report
 
 If fixes were made:
 
 ```bash
-git commit -m "fix: address PR review comments (DLC automated)"
+git commit -m "fix: address PR review comments"
 ```
 
 Print summary:
@@ -166,8 +206,8 @@ Print summary:
 PR review compliance check complete.
   - PR: #{number} ({title})
   - Total comments: {n}
-  - Resolved: {n}, Fixed by DLC: {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
-  - Issue: #{number} ({url})  [only if unresolved items remain]
+  - Resolved: {n}, Fixed by DLC: {n}, Skipped (user decision): {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
+  - Follow-up issue: #{number} ({url})  [only if user approved creation]
 ```
 
 If all comments are resolved or dismissed, skip issue creation and report: "All PR review comments addressed."

@@ -279,13 +279,37 @@ user-invocable: true  # Users naturally say these things
 
 If a router skill's instructions say "invoke the sub-skill with `Skill`", then `Skill` **must** be in `allowed-tools`. Without it, the space-syntax dispatch (`/pm next`) may be blocked.
 
-**Don't compare blindly across routers.** DLC's router (`allowed-tools: [Read, Bash]`) works without `Skill` because it never explicitly instructs the LLM to call the `Skill` tool — it relies on the user typing colon-syntax (`/dlc:security`) which the framework dispatches directly. PM's router explicitly says "invoke it with `Skill`", so it needs the permission.
+**Both DLC and PM now use active dispatch.** DLC was originally passive (`allowed-tools: [Read, Bash]`, relying on user-typed colon-syntax), but was converted to active dispatch in Issue #44 — it now has `allowed-tools: [Read, Bash, Skill, AskUserQuestion]` and an explicit Routing section that calls `Skill`. PM has used active dispatch since its initial router conversion.
 
 | Router style | Dispatches via | Needs `Skill`? |
 |---|---|---|
-| Passive (DLC) | User types `/dlc:security` → framework dispatch | No |
+| Active (DLC) | LLM reads `/dlc security` or `--all` → calls `Skill` tool | **Yes** |
 | Active (PM) | LLM reads `/pm next` → calls `Skill` tool | **Yes** |
 
 **Rule**: If your routing section contains "invoke with `Skill`", add `Skill` to `allowed-tools`. If you only document colon-syntax, you don't need it.
 
 > Source: [PR #43](https://github.com/rube-de/cc-skills/pull/43) — CodeRabbit caught this; initially dismissed based on flawed DLC comparison. Confirmed by checking `jules-review` which already uses `Skill` in `allowed-tools`.
+> Source: [Issue #44](https://github.com/rube-de/cc-skills/issues/44) — DLC router converted from Passive to Active dispatch. Required adding `Skill` to `allowed-tools` and removing `disable-model-invocation` from sub-skills.
+
+### User-gated actions via `AskUserQuestion`
+
+Skills that create **side-effect external resources** (tracking issues, PR comments on shared threads, follow-up tickets) should ask the user before proceeding — never auto-create. Use `AskUserQuestion` to present the action, its scope, and options (create / skip / show details).
+
+**Scope**: This applies to resources created as a *side effect* of the skill's primary function. Skills whose primary output IS an issue (like DLC scan skills creating structured findings issues) are different — the issue is the deliverable, not a side effect. But skills that create *tracking* issues alongside their main work (like pr-check creating a follow-up issue after fixing comments) should gate on user consent.
+
+**Pattern**: Present a summary → offer "Yes" / "No" / "Show details" → only proceed on explicit approval.
+
+**Bad** — auto-creates without asking:
+```markdown
+## Step 6: Create Summary Issue
+If unresolved items remain, create a GitHub issue...
+```
+
+**Good** — user-gated with `AskUserQuestion`:
+```markdown
+## Step 6: User-Gated Issue Creation
+If out-of-scope items remain, use `AskUserQuestion` to ask:
+- Options: "Yes, create follow-up issue" / "No, I'll handle manually" / "Show me details first"
+```
+
+> Source: [Issue #44](https://github.com/rube-de/cc-skills/issues/44) — DLC `pr-check` auto-created tracking issues without consent. Fixed to match the user-gated pattern used by the PM plugin.
