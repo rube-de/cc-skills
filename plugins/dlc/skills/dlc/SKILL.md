@@ -5,7 +5,6 @@ description: >-
   performance analysis, test coverage, and PR review compliance. Routes
   to domain-specific sub-skills or runs all checks in sequence.
 user-invocable: true
-disable-model-invocation: true
 allowed-tools: [Read, Bash, Skill, AskUserQuestion]
 argument-hint: "[--all | security | quality | perf | test | pr-check]"
 ---
