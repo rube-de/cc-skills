@@ -50,7 +50,7 @@
     },
     {
       "name": "project-manager",
-      "description": "GitHub issue lifecycle: create structured issues for LLM agent teams, triage and recommend next issues, audit and clean up stale backlogs",
+      "description": "GitHub issue lifecycle: create structured issues for LLM agent teams, triage and recommend next issues, audit and clean up stale backlogs, and deep-validate individual issues against the codebase",
       "version": "1.11.0",
       "source": "./plugins/project-manager",
       "category": "productivity",
@@ -65,6 +65,7 @@
         "task-planning",
         "issue-triage",
         "issue-audit",
+        "issue-review",
         "backlog-management"
       ]
     },

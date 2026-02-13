@@ -2,12 +2,12 @@
 name: pm
 description: >-
   Project manager for GitHub issues: create structured issues optimized for LLM
-  agent teams, triage and recommend what to work on next, or audit and clean up
-  stale issues. Triggers: create issue, plan work, new task, project manager,
-  write ticket, draft issue, plan feature, plan project, start project, create
-  ticket, pm.
+  agent teams, triage and recommend what to work on next, audit and clean up
+  stale issues, or deep-validate a single issue against the codebase. Triggers:
+  create issue, plan work, new task, project manager, write ticket, draft issue,
+  plan feature, plan project, start project, create ticket, review issue, pm.
 user-invocable: true
-argument-hint: "[next | update | -quick <description>]"
+argument-hint: "[next | update | review ISSUE_NUMBER | -quick <description>]"
 allowed-tools:
   - Task
   - Skill
@@ -27,7 +27,7 @@ metadata:
 
 # Project Manager
 
-GitHub issue lifecycle: **create**, **triage**, and **audit**.
+GitHub issue lifecycle: **create**, **triage**, **audit**, and **review**.
 
 ## Sub-Skills
 
@@ -36,6 +36,7 @@ GitHub issue lifecycle: **create**, **triage**, and **audit**.
 | Create | `/pm` or `/pm -quick <desc>` | Create structured issues optimized for agent execution |
 | Next | `/pm:next` | Triage open issues — recommend what to work on next |
 | Update | `/pm:update` | Audit open issues — find stale, orphaned, and drift |
+| Review | `/pm:review ISSUE_NUMBER` | Deep-validate a single issue against the codebase |
 
 ## Usage
 
@@ -46,6 +47,8 @@ GitHub issue lifecycle: **create**, **triage**, and **audit**.
 /pm:next                  → Same (alternate syntax)
 /pm update                → Audit: find stale/orphaned issues
 /pm:update                → Same (alternate syntax)
+/pm review 42             → Review: validate issue #42 against codebase
+/pm:review 42             → Same (alternate syntax)
 ```
 
 ## Routing
@@ -56,6 +59,7 @@ Parse the first argument:
 |----------|----------|
 | `next` | `/pm:next` sub-skill |
 | `update` | `/pm:update` sub-skill |
+| `review` | `/pm:review` sub-skill |
 | `-quick [desc]` | Create Issue Workflow (quick mode) below |
 | anything else / empty | Create Issue Workflow below |
 
