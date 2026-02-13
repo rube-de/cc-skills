@@ -19,7 +19,7 @@ Determine the PR to check:
 
 ```bash
 # If PR number provided as argument
-gh pr view <PR#> --json number,title,url,headRefName,state
+gh pr view <PR_NUMBER> --json number,title,url,headRefName,state
 
 # If no argument — detect from current branch
 gh pr view --json number,title,url,headRefName,state
@@ -36,7 +36,7 @@ Retrieve all review comments and categorize them:
 gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
 
 # Get review threads (to check resolved status)
-gh pr view <PR#> --json reviewDecision,reviews,comments
+gh pr view <PR_NUMBER> --json reviewDecision,reviews,comments
 ```
 
 Parse each comment into:
