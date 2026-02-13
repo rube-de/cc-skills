@@ -1,3 +1,11 @@
+## [1.10.1](https://github.com/rube-de/cc-skills/compare/v1.10.0...v1.10.1) (2026-02-13)
+
+
+### Bug Fixes
+
+* **dlc:** add critical evaluation, user-gated issues, and router dispatch ([26ee494](https://github.com/rube-de/cc-skills/commit/26ee4947c8d4dde0088dc65393a97e730e8f58e4)), closes [#44](https://github.com/rube-de/cc-skills/issues/44)
+* **dlc:** remove disable-model-invocation from router ([89d0a9a](https://github.com/rube-de/cc-skills/commit/89d0a9a1ed9173767343782381c1343045400673))
+
 # [1.10.0](https://github.com/rube-de/cc-skills/compare/v1.9.0...v1.10.0) (2026-02-12)
 
 
