@@ -4,7 +4,6 @@ description: >-
   Code quality check: linting, complexity analysis, duplication detection,
   and dead code identification. Detects project linting config, runs
   appropriate tools, and creates a structured GitHub issue.
-disable-model-invocation: true
 allowed-tools: [Bash, Read, Grep, Glob]
 ---
 

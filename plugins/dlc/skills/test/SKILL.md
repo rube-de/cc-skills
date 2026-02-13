@@ -4,7 +4,6 @@ description: >-
   Test coverage analysis: detect test framework, run test suite,
   capture failures and coverage metrics, identify coverage gaps
   in recent changes, and create a structured GitHub issue.
-disable-model-invocation: true
 allowed-tools: [Bash, Read, Grep, Glob]
 ---
 
