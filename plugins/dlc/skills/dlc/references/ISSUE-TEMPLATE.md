@@ -8,7 +8,7 @@ GitHub issues created by DLC skills follow this exact format.
 [DLC] {type}: {summary}
 ```
 
-Where `{type}` is one of: `Security`, `Quality`, `Performance`, `Testing`, `PR Review`.
+Where `{type}` is one of: `Security`, `Quality`, `Performance`, `Testing`, `PR Review`, `PR Validity`.
 
 ## Label
 
@@ -19,6 +19,7 @@ Apply the label corresponding to the `{type}`:
 - `Performance` → `dlc-perf`
 - `Testing` → `dlc-test`
 - `PR Review` → `dlc-pr-check`
+- `PR Validity` → `dlc-pr-validity`
 
 All labels are lowercase and prefixed with `dlc-`.
 

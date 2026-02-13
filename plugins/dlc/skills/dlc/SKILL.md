@@ -6,7 +6,7 @@ description: >-
   to domain-specific sub-skills or runs all checks in sequence.
 user-invocable: true
 allowed-tools: [Read, Bash, Skill, AskUserQuestion]
-argument-hint: "[--all | security | quality | perf | test | pr-check]"
+argument-hint: "[--all | security | quality | perf | test | pr-check | pr-validity]"
 ---
 
 # Dev Life Cycle (DLC)
@@ -22,6 +22,7 @@ Automated quality gates for the development life cycle. Each sub-skill detects y
 | Performance | `/dlc:perf` | Bundle analysis, profiling, algorithmic complexity review |
 | Testing | `/dlc:test` | Test execution, coverage measurement, gap analysis |
 | PR Review | `/dlc:pr-check` | Fetch PR comments, implement fixes, reply inline |
+| PR Validity | `/dlc:pr-validity` | Detect duplicate/redundant code in PR changes |
 
 ## Usage
 
@@ -44,6 +45,7 @@ Parse the first argument:
 | `perf` | Invoke `dlc:perf` via `Skill` |
 | `test` | Invoke `dlc:test` via `Skill` |
 | `pr-check` | Invoke `dlc:pr-check` via `Skill` |
+| `pr-validity` | Invoke `dlc:pr-validity` via `Skill` |
 | empty | Show overview and use `AskUserQuestion` to ask which check to run |
 
 If routing to a single sub-skill, invoke it with `Skill` and pass any remaining arguments.
@@ -57,6 +59,7 @@ When invoked with `--all`, invoke each sub-skill via `Skill` in order:
 3. `dlc:perf`
 4. `dlc:test`
 5. `dlc:pr-check` (only if on a branch with an open PR)
+6. `dlc:pr-validity` (only if on a branch with an open PR)
 
 After all checks complete, print a summary table:
 
@@ -70,6 +73,7 @@ After all checks complete, print a summary table:
 | Performance | 1 high | #125 |
 | Testing | 85% coverage (target: 80%) | — |
 | PR Review | 3 unresolved comments | #126 |
+| PR Validity | 1 high, 2 medium | #127 |
 ```
 
 Skip any sub-skill that fails to detect its prerequisites (e.g., skip `dlc:perf` if no bundle config or benchmarks exist).

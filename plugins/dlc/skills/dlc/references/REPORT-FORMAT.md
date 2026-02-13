@@ -9,7 +9,7 @@ Each finding is a structured record with these fields:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `severity` | enum | yes | `critical`, `high`, `medium`, `low`, `info` |
-| `type` | string | yes | Category: `vulnerability`, `dependency`, `lint`, `complexity`, `duplication`, `dead-code`, `performance`, `coverage`, `test-failure`, `pr-comment` |
+| `type` | string | yes | Category: `vulnerability`, `dependency`, `lint`, `complexity`, `duplication`, `dead-code`, `performance`, `coverage`, `test-failure`, `pr-comment`, `redundancy` |
 | `file` | string | yes | Relative file path from repo root (e.g. `src/auth/login.ts`) |
 | `line` | number | no | Line number where the issue occurs |
 | `message` | string | yes | Human-readable description of the finding |

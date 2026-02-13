@@ -183,6 +183,7 @@
         "performance",
         "testing",
         "pr-review",
+        "pr-validity",
         "github-issues"
       ]
     }

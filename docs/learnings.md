@@ -313,3 +313,14 @@ If out-of-scope items remain, use `AskUserQuestion` to ask:
 ```
 
 > Source: [Issue #44](https://github.com/rube-de/cc-skills/issues/44) — DLC `pr-check` auto-created tracking issues without consent. Fixed to match the user-gated pattern used by the PM plugin.
+
+### Read-only analysis skills omit `Write`/`Edit` from allowed-tools
+
+When a DLC sub-skill only analyzes code (no modifications), exclude `Write` and `Edit` from `allowed-tools`. This makes the skill's intent unambiguous and prevents accidental code modifications. Compare:
+
+- **Read-only** (`pr-validity`): `allowed-tools: [Bash, Read, Grep, Glob, AskUserQuestion]`
+- **Read-write** (`pr-check`): `allowed-tools: [Bash, Read, Grep, Glob, Write, Edit, AskUserQuestion]`
+
+The tool list signals to both the model and the user whether the skill can change files.
+
+> Source: [Issue #47](https://github.com/rube-de/cc-skills/issues/47) — `pr-validity` sub-skill is read-only analysis; intentionally excludes `Write`/`Edit` to match the scan-only pattern of `security`/`quality`/`perf`/`test`.
