@@ -32,7 +32,7 @@ If no open PR is found, abort with: "No open PR found for the current branch. Pu
 - Present the addition count and file count
 - Options: "Analyze everything" / "Only new files" / "Abort"
 - If "Abort", stop and report: "PR validity analysis aborted by user."
-- If "Only new files", limit Steps 2-3 to files with status `added` (skip `modified`)
+- If "Only new files", limit Steps 2-3 to files with status `added` or `renamed` (skip `modified`)
 
 ## Step 2: Fetch Diff & Extract Additions
 
@@ -101,6 +101,8 @@ For constructs where the PR also deletes code (file has both `+` and `-` lines):
 1. Extract the body of the deleted construct
 2. `Grep` for distinctive lines from the deleted body in the new location
 3. If the new construct's body closely matches a deleted construct, classify as **Code Movement** (not duplication)
+
+**Self-match guard**: When the deleted and added constructs are in the same file with overlapping line ranges, classify as **Update** (not Movement). Only flag Movement when code migrates between different files.
 
 ## Step 4: Check Issue Reference
 
@@ -180,7 +182,17 @@ If the threshold is met, use `AskUserQuestion`:
 | Trivial Overlap | {n} | {comma-separated file list} |
 | Code Movement | {n} | {comma-separated file list} |
 | **Total Constructs** | **{n}** | |
+
+## Referenced Issues
+
+| Issue | Title | State |
+|-------|-------|-------|
+| #{n} | {title} | {open/closed} |
+
+> Omit this section if no issues were referenced in the PR body.
 ```
+
+**Raw Output**: This skill has no CLI tool output to capture. Omit the Raw Output section from the issue body.
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
@@ -189,7 +201,7 @@ BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
 
 gh issue create \
   --repo "$REPO" \
-  --title "[DLC] PR Validity: {n} redundancies in PR ${PR_NUMBER}" \
+  --title "[DLC] PR Validity: {n} redundancies in PR {number}" \
   --body-file "$BODY_FILE" \
   --label "dlc-pr-validity"
 ```

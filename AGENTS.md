@@ -36,7 +36,7 @@ cc-skills/
 │   ├── jules-review/            ← Jules PR review via council
 │   │   └── skills/              # jules-review + references
 │   └── dlc/                     ← Dev Life Cycle quality gates
-│       └── skills/              # dlc, security, quality, perf, test, pr-check
+│       └── skills/              # dlc, security, quality, perf, test, pr-check, pr-validity
 ├── scripts/
 │   ├── validate-plugins.mjs     ← Plugin validation
 │   └── marketplace.schema.json  ← JSON Schema for marketplace.json

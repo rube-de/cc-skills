@@ -324,3 +324,4 @@ When a DLC sub-skill only analyzes code (no modifications), exclude `Write` and 
 The tool list signals to both the model and the user whether the skill can change files.
 
 > Source: [Issue #47](https://github.com/rube-de/cc-skills/issues/47) — `pr-validity` sub-skill is read-only analysis; intentionally excludes `Write`/`Edit` to match the scan-only pattern of `security`/`quality`/`perf`/`test`.
+> Source: [`plugins/dlc/skills/pr-validity/SKILL.md`](../plugins/dlc/skills/pr-validity/SKILL.md) — compare `allowed-tools` with [`pr-check/SKILL.md`](../plugins/dlc/skills/pr-check/SKILL.md)
