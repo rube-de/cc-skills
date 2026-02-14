@@ -1,3 +1,15 @@
+# [1.13.0](https://github.com/rube-de/cc-skills/compare/v1.12.6...v1.13.0) (2026-02-14)
+
+
+### Bug Fixes
+
+* add Task to allowed-tools and clarify fallback wording ([c3f34bd](https://github.com/rube-de/cc-skills/commit/c3f34bd6be7a7b278e052b058e76cc8ac56ee205))
+
+
+### Features
+
+* implement Explore agent as default discovery mechanism ([505feac](https://github.com/rube-de/cc-skills/commit/505feac4b860915759d87e8a285d6b30f35cc241)), closes [#58](https://github.com/rube-de/cc-skills/issues/58)
+
 ## [1.12.6](https://github.com/rube-de/cc-skills/compare/v1.12.5...v1.12.6) (2026-02-14)
 
 
