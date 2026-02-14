@@ -72,11 +72,11 @@ Invoked via CLI. Each brings a different AI model's perspective. All receive the
 
 | Agent | CLI | Strength | Expertise Weight |
 |-------|-----|----------|------------------|
-| `gemini-consultant` | `gemini` | Architecture, security | Security: 0.9, Architecture: 0.85 |
-| `codex-consultant` | `codex` | PR review, bugs | Debugging: 0.9, Security: 0.8 |
-| `qwen-consultant` | `qwen` | Quality, brainstorming | Quality: 0.9, Refactoring: 0.85 |
-| `glm-consultant` | `opencode -m glm-4.7` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
-| `kimi-consultant` | `opencode -m opencode/kimi-k2.5-free` | Code analysis, algorithms | Code Quality: 0.80, Algorithms: 0.80 |
+| `council:gemini-consultant` | `gemini` | Architecture, security | Security: 0.9, Architecture: 0.85 |
+| `council:codex-consultant` | `codex` | PR review, bugs | Debugging: 0.9, Security: 0.8 |
+| `council:qwen-consultant` | `qwen` | Quality, brainstorming | Quality: 0.9, Refactoring: 0.85 |
+| `council:glm-consultant` | `opencode -m glm-4.7` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
+| `council:kimi-consultant` | `opencode -m opencode/kimi-k2.5-free` | Code analysis, algorithms | Code Quality: 0.80, Algorithms: 0.80 |
 
 ### Claude Subagents (Concern Depth — Review Workflows Only)
 
@@ -84,8 +84,8 @@ Invoked via Task tool. Each has a **different concern** and **native codebase ac
 
 | Agent | Model | Concern | Unique Capability |
 |-------|-------|---------|-------------------|
-| `claude-deep-review` | opus | Security, bugs, performance | Traces input paths, follows call chains, profiles hot paths |
-| `claude-codebase-context` | sonnet | Quality, compliance, history, documentation | Reads CLAUDE.md rules, greps codebase patterns, runs git blame |
+| `council:claude-deep-review` | opus | Security, bugs, performance | Traces input paths, follows call chains, profiles hot paths |
+| `council:claude-codebase-context` | sonnet | Quality, compliance, history, documentation | Reads CLAUDE.md rules, greps codebase patterns, runs git blame |
 
 ### Dual-Layer Architecture (Review Workflows)
 
@@ -114,7 +114,7 @@ Invoked via Task tool. Each has a **different concern** and **native codebase ac
 │                                                                 │
 │  Layer 3: Scoring                                               │
 │  ┌─────────────────────────────────────────────────────┐        │
-│  │ review-scorer (sonnet)                              │        │
+│  │ council:review-scorer (sonnet)                       │        │
 │  │ Scores ALL findings from both layers 0-100          │        │
 │  │ Filters at threshold (>= 80)                        │        │
 │  └─────────────────────────────────────────────────────┘        │
@@ -348,7 +348,7 @@ See "Dual-Layer Architecture" section above and WORKFLOWS.md Workflow B for deta
 ```
 1. Launch BOTH in parallel:
    - Gemini Flash (gemini -m flash) — fastest external model
-   - claude-codebase-context (sonnet) — native codebase access
+   - council:claude-codebase-context (sonnet) — native codebase access
 2. If BOTH confident (>= 0.7) AND no critical findings:
    → DONE (synthesize dual-perspective report)
 3. If disagreement, confidence < 0.7, OR severity == "critical":

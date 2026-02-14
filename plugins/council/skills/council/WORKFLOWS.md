@@ -58,18 +58,18 @@ fi
 3. **Launch Parallel Consultations (120s timeout each)**
 
    ```
-   Task(gemini-consultant, timeout=120s):
+   Task(council:gemini-consultant, timeout=120s):
    "Review this implementation plan. Return JSON:
    {consultant:'gemini', confidence:0-1, severity:'critical|high|medium|low|none',
     findings:[{type, severity, description, recommendation}], summary:'...'}"
 
-   Task(codex-consultant, timeout=120s):
+   Task(council:codex-consultant, timeout=120s):
    [Same structure]
 
-   Task(qwen-consultant, timeout=120s):
+   Task(council:qwen-consultant, timeout=120s):
    [Same structure]
 
-   Task(glm-consultant, timeout=120s):
+   Task(council:glm-consultant, timeout=120s):
    [Same structure]
    ```
 
@@ -207,8 +207,8 @@ fi
 
    Each runs a DIFFERENT concern domain with native tool access:
    ```
-   Task(claude-deep-review, model=opus):     "Review for security, bugs, and performance. Trace input paths, follow call chains, profile hot paths."
-   Task(claude-codebase-context, model=sonnet): "Check quality patterns, CLAUDE.md compliance, git history, and documentation. Compare against codebase conventions."
+   Task(council:claude-deep-review, model=opus):     "Review for security, bugs, and performance. Trace input paths, follow call chains, profile hot paths."
+   Task(council:claude-codebase-context, model=sonnet): "Check quality patterns, CLAUDE.md compliance, git history, and documentation. Compare against codebase conventions."
    ```
 
    If `--blind` flag is set, invoke Claude subagents via CLI instead:
@@ -252,7 +252,7 @@ fi
     After all findings are merged:
     ```
     1. Deduplicate findings referring to the same issue (across both layers)
-    2. Launch review-scorer (Sonnet) with full context + all findings
+    2. Launch council:review-scorer (Sonnet) with full context + all findings
     3. Scorer evaluates each finding 0-100, considering:
        - External consultant consensus count
        - Claude subagent tool-traced evidence
@@ -278,12 +278,12 @@ fi
     ### Reviewers
     - External: Gemini ✓ | Codex ✓ | Qwen ✓ | GLM ✗ (timeout)
     - Claude: deep-review ✓ | codebase-context ✓
-    - Scorer: review-scorer ✓
+    - Scorer: council:review-scorer ✓
     ### Mode: [concern | broad] | Blind: [no | yes]
     ### Escalation: [None | Escalated to security round]
 
     ### 🚨 Block Merge (Critical, score >= 80)
-    - [finding] at `file:line` (score: 92, flagged by: Gemini, Codex, claude-deep-review)
+    - [finding] at `file:line` (score: 92, flagged by: Gemini, Codex, council:claude-deep-review)
 
     ### ⚠️ Should Fix (High, score >= 80, 2+ agree)
     - [finding] at `file:line` (score: 85, flagged by: Qwen, GLM, Codex)
@@ -314,21 +314,21 @@ fi
    Launch simultaneously:
 
    ```
-   Task(gemini-consultant, flags="-m flash"):
+   Task(council:gemini-consultant, flags="-m flash"):
    "Quick review of [artifact]. Return JSON with:
    - confidence: 0-1
    - severity: none|low|medium|high|critical
    - findings: [{type, severity, description, recommendation}]
    - summary: 1-3 sentence overview"
 
-   Task(claude-codebase-context, model=sonnet):
+   Task(council:claude-codebase-context, model=sonnet):
    "Quick review of [artifact]. Use tool access to check against
    codebase conventions, CLAUDE.md rules, git history, and documentation.
    Return JSON with same structure."
    ```
 
    Both run simultaneously. Gemini Flash provides fast external model
-   perspective; claude-codebase-context provides codebase-aware depth.
+   perspective; council:claude-codebase-context provides codebase-aware depth.
 
 2. **Evaluate Responses**
 
