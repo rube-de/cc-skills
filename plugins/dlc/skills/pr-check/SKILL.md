@@ -125,7 +125,7 @@ gh api repos/{owner}/{repo}/pulls/{number}/comments \
 
 ## Step 6: User-Gated Issue Creation
 
-If no Discussion or Blocked items remain after Step 4, **skip this step entirely**.
+If no Discussion, Blocked, or user-skipped Fixable items remain after Step 4, **skip this step entirely**.
 
 If out-of-scope items remain (Discussion, Blocked, or items the user chose to skip), use `AskUserQuestion` to ask:
 
@@ -156,29 +156,37 @@ If the user selects "Show me details first", display each remaining item with yo
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 TIMESTAMP=$(date +%s)
 BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
+# Write the formatted issue body to BODY_FILE following ISSUE-TEMPLATE.md structure
 
 gh issue create \
   --repo "$REPO" \
-  --title "[DLC] PR Review: {n} unresolved on PR #{number}" \
+  --title "[DLC] PR Review: {n} unresolved comments on PR #{number}" \
   --body-file "$BODY_FILE" \
   --label "dlc-pr-check"
 ```
 
 If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
-**If the user declines**, skip issue creation and proceed to Step 6b.
+**If the user chooses "No, I'll handle manually"**, skip issue creation and proceed to Step 6b.
 
 ## Step 6b: Decision-Aware Inline Replies
 
 If there are no Discussion, Blocked, or user-skipped Fixable items, **skip this step**.
 
-After the user's decision in Step 6, post inline replies to each **Discussion**, **Blocked**, and **user-skipped Fixable** comment reflecting the actual outcome:
+After the user's decision in Step 6, post inline replies reflecting the actual outcome. Separate the global decision (for Discussion/Blocked items) from the per-item decision (for skipped Fixable items).
 
-| User Decision | Inline Reply Text |
-|---------------|-------------------|
+For each **Discussion** or **Blocked** comment, map the user's Step 6 decision:
+
+| User Decision (Step 6) | Inline Reply Text |
+|------------------------|-------------------|
 | Created follow-up issue | `Acknowledged — tracked in #{N}` (where N is the issue number from Step 6) |
 | Handle manually | `Acknowledged — will be addressed by the author` |
-| Skipped | `Acknowledged — deferred (out of scope for this PR)` |
+
+For each **user-skipped Fixable** comment, always reply:
+
+| Item Status | Inline Reply Text |
+|-------------|-------------------|
+| Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
 
 ```bash
 # Reply to each Discussion/Blocked/skipped comment with the decision-aware message
@@ -216,14 +224,15 @@ Build the summary with these sections:
 
 ## Follow-up
 
-{If follow-up issue was created:}
-Tracked in #{N}
+{Include all applicable lines below:}
+{If any follow-up issue was created:}
+Follow-up issue: #{N}
 
-{If user chose to handle manually:}
-Author will address remaining items manually.
+{If any items will be handled manually by the author:}
+Author will address some remaining items manually.
 
-{If user skipped:}
-Remaining items deferred — out of scope for this PR.
+{If any items were explicitly deferred/skipped:}
+Some remaining items deferred — out of scope for this PR.
 ```
 
 Write the summary and post it:
