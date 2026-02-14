@@ -1,3 +1,11 @@
+## [1.12.6](https://github.com/rube-de/cc-skills/compare/v1.12.5...v1.12.6) (2026-02-14)
+
+
+### Bug Fixes
+
+* address PR review comments ([bf6559f](https://github.com/rube-de/cc-skills/commit/bf6559f5b97b78df51decd1eaf513da8e7d99c7d))
+* **dlc:** add branch verification to pr-check before commit/push ([cb98d73](https://github.com/rube-de/cc-skills/commit/cb98d73e9e9f831b026b82615e30a81962feaec1)), closes [#54](https://github.com/rube-de/cc-skills/issues/54)
+
 ## [1.12.5](https://github.com/rube-de/cc-skills/compare/v1.12.4...v1.12.5) (2026-02-14)
 
 
