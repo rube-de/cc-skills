@@ -1,3 +1,11 @@
+## [1.12.4](https://github.com/rube-de/cc-skills/compare/v1.12.3...v1.12.4) (2026-02-14)
+
+
+### Bug Fixes
+
+* address PR review comments ([739e459](https://github.com/rube-de/cc-skills/commit/739e4591fbf589bab0bc9433b86a7eef984dbf15))
+* **cdt:** disable enforce-lead-delegation hook that blocks teammates ([1daf715](https://github.com/rube-de/cc-skills/commit/1daf71504d8ffa38c5b32ad2d94527479f2cb0b8)), closes [#59](https://github.com/rube-de/cc-skills/issues/59)
+
 ## [1.12.3](https://github.com/rube-de/cc-skills/compare/v1.12.2...v1.12.3) (2026-02-14)
 
 
