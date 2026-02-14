@@ -134,7 +134,7 @@ Teammate tool:
     Focus on behavior and correctness — not internal implementation details.
 ```
 
-**Reviewer teammate**:
+**Reviewer teammate** (substitute `[report-path]` → `.claude/files/dev-report-$TIMESTAMP.md` from Step 2):
 ```
 Teammate tool:
   team_name: "dev-team"

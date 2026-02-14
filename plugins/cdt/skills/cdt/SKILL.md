@@ -93,7 +93,7 @@ You are a **coordinator**, not an implementer. During active team phases:
 - Edit or write project doc files (*.md) outside of plan/report/ADR paths
 
 ### NEVER — policy (delegate to teammates)
-- Edit or write test files (*.test.*, *.spec.*, __tests__/*) — delegate to code-tester teammate
+- Edit or write test files (*.test.*, *.spec.*, `__tests__/*`) — delegate to code-tester teammate
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate
 - Explore the codebase during planning (Glob/Grep on source files) — delegate to architect teammate

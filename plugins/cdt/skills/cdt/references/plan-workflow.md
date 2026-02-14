@@ -53,7 +53,7 @@ TaskCreate:
 
 Spawn all three simultaneously:
 
-**Architect teammate**:
+**Architect teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
 ```
 Teammate tool:
   team_name: "plan-team"

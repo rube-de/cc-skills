@@ -43,9 +43,9 @@ fi
 
 # --- Path allowlist (lead may edit these during active team) ---
 case "$FILE_PATH" in
-  */.claude/plans/*|.claude/plans/*)       exit 0 ;;
-  */.claude/files/*|.claude/files/*)       exit 0 ;;
-  */docs/adrs/*|docs/adrs/*)               exit 0 ;;
+  */.claude/plans/*|.claude/plans/*|./.claude/plans/*)       exit 0 ;;
+  */.claude/files/*|.claude/files/*|./.claude/files/*)       exit 0 ;;
+  */docs/adrs/*|docs/adrs/*|./docs/adrs/*)                   exit 0 ;;
   */package.json|package.json)             exit 0 ;;
   */tsconfig*.json|tsconfig*.json)         exit 0 ;;
   */eslint.config.*|eslint.config.*|./eslint.config.*|*/vite.config.*|vite.config.*|./vite.config.*) exit 0 ;;
@@ -56,7 +56,7 @@ case "$FILE_PATH" in
   */babel.config.*|babel.config.*|./babel.config.*) exit 0 ;;
 esac
 
-# --- Extension blocklist (source/test files) ---
+# --- Extension blocklist (source/test/doc files) ---
 case "$FILE_PATH" in
   *.ts|*.js|*.mjs|*.cjs|*.py|*.go|*.rs|*.tsx|*.jsx)    ;;
   *.vue|*.svelte|*.css|*.scss|*.html)      ;;
