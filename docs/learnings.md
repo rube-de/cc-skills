@@ -258,6 +258,7 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | `#N` in bash code blocks | `gh issue close #42` silently becomes `gh issue close` | Use bare numbers or `ISSUE_NUMBER` placeholder — `gh` CLI doesn't need `#` |
 | Router says "invoke with Skill" but `Skill` not in `allowed-tools` | Space-syntax dispatch (`/pm next`) may be blocked | Add `Skill` to `allowed-tools` if routing explicitly uses it |
 | Hook blocks all agents, not just lead | Teammates can't Edit/Write during active team | Verify hook protocol exposes actor identity before building role-based enforcement |
+| Skill commits/pushes without branch verification | Commits and pushes land on wrong branch | Assert `git branch --show-current` matches expected branch before any `git commit`/`git push` |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
@@ -345,3 +346,18 @@ The tool list signals to both the model and the user whether the skill can chang
 
 > Source: [Issue #47](https://github.com/rube-de/cc-skills/issues/47) — `pr-validity` sub-skill is read-only analysis; intentionally excludes `Write`/`Edit` to match the scan-only pattern of `security`/`quality`/`perf`/`test`.
 > Source: [`plugins/dlc/skills/pr-validity/SKILL.md`](../plugins/dlc/skills/pr-validity/SKILL.md) — compare `allowed-tools` with [`pr-check/SKILL.md`](../plugins/dlc/skills/pr-check/SKILL.md)
+
+### Skills that commit/push must verify the correct branch first
+
+Any skill that runs `git commit` + `git push origin HEAD` must verify that the current branch matches the expected target **before** making changes. If the skill retrieves a branch name (e.g., `headRefName` from a PR), it should assert `git branch --show-current` matches — not assume the user invoked the skill from the right branch.
+
+**Three-way check pattern**:
+1. **Match** → proceed
+2. **Mismatch + dirty worktree** → abort with actionable error (stash/commit first)
+3. **Mismatch + clean worktree** → auto-checkout (e.g., `gh pr checkout`) + post-checkout verification
+
+Post-checkout verification is defense-in-depth: re-check `git branch --show-current` after the checkout command to catch silent failures.
+
+**Why this matters**: Without verification, `git push origin HEAD` pushes to whatever branch you're on — not the PR's branch. PR #53 increased blast radius by adding `git push` to `pr-check`, turning "wrong local commit" into "wrong remote push."
+
+> Source: [Issue #54](https://github.com/rube-de/cc-skills/issues/54) — `pr-check` fetched `headRefName` but never verified or checked out the branch before committing and pushing.

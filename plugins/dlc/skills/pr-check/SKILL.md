@@ -27,6 +27,40 @@ gh pr view --json number,title,url,headRefName,state
 
 If no open PR is found, abort with: "No open PR found for the current branch. Push your changes and open a PR first."
 
+## Step 1b: Verify and Checkout PR Branch
+
+Before making any changes, verify you are on the PR's source branch (`headRefName` from Step 1).
+
+```bash
+CURRENT=$(git branch --show-current)
+PR_BRANCH="{headRefName from Step 1}"
+
+if [ "$CURRENT" = "$PR_BRANCH" ]; then
+  echo "Already on $PR_BRANCH — proceeding."
+else
+  # Check for uncommitted changes
+  if ! git diff --quiet || ! git diff --cached --quiet; then
+    echo "ERROR: Current branch ($CURRENT) does not match PR branch ($PR_BRANCH) and worktree is dirty."
+    echo "Stash or commit your changes, then re-run."
+    exit 1
+  fi
+  # Clean worktree — checkout the PR branch
+  gh pr checkout {number}
+fi
+```
+
+Post-checkout verification (defense-in-depth):
+
+```bash
+VERIFY=$(git branch --show-current)
+if [ "$VERIFY" != "$PR_BRANCH" ]; then
+  echo "ERROR: Checkout failed — expected $PR_BRANCH but on $VERIFY. Aborting."
+  exit 1
+fi
+```
+
+If verification fails, abort with the error above. Do **not** proceed to Step 2 on the wrong branch — commits and pushes would target the wrong remote branch.
+
 ## Step 2: Fetch Review Comments
 
 Retrieve all review comments and categorize them:
