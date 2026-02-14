@@ -179,7 +179,7 @@ For each **Discussion** or **Blocked** comment, map the user's Step 6 decision:
 
 | User Decision (Step 6) | Inline Reply Text |
 |------------------------|-------------------|
-| Created follow-up issue | `Acknowledged — tracked in #{N}` (where N is the issue number from Step 6) |
+| Created follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
 | Handle manually | `Acknowledged — will be addressed by the author` |
 
 For each **user-skipped Fixable** comment, always reply:
@@ -226,7 +226,7 @@ Build the summary with these sections:
 
 {Include all applicable lines below:}
 {If any follow-up issue was created:}
-Follow-up issue: #{N}
+Follow-up issue: #ISSUE_NUMBER
 
 {If any items will be handled manually by the author:}
 Author will address some remaining items manually.
