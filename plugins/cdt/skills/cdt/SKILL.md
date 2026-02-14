@@ -47,7 +47,7 @@ Research specialist for doc lookups. Queries Context7 for library docs, searches
 
 ### Architect (teammate — spawn via Teammate tool, plan phase)
 
-Explores the codebase (Glob/Grep/Read) to understand structure and patterns. Reads existing Architecture Decision Records (ADRs) from `docs/adrs/` before designing. Designs architecture: components, interfaces, file changes, data flow, testing strategy. Writes new ADRs to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision. References existing ADRs when relevant and supersedes old ones when decisions change. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate. Writes the plan file as their final deliverable.
+Discovers codebase structure using the Explore agent (preferred) or repomix-explorer (if available) for broad understanding, then targets specific files with Glob/Grep/Read for detailed inspection. Reads existing Architecture Decision Records (ADRs) from `docs/adrs/` before designing. Designs architecture: components, interfaces, file changes, data flow, testing strategy. Writes new ADRs to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision. References existing ADRs when relevant and supersedes old ones when decisions change. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate. Writes the plan file as their final deliverable.
 
 ### Product Manager (teammate — spawn via Teammate tool, plan phase)
 
@@ -94,7 +94,7 @@ You are a **coordinator**, not an implementer. During active team phases:
 - Edit or write project doc files (`*.md`) — delegate to the teammate with context (architect for plans/ADRs, reviewer for reports, developer for project docs)
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate
-- Explore the codebase during planning (Glob/Grep on source files) — delegate to architect teammate
+- Explore the codebase during planning (Explore agent, repomix-explorer, Glob/Grep/Read on source files) — delegate to architect teammate
 
 ### ALWAYS
 - Delegate implementation to the developer teammate via SendMessage

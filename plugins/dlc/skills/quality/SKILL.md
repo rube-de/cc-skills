@@ -4,7 +4,7 @@ description: >-
   Code quality check: linting, complexity analysis, duplication detection,
   and dead code identification. Detects project linting config, runs
   appropriate tools, and creates a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob]
+allowed-tools: [Bash, Read, Grep, Glob, Task]
 ---
 
 # DLC: Code Quality Check
@@ -94,7 +94,7 @@ fi
 command -v vulture >/dev/null 2>&1 && vulture . 2>/dev/null
 ```
 
-If **no tools are available**, fall back to Claude analysis:
+If **no dedicated quality tools are available**, use the Explore agent to discover code quality hotspots across the codebase. Use repomix-explorer (if available) for large codebases to get a structural overview. Then use targeted Grep and Read for detailed analysis:
 - Review for unused imports, exports, and functions
 - Check for unreachable code paths
 - Identify overly complex functions (nesting depth, parameter count)

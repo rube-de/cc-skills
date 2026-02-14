@@ -65,19 +65,20 @@ Teammate tool:
     Codebase: [path]. Constraints: [any].
 
     1. Check TaskList, claim your task
-    2. Explore the codebase thoroughly (Glob, Grep, Read) — identify stack, patterns, conventions, and all relevant files
-    3. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
-    4. If you need library docs, message the lead
-    5. Design: components, interfaces, file changes, data flow, testing strategy
-    6. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
+    2. **Discover**: Use the Explore agent to survey the codebase — identify stack, patterns, conventions, and all relevant files. Use repomix-explorer (if available) for large or unfamiliar codebases to get a structural overview.
+    3. **Target**: Use Glob, Grep, and Read to drill into specific files and patterns identified during discovery
+    4. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
+    5. If you need library docs, message the lead
+    6. Design: components, interfaces, file changes, data flow, testing strategy
+    7. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
        - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
        - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
-    7. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
-    8. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
-    9. Iterate on PM teammate feedback
-    10. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
+    8. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
+    9. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
+    10. Iterate on PM teammate feedback
+    11. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
 
         # Plan: [Task Name]
 
@@ -133,8 +134,8 @@ Teammate tool:
         ## Validation
         [PM verdict]
 
-    11. Message the lead and product-manager that the plan is ready at [plan-path]
-    12. Mark task complete
+    12. Message the lead and product-manager that the plan is ready at [plan-path]
+    13. Mark task complete
 ```
 
 **PM teammate**:
@@ -258,7 +259,7 @@ Summarize: task count, waves, key decisions, risks.
 - Writing ADRs yourself instead of having the architect teammate write them
 - Validating requirements yourself instead of delegating to PM teammate
 - Resolving architect↔PM disagreements by implementing your own design
-- Exploring the codebase yourself (Glob/Grep/Read on source files) instead of delegating to architect teammate
+- Exploring the codebase yourself (Explore agent, repomix-explorer, Glob/Grep/Read on source files) instead of delegating to architect teammate
 - Writing the plan file yourself instead of having the architect teammate write it
 
 ## Rules

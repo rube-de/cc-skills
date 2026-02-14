@@ -177,10 +177,8 @@ for the full dimension list.
 
 Before drafting, explore the codebase to enrich the issue with concrete details:
 
-- **Find relevant files**: Use `Glob` and `Grep` to identify files that will need modification
-- **Understand current patterns**: Read existing code to align implementation hints with actual architecture
-- **Check for related work**: Search for TODOs, existing tests, related components
-- **Verify assumptions**: Confirm that proposed changes don't conflict with existing code
+1. **Discover**: Use the Explore agent to survey the codebase for structure, conventions, and relevant areas. For large or unfamiliar codebases, use repomix-explorer (if available) to get a structural overview.
+2. **Target**: Use `Glob`, `Grep`, and `Read` to drill into specific files identified during discovery — find files that need modification, understand current patterns, check for related work (TODOs, existing tests, related components), and verify that proposed changes don't conflict with existing code.
 
 This step is critical — agents executing the issue will perform better with accurate file paths
 and pattern-aware implementation hints.

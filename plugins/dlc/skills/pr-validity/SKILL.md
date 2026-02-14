@@ -4,7 +4,7 @@ description: >-
   PR validity analysis: fetch PR diff, extract new code additions,
   search existing codebase for duplicate or overlapping implementations,
   classify changes, and create a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob, AskUserQuestion]
+allowed-tools: [Bash, Read, Grep, Glob, Task, AskUserQuestion]
 ---
 
 # DLC: PR Validity Analysis
@@ -69,6 +69,8 @@ For each extracted construct, record:
 ## Step 3: Codebase Search
 
 For each extracted construct, search the existing codebase for matches. Exclude files that are part of the PR diff.
+
+Before targeted searches, use the Explore agent to build broad context of the codebase structure and identify areas likely to contain similar constructs. Use repomix-explorer (if available) for large codebases. Then use Grep and Read for the targeted searches below.
 
 ### 3a. Name-Based Search
 

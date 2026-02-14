@@ -12,6 +12,7 @@ allowed-tools:
   - Read
   - Grep
   - Glob
+  - Task
   - AskUserQuestion
 metadata:
   author: claude-pm
@@ -85,6 +86,8 @@ When `/pm` section headers are absent, extract what you can:
 Note lower confidence in the verdict when using Tier 2 parsing.
 
 ### Step 5: Codebase Cross-Reference
+
+Start with the Explore agent to get a broad understanding of the codebase structure before targeted searches. For large or unfamiliar codebases, use repomix-explorer (if available) to get a structural overview. Then use Glob, Grep, and Read for detailed analysis.
 
 For each piece of extracted data, cross-check against the codebase:
 

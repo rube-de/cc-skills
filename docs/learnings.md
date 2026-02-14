@@ -259,6 +259,7 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Router says "invoke with Skill" but `Skill` not in `allowed-tools` | Space-syntax dispatch (`/pm next`) may be blocked | Add `Skill` to `allowed-tools` if routing explicitly uses it |
 | Hook blocks all agents, not just lead | Teammates can't Edit/Write during active team | Verify hook protocol exposes actor identity before building role-based enforcement |
 | Skill commits/pushes without branch verification | Commits and pushes land on wrong branch | Assert `git branch --show-current` matches expected branch before any `git commit`/`git push` |
+| Hardcoding Glob/Grep/Read as only exploration method | Context window bloated with raw search results; misses structural patterns | Use Discover→Target pattern: Explore agent (built-in) for broad discovery, repomix-explorer (if available) for structural overview, then Glob/Grep/Read for targeted follow-up |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
