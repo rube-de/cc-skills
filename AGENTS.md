@@ -18,7 +18,7 @@ cc-skills/
 │   ├── cdt/                     ← Multi-agent dev team (Agent Teams)
 │   │   ├── agents/              # Researcher subagent (Context7)
 │   │   ├── commands/            # plan-task, dev-task, full-task, auto-task
-│   │   ├── hooks/               # Session start validation
+│   │   ├── hooks/               # Session start, prompt gating, team lifecycle
 │   │   ├── scripts/             # Agent teams prerequisite check
 │   │   └── skills/              # cdt
 │   ├── project-manager/         ← GitHub issue creation

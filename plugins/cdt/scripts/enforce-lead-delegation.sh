@@ -1,6 +1,9 @@
 #!/bin/sh
-# Blocks lead from editing source files during active team sessions
-# Called on PreToolUse for Edit and Write tools
+# Blocks lead from editing source files during active team sessions.
+# DORMANT: Not wired in hooks.json as of Issue #59.
+# Reason: Claude Code hooks don't expose agent identity, so this blocks
+# teammates too. Will need new conditional logic (not just re-wiring) when
+# the hook protocol adds agent_role or similar.
 
 # Derive branch-scoped state directory
 BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
@@ -36,37 +39,11 @@ if ! FILE_PATH=$(cat | jq -r '.tool_input.file_path // ""' 2>/dev/null); then
   exit 2
 fi
 
-# No file path -> allow (shouldn't happen for Edit/Write)
-if [ -z "$FILE_PATH" ] || [ "$FILE_PATH" = "null" ]; then
-  exit 0
-fi
-
-# --- Path allowlist (lead may edit these during active team) ---
-case "$FILE_PATH" in
-  */.claude/plans/*|.claude/plans/*|./.claude/plans/*)       exit 0 ;;
-  */.claude/files/*|.claude/files/*|./.claude/files/*)       exit 0 ;;
-  */docs/adrs/*|docs/adrs/*|./docs/adrs/*)                   exit 0 ;;
-  */package.json|package.json)             exit 0 ;;
-  */tsconfig*.json|tsconfig*.json)         exit 0 ;;
-  */eslint.config.*|eslint.config.*|./eslint.config.*|*/vite.config.*|vite.config.*|./vite.config.*) exit 0 ;;
-  */jest.config.*|jest.config.*|./jest.config.*|*/vitest.config.*|vitest.config.*|./vitest.config.*) exit 0 ;;
-  */next.config.*|next.config.*|./next.config.*|*/postcss.config.*|postcss.config.*|./postcss.config.*) exit 0 ;;
-  */tailwind.config.*|tailwind.config.*|./tailwind.config.*) exit 0 ;;
-  */webpack.config.*|webpack.config.*|./webpack.config.*|*/rollup.config.*|rollup.config.*|./rollup.config.*) exit 0 ;;
-  */babel.config.*|babel.config.*|./babel.config.*) exit 0 ;;
-esac
-
-# --- Extension blocklist (source/test/doc files) ---
-case "$FILE_PATH" in
-  *.ts|*.js|*.mjs|*.cjs|*.py|*.go|*.rs|*.tsx|*.jsx)    ;;
-  *.vue|*.svelte|*.css|*.scss|*.html)      ;;
-  *.md)                                    ;;
-  *)  exit 0 ;;  # Unknown extension -> allow
-esac
-
-# Blocked -- source/doc file edit during active team
+# Block all file edits during active team — lead is a coordinator, not an implementer.
 TEAM_NAME=$(cat "$STATE_FILE" 2>/dev/null || echo "active team")
-echo "BLOCKED: Lead cannot edit source or project doc files during active ${TEAM_NAME}." >&2
-echo "Delegate to the developer or architect teammate via SendMessage." >&2
-echo "File: ${FILE_PATH}" >&2
+FILE_PATH_MSG=""
+if [ -n "$FILE_PATH" ] && [ "$FILE_PATH" != "null" ]; then
+  FILE_PATH_MSG=" File: ${FILE_PATH}"
+fi
+echo "BLOCKED: Lead cannot edit files during active ${TEAM_NAME}. Delegate via SendMessage.${FILE_PATH_MSG}" >&2
 exit 2
