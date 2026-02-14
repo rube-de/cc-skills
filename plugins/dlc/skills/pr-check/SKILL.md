@@ -33,29 +33,29 @@ Before making any changes, verify you are on the PR's source branch (`headRefNam
 
 ```bash
 CURRENT=$(git branch --show-current)
-PR_BRANCH="{headRefName from Step 1}"
+PR_BRANCH="{headRefName}"
 
 if [ "$CURRENT" = "$PR_BRANCH" ]; then
-  echo "Already on $PR_BRANCH — proceeding."
+  echo "Already on PR branch $PR_BRANCH — proceeding."
 else
-  # Check for uncommitted changes
-  if ! git diff --quiet || ! git diff --cached --quiet; then
+  # Check for uncommitted changes (tracked and untracked)
+  if [ -n "$(git status --porcelain)" ]; then
     echo "ERROR: Current branch ($CURRENT) does not match PR branch ($PR_BRANCH) and worktree is dirty."
     echo "Stash or commit your changes, then re-run."
     exit 1
   fi
-  # Clean worktree — checkout the PR branch
+
+  # Clean worktree — attempt to checkout the PR branch
+  echo "Switching to PR branch $PR_BRANCH..."
   gh pr checkout {number}
-fi
-```
 
-Post-checkout verification (defense-in-depth):
-
-```bash
-VERIFY=$(git branch --show-current)
-if [ "$VERIFY" != "$PR_BRANCH" ]; then
-  echo "ERROR: Checkout failed — expected $PR_BRANCH but on $VERIFY. Aborting."
-  exit 1
+  # Post-checkout verification (defense-in-depth)
+  VERIFY=$(git branch --show-current)
+  if [ "$VERIFY" != "$PR_BRANCH" ]; then
+    echo "ERROR: Checkout failed — expected $PR_BRANCH but on $VERIFY. Aborting."
+    exit 1
+  fi
+  echo "Successfully checked out $PR_BRANCH."
 fi
 ```
 
