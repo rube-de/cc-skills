@@ -278,12 +278,12 @@ fi
     ### Reviewers
     - External: Gemini ✓ | Codex ✓ | Qwen ✓ | GLM ✗ (timeout)
     - Claude: deep-review ✓ | codebase-context ✓
-    - Scorer: council:review-scorer ✓
+    - Scorer: review-scorer ✓
     ### Mode: [concern | broad] | Blind: [no | yes]
     ### Escalation: [None | Escalated to security round]
 
     ### 🚨 Block Merge (Critical, score >= 80)
-    - [finding] at `file:line` (score: 92, flagged by: Gemini, Codex, council:claude-deep-review)
+    - [finding] at `file:line` (score: 92, flagged by: Gemini, Codex, claude-deep-review)
 
     ### ⚠️ Should Fix (High, score >= 80, 2+ agree)
     - [finding] at `file:line` (score: 85, flagged by: Qwen, GLM, Codex)
