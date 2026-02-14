@@ -93,18 +93,23 @@ The Lead coordinator's job is orchestration, not authorship. When the Lead write
 
 > Source: [Issue #51](https://github.com/rube-de/cc-skills/issues/51)
 
-### PreToolUse hooks enforce role boundaries
+### PreToolUse hooks cannot enforce role boundaries (yet)
 
-When a lead agent bypasses delegation and edits source code directly, prompt instructions alone are insufficient — the model treats them as advisory. Use **PreToolUse hooks** as hard guardrails:
+Claude Code's hook protocol passes only `tool_input` JSON to PreToolUse hooks — there is **no agent identity field** (no `agent_role`, `agent_id`, or similar). A hook that blocks `Edit`/`Write` during active team sessions blocks *all* agents equally, including the teammates the lead is delegating to.
 
-1. **State tracking**: A `TeamCreate`/`TeamDelete` hook manages a branch-scoped state file (`.claude/<branch-slug>/.cdt-team-active`) that signals whether a team session is active
-2. **Tool blocking**: `Edit`/`Write` hooks check the state file, parse `file_path` from tool input, and exit 2 to block source file edits
-3. **Allowlist + blocklist**: Two-tier filtering — path allowlist (plans, config, ADRs always allowed) then extension blocklist (`.ts`, `.js`, `.py`, etc. blocked)
-4. **Soft reinforcement**: Prompt-level "Lead Identity" section + anti-patterns in workflow docs reduce how often hooks need to fire
+**Timeline**:
+1. [Issue #32](https://github.com/rube-de/cc-skills/issues/32) — Lead was editing source files directly. Added `enforce-lead-delegation.sh` hook on `Edit`/`Write` to block source edits during active teams.
+2. [Issue #59](https://github.com/rube-de/cc-skills/issues/59) — Discovered the hook blocks teammates too, defeating the delegation model entirely.
 
-**Pattern**: Hard guardrails (hooks) + soft constraints (prompts) = defense-in-depth for agent role enforcement.
+**Current approach** (Issue #59):
+- **Hooks disabled**: `Edit`/`Write` entries removed from `hooks.json`
+- **Script kept dormant**: `enforce-lead-delegation.sh` retained with a dormant header, ready to re-enable when the hook protocol adds agent identity
+- **Prompt-level enforcement**: "Lead Identity" section in SKILL.md + anti-patterns in workflow docs serve as soft guardrails
+- **State tracking preserved**: `TeamCreate`/`TeamDelete` hooks still manage `.cdt-team-active` state file — useful for other hooks and future role enforcement
 
-> Source: [Issue #32](https://github.com/rube-de/cc-skills/issues/32) — Lead agent was directly editing source files, bypassing teammate delegation. Fixed with `enforce-lead-delegation.sh` + `track-team-state.sh` hooks + SKILL.md Lead Identity section.
+**Lesson**: Before building role-based enforcement on hooks, verify that the hook protocol exposes the identity of the acting agent. Without that, hooks are agent-blind and cannot distinguish lead from teammate.
+
+> Source: [Issue #32](https://github.com/rube-de/cc-skills/issues/32), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
 ### Hook scripts must fail-closed, not fail-open
 
@@ -119,6 +124,8 @@ Security-critical hooks should **block when uncertain** (fail-closed) rather tha
 **Rule of thumb**: When a hook can't determine context (missing tool, empty variable, ambiguous state), block and explain — don't guess and proceed. Over-blocking is annoying but recoverable; under-blocking is a security bypass.
 
 > Source: [PR #41](https://github.com/rube-de/cc-skills/pull/41) — Copilot and CodeRabbit reviews caught fail-open jq dependency, detached HEAD bypass, and arbitrary branch glob selection across rounds 7-10.
+
+> Note: `enforce-lead-delegation.sh` is now dormant (Issue #59) — its fail-closed patterns remain as reference for future hooks. See "PreToolUse hooks cannot enforce role boundaries" above.
 
 ---
 
@@ -250,8 +257,9 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Glob fallback picks arbitrary state | Wrong branch's sentinel used for enforcement | Fail-closed: detect ambiguity, block, require explicit action |
 | `#N` in bash code blocks | `gh issue close #42` silently becomes `gh issue close` | Use bare numbers or `ISSUE_NUMBER` placeholder — `gh` CLI doesn't need `#` |
 | Router says "invoke with Skill" but `Skill` not in `allowed-tools` | Space-syntax dispatch (`/pm next`) may be blocked | Add `Skill` to `allowed-tools` if routing explicitly uses it |
+| Hook blocks all agents, not just lead | Teammates can't Edit/Write during active team | Verify hook protocol exposes actor identity before building role-based enforcement |
 
-> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43)
+> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
 ---
 

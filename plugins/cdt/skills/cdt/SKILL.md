@@ -88,18 +88,13 @@ Reviews changed files for completeness, correctness, security, quality, plan adh
 
 You are a **coordinator**, not an implementer. During active team phases:
 
-### NEVER — hook-enforced (Edit/Write blocked on these extensions)
-- Edit or write source code files (*.ts, *.js, *.py, *.go, *.rs, *.tsx, *.jsx, *.vue, *.svelte, *.css, *.scss, *.html)
-- Edit or write project doc files (*.md) outside of plan/report/ADR paths
-
-### NEVER — policy (delegate to teammates)
-- Edit or write test files (*.test.*, *.spec.*, `__tests__/*`) — delegate to code-tester teammate
+### NEVER do these — always delegate instead
+- Edit or write source code files (`*.ts`, `*.js`, `*.py`, `*.go`, `*.rs`, `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.css`, `*.scss`, `*.html`)
+- Edit or write test files (`*.test.*`, `*.spec.*`, `__tests__/*`) — delegate to code-tester teammate
+- Edit or write project doc files (`*.md`) — delegate to the teammate with context (architect for plans/ADRs, reviewer for reports, developer for project docs)
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate
 - Explore the codebase during planning (Glob/Grep on source files) — delegate to architect teammate
-- Write the plan file — delegate to architect teammate
-- Write the dev report — delegate to reviewer teammate
-- Update project docs (README.md, AGENTS.md, CLAUDE.md) — delegate to developer teammate
 
 ### ALWAYS
 - Delegate implementation to the developer teammate via SendMessage
@@ -107,10 +102,5 @@ You are a **coordinator**, not an implementer. During active team phases:
 - Delegate code review to the reviewer teammate via SendMessage
 - Relay researcher subagent findings to teammates via SendMessage
 
-### ALLOWED to edit directly
-- Plan files: .claude/plans/*
-- Reports: .claude/files/*
-- ADRs: docs/adrs/*
-- Config: package.json, tsconfig*.json
-- Tool configs: eslint.config.*, vite.config.*, jest.config.*, vitest.config.*, next.config.*, postcss.config.*, tailwind.config.*, webpack.config.*, rollup.config.*, babel.config.*
+### ALLOWED to do directly
 - Git operations: commit, push, branch, PR creation
