@@ -43,12 +43,9 @@ fi
 
 # --- Path allowlist (lead may edit these during active team) ---
 case "$FILE_PATH" in
-  */.claude/plans/*|.claude/plans/*)       exit 0 ;;
-  */.claude/files/*|.claude/files/*)       exit 0 ;;
-  */docs/adrs/*|docs/adrs/*)               exit 0 ;;
-  */CLAUDE.md|CLAUDE.md)                   exit 0 ;;
-  */AGENTS.md|AGENTS.md)                   exit 0 ;;
-  */README.md|README.md)                   exit 0 ;;
+  */.claude/plans/*|.claude/plans/*|./.claude/plans/*)       exit 0 ;;
+  */.claude/files/*|.claude/files/*|./.claude/files/*)       exit 0 ;;
+  */docs/adrs/*|docs/adrs/*|./docs/adrs/*)                   exit 0 ;;
   */package.json|package.json)             exit 0 ;;
   */tsconfig*.json|tsconfig*.json)         exit 0 ;;
   */eslint.config.*|eslint.config.*|./eslint.config.*|*/vite.config.*|vite.config.*|./vite.config.*) exit 0 ;;
@@ -59,16 +56,17 @@ case "$FILE_PATH" in
   */babel.config.*|babel.config.*|./babel.config.*) exit 0 ;;
 esac
 
-# --- Extension blocklist (source/test files) ---
+# --- Extension blocklist (source/test/doc files) ---
 case "$FILE_PATH" in
   *.ts|*.js|*.mjs|*.cjs|*.py|*.go|*.rs|*.tsx|*.jsx)    ;;
   *.vue|*.svelte|*.css|*.scss|*.html)      ;;
+  *.md)                                    ;;
   *)  exit 0 ;;  # Unknown extension -> allow
 esac
 
-# Blocked -- source file edit during active team
+# Blocked -- source/doc file edit during active team
 TEAM_NAME=$(cat "$STATE_FILE" 2>/dev/null || echo "active team")
-echo "BLOCKED: Lead cannot edit source files during active ${TEAM_NAME}." >&2
+echo "BLOCKED: Lead cannot edit source or project doc files during active ${TEAM_NAME}." >&2
 echo "Delegate to the developer or architect teammate via SendMessage." >&2
 echo "File: ${FILE_PATH}" >&2
 exit 2

@@ -3,7 +3,7 @@ allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, 
 description: "Create an agent team for autonomous workflow: plan (Architect teammate + PM teammate) → develop (Developer teammate + Code-tester teammate + QA-tester teammate + Reviewer teammate) → report (no approval gate)"
 ---
 
-> **ROLE: Coordinator only.** You do NOT edit source code or test files. You delegate all implementation, testing, and review to teammates. You may only edit plan files, reports, ADRs, and config files.
+> **ROLE: Coordinator only.** You do NOT edit source code, test files, or project docs. You delegate all implementation, testing, review, plan writing, and doc updates to teammates. You verify plan/report artifacts written by teammates.
 
 # /auto-task — Autonomous Workflow
 
@@ -60,7 +60,7 @@ Automatically finalize without user interaction:
 ## Bridge
 
 The plan file is the handoff (Lead carries the path between phases):
-- Phase 1 writes it (architecture, tasks, research)
+- Phase 1: architect teammate writes it (architecture, tasks, research)
 - Phase 2 reads and updates it (status, logs, files)
 - Lead's context spans both phases; teammate context does not
 - Lead carries the plan path from Phase 1 → Phase 2

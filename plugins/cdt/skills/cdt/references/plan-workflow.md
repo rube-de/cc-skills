@@ -29,9 +29,12 @@ If no issue reference is found, skip this step.
 
 Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this for the plan output path. Store as `$TIMESTAMP`.
 
-## 2. Explore
+## 2. Orient
 
-Read referenced files, explore codebase (Glob/Grep), identify stack and patterns. If requirements are ambiguous — ask the user via AskUserQuestion with recommendations.
+Read project context files (`CLAUDE.md`, `AGENTS.md`) to understand conventions and stack.
+If requirements are ambiguous — ask the user via AskUserQuestion with recommendations.
+
+Do NOT explore the codebase with Glob/Grep — that is the architect's job in Step 5.
 
 ## 3. Create Team
 
@@ -50,7 +53,7 @@ TaskCreate:
 
 Spawn all three simultaneously:
 
-**Architect teammate**:
+**Architect teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
 ```
 Teammate tool:
   team_name: "plan-team"
@@ -59,10 +62,10 @@ Teammate tool:
   prompt: >
     You are the architect. Design the architecture for: [task]
 
-    Codebase: [path]. Stack: [detected]. Constraints: [any].
+    Codebase: [path]. Constraints: [any].
 
     1. Check TaskList, claim your task
-    2. Analyze codebase structure and patterns (Glob, Grep, Read)
+    2. Explore the codebase thoroughly (Glob, Grep, Read) — identify stack, patterns, conventions, and all relevant files
     3. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
     4. If you need library docs, message the lead
     5. Design: components, interfaces, file changes, data flow, testing strategy
@@ -71,10 +74,67 @@ Teammate tool:
        - Number sequentially from existing ADRs (start at 0001 if none exist)
        - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
        - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
-    7. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, add a reference so future agents discover the ADR directory
+    7. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
     8. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
     9. Iterate on PM teammate feedback
-    10. Mark task complete
+    10. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
+
+        # Plan: [Task Name]
+
+        **Generated**: [Date]  **Target**: [Original request]
+
+        ## Overview
+        [Architecture, key decisions, research findings — 2-3 paragraphs]
+
+        ## Architecture
+
+        ### Component Design
+        [Per component: purpose, interface, dependencies]
+
+        ### File Changes
+        | File | Action | Description |
+        |------|--------|-------------|
+
+        ### Data Flow
+        [How data moves through the system]
+
+        ## Architecture Decision Records
+        [Link to each ADR created or referenced during planning]
+        - [ADR-NNNN: Title](docs/adrs/adr-NNNN-slug.md) — status
+
+        ## Research Findings
+        [Library versions, APIs, code examples, pitfalls]
+
+        ## Tasks
+
+        ### T1: [Name]
+        - **depends_on**: []
+        - **location**: [file paths]
+        - **description**: [specific and actionable]
+        - **validation**: [how to verify]
+        - **status**: Not Started
+        - **log**:
+        - **files_changed**:
+
+        ### T2: [Name]
+        - **depends_on**: [T1]
+        ...
+
+        ## Execution Waves
+        | Wave | Tasks | Starts When |
+        |------|-------|-------------|
+
+        ## Testing Strategy
+        [Framework, scenarios, acceptance criteria]
+        [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
+
+        ## Risks & Mitigations
+
+        ## Validation
+        [PM verdict]
+
+    11. Message the lead and product-manager that the plan is ready at [plan-path]
+    12. Mark task complete
 ```
 
 **PM teammate**:
@@ -107,13 +167,20 @@ Task tool:
 
 1. **When Researcher returns** — SendMessage findings to architect teammate
 2. **When architect teammate needs docs** — spawn another Researcher subagent, relay results
-3. **When architect teammate shares design** — verify it aligns with research findings
-4. **When PM teammate validates** — if NEEDS_REVISION, forward feedback to architect teammate (max 2 cycles)
+3. **When architect teammate shares design** — verify it aligns with research findings, confirm the plan file path was communicated
+4. **When PM teammate validates** — if NEEDS_REVISION, architect revises their design directly (max 2 cycles)
 5. **If they disagree** — you decide based on requirements + research
 
-## 7. Save Plan
+## 7. Verify Plan
 
-Write `.claude/plans/plan-$TIMESTAMP.md`:
+The architect teammate writes the plan file. Your role is to verify it exists and is complete.
+
+1. Confirm the plan file exists at `.claude/plans/plan-$TIMESTAMP.md`
+2. Read the plan file — verify it follows the template below
+3. Verify the PM verdict is included in the Validation section
+4. If incomplete, message the architect teammate to fix it
+
+### Plan Template (architect references this)
 
 ```markdown
 # Plan: [Task Name]
@@ -191,12 +258,14 @@ Summarize: task count, waves, key decisions, risks.
 - Writing ADRs yourself instead of having the architect teammate write them
 - Validating requirements yourself instead of delegating to PM teammate
 - Resolving architect↔PM disagreements by implementing your own design
+- Exploring the codebase yourself (Glob/Grep/Read on source files) instead of delegating to architect teammate
+- Writing the plan file yourself instead of having the architect teammate write it
 
 ## Rules
 
 - Architect teammate + PM teammate debate directly
 - Researcher is a subagent — Lead relays results
-- Write plan to disk — handoff artifact for `/cdt:dev-task`
+- Architect writes plan to disk — Lead verifies, handoff artifact for `/cdt:dev-task`
 - Every task declares `depends_on`
 - Always cleanup the team before finishing
 - Do NOT implement — only plan

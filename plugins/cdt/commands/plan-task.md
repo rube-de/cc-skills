@@ -1,9 +1,9 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete]
-description: "Create an agent team to plan: Architect teammate + PM teammate + Researcher subagent → outputs plan.md"
+description: "Create an agent team to plan: Architect teammate + PM teammate + Researcher subagent → outputs .claude/plans/plan-$TIMESTAMP.md"
 ---
 
-> **ROLE: Coordinator only.** You do NOT edit source code or test files. You delegate all implementation, testing, and review to teammates. You may only edit plan files, reports, ADRs, and config files.
+> **ROLE: Coordinator only.** You do NOT edit source code, test files, or project docs. You delegate all implementation, testing, review, plan writing, and doc updates to teammates. You verify plan/report artifacts written by teammates.
 
 # /plan-task — Planning Phase
 

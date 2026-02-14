@@ -47,7 +47,7 @@ Research specialist for doc lookups. Queries Context7 for library docs, searches
 
 ### Architect (teammate — spawn via Teammate tool, plan phase)
 
-Reads existing Architecture Decision Records (ADRs) from `docs/adrs/` before designing. Designs architecture: components, interfaces, file changes, data flow, testing strategy. Writes new ADRs to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision. References existing ADRs when relevant and supersedes old ones when decisions change. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate.
+Explores the codebase (Glob/Grep/Read) to understand structure and patterns. Reads existing Architecture Decision Records (ADRs) from `docs/adrs/` before designing. Designs architecture: components, interfaces, file changes, data flow, testing strategy. Writes new ADRs to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision. References existing ADRs when relevant and supersedes old ones when decisions change. Debates tradeoffs with PM teammate. Messages design to lead and PM teammate. Writes the plan file as their final deliverable.
 
 ### Product Manager (teammate — spawn via Teammate tool, plan phase)
 
@@ -55,7 +55,7 @@ Validates architecture against requirements. Challenges design with concerns. Pr
 
 ### Developer (teammate — spawn via Teammate tool, dev phase)
 
-Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality.
+Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
 
 ### Code-Tester (teammate — spawn via Teammate tool, dev phase, always)
 
@@ -67,7 +67,7 @@ Always spawned. Adapts testing approach based on task type: for UI tasks, writes
 
 ### Reviewer (teammate — spawn via Teammate tool, dev phase)
 
-Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles.
+Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Writes the dev report as their final deliverable after review is approved.
 
 ## Rules
 
@@ -90,11 +90,16 @@ You are a **coordinator**, not an implementer. During active team phases:
 
 ### NEVER — hook-enforced (Edit/Write blocked on these extensions)
 - Edit or write source code files (*.ts, *.js, *.py, *.go, *.rs, *.tsx, *.jsx, *.vue, *.svelte, *.css, *.scss, *.html)
+- Edit or write project doc files (*.md) outside of plan/report/ADR paths
 
 ### NEVER — policy (delegate to teammates)
-- Edit or write test files (*.test.*, *.spec.*, __tests__/*) — delegate to code-tester teammate
+- Edit or write test files (*.test.*, *.spec.*, `__tests__/*`) — delegate to code-tester teammate
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate
+- Explore the codebase during planning (Glob/Grep on source files) — delegate to architect teammate
+- Write the plan file — delegate to architect teammate
+- Write the dev report — delegate to reviewer teammate
+- Update project docs (README.md, AGENTS.md, CLAUDE.md) — delegate to developer teammate
 
 ### ALWAYS
 - Delegate implementation to the developer teammate via SendMessage
@@ -106,6 +111,6 @@ You are a **coordinator**, not an implementer. During active team phases:
 - Plan files: .claude/plans/*
 - Reports: .claude/files/*
 - ADRs: docs/adrs/*
-- Config: CLAUDE.md, AGENTS.md, README.md, package.json, tsconfig*.json
+- Config: package.json, tsconfig*.json
 - Tool configs: eslint.config.*, vite.config.*, jest.config.*, vitest.config.*, next.config.*, postcss.config.*, tailwind.config.*, webpack.config.*, rollup.config.*, babel.config.*
 - Git operations: commit, push, branch, PR creation

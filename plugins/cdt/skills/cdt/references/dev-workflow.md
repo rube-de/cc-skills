@@ -63,9 +63,11 @@ Teammate tool:
     7. If qa-tester teammate reports issues — fix, message them to re-test
     8. If reviewer requests changes — fix, message them to re-review
     9. Mark task complete, check TaskList for next
-    10. When done, message the lead
+    10. After all implementation tasks are complete, update project documentation
+        (README.md, AGENTS.md, CLAUDE.md) to reflect what changed
+    11. When done, message the lead
 
-    Stay within files specified in each task. Need docs? Message the lead.
+    Stay within files specified in each task (except Step 10 doc updates, which are always in scope). Need docs? Message the lead.
 ```
 
 **Code-tester teammate** (always spawned):
@@ -132,7 +134,7 @@ Teammate tool:
     Focus on behavior and correctness — not internal implementation details.
 ```
 
-**Reviewer teammate**:
+**Reviewer teammate** (substitute `[report-path]` → `.claude/files/dev-report-$TIMESTAMP.md` from Step 2):
 ```
 Teammate tool:
   team_name: "dev-team"
@@ -140,6 +142,7 @@ Teammate tool:
   model: opus
   prompt: >
     You are the code reviewer. Plan: [plan-path] — read Architecture.
+    Dev report path: [report-path] — you will write the report after review.
 
     1. Check TaskList — your task is blocked until tests pass
     2. Wait for lead to activate you
@@ -149,7 +152,39 @@ Teammate tool:
     6. Blocking issues → message developer with file:line + fix suggestion
        Wait for fix, re-review (max 3 cycles, then escalate to lead)
     7. When approved, message lead with verdict
-    8. Mark task complete
+    8. Write the dev report to [report-path] using this template:
+
+        # Development Report: [Task Name]
+
+        **Plan**: [path]  **Date**: [date]
+
+        ## Summary
+        [What was built]
+
+        ## Execution
+        | Wave | Tasks | Status |
+        |------|-------|--------|
+
+        ## Changes
+        | File | Action | Description |
+        |------|--------|-------------|
+
+        ## Test Results
+        [Pass/fail counts]
+
+        ## Review
+        [Verdict, cycles, issues fixed]
+
+        ## Developer↔Code-Tester Iterations
+        [Cycle count, key fixes]
+
+        ## Developer↔QA-Tester Iterations
+        [Cycle count, issues found, tests written, screenshots taken (if UI)]
+
+        ## Known Limitations
+
+    9. Message the lead that the report is ready at [report-path]
+    10. Mark task complete
 
     Be specific: file paths, line numbers, concrete fixes.
 ```
@@ -187,9 +222,15 @@ After APPROVED:
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-## 9. Report
+## 9. Verify Report
 
-Write `.claude/files/dev-report-$TIMESTAMP.md`:
+The reviewer teammate writes the dev report. Your role is to verify it exists and is complete.
+
+1. Confirm the report file exists at `.claude/files/dev-report-$TIMESTAMP.md`
+2. Read the report — verify it follows the template below
+3. If incomplete, message the reviewer teammate to fix it
+
+### Report Template (reviewer references this)
 
 ```markdown
 # Development Report: [Task Name]
@@ -251,6 +292,8 @@ If commit & push only:
 - Fixing bugs yourself when developer↔tester cycles haven't been exhausted
 - Reviewing code yourself instead of messaging reviewer teammate
 - "Quick fixing" a file because it's faster than delegating
+- Writing the dev report yourself instead of delegating to reviewer teammate
+- Updating project documentation yourself instead of delegating to developer teammate
 
 ## Rules
 

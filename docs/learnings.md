@@ -81,6 +81,18 @@ The defense-in-depth pattern (inline critical rules as reinforcement) isn't limi
 
 > Source: [Claude Code — Agent Teams](https://code.claude.com/docs/en/agent-teams) — multi-agent orchestration, subagent definitions, and team coordination patterns
 
+### Coordinator should not write deliverable artifacts
+
+The Lead coordinator's job is orchestration, not authorship. When the Lead writes plan files, dev reports, or project docs, it duplicates work that teammates have better context for:
+
+- **Architect** has codebase context from exploration → writes the plan file
+- **Reviewer** has seen all code, tests, and iterations → writes the dev report
+- **Developer** knows what changed → updates project docs
+
+**Rule**: If a teammate has better context for producing an artifact, delegate the writing to them. The Lead verifies the artifact exists and is complete, then presents it to the user.
+
+> Source: [Issue #51](https://github.com/rube-de/cc-skills/issues/51)
+
 ### PreToolUse hooks enforce role boundaries
 
 When a lead agent bypasses delegation and edits source code directly, prompt instructions alone are insufficient — the model treats them as advisory. Use **PreToolUse hooks** as hard guardrails:
