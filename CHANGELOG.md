@@ -1,3 +1,16 @@
+# [1.14.0](https://github.com/rube-de/cc-skills/compare/v1.13.1...v1.14.0) (2026-02-15)
+
+
+### Bug Fixes
+
+* address PR review comments ([60b40f5](https://github.com/rube-de/cc-skills/commit/60b40f53456e1d64dde9fbef495b0b5e1d3b189f))
+* **dlc:** reclassify failed implementations as Blocked in pr-check Step 4 ([ac1e7f9](https://github.com/rube-de/cc-skills/commit/ac1e7f946de35c04dfd27ef20765d7f316555371))
+
+
+### Features
+
+* **dlc:** add reviewer enumeration and coverage verification to pr-check ([7974483](https://github.com/rube-de/cc-skills/commit/7974483d21c58b50eb8493785a3c236454d8a6db)), closes [#1](https://github.com/rube-de/cc-skills/issues/1) [#64](https://github.com/rube-de/cc-skills/issues/64)
+
 ## [1.13.1](https://github.com/rube-de/cc-skills/compare/v1.13.0...v1.13.1) (2026-02-15)
 
 
