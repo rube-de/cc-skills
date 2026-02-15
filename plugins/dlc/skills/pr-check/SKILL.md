@@ -84,6 +84,27 @@ Parse each comment into:
 | `created_at` | `.created_at` |
 | `in_reply_to` | `.in_reply_to_id` (null if top-level) |
 
+## Step 2b: Enumerate Reviewers
+
+Build a reviewer inventory from the comments fetched in Step 2. For each unique `author`, count:
+
+- **Total comments** — every comment by that author
+- **Top-level threads** — comments where `in_reply_to` is null
+
+Include all commenters (human reviewers, bots, CI tools) — do not pre-filter. Step 3 handles relevance classification.
+
+Print the inventory:
+
+```text
+Reviewer inventory ({reviewer_count} reviewers, {total_comment_count} total comments, {top_level_thread_count} top-level threads):
+  - @{reviewer1}: {reviewer1_comment_count} comments ({reviewer1_top_level_thread_count} top-level threads)
+  - @{reviewer2}: {reviewer2_comment_count} comments ({reviewer2_top_level_thread_count} top-level threads)
+```
+
+Store each reviewer's **top-level thread count** as the coverage target for Step 5b. These counts are the baseline — every top-level thread must appear in exactly one category by the end of Step 5.
+
+> **Why this step exists:** The #1 friction point in PR review compliance is silently dropped comments. Without an explicit per-reviewer inventory, there is no way to detect that a reviewer's comment was skipped during categorization. This step creates the accountability baseline that Step 5b verifies against.
+
 ## Step 3: Categorize Comments
 
 Classify each top-level review thread:
@@ -142,6 +163,7 @@ Assign a confidence level:
 - Do not make changes the reviewer didn't request
 - If unsure about intent, classify as **Discussion** instead of guessing
 - Never implement a suggestion assessed as technically incorrect without explicit user approval
+- If an `Edit` or `Write` call fails (tool error, file not found, conflict), reclassify the item as **Blocked** with the reason "implementation failed: {error}" — do not leave it in the Fixable state
 
 ## Step 5: Reply to Fixed Comments
 
@@ -156,6 +178,59 @@ gh api repos/{owner}/{repo}/pulls/{number}/comments \
 ```
 
 > **Note:** Discussion and Blocked replies are deferred to Step 6b (after user decision).
+
+## Step 5b: Coverage Verification
+
+Verify that every top-level thread from Step 2b has been accounted for. For each reviewer, count the top-level threads that appear across **all** categories:
+
+| Category | Counts toward coverage? |
+|----------|------------------------|
+| Resolved | Yes |
+| Dismissed | Yes |
+| Fixed by DLC | Yes |
+| Skipped (user decision) | Yes |
+| Discussion | Yes |
+| Blocked | Yes |
+
+For each reviewer from Step 2b, assert:
+
+```text
+covered threads (sum across all categories) == top-level thread count from Step 2b
+```
+
+**If all reviewers pass:** Print confirmation and continue to Step 6.
+
+```text
+Coverage verification passed: {n}/{n} threads verified across {r} reviewers.
+```
+
+**If any reviewer has a mismatch: HALT.**
+
+Do **not** proceed to Step 6. Print the error:
+
+```text
+ERROR: Coverage verification failed.
+  Reviewer @{name}: expected {expected} top-level threads, found {actual} categorized.
+  Missing comment IDs: {id1}, {id2}, ...
+  Recovery: re-processing missed comments through Steps 3-5.
+```
+
+**Recovery procedure:**
+
+1. Re-process only the missed comments through Steps 3–5
+2. Re-run this verification (Step 5b) a second time
+3. If the second verification also fails, **stop permanently** and report:
+
+```text
+FATAL: Coverage verification failed after retry.
+  Reviewer @{name}: still missing {n} threads.
+  Missing comment IDs: {id1}, {id2}, ...
+  Manual audit required — cannot proceed.
+```
+
+Do **not** retry more than once. A second failure indicates a structural issue that automated re-processing cannot fix.
+
+> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" and "comments addressed" — ensuring that every reviewer's feedback is categorized before fixes are committed and replies are posted.
 
 ## Step 6: User-Gated Issue Creation
 
@@ -311,6 +386,10 @@ PR review compliance check complete.
   - PR: #{number} ({title})
   - Total comments: {n}
   - Resolved: {n}, Fixed by DLC: {n}, Skipped (user decision): {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
+  - Coverage: {verified_threads}/{total_threads} threads verified (Step 5b passed)
+  - Per-reviewer breakdown:
+      @{reviewer1}: Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

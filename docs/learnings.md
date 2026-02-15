@@ -261,6 +261,7 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Skill commits/pushes without branch verification | Commits and pushes land on wrong branch | Assert `git branch --show-current` matches expected branch before any `git commit`/`git push` |
 | Bulk rename over-applied to example output | Namespace prefix appears in self-identification output (review summaries, `flagged by` lists) creating inconsistency | Distinguish invocation code (`Task()` calls) from example output (rendered summaries) — only invocations need namespace prefixes |
 | Hardcoding Glob/Grep/Read as only exploration method | Context window bloated with raw search results; misses structural patterns | Use Discover→Target pattern: Explore agent (built-in) for broad discovery, repomix-explorer (if available) for structural overview, then Glob/Grep/Read for targeted follow-up |
+| No reviewer-level tracking in multi-step workflows | Comments silently dropped — no way to detect which reviewer's feedback was skipped | Add an enumeration step (baseline) before processing and a coverage verification step (assertion) after — with HALT on mismatch |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
@@ -348,6 +349,38 @@ The tool list signals to both the model and the user whether the skill can chang
 
 > Source: [Issue #47](https://github.com/rube-de/cc-skills/issues/47) — `pr-validity` sub-skill is read-only analysis; intentionally excludes `Write`/`Edit` to match the scan-only pattern of `security`/`quality`/`perf`/`test`.
 > Source: [`plugins/dlc/skills/pr-validity/SKILL.md`](../plugins/dlc/skills/pr-validity/SKILL.md) — compare `allowed-tools` with [`pr-check/SKILL.md`](../plugins/dlc/skills/pr-check/SKILL.md)
+
+### Coverage verification as a safeguard against silent item drops
+
+Multi-step workflows that process a list of items (comments, issues, findings) should bracket the processing steps with **enumeration** (baseline count) and **verification** (assertion). Without both, silently dropped items are undetectable.
+
+**Pattern**: Enumerate → Process → Verify → HALT on mismatch
+
+**Bad** — totals-only check (drops can hide):
+```text
+Fetched 12 comments total; categorized 12 comments total. ✓
+# But @reviewerA had 4 comments and only 3 were categorized,
+# while @reviewerB had 3 comments and 4 were categorized (phantom).
+# Total still matches — the drop is invisible.
+```
+
+**Good** — per-source enumeration + verification:
+```text
+@reviewerA: expected 4, categorized 4 ✓
+@reviewerB: expected 3, categorized 2 ✗
+  → HALT: missing comment IDs: [2808261121]
+  → Recovery: re-processing 1 missed comment through Steps 3-5...
+  → Retry verification: @reviewerB: expected 3, categorized 3 ✓
+```
+
+- **Step N**: Enumerate items per source (reviewer, scanner, etc.) — store counts as baseline
+- **Steps N+1 through M**: Process, categorize, and act on each item
+- **Step M+1**: Assert sum-across-categories == baseline per source
+- **HALT** if mismatch — print missing IDs, attempt one retry, then stop permanently
+
+The key insight is tracking by **source** (per-reviewer, per-scanner), not just totals. A total-only check can mask offsetting errors (one reviewer gains a phantom category while another loses a real one).
+
+> Source: [Issue #64](https://github.com/rube-de/cc-skills/issues/64) — `pr-check` Steps 2b and 5b. Claude Code Insights report identified missed review comments as the #1 friction point.
 
 ### Skills that commit/push must verify the correct branch first
 
