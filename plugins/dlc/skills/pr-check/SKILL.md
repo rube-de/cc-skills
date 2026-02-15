@@ -163,6 +163,7 @@ Assign a confidence level:
 - Do not make changes the reviewer didn't request
 - If unsure about intent, classify as **Discussion** instead of guessing
 - Never implement a suggestion assessed as technically incorrect without explicit user approval
+- If an `Edit` or `Write` call fails (tool error, file not found, conflict), reclassify the item as **Blocked** with the reason "implementation failed: {error}" — do not leave it in the Fixable state
 
 ## Step 5: Reply to Fixed Comments
 
