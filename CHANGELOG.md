@@ -1,3 +1,17 @@
+# [1.15.0](https://github.com/rube-de/cc-skills/compare/v1.14.0...v1.15.0) (2026-02-15)
+
+
+### Bug Fixes
+
+* address PR review comments ([025347b](https://github.com/rube-de/cc-skills/commit/025347b1e4498afb7cb27b362d13d0fb39c88903))
+* address PR review comments ([c2e6fda](https://github.com/rube-de/cc-skills/commit/c2e6fda78c880a4a0ee5e74d8b713d4b30441f2a))
+* align severity default with schema (info → none) ([eb8a410](https://github.com/rube-de/cc-skills/commit/eb8a410612bb1ca0ef76fdbf096cb4ff6c18b456))
+
+
+### Features
+
+* **council:** add response validation, layer completion checks, and explicit quick mode boundaries ([3be22f2](https://github.com/rube-de/cc-skills/commit/3be22f283ffec94fd31131ef068b39c41cb13632)), closes [#65](https://github.com/rube-de/cc-skills/issues/65)
+
 # [1.14.0](https://github.com/rube-de/cc-skills/compare/v1.13.1...v1.14.0) (2026-02-15)
 
 
