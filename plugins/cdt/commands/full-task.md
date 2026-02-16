@@ -55,7 +55,7 @@ Follow the planning workflow defined in @plan-workflow.md (skip Step 0 — Git C
 
 ## Phase 1: Completion Audit
 
-Before proceeding, log which teammates were actually used during Phase 1:
+Before proceeding, log which roles were actually used during Phase 1:
 
 ```
 Phase 1 complete:
@@ -66,7 +66,7 @@ Phase 1 complete:
 
 Determine "used" by whether you sent at least one `SendMessage` (teammates) or launched at least one `Task` subagent (researcher) during Phase 1.
 
-If any teammate was created but never used: **WARN** "Teammate {name} was created but never used in Phase 1"
+If any role was created but never used: **WARN** "Role {name} was created but never used in Phase 1"
 
 ## Gate: User Approval
 
@@ -85,7 +85,7 @@ Follow the development workflow defined in @dev-workflow.md using the plan path 
 
 ## Phase 2: Completion Audit
 
-Before proceeding to wrap-up, log which teammates were actually used during Phase 2:
+Before proceeding to wrap-up, log which roles were actually used during Phase 2:
 
 ```
 Phase 2 complete:
@@ -98,7 +98,7 @@ Phase 2 complete:
 
 Determine "used" by whether you sent at least one `SendMessage` (teammates) or launched at least one `Task` subagent (researcher) during Phase 2.
 
-If any teammate was created but never used: **WARN** "Teammate {name} was created but never used in Phase 2"
+If any role was created but never used: **WARN** "Role {name} was created but never used in Phase 2"
 
 ## Wrap Up
 
