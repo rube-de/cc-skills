@@ -16,15 +16,15 @@ description: "Create an agent team for autonomous workflow: plan (Architect team
 Two-phase orchestration like `/cdt:full-task`, but without a user approval gate. Plan team runs, cleans up, then dev team starts immediately.
 
 ```text
-Phase 1: plan-team               Phase 2: dev-team
-┌──────────────────────┐         ┌───────────────────────────┐
-│  Lead (You)          │         │  Lead (You)               │
-│  ├── architect  [tm] │ plan.md │  ├── developer   [tm]     │
-│  ├── prod-mgr   [tm] │──────→ │  ├── code-tester [tm]     │
-│  └── researcher [sa] │         │  ├── qa-tester   [tm]     │
-└──────────────────────┘         │  ├── reviewer    [tm]     │
-                                 │  └── researcher  [sa]     │
-                                 └───────────────────────────┘
+Phase 1: plan-team                    Phase 2: dev-team
+┌───────────────────────────┐         ┌───────────────────────────┐
+│  Lead (You)               │         │  Lead (You)               │
+│  ├── architect       [tm] │ plan.md │  ├── developer   [tm]     │
+│  ├── product-manager [tm] │──────→  │  ├── code-tester [tm]     │
+│  └── researcher      [sa] │         │  ├── qa-tester   [tm]     │
+└───────────────────────────┘         │  ├── reviewer    [tm]     │
+                                      │  └── researcher  [sa]     │
+                                      └───────────────────────────┘
 ```
 
 `[tm]` = teammate (Agent Team)  `[sa]` = subagent
@@ -43,7 +43,7 @@ Print to the user before proceeding:
 
 ```
 Workflow: auto-task
- Phase 1 — Planning: architect [tm], prod-mgr [tm], researcher [sa]
+ Phase 1 — Planning: architect [tm], product-manager [tm], researcher [sa]
  Phase 2 — Development: developer [tm], code-tester [tm], qa-tester [tm], reviewer [tm], researcher [sa]
  Coordinator role: orchestration only — no direct file edits
 ```

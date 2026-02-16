@@ -16,15 +16,15 @@ description: "Create an agent team for full workflow: plan (Architect teammate +
 Two-phase orchestration: plan team → user approval → dev team. One team per session, so plan team must be fully cleaned up before dev team starts.
 
 ```text
-Phase 1: plan-team               Phase 2: dev-team
-┌──────────────────────┐         ┌───────────────────────────┐
-│  Lead (You)          │         │  Lead (You)               │
-│  ├── architect  [tm] │ plan.md │  ├── developer   [tm]     │
-│  ├── prod-mgr   [tm] │──────→ │  ├── code-tester [tm]     │
-│  └── researcher [sa] │         │  ├── qa-tester   [tm]     │
-└──────────────────────┘         │  ├── reviewer    [tm]     │
-                ▲                │  └── researcher  [sa]     │
-         User Approval           └───────────────────────────┘
+Phase 1: plan-team                    Phase 2: dev-team
+┌───────────────────────────┐         ┌───────────────────────────┐
+│  Lead (You)               │         │  Lead (You)               │
+│  ├── architect       [tm] │ plan.md │  ├── developer   [tm]     │
+│  ├── product-manager [tm] │──────→  │  ├── code-tester [tm]     │
+│  └── researcher      [sa] │         │  ├── qa-tester   [tm]     │
+└───────────────────────────┘         │  ├── reviewer    [tm]     │
+              ▲                       │  └── researcher  [sa]     │
+       User Approval                  └───────────────────────────┘
 ```
 
 `[tm]` = teammate (Agent Team)  `[sa]` = subagent
@@ -43,8 +43,9 @@ Print to the user before proceeding:
 
 ```
 Workflow: full-task
- Phase 1 — Planning: architect [tm], prod-mgr [tm], researcher [sa]
+ Phase 1 — Planning: architect [tm], product-manager [tm], researcher [sa]
  Phase 2 — Development: developer [tm], code-tester [tm], qa-tester [tm], reviewer [tm], researcher [sa]
+ Approval gate: user approval required between Phase 1 and Phase 2
  Coordinator role: orchestration only — no direct file edits
 ```
 
