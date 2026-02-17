@@ -185,6 +185,7 @@
         "testing",
         "pr-review",
         "pr-validity",
+        "git-ops",
         "github-issues"
       ]
     }
