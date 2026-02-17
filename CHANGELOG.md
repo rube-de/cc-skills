@@ -1,3 +1,16 @@
+# [1.16.0](https://github.com/rube-de/cc-skills/compare/v1.15.0...v1.16.0) (2026-02-17)
+
+
+### Bug Fixes
+
+* address PR review comments ([e426adb](https://github.com/rube-de/cc-skills/commit/e426adb262429f7c232e79362e4b4faeab70a604))
+* address PR review comments ([5948e76](https://github.com/rube-de/cc-skills/commit/5948e76522c23748c0c8064d250b817c6ae1b057))
+
+
+### Features
+
+* **cdt:** add workflow declaration and delegation enforcement ([2eda87b](https://github.com/rube-de/cc-skills/commit/2eda87b011aff4f7a09c9334a9ae8a7afa52ecf0)), closes [#66](https://github.com/rube-de/cc-skills/issues/66)
+
 # [1.15.0](https://github.com/rube-de/cc-skills/compare/v1.14.0...v1.15.0) (2026-02-15)
 
 
