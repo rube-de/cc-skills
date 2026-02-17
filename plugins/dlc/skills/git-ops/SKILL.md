@@ -50,11 +50,12 @@ Combine two detection methods and deduplicate:
 # Method 1: Branches fully merged into the default branch
 git branch --merged "$DEFAULT_BRANCH" | grep -v "^\*" | sed 's/^[[:space:]]*//'
 
-# Method 2: Branches whose remote tracking ref is gone
-git branch -vv | grep ': gone]' | awk '{print $1}'
+# Method 2: Branches whose remote tracking ref is gone (plumbing command for reliable parsing)
+git for-each-ref --format '%(refname:short) %(upstream:track)' refs/heads | grep '\[gone\]' | cut -d' ' -f1
 ```
 
 **Filter out protected branches** — never include these in candidates:
+- `$DEFAULT_BRANCH` (the dynamically detected default branch)
 - `main`
 - `master`
 - `develop`
@@ -66,6 +67,7 @@ For each candidate, record:
 |-------|-------|
 | `name` | Branch name |
 | `reason` | `merged` (from method 1), `gone` (from method 2), or `merged + gone` (both) |
+| `has_remote` | `yes` if `git ls-remote --exit-code --heads origin "$name"` succeeds, `no` otherwise |
 
 If no candidates are found, print "No cleanup candidates found. Repository is clean." and skip to Step 5.
 
@@ -76,9 +78,9 @@ Display the candidate list with reasons:
 ```text
 Found {n} branch(es) to clean up:
 
-  {branch-1}  (merged)
-  {branch-2}  (gone)
-  {branch-3}  (merged + gone)
+  {branch-1}  (merged)                    → delete local only
+  {branch-2}  (gone)                      → delete local only
+  {branch-3}  (merged + gone, remote: yes) → delete local + remote
 ```
 
 Use `AskUserQuestion` with three options:
@@ -109,7 +111,7 @@ fi
 
 **Safety rules:**
 - Use `-d` (NOT `-D`) — Git's built-in safety check prevents deleting unmerged branches
-- NEVER delete protected branches (`main`, `master`, `develop`, `release/*`) even if they appear in candidates (defense-in-depth)
+- NEVER delete protected branches (`$DEFAULT_BRANCH`, `main`, `master`, `develop`, `release/*`) even if they appear in candidates (defense-in-depth)
 - If `git branch -d` fails for a branch, report the failure and continue with the next branch — do not abort the entire cleanup
 - If `git push origin --delete` fails, report the failure but count the local deletion as successful
 
