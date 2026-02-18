@@ -6,7 +6,7 @@ description: >-
   to domain-specific sub-skills or runs all checks in sequence.
 user-invocable: true
 allowed-tools: [Read, Bash, Skill, AskUserQuestion]
-argument-hint: "[--all | security | quality | perf | test | pr-check | pr-validity]"
+argument-hint: "[--all | security | quality | perf | test | pr-check | pr-validity | git-ops]"
 ---
 
 # Dev Life Cycle (DLC)
@@ -23,6 +23,7 @@ Automated quality gates for the development life cycle. Each sub-skill detects y
 | Testing | `/dlc:test` | Test execution, coverage measurement, gap analysis |
 | PR Review | `/dlc:pr-check` | Fetch PR comments, implement fixes, reply inline |
 | PR Validity | `/dlc:pr-validity` | Detect duplicate/redundant code in PR changes |
+| Git Ops | `/dlc:git-ops` | Branch cleanup, remote pruning, repo state verification |
 
 ## Usage
 
@@ -46,6 +47,7 @@ Parse the first argument:
 | `test` | Invoke `dlc:test` via `Skill` |
 | `pr-check` | Invoke `dlc:pr-check` via `Skill` |
 | `pr-validity` | Invoke `dlc:pr-validity` via `Skill` |
+| `git-ops` | Invoke `dlc:git-ops` via `Skill` |
 | empty | Show overview and use `AskUserQuestion` to ask which check to run |
 
 If routing to a single sub-skill, invoke it with `Skill` and pass any remaining arguments.
