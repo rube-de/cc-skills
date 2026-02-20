@@ -202,6 +202,24 @@ Also watch for:
 
 > Source: [PR #40](https://github.com/rube-de/cc-skills/pull/40) — Copilot review caught this across 4 DLC skills (`security`, `quality`, `test`, `perf`). All fixed with `command -v` selection pattern.
 
+### Batch GitHub API calls into per-plugin shell scripts
+
+Skills that make 3–4 sequential `gh` CLI calls waste context window space on raw API output and data wrangling. Batch these into self-contained shell scripts (`scripts/*.sh`) that return structured JSON in a single tool call.
+
+**Key design choices**:
+- **`#!/bin/sh`** not `#!/bin/bash` — maximizes portability across macOS/Linux; avoids bash-isms (arrays, `[[ ]]`, `${var//pattern}`)
+- **No `set -e`** — conflicts with `cmd || die_json "msg"` error handling; use explicit error checks instead
+- **`die_json()` helper** — prints `{"error":"...","code":"..."}` to stderr on failure, ensuring the LLM always gets structured output even on errors
+- **`databaseId` in GraphQL** — REST reply endpoints need integer IDs; GraphQL `id` returns opaque node IDs; `databaseId` bridges the gap
+- **Optional positional args** — scripts auto-detect PR number and repo when args are omitted, saving a preliminary `gh` call in the SKILL.md
+- **Cycle detection deferred to LLM** — jq lacks mutable state for DFS; scripts provide edge lists, SKILL.md steps do graph traversal
+
+**Script path resolution**: SKILL.md references scripts as `scripts/foo.sh` relative to the plugin root. Claude resolves this the same way it resolves reference file links (`../dlc/references/ISSUE-TEMPLATE.md`). No `$CLAUDE_PLUGIN_ROOT` needed (that's for hooks).
+
+**Frontmatter impact**: If a skill's `allowed-tools` restricts Bash (e.g., `Bash(gh:*)`), widen to `Bash` when adding local script execution. Acceptable trade-off since skills with Read/Grep/Glob already have filesystem access.
+
+> Source: [Issue #74](https://github.com/rube-de/cc-skills/issues/74) — `pr-check` and `pm:next` batched into `pr-comments.sh` and `open-issues.sh` respectively.
+
 ---
 
 ## GitHub Issue Integration in Agent Teams

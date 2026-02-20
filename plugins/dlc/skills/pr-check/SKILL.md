@@ -13,27 +13,50 @@ Fetch PR review comments, implement fixes for unresolved items, and report compl
 
 Before running, **read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/ISSUE-TEMPLATE.md) now** for the issue format, and **read [../dlc/references/REPORT-FORMAT.md](../dlc/references/REPORT-FORMAT.md) now** for the findings data structure.
 
-## Step 1: Resolve Target PR
+## Step 1: Fetch PR Data
 
-Determine the PR to check:
+Run the `pr-comments.sh` script located in the `scripts/` directory of this plugin (same plugin containing this SKILL.md):
 
 ```bash
 # If PR number provided as argument
-gh pr view <PR_NUMBER> --json number,title,url,headRefName,state
+sh scripts/pr-comments.sh <PR_NUMBER>
 
-# If no argument — detect from current branch
-gh pr view --json number,title,url,headRefName,state
+# If no argument — auto-detect from current branch
+sh scripts/pr-comments.sh
 ```
 
-If no open PR is found, abort with: "No open PR found for the current branch. Push your changes and open a PR first."
+**Validate the response:**
+- Check stderr for a JSON `error` object — if present, abort with the error message
+- Extract from the JSON output and store as variables:
+  - `PR_NUMBER` ← `.pr.number`
+  - `PR_TITLE` ← `.pr.title`
+  - `PR_BRANCH` ← `.pr.branch`
+  - `PR_STATE` ← `.pr.state`
+  - `PR_AUTHOR` ← `.pr.author`
+  - `PR_URL` ← `.pr.url`
+  - `PR_OWNER` ← `.pr.owner`
+  - `PR_REPO` ← `.pr.repo`
+  - `REVIEW_DECISION` ← `.pr.reviewDecision`
+
+**State check:** If `PR_STATE` is not `OPEN`, abort with: "PR #{PR_NUMBER} is {PR_STATE} — only open PRs can be checked."
+
+**Truncation warning:** If `.summary.truncated` is `true`, warn: "Review threads were truncated — some threads may be missing from the analysis."
+
+**Print reviewer inventory** from the pre-built `.reviewers` array:
+
+```text
+Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads):
+  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} top-level threads)
+```
+
+Store each reviewer's `top_level_threads` count as the coverage target for Step 4b.
 
 ## Step 1b: Verify and Checkout PR Branch
 
-Before making any changes, verify you are on the PR's source branch (`headRefName` from Step 1).
+Before making any changes, verify you are on the PR's source branch (`PR_BRANCH` from Step 1).
 
 ```bash
 CURRENT=$(git branch --show-current)
-PR_BRANCH="{headRefName}"
 
 if [ "$CURRENT" = "$PR_BRANCH" ]; then
   echo "Already on PR branch $PR_BRANCH — proceeding."
@@ -47,7 +70,7 @@ else
 
   # Clean worktree — attempt to checkout the PR branch
   echo "Switching to PR branch $PR_BRANCH..."
-  gh pr checkout {number}
+  gh pr checkout $PR_NUMBER
 
   # Post-checkout verification (defense-in-depth)
   VERIFY=$(git branch --show-current)
@@ -61,59 +84,15 @@ fi
 
 If verification fails, abort with the error above. Do **not** proceed to Step 2 on the wrong branch — commits and pushes would target the wrong remote branch.
 
-## Step 2: Fetch Review Comments
+## Step 2: Categorize Comments
 
-Retrieve all review comments and categorize them:
-
-```bash
-# Get all review comments
-gh api repos/{owner}/{repo}/pulls/{number}/comments --paginate
-
-# Get review threads (to check resolved status)
-gh pr view <PR_NUMBER> --json reviewDecision,reviews,comments
-```
-
-Parse each comment into:
-
-| Field | Source |
-|-------|--------|
-| `author` | `.user.login` |
-| `body` | `.body` |
-| `path` | `.path` (file the comment is on) |
-| `line` | `.line` or `.original_line` |
-| `created_at` | `.created_at` |
-| `in_reply_to` | `.in_reply_to_id` (null if top-level) |
-
-## Step 2b: Enumerate Reviewers
-
-Build a reviewer inventory from the comments fetched in Step 2. For each unique `author`, count:
-
-- **Total comments** — every comment by that author
-- **Top-level threads** — comments where `in_reply_to` is null
-
-Include all commenters (human reviewers, bots, CI tools) — do not pre-filter. Step 3 handles relevance classification.
-
-Print the inventory:
-
-```text
-Reviewer inventory ({reviewer_count} reviewers, {total_comment_count} total comments, {top_level_thread_count} top-level threads):
-  - @{reviewer1}: {reviewer1_comment_count} comments ({reviewer1_top_level_thread_count} top-level threads)
-  - @{reviewer2}: {reviewer2_comment_count} comments ({reviewer2_top_level_thread_count} top-level threads)
-```
-
-Store each reviewer's **top-level thread count** as the coverage target for Step 5b. These counts are the baseline — every top-level thread must appear in exactly one category by the end of Step 5.
-
-> **Why this step exists:** The #1 friction point in PR review compliance is silently dropped comments. Without an explicit per-reviewer inventory, there is no way to detect that a reviewer's comment was skipped during categorization. This step creates the accountability baseline that Step 5b verifies against.
-
-## Step 3: Categorize Comments
-
-Classify each top-level review thread:
+Using the `.threads` array from Step 1, classify each top-level review thread:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | Thread explicitly marked as resolved in GitHub, or author replied confirming fix |
-| **Dismissed** | Review was dismissed, or comment is a nit/optional suggestion (contains "nit:", "optional:", "consider:") |
-| **Unresolved** | Active thread with no resolution — the reviewer expects a change |
+| **Resolved** | `is_resolved == true`, or PR author replied confirming fix (`has_author_reply == true` with affirmative language) |
+| **Dismissed** | `is_outdated == true`, review was dismissed, or comment is a nit/optional suggestion (contains "nit:", "optional:", "consider:") |
+| **Unresolved** | Active thread with `is_resolved == false` and `is_outdated == false` — the reviewer expects a change |
 
 For unresolved comments, further classify by actionability:
 
@@ -123,17 +102,17 @@ For unresolved comments, further classify by actionability:
 | **Discussion** | Comment asks a question or raises a concern that needs human judgment |
 | **Blocked** | Fix requires information or access the agent doesn't have |
 
-## Step 4: Critically Evaluate and Implement Fixable Items
+## Step 3: Critically Evaluate and Implement Fixable Items
 
 For each **fixable unresolved** comment, follow a three-phase workflow:
 
-### 4a. Read Context
+### 3a. Read Context
 
 1. Read the file at the referenced path
 2. Read at least 20 lines of surrounding context (before and after the target line)
 3. Read the full comment thread (including any replies)
 
-### 4b. Critically Evaluate
+### 3b. Critically Evaluate
 
 Assess the suggestion against these criteria:
 
@@ -149,7 +128,7 @@ Assign a confidence level:
 - **Medium**: One or two criteria are uncertain — the suggestion is plausible but not obvious
 - **Low**: Multiple criteria fail or the suggestion appears technically incorrect
 
-### 4c. Confidence-Gated Implementation
+### 3c. Confidence-Gated Implementation
 
 - **High confidence** → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
 - **Medium or Low confidence** → Use `AskUserQuestion` to present:
@@ -165,23 +144,23 @@ Assign a confidence level:
 - Never implement a suggestion assessed as technically incorrect without explicit user approval
 - If an `Edit` or `Write` call fails (tool error, file not found, conflict), reclassify the item as **Blocked** with the reason "implementation failed: {error}" — do not leave it in the Fixable state
 
-## Step 5: Reply to Fixed Comments
+## Step 4: Reply to Fixed Comments
 
-For each **fixed** comment, post an inline reply:
+For each **fixed** comment, post an inline reply using the `rest_id` (database ID) from the thread data:
 
 ```bash
-# Reply to a review comment
-gh api repos/{owner}/{repo}/pulls/{number}/comments \
+# Reply to a review comment — use rest_id from the thread's first comment
+gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="Fixed: {brief description of what was changed}" \
-  -f in_reply_to={comment_id}
+  -F in_reply_to={rest_id}
 ```
 
-> **Note:** Discussion and Blocked replies are deferred to Step 6b (after user decision).
+> **Note:** Discussion and Blocked replies are deferred to Step 5b (after user decision).
 
-## Step 5b: Coverage Verification
+## Step 4b: Coverage Verification
 
-Verify that every top-level thread from Step 2b has been accounted for. For each reviewer, count the top-level threads that appear across **all** categories:
+Verify that every top-level thread from Step 1 has been accounted for. For each reviewer, count the top-level threads that appear across **all** categories:
 
 | Category | Counts toward coverage? |
 |----------|------------------------|
@@ -192,13 +171,13 @@ Verify that every top-level thread from Step 2b has been accounted for. For each
 | Discussion | Yes |
 | Blocked | Yes |
 
-For each reviewer from Step 2b, assert:
+For each reviewer from Step 1, assert:
 
 ```text
-covered threads (sum across all categories) == top-level thread count from Step 2b
+covered threads (sum across all categories) == top-level thread count from Step 1
 ```
 
-**If all reviewers pass:** Print confirmation and continue to Step 6.
+**If all reviewers pass:** Print confirmation and continue to Step 5.
 
 ```text
 Coverage verification passed: {n}/{n} threads verified across {r} reviewers.
@@ -206,19 +185,19 @@ Coverage verification passed: {n}/{n} threads verified across {r} reviewers.
 
 **If any reviewer has a mismatch: HALT.**
 
-Do **not** proceed to Step 6. Print the error:
+Do **not** proceed to Step 5. Print the error:
 
 ```text
 ERROR: Coverage verification failed.
   Reviewer @{name}: expected {expected} top-level threads, found {actual} categorized.
   Missing comment IDs: {id1}, {id2}, ...
-  Recovery: re-processing missed comments through Steps 3-5.
+  Recovery: re-processing missed comments through Steps 2-3.
 ```
 
 **Recovery procedure:**
 
-1. Re-process only the missed comments through Steps 3–5
-2. Re-run this verification (Step 5b) a second time
+1. Re-process only the missed comments through Steps 2–3
+2. Re-run this verification (Step 4b) a second time
 3. If the second verification also fails, **stop permanently** and report:
 
 ```text
@@ -230,11 +209,11 @@ FATAL: Coverage verification failed after retry.
 
 Do **not** retry more than once. A second failure indicates a structural issue that automated re-processing cannot fix.
 
-> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" and "comments addressed" — ensuring that every reviewer's feedback is categorized before fixes are committed and replies are posted.
+> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" (Step 1) and "comments addressed" — ensuring that every reviewer's feedback is categorized before fixes are committed and replies are posted.
 
-## Step 6: User-Gated Issue Creation
+## Step 5: User-Gated Issue Creation
 
-If no Discussion, Blocked, or user-skipped Fixable items remain after Step 4, **skip this step entirely**.
+If no Discussion, Blocked, or user-skipped Fixable items remain after Step 3, **skip this step entirely**.
 
 If out-of-scope items remain (Discussion, Blocked, or items the user chose to skip), use `AskUserQuestion` to ask:
 
@@ -276,17 +255,17 @@ gh issue create \
 
 If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
-**If the user chooses "No, I'll handle manually"**, skip issue creation and proceed to Step 6b.
+**If the user chooses "No, I'll handle manually"**, skip issue creation and proceed to Step 5b.
 
-## Step 6b: Decision-Aware Inline Replies
+## Step 5b: Decision-Aware Inline Replies
 
 If there are no Discussion, Blocked, or user-skipped Fixable items, **skip this step**.
 
-After the user's decision in Step 6, post inline replies reflecting the actual outcome. Separate the global decision (for Discussion/Blocked items) from the per-item decision (for skipped Fixable items).
+After the user's decision in Step 5, post inline replies reflecting the actual outcome. Separate the global decision (for Discussion/Blocked items) from the per-item decision (for skipped Fixable items).
 
-For each **Discussion** or **Blocked** comment, map the user's Step 6 decision:
+For each **Discussion** or **Blocked** comment, map the user's Step 5 decision:
 
-| User Decision (Step 6) | Inline Reply Text |
+| User Decision (Step 5) | Inline Reply Text |
 |------------------------|-------------------|
 | Created follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
 | Handle manually | `Acknowledged — will be addressed by the author` |
@@ -298,14 +277,14 @@ For each **user-skipped Fixable** comment, always reply:
 | Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
 
 ```bash
-# Reply to each Discussion/Blocked/skipped comment with the decision-aware message
-gh api repos/{owner}/{repo}/pulls/{number}/comments \
+# Reply to each Discussion/Blocked/skipped comment using rest_id from thread data
+gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="{decision-aware reply text}" \
-  -f in_reply_to={comment_id}
+  -F in_reply_to={rest_id}
 ```
 
-## Step 6c: PR Summary Comment
+## Step 5c: PR Summary Comment
 
 If there are no Discussion, Blocked, or user-skipped Fixable items, **skip this step**.
 
@@ -351,10 +330,10 @@ TIMESTAMP=$(date +%s)
 SUMMARY_FILE="/tmp/dlc-pr-summary-${TIMESTAMP}.md"
 # Write the summary content to SUMMARY_FILE
 
-gh pr comment {number} --body-file "$SUMMARY_FILE"
+gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"
 ```
 
-## Step 7: Commit, Push, and Report
+## Step 6: Commit, Push, and Report
 
 If fixes were made:
 
@@ -386,7 +365,7 @@ PR review compliance check complete.
   - PR: #{number} ({title})
   - Total comments: {n}
   - Resolved: {n}, Fixed by DLC: {n}, Skipped (user decision): {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
-  - Coverage: {verified_threads}/{total_threads} threads verified (Step 5b passed)
+  - Coverage: {verified_threads}/{total_threads} threads verified (Step 4b passed)
   - Per-reviewer breakdown:
       @{reviewer1}: Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
       @{reviewer2}: Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
