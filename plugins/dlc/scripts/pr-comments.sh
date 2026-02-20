@@ -85,6 +85,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
 '
 
 _err=$(mktemp)
+trap 'rm -f "$_err"' EXIT
 RAW=$(gh api graphql \
   -f query="$QUERY" \
   -F owner="$OWNER" \

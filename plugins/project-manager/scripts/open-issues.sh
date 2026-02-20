@@ -75,8 +75,8 @@ echo "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED"
   [ .[] | {
     number:      .number,
     title:       .title,
-    labels:      [.labels[].name],
-    assignees:   [.assignees[].login],
+    labels:      [(.labels // [])[].name],
+    assignees:   [(.assignees // [])[].login],
     milestone:   (.milestone.title // null),
     created_at:  .createdAt,
     updated_at:  .updatedAt,
