@@ -34,6 +34,8 @@ sh scripts/pr-comments.sh
   - `PR_STATE` ← `.pr.state`
   - `PR_AUTHOR` ← `.pr.author`
   - `PR_URL` ← `.pr.url`
+  - `PR_OWNER` ← `.pr.owner`
+  - `PR_REPO` ← `.pr.repo`
   - `REVIEW_DECISION` ← `.pr.reviewDecision`
 
 **State check:** If `PR_STATE` is not `OPEN`, abort with: "PR #{PR_NUMBER} is {PR_STATE} — only open PRs can be checked."
@@ -148,7 +150,7 @@ For each **fixed** comment, post an inline reply using the `rest_id` (database I
 
 ```bash
 # Reply to a review comment — use rest_id from the thread's first comment
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments \
+gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="Fixed: {brief description of what was changed}" \
   -F in_reply_to={rest_id}
@@ -276,7 +278,7 @@ For each **user-skipped Fixable** comment, always reply:
 
 ```bash
 # Reply to each Discussion/Blocked/skipped comment using rest_id from thread data
-gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments \
+gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="{decision-aware reply text}" \
   -F in_reply_to={rest_id}

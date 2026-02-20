@@ -49,7 +49,7 @@ sh scripts/open-issues.sh --include-assigned
 - Check stderr for a JSON `error` object — if present, abort with the error message (auth failures, missing tools, repo detection failures are handled by the script)
 - Extract and store the full JSON output as `$ISSUES_DATA`
 
-**Edge case — no unassigned issues:** If `.total_open == 0`, report "No unassigned issues found (try `--include-assigned` to include assigned items)" and stop.
+**Edge case — no issues:** If `.total_open == 0`, report "No open issues found" (if `--include-assigned` was used) or "No unassigned issues found (try `--include-assigned` to include assigned items)" (default mode) and stop.
 
 **Edge case — 100+ issues:** If `.total_open >= 100`, warn: "Results capped at 100 issues. Consider filtering by label or milestone for a broader view."
 
@@ -58,6 +58,7 @@ The JSON output contains pre-computed fields for each issue:
 - `blockers_resolved` — `true` if all blockers are closed (not in the open issue set)
 - `unblocked` — `true` if no open blockers remain
 - `age_days` — days since issue creation
+- `milestone_due_on` — milestone due date (ISO 8601) or `null`
 - `dependency_graph.edges` — `[[blocker, blocked], ...]` pairs for graph analysis
 
 ### Step 2: Build Dependency Graph

@@ -78,6 +78,7 @@ echo "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED"
     labels:      [(.labels // [])[].name],
     assignees:   [(.assignees // [])[].login],
     milestone:   (.milestone.title // null),
+    milestone_due_on: (.milestone.due_on // null),
     created_at:  .createdAt,
     updated_at:  .updatedAt,
     age_days:    days_since_created,
@@ -105,10 +106,13 @@ echo "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED"
     unblocked: (
       [.blocked_by[] | select(. as $b | $open_set | index($b))] | length == 0
     )
-  }] |
+  }] as $augmented_issues |
+
+  # Count unassigned from full list (before assignment filter)
+  ([$augmented_issues[] | select(.assignees | length == 0)] | length) as $unassigned |
 
   # Filter by assignment — default excludes assigned issues
-  (if $include_assigned then . else [.[] | select(.assignees | length == 0)] end) as $all_issues |
+  (if $include_assigned then $augmented_issues else [$augmented_issues[] | select(.assignees | length == 0)] end) as $all_issues |
 
   # Build dependency graph edges [blocker, blocked]
   [ $all_issues[] |
@@ -121,9 +125,6 @@ echo "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED"
   ] as $blocks_edges |
   ($blocker_edges + $blocks_edges | unique) as $edges |
 
-  # Count unassigned
-  ([$all_issues[] | select(.assignees | length == 0)] | length) as $unassigned |
-
   {
     repo:             $repo,
     total_open:       ($all_issues | length),
@@ -134,4 +135,4 @@ echo "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED"
       cycles: []
     }
   }
-'
+' || die_json "jq transform failed — check RAW input or jq syntax" "JQ_FAIL"
