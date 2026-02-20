@@ -330,7 +330,7 @@ TIMESTAMP=$(date +%s)
 SUMMARY_FILE="/tmp/dlc-pr-summary-${TIMESTAMP}.md"
 # Write the summary content to SUMMARY_FILE
 
-gh pr comment {number} --body-file "$SUMMARY_FILE"
+gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"
 ```
 
 ## Step 6: Commit, Push, and Report
