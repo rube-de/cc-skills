@@ -22,41 +22,35 @@ The OpenCode CLI (`opencode`) provides access to GLM-5. Key patterns:
 
 ### Basic Query
 ```bash
-opencode "Your prompt here"
+opencode -m zai-coding-plan/glm-5 "Your prompt here"
 ```
 
 ### Query with File Context
 ```bash
-opencode -f src/auth/middleware.ts "Review this code for security issues"
+opencode -m zai-coding-plan/glm-5 -f src/auth/middleware.ts "Review this code for security issues"
 ```
 
 ### Multiple Files
 ```bash
-opencode -f src/services/*.ts "Analyze the service layer architecture"
-```
-
-### Specifying Model
-```bash
-# GLM-5 via Z.AI Coding Plan provider
-opencode -m zai-coding-plan/glm-5 "Analyze this implementation"
+opencode -m zai-coding-plan/glm-5 -f src/services/*.ts "Analyze the service layer architecture"
 ```
 
 ### With Stdin (piping)
 ```bash
-cat src/utils.ts | opencode "Review this utility module"
+cat src/utils.ts | opencode -m zai-coding-plan/glm-5 "Review this utility module"
 ```
 
 ### PR/Diff Review
 ```bash
-git diff main...HEAD | opencode "Review these PR changes for issues"
+git diff main...HEAD | opencode -m zai-coding-plan/glm-5 "Review these PR changes for issues"
 
 # Or specific commit range
-git diff HEAD~5 | opencode "Review recent changes"
+git diff HEAD~5 | opencode -m zai-coding-plan/glm-5 "Review recent changes"
 ```
 
 ### Interactive Mode
 ```bash
-opencode -i  # Start interactive session
+opencode -m zai-coding-plan/glm-5 -i  # Start interactive session
 ```
 
 ## Core Responsibilities

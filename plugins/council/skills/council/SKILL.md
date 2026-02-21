@@ -75,7 +75,7 @@ Invoked via CLI. Each brings a different AI model's perspective. All receive the
 | `council:gemini-consultant` | `gemini` | Architecture, security | Security: 0.9, Architecture: 0.85 |
 | `council:codex-consultant` | `codex` | PR review, bugs | Debugging: 0.9, Security: 0.8 |
 | `council:qwen-consultant` | `qwen` | Quality, brainstorming | Quality: 0.9, Refactoring: 0.85 |
-| `council:glm-consultant` | `opencode -m glm-5` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
+| `council:glm-consultant` | `opencode -m zai-coding-plan/glm-5` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
 | `council:kimi-consultant` | `opencode -m opencode/kimi-k2.5-free` | Code analysis, algorithms | Code Quality: 0.80, Algorithms: 0.80 |
 
 ### Claude Subagents (Concern Depth — Review Workflows Only)
