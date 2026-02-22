@@ -37,19 +37,20 @@ sh scripts/pr-comments.sh
   - `PR_OWNER` ← `.pr.owner`
   - `PR_REPO` ← `.pr.repo`
   - `REVIEW_DECISION` ← `.pr.reviewDecision`
+  - `REVIEW_BODIES` ← `.review_bodies`
 
 **State check:** If `PR_STATE` is not `OPEN`, abort with: "PR #{PR_NUMBER} is {PR_STATE} — only open PRs can be checked."
 
-**Truncation warning:** If `.summary.truncated` is `true`, warn: "Review threads were truncated — some threads may be missing from the analysis."
+**Truncation warning:** If `.summary.truncated` is `true`, warn: "Review data was truncated — some threads or review bodies may be missing from the analysis."
 
 **Print reviewer inventory** from the pre-built `.reviewers` array:
 
 ```text
-Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads):
-  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} top-level threads)
+Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads, {summary.total_review_bodies} review bodies):
+  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies)
 ```
 
-Store each reviewer's `top_level_threads` count as the coverage target for Step 4b.
+Store each reviewer's `top_level_threads` and `review_bodies` counts as the coverage targets for Step 4b.
 
 ## Step 1b: Verify and Checkout PR Branch
 
@@ -86,15 +87,33 @@ If verification fails, abort with the error above. Do **not** proceed to Step 2 
 
 ## Step 2: Categorize Comments
 
+### Thread categorization
+
 Using the `.threads` array from Step 1, classify each top-level review thread:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | `is_resolved == true`, or PR author replied confirming fix (`has_author_reply == true` with affirmative language) |
-| **Dismissed** | `is_outdated == true`, review was dismissed, or comment is a nit/optional suggestion (contains "nit:", "optional:", "consider:") |
-| **Unresolved** | Active thread with `is_resolved == false` and `is_outdated == false` — the reviewer expects a change |
+| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", or "Acknowledged:") |
+| **Dismissed** | Not applicable for inline threads — threads use GitHub's resolve mechanism, not dismiss. This category will typically be 0 for threads. |
+| **Unresolved** | Everything else. This includes `is_outdated` threads (the agent must re-check the current code state), and threads containing nit/optional/consider comments (these are still legitimate feedback) |
 
-For unresolved comments, further classify by actionability:
+> **Important:** Do NOT auto-dismiss threads based on `is_outdated == true` or keyword matching (`nit:`, `optional:`, `consider:`). Outdated threads may still contain unresolved feedback — a file change does not invalidate a design concern.
+
+### Review body categorization
+
+Using the `REVIEW_BODIES` array from Step 1, classify each review body:
+
+| Category | Criteria |
+|----------|----------|
+| **Resolved** | `state == "DISMISSED"`, or a DLC reply was already posted for this review body |
+| **Dismissed** | `state == "DISMISSED"` |
+| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body |
+
+> Review bodies with `state == "APPROVED"` and a body like "LGTM" are typically non-actionable — classify these as **Resolved** unless the body contains specific action items.
+
+### Unresolved sub-categories
+
+For unresolved comments (both threads and review bodies), further classify by actionability:
 
 | Sub-Category | Criteria |
 |-------------|----------|
@@ -144,43 +163,68 @@ Assign a confidence level:
 - Never implement a suggestion assessed as technically incorrect without explicit user approval
 - If an `Edit` or `Write` call fails (tool error, file not found, conflict), reclassify the item as **Blocked** with the reason "implementation failed: {error}" — do not leave it in the Fixable state
 
-## Step 4: Reply to Fixed Comments
+## Step 4: Reply to Fixed and Dismissed Comments
 
-For each **fixed** comment, post an inline reply using the `rest_id` (database ID) from the thread data:
+For each **Fixed** and **Dismissed** comment, post a reply using the appropriate routing based on `reply_type`.
+
+### Reply routing
+
+Use the `reply_type` field from the comment data to determine the reply mechanism:
+
+- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`:
 
 ```bash
-# Reply to a review comment — use rest_id from the thread's first comment
 gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
-  -f body="Fixed: {brief description of what was changed}" \
+  -f body="{reply text}" \
   -F in_reply_to={rest_id}
 ```
+
+- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original:
+
+```bash
+gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+
+{reply text}"
+```
+
+### Reply text by category
+
+| Category | Reply prefix | Example |
+|----------|-------------|---------|
+| **Fixed** | `Fixed: {brief description}` | `Fixed: renamed variable to camelCase` |
+| **Dismissed** | `Dismissed: {reason}` | `Dismissed: review formally dismissed via GitHub` |
+
+**Dismissed reasons:**
+- "review formally dismissed via GitHub" — for threads/bodies with `state == "DISMISSED"`
+- "thread resolved by reviewer" — for threads that were resolved via GitHub UI
 
 > **Note:** Discussion and Blocked replies are deferred to Step 5b (after user decision).
 
 ## Step 4b: Coverage Verification
 
-Verify that every top-level thread from Step 1 has been accounted for. For each reviewer, count the top-level threads that appear across **all** categories:
+Verify that every top-level thread **and** every review body from Step 1 has been accounted for. For each reviewer, count the items that appear across **all** categories:
 
-| Category | Counts toward coverage? |
-|----------|------------------------|
-| Resolved | Yes |
-| Dismissed | Yes |
-| Fixed by DLC | Yes |
-| Skipped (user decision) | Yes |
-| Discussion | Yes |
-| Blocked | Yes |
+| Category | Counts toward thread coverage? | Counts toward review body coverage? |
+|----------|-------------------------------|-------------------------------------|
+| Resolved | Yes | Yes |
+| Dismissed | Yes | Yes |
+| Fixed by DLC | Yes | Yes |
+| Skipped (user decision) | Yes | Yes |
+| Discussion | Yes | Yes |
+| Blocked | Yes | Yes |
 
-For each reviewer from Step 1, assert:
+For each reviewer from Step 1, assert **both**:
 
 ```text
-covered threads (sum across all categories) == top-level thread count from Step 1
+covered threads (sum across all categories) == top_level_threads from Step 1
+covered review bodies (sum across all categories) == review_bodies count from Step 1
 ```
 
 **If all reviewers pass:** Print confirmation and continue to Step 5.
 
 ```text
-Coverage verification passed: {n}/{n} threads verified across {r} reviewers.
+Coverage verification passed: {thread_count}/{thread_count} threads + {body_count}/{body_count} review bodies verified across {r} reviewers.
 ```
 
 **If any reviewer has a mismatch: HALT.**
@@ -189,27 +233,27 @@ Do **not** proceed to Step 5. Print the error:
 
 ```text
 ERROR: Coverage verification failed.
-  Reviewer @{name}: expected {expected} top-level threads, found {actual} categorized.
-  Missing comment IDs: {id1}, {id2}, ...
-  Recovery: re-processing missed comments through Steps 2-3.
+  Reviewer @{name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized.
+  Missing IDs: {id1}, {id2}, ...
+  Recovery: re-processing missed items through Steps 2-3.
 ```
 
 **Recovery procedure:**
 
-1. Re-process only the missed comments through Steps 2–3
+1. Re-process only the missed items through Steps 2–3
 2. Re-run this verification (Step 4b) a second time
 3. If the second verification also fails, **stop permanently** and report:
 
 ```text
 FATAL: Coverage verification failed after retry.
-  Reviewer @{name}: still missing {n} threads.
-  Missing comment IDs: {id1}, {id2}, ...
+  Reviewer @{name}: still missing {n} items.
+  Missing IDs: {id1}, {id2}, ...
   Manual audit required — cannot proceed.
 ```
 
 Do **not** retry more than once. A second failure indicates a structural issue that automated re-processing cannot fix.
 
-> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" (Step 1) and "comments addressed" — ensuring that every reviewer's feedback is categorized before fixes are committed and replies are posted.
+> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" (Step 1) and "comments addressed" — ensuring that every reviewer's feedback (both inline threads and review bodies) is categorized before fixes are committed and replies are posted.
 
 ## Step 5: User-Gated Issue Creation
 
@@ -276,12 +320,21 @@ For each **user-skipped Fixable** comment, always reply:
 |-------------|-------------------|
 | Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
 
+Use the same reply routing as Step 4 — route based on the item's `reply_type`:
+
+- **Inline** (`reply_type == "inline"`):
 ```bash
-# Reply to each Discussion/Blocked/skipped comment using rest_id from thread data
 gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="{decision-aware reply text}" \
   -F in_reply_to={rest_id}
+```
+
+- **Review body** (`reply_type == "pr_comment"`):
+```bash
+gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+
+{decision-aware reply text}"
 ```
 
 ## Step 5c: PR Summary Comment
@@ -295,15 +348,15 @@ Build the summary with these sections:
 ```markdown
 ## PR Comment Status
 
-| Status | Count |
-|--------|-------|
-| Resolved | {n} |
-| Fixed by DLC | {n} |
-| Skipped (user decision) | {n} |
-| Discussion (needs human) | {n} |
-| Blocked | {n} |
-| Dismissed | {n} |
-| **Total** | **{n}** |
+| Status | Threads | Review Bodies | Total |
+|--------|---------|---------------|-------|
+| Resolved | {n} | {n} | {n} |
+| Fixed by DLC | {n} | {n} | {n} |
+| Skipped (user decision) | {n} | {n} | {n} |
+| Discussion (needs human) | {n} | {n} | {n} |
+| Blocked | {n} | {n} | {n} |
+| Dismissed | {n} | {n} | {n} |
+| **Total** | **{n}** | **{n}** | **{n}** |
 
 ## Decisions
 
@@ -363,12 +416,12 @@ Print summary:
 ```text
 PR review compliance check complete.
   - PR: #{number} ({title})
-  - Total comments: {n}
+  - Total comments: {n} ({thread_count} threads + {review_body_count} review bodies)
   - Resolved: {n}, Fixed by DLC: {n}, Skipped (user decision): {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
-  - Coverage: {verified_threads}/{total_threads} threads verified (Step 4b passed)
+  - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

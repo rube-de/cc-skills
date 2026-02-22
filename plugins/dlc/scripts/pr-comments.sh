@@ -67,6 +67,13 @@ query($owner: String!, $repo: String!, $number: Int!) {
     pullRequest(number: $number) {
       number title url headRefName state reviewDecision
       author { login }
+      reviews(first: 50) {
+        totalCount
+        nodes {
+          id databaseId body state createdAt
+          author { login }
+        }
+      }
       reviewThreads(first: 100) {
         totalCount
         nodes {
@@ -110,6 +117,20 @@ echo "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
   # Extract PR author for has_author_reply detection
   ($pr.author.login // "unknown") as $pr_author |
 
+  # Extract review bodies (top-level PR review comments, e.g. bot summaries)
+  [ $pr.reviews.nodes[] |
+    select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
+    {
+      id:          .id,
+      database_id: (.databaseId // null),
+      author:      (.author.login // "ghost"),
+      body:        .body,
+      state:       .state,
+      created_at:  .createdAt,
+      reply_type:  "pr_comment"
+    }
+  ] as $review_bodies |
+
   # Flatten threads
   [ $pr.reviewThreads.nodes[] |
     . as $thread |
@@ -126,6 +147,7 @@ echo "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
       is_outdated:     $thread.isOutdated,
       has_author_reply: ([ $thread.comments.nodes[1:][] | select(.author.login == $pr_author) ] | length > 0),
       reply_count:     ([ $thread.comments.nodes[1:][] ] | length),
+      reply_type:      "inline",
       replies: [ $thread.comments.nodes[1:][] | {
         id:         .id,
         rest_id:    (.databaseId // null),
@@ -136,16 +158,20 @@ echo "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     }
   ] as $threads |
 
-  # Build reviewer inventory
-  [ $threads[] | .author ] | unique | map(. as $login | {
+  # Build reviewer inventory (from both threads and review bodies)
+  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] | unique) |
+  map(. as $login | {
     login: $login,
-    total_comments: ([ $threads[] | select(.author == $login) ] | length) +
-                    ([ $threads[].replies[] | select(.author == $login) ] | length),
-    top_level_threads: [ $threads[] | select(.author == $login) ] | length
+    total_comments: (([ $threads[] | select(.author == $login) ] | length) +
+                     ([ $threads[].replies[] | select(.author == $login) ] | length) +
+                     ([ $review_bodies[] | select(.author == $login) ] | length)),
+    top_level_threads: ([ $threads[] | select(.author == $login) ] | length),
+    review_bodies: ([ $review_bodies[] | select(.author == $login) ] | length)
   }) as $reviewers |
 
-  # Truncation flag
-  ($pr.reviewThreads.totalCount > ($threads | length)) as $truncated |
+  # Truncation flag (check both threads and reviews)
+  ($pr.reviewThreads.totalCount > ($threads | length) or
+   $pr.reviews.totalCount > ($review_bodies | length)) as $truncated |
 
   {
     pr: {
@@ -161,9 +187,13 @@ echo "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     },
     reviewers: $reviewers,
     threads: $threads,
+    review_bodies: $review_bodies,
     summary: {
-      total_comments:                ([ $threads[] | 1 + .reply_count ] | add // 0),
+      total_comments:                (([ $threads[] | 1 + .reply_count ] | add // 0) +
+                                      ($review_bodies | length)),
       total_threads:                 ($threads | length),
+      total_review_bodies:           ($review_bodies | length),
+      review_bodies_with_content:    ($review_bodies | length),
       resolved_threads:              ([ $threads[] | select(.is_resolved) ] | length),
       unresolved_threads:            ([ $threads[] | select(.is_resolved | not) ] | length),
       outdated_threads:              ([ $threads[] | select(.is_outdated) ] | length),
