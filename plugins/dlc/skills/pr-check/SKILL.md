@@ -105,11 +105,11 @@ Using the `REVIEW_BODIES` array from Step 1, classify each review body:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | `state == "DISMISSED"`, or a DLC reply was already posted for this review body |
+| **Resolved** | A DLC reply was already posted for this review body, OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
 | **Dismissed** | `state == "DISMISSED"` |
-| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body |
+| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) |
 
-> Review bodies with `state == "APPROVED"` and a body like "LGTM" are typically non-actionable — classify these as **Resolved** unless the body contains specific action items.
+> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved.
 
 ### Unresolved sub-categories
 
@@ -127,9 +127,15 @@ For each **fixable unresolved** comment, follow a three-phase workflow:
 
 ### 3a. Read Context
 
-1. Read the file at the referenced path
-2. Read at least 20 lines of surrounding context (before and after the target line)
+**For inline threads** (`reply_type == "inline"`):
+1. Read the file at the referenced `path`
+2. Read at least 20 lines of surrounding context (before and after the target `line`)
 3. Read the full comment thread (including any replies)
+
+**For review bodies** (`reply_type == "pr_comment"`):
+1. Review bodies have no `path`/`line` — parse the body for file paths, function names, or code snippets
+2. If the body references specific files, read those files for context
+3. If no specific files are mentioned, use the PR diff to understand the scope of the review
 
 ### 3b. Critically Evaluate
 
@@ -196,8 +202,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 | **Dismissed** | `Dismissed: {reason}` | `Dismissed: review formally dismissed via GitHub` |
 
 **Dismissed reasons:**
-- "review formally dismissed via GitHub" — for threads/bodies with `state == "DISMISSED"`
-- "thread resolved by reviewer" — for threads that were resolved via GitHub UI
+- "review formally dismissed via GitHub" — for review bodies with `state == "DISMISSED"`
 
 > **Note:** Discussion and Blocked replies are deferred to Step 5b (after user decision).
 

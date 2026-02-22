@@ -169,9 +169,9 @@ echo "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     review_bodies: ([ $review_bodies[] | select(.author == $login) ] | length)
   }) as $reviewers |
 
-  # Truncation flag (check both threads and reviews)
+  # Truncation flag (compare against unfiltered node counts to avoid false positives from content filtering)
   ($pr.reviewThreads.totalCount > ($threads | length) or
-   $pr.reviews.totalCount > ($review_bodies | length)) as $truncated |
+   $pr.reviews.totalCount > ($pr.reviews.nodes | length)) as $truncated |
 
   {
     pr: {
