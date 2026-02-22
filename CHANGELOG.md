@@ -1,3 +1,11 @@
+## [1.19.1](https://github.com/rube-de/cc-skills/compare/v1.19.0...v1.19.1) (2026-02-22)
+
+
+### Bug Fixes
+
+* address PR review comments ([19a08c0](https://github.com/rube-de/cc-skills/commit/19a08c060a8ef2bdd78b887b803cfa0882bd9018))
+* **dlc:** resolve 5 compounding failures in pr-check review handling ([07c4c19](https://github.com/rube-de/cc-skills/commit/07c4c194f7f25b3941d9919f8f407384e0b01431)), closes [#82](https://github.com/rube-de/cc-skills/issues/82)
+
 # [1.19.0](https://github.com/rube-de/cc-skills/compare/v1.18.0...v1.19.0) (2026-02-21)
 
 
