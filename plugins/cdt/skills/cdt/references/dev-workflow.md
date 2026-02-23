@@ -80,6 +80,13 @@ Teammate tool:
     You are the code tester. Plan: [plan-path] — read Testing Strategy.
     Focus on unit tests, integration tests, and API contracts.
 
+    Communication rules:
+    - Test failures → message DEVELOPER (with failure details + root cause)
+    - All tests pass → message LEAD (with results summary)
+    - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
+    A cycle = one report-to-developer → developer-fix → re-test round-trip.
+    Never report failures to the lead. The developer fixes bugs, not the lead.
+
     1. Check TaskList — your task is blocked until implementation completes
     2. Wait for developer to message what they changed
     3. Read plan + implementation, write tests matching existing patterns
@@ -101,6 +108,13 @@ Teammate tool:
   prompt: >
     You are the QA tester. Plan: [plan-path] — read Testing Strategy.
     You adapt your testing approach based on the task type.
+
+    Communication rules:
+    - QA issues found → message DEVELOPER (with what failed, expected vs actual, evidence)
+    - All QA checks pass → message LEAD (with results summary)
+    - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
+    A cycle = one report-to-developer → developer-fix → re-test round-trip.
+    Never report issues to the lead. The developer fixes issues, not the lead.
 
     **For UI/frontend tasks:**
     You test user-facing behavior using agent-browser via Bash. Ask lead if unsure about app URL.
@@ -144,15 +158,20 @@ Teammate tool:
     You are the code reviewer. Plan: [plan-path] — read Architecture.
     Dev report path: [report-path] — you will write the report after review.
 
-    1. Check TaskList — your task is blocked until tests pass
-    2. Wait for lead to activate you
-    3. Review all changed files: completeness, correctness, security, quality, plan adherence
-    4. Use /council to validate your review (quick quality for routine, review security or review architecture for critical concerns)
-    5. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub"
-    6. Blocking issues → message developer with file:line + fix suggestion
+    Communication rules:
+    - Blocking issues → message DEVELOPER (with file:line + fix suggestion)
+    - Review approved → message LEAD (with verdict + report path)
+    - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
+    A cycle = one report-to-developer → developer-fix → re-review round-trip.
+    Never send unapproved reviews to the lead. The developer addresses review feedback, not the lead.
+
+    1. Check TaskList — wait until your task is unblocked (tests must pass first)
+    2. Review all changed files: completeness, correctness, security, quality, plan adherence
+    3. Use /council to validate your review (quick quality for routine, review security or review architecture for critical concerns)
+    4. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub"
+    5. Blocking issues → message developer with file:line + fix suggestion
        Wait for fix, re-review (max 3 cycles, then escalate to lead)
-    7. When approved, message lead with verdict
-    8. Write the dev report to [report-path] using this template:
+    6. When approved, write the dev report to [report-path] using this template:
 
         # Development Report: [Task Name]
 
@@ -183,8 +202,8 @@ Teammate tool:
 
         ## Known Limitations
 
-    9. Message the lead that the report is ready at [report-path]
-    10. Mark task complete
+    7. Message lead with verdict and report path
+    8. Mark task complete
 
     Be specific: file paths, line numbers, concrete fixes.
 ```
@@ -199,14 +218,19 @@ For each wave:
 5. Verify wave: check build, update plan file (status, log, files_changed)
 
 After all impl waves:
-6. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing."
-7. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Begin QA testing."
+6. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
+7. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
 8. Code-tester and qa-tester run in parallel — they test different aspects.
 9. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly. Intervene only on escalation.
 
 After all test tasks complete:
-10. Message reviewer teammate: "Tests passing. Files: [list]. Begin review."
+10. Message reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
 11. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+
+After activating testers/reviewer, stand back:
+- Do NOT expect failure reports — those go Developer↔Tester/Reviewer directly
+- You only receive: "all tests pass", "all QA checks pass", "review approved"
+- Intervene ONLY on escalation (after 3 failed peer iteration cycles)
 
 ## 7. Final Verification
 
