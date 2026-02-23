@@ -15,14 +15,20 @@ Before running, **read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/I
 
 ## Step 1: Resolve Target PR
 
-Determine the PR to check:
+Determine the PR to check and fetch **all** data needed for subsequent steps in a single call:
 
 ```bash
 # If PR number provided as argument
-gh pr view <PR_NUMBER> --json number,title,url,headRefName,state,additions
+PR_JSON=$(gh pr view <PR_NUMBER> --json number,title,url,headRefName,state,additions,files,body)
 
 # If no argument — detect from current branch
-gh pr view --json number,title,url,headRefName,state,additions
+PR_JSON=$(gh pr view --json number,title,url,headRefName,state,additions,files,body)
+
+# Fetch repo identifier (used in Step 6 for issue creation)
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
+# Display PR summary
+echo "$PR_JSON" | jq '{number, title, url, headRefName, state, additions}'
 ```
 
 If no open PR is found, abort with: "No open PR found for the current branch. Push your changes and open a PR first."
@@ -39,11 +45,11 @@ If no open PR is found, abort with: "No open PR found for the current branch. Pu
 Retrieve the full diff and extract new code constructs:
 
 ```bash
-# Get the full diff
+# Get the full diff (raw text — cannot be combined with the JSON call)
 gh pr diff <PR_NUMBER>
 
-# Get per-file status (added, modified, removed, renamed)
-gh pr view <PR_NUMBER> --json files --jq '.files[] | {path: .path, status: .status, additions: .additions}'
+# Get per-file status from the cached PR_JSON (no extra API call)
+echo "$PR_JSON" | jq '.files[] | {path: .path, status: .status, additions: .additions}'
 ```
 
 Parse the diff for `+` lines (excluding `+++ b/` headers) and extract declarations:
@@ -70,7 +76,21 @@ For each extracted construct, record:
 
 For each extracted construct, search the existing codebase for matches. Exclude files that are part of the PR diff.
 
-Before targeted searches, use the Explore agent to build broad context of the codebase structure and identify areas likely to contain similar constructs. Use repomix-explorer (if available) for large codebases. Then use Grep and Read for the targeted searches below.
+Before targeted searches, launch an Explore agent with the following structured prompt:
+
+> Explore the codebase structure to identify where the following constructs
+> might have existing implementations. For each construct, report:
+> 1. Directories most likely to contain similar code
+> 2. Any files with matching or similar names
+> 3. Related test files that might reveal expected behavior
+>
+> Constructs to locate:
+> (list each construct name and kind extracted from Step 2)
+>
+> Exclude these PR files from results:
+> (list each file path from the PR diff)
+
+Use repomix-explorer (if available) for large codebases. Use the Explore agent output to prioritize directories for Steps 3a–3d. Then use Grep and Read for the targeted searches below.
 
 ### 3a. Name-Based Search
 
@@ -111,7 +131,8 @@ For constructs where the PR also deletes code (file has both `+` and `-` lines):
 Check whether the PR references any GitHub issues:
 
 ```bash
-gh pr view <PR_NUMBER> --json body --jq '.body'
+# Extract PR body from the cached PR_JSON (no extra API call)
+echo "$PR_JSON" | jq -r '.body'
 ```
 
 Scan the PR body for `#N` issue references. For each referenced issue:
@@ -198,7 +219,7 @@ If the threshold is met, use `AskUserQuestion`:
 **Raw Output**: This skill has no CLI tool output to capture. Omit the Raw Output section from the issue body.
 
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+# $REPO was fetched in Step 1
 TIMESTAMP=$(date +%s)
 BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
 
