@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/rube-de/cc-skills/compare/v1.19.4...v1.20.0) (2026-02-23)
+
+
+### Features
+
+* **cdt:** enforce peer-first reporting in dev workflow ([ae8e2aa](https://github.com/rube-de/cc-skills/commit/ae8e2aa35ef94d6ebd46da69ce25e86c32bfaf75)), closes [#80](https://github.com/rube-de/cc-skills/issues/80)
+
 ## [1.19.4](https://github.com/rube-de/cc-skills/compare/v1.19.3...v1.19.4) (2026-02-23)
 
 
