@@ -1,3 +1,11 @@
+## [1.19.4](https://github.com/rube-de/cc-skills/compare/v1.19.3...v1.19.4) (2026-02-23)
+
+
+### Bug Fixes
+
+* address PR review comments ([2e408e2](https://github.com/rube-de/cc-skills/commit/2e408e2b55d46615c3f38cefcedc58dc7989732f))
+* replace echo with printf to prevent JSON corruption on macOS ([22754f9](https://github.com/rube-de/cc-skills/commit/22754f91ae00b2e6fbeeeb33633a29ba89a1f446))
+
 ## [1.19.3](https://github.com/rube-de/cc-skills/compare/v1.19.2...v1.19.3) (2026-02-23)
 
 
