@@ -45,7 +45,7 @@ Planning Phase                    Development Phase
 | **Architect** | Teammate | Opus | Always | Component design, interfaces, file changes, data flow |
 | **Product Manager** | Teammate | Sonnet | Always | Requirements validation, architecture challenges |
 | **Developer** | Teammate | Opus | Always | Full implementation — no stubs, no TODOs |
-| **Code-Tester** | Teammate | Sonnet | Always | Unit/integration test writing and execution, failure reporting |
+| **Code-Tester** | Teammate | Sonnet | Always | Unit/integration test writing and execution; reports failures directly to Developer |
 | **QA-Tester** | Teammate | Sonnet | Always | UX testing (Storybook + agent-browser) for UI tasks; integration/smoke testing for non-UI tasks |
 | **Reviewer** | Teammate | Opus | Always | Code quality, security, completeness, plan adherence |
 | **Researcher** | Subagent | Sonnet | Always | Documentation via Context7, web research |
