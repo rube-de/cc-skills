@@ -15,14 +15,14 @@ Before running, **read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/I
 
 ## Step 1: Fetch PR Data
 
-Run the `pr-comments.sh` script located in the `scripts/` directory of this plugin (same plugin containing this SKILL.md):
+Run the `pr-comments.sh` script from the plugin's `scripts/` directory (two levels up from this skill):
 
 ```bash
 # If PR number provided as argument
-sh scripts/pr-comments.sh <PR_NUMBER>
+sh ../../scripts/pr-comments.sh <PR_NUMBER>
 
 # If no argument — auto-detect from current branch
-sh scripts/pr-comments.sh
+sh ../../scripts/pr-comments.sh
 ```
 
 **Validate the response:**
