@@ -1,3 +1,10 @@
+## [1.19.2](https://github.com/rube-de/cc-skills/compare/v1.19.1...v1.19.2) (2026-02-23)
+
+
+### Bug Fixes
+
+* correct script path resolution in skill SKILL.md files ([4c8d102](https://github.com/rube-de/cc-skills/commit/4c8d1027e70f7d8e1f54424b4c50393a8f245eaf))
+
 ## [1.19.1](https://github.com/rube-de/cc-skills/compare/v1.19.0...v1.19.1) (2026-02-22)
 
 
