@@ -19,28 +19,30 @@ Determine the PR to check and fetch **all** data needed for subsequent steps in 
 
 ```bash
 # If PR number provided as argument
-PR_JSON=$(gh pr view <PR_NUMBER> --json number,title,url,headRefName,state,additions,files,body)
+PR_JSON=$(gh pr view <PR_NUMBER> --json number,title,url,headRefName,state,additions,changedFiles,files,body)
 
 # If no argument — detect from current branch
-PR_JSON=$(gh pr view --json number,title,url,headRefName,state,additions,files,body)
+PR_JSON=$(gh pr view --json number,title,url,headRefName,state,additions,changedFiles,files,body)
 
 # Fetch repo identifier (used in Step 6 for issue creation)
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
 # Display PR summary
-echo "$PR_JSON" | jq '{number, title, url, headRefName, state, additions}'
+echo "$PR_JSON" | jq '{number, title, url, headRefName, state, additions, changedFiles}'
 ```
 
 If no open PR is found, abort with: "No open PR found for the current branch. Push your changes and open a PR first."
 
 **Large PR gate**: If the PR has 500+ additions, use `AskUserQuestion` before proceeding:
 
-- Present the addition count and file count
+- Present the addition count and file count (use `changedFiles` for the accurate total — `.files | length` caps at 100)
 - Options: "Analyze everything" / "Only new files" / "Abort"
 - If "Abort", stop and report: "PR validity analysis aborted by user."
 - If "Only new files", limit Steps 2-3 to files with status `added` or `renamed` (skip `modified`)
 
 ## Step 2: Fetch Diff & Extract Additions
+
+> **Note**: If the user selected "Only new files" in Step 1, restrict all diff parsing and construct extraction in this step to files where `status == "added"` or `status == "renamed"` (skip `status == "modified"`).
 
 Retrieve the full diff and extract new code constructs:
 
