@@ -214,7 +214,7 @@ Skills that make 3–4 sequential `gh` CLI calls waste context window space on r
 - **Optional positional args** — scripts auto-detect PR number and repo when args are omitted, saving a preliminary `gh` call in the SKILL.md
 - **Cycle detection deferred to LLM** — jq lacks mutable state for DFS; scripts provide edge lists, SKILL.md steps do graph traversal
 
-**Script path resolution**: SKILL.md references scripts as `scripts/foo.sh` relative to the plugin root. Claude resolves this the same way it resolves reference file links (`../dlc/references/ISSUE-TEMPLATE.md`). No `$CLAUDE_PLUGIN_ROOT` needed (that's for hooks).
+**Script path resolution**: SKILL.md bash code blocks run relative to the **skill's base directory** (`skills/<skill-name>/`), NOT the plugin root. Use `../../scripts/foo.sh` to reach the plugin-level `scripts/` directory. This differs from markdown reference links (which are resolved by the plugin loader). A bare `scripts/foo.sh` resolves to `skills/<skill-name>/scripts/foo.sh` — which doesn't exist.
 
 **Frontmatter impact**: If a skill's `allowed-tools` restricts Bash (e.g., `Bash(gh:*)`), widen to `Bash` when adding local script execution. Acceptable trade-off since skills with Read/Grep/Glob already have filesystem access.
 
