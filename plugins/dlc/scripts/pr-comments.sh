@@ -37,12 +37,12 @@ done
 # --- repo detection --------------------------------------------------------
 
 if [ -n "$OWNER_REPO" ]; then
-  OWNER=$(printf '%s' "$OWNER_REPO" | cut -d/ -f1)
-  REPO=$(printf '%s' "$OWNER_REPO" | cut -d/ -f2)
+  OWNER=$(printf '%s\n' "$OWNER_REPO" | cut -d/ -f1)
+  REPO=$(printf '%s\n' "$OWNER_REPO" | cut -d/ -f2)
 else
   _repo_json=$(gh repo view --json owner,name 2>/dev/null) || die_json "Could not detect repository — pass OWNER/REPO as argument" "REPO_DETECT"
-  OWNER=$(printf '%s' "$_repo_json" | jq -r '.owner.login')
-  REPO=$(printf '%s' "$_repo_json" | jq -r '.name')
+  OWNER=$(printf '%s\n' "$_repo_json" | jq -r '.owner.login')
+  REPO=$(printf '%s\n' "$_repo_json" | jq -r '.name')
 fi
 
 if [ -z "$OWNER" ] || [ -z "$REPO" ]; then
@@ -55,7 +55,7 @@ if [ -z "$PR_NUMBER" ]; then
   PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null) || die_json "No PR found for current branch — push and open a PR first" "PR_DETECT"
 fi
 
-if [ -z "$PR_NUMBER" ] || ! printf '%s' "$PR_NUMBER" | grep -qE '^[0-9]+$'; then
+if [ -z "$PR_NUMBER" ] || ! printf '%s\n' "$PR_NUMBER" | grep -qE '^[0-9]+$'; then
   die_json "Invalid PR number: ${PR_NUMBER}" "PR_INVALID"
 fi
 

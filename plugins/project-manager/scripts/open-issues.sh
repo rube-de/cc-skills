@@ -54,7 +54,7 @@ RAW=$(gh issue list \
   --state open \
   --limit 100 \
   --json number,title,body,labels,assignees,milestone,createdAt,updatedAt 2>&1) \
-  || die_json "Failed to fetch issues: $(printf '%s' "$RAW" | tr '"' "'")" "FETCH_FAIL"
+  || die_json "Failed to fetch issues: $(printf '%s\n' "$RAW" | tr '"' "'")" "FETCH_FAIL"
 
 # --- jq transform ----------------------------------------------------------
 
