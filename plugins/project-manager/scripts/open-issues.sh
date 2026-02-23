@@ -54,13 +54,13 @@ RAW=$(gh issue list \
   --state open \
   --limit 100 \
   --json number,title,body,labels,assignees,milestone,createdAt,updatedAt 2>&1) \
-  || die_json "Failed to fetch issues: $(echo "$RAW" | tr '"' "'")" "FETCH_FAIL"
+  || die_json "Failed to fetch issues: $(printf '%s' "$RAW" | tr '"' "'")" "FETCH_FAIL"
 
 # --- jq transform ----------------------------------------------------------
 
 NOW=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 
-echo "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED" --arg repo "$OWNER_REPO" '
+printf '%s\n' "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_ASSIGNED" --arg repo "$OWNER_REPO" '
 
   # Accurate age calculation using epoch math
   def days_since_created:

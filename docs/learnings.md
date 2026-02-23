@@ -202,6 +202,30 @@ Also watch for:
 
 > Source: [PR #40](https://github.com/rube-de/cc-skills/pull/40) — Copilot review caught this across 4 DLC skills (`security`, `quality`, `test`, `perf`). All fixed with `command -v` selection pattern.
 
+### `echo "$var"` corrupts JSON containing escape sequences on macOS
+
+POSIX `echo` behavior with backslash sequences is implementation-defined. On macOS, `/bin/sh` (zsh in POSIX mode) interprets `\n`, `\t`, `\c` in `echo` arguments by default. When a variable contains JSON with embedded `\n` sequences (e.g., review comment bodies with newlines), `echo "$RAW"` expands `\n` to actual newlines, corrupting the JSON structure.
+
+**Symptom**: `echo "$RAW" | jq` fails with exit code 5 (system error / invalid input). The script misreports the error as "PR not found" because the null check wraps a generic `die_json`.
+
+**Bad** — `echo` interprets `\n` in JSON strings on macOS:
+```bash
+RAW=$(gh api graphql -f query="$QUERY" ...)
+echo "$RAW" | jq '.data.repository.pullRequest'
+# → exit 5 on macOS when body contains \n
+```
+
+**Good** — `printf` never interprets escapes in the argument:
+```bash
+RAW=$(gh api graphql -f query="$QUERY" ...)
+printf '%s\n' "$RAW" | jq '.data.repository.pullRequest'
+# → works on all platforms
+```
+
+**Rule**: Never use `echo "$var"` to pipe variable content through `jq` (or any parser). Use `printf '%s\n' "$var"` unconditionally. This is safe on Linux too — `printf '%s\n'` is POSIX-specified portable behavior. The bug is latent on Linux (where `/bin/sh` is usually dash, which doesn't interpret `\n` in `echo`) but present on macOS.
+
+> Source: `pr-comments.sh` and `open-issues.sh` — GraphQL responses containing reviewer body text with `\n` sequences failed the jq null check on macOS. Confirmed: `echo` output was 126 bytes shorter than `printf` output for the same variable.
+
 ### Batch GitHub API calls into per-plugin shell scripts
 
 Skills that make 3–4 sequential `gh` CLI calls waste context window space on raw API output and data wrangling. Batch these into self-contained shell scripts (`scripts/*.sh`) that return structured JSON in a single tool call.
@@ -285,6 +309,7 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Auto-dismissing `is_outdated` threads | Unresolved design feedback silently marked as dismissed | Only GitHub's formal dismiss mechanism (`state == "DISMISSED"`) counts; `is_outdated` threads go to Unresolved for re-checking |
 | Advisory hooks instead of inline validation | PostToolUse hook warns about invalid output, but LLM follows workflow steps — warning is ignored | Make validation a named workflow step with explicit "mark as failed" semantics; hooks remain as defense-in-depth only |
 | Ambiguous mode boundaries (e.g., quick mode) | LLM infers which agents to run from context, skips layers it shouldn't | Enumerate exactly which agents run and which are skipped in explicit tables at the workflow step level |
+| `echo "$var"` piped to `jq` in `#!/bin/sh` scripts | JSON corrupted on macOS — `\n` in body text expanded to real newlines; `jq` exits 5 | Use `printf '%s\n' "$var"` — never `echo` for variable content piped to parsers |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
