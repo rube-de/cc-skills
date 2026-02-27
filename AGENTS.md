@@ -33,9 +33,9 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 
 ## Validation & PRs
 
-- CI plan lives in `.github/workflows/` (`ci.yml` validates on PR, `release.yml` runs on merge to main)
-- Run `bun scripts/validate-plugins.mjs` before committing — CI runs the same check
-- After adding or moving plugin files, re-run validation to catch orphaned dirs or missing marketplace entries
+- CI plan lives in `.github/workflows/` (`ci.yml` validates on PR, `release.yml` runs on push to main)
+- Run `bun scripts/validate-plugins.mjs` and fix any errors before committing — CI runs the same check
+- After adding or moving plugin directories or updating marketplace entries, re-run validation to catch orphaned plugin directories or missing source paths
 - PRs target `main`; semantic-release handles versioning on merge — never edit versions by hand
 
 ## Learnings
