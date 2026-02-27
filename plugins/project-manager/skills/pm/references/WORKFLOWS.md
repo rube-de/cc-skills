@@ -72,21 +72,15 @@ Round 1: Scope + Priority → Round 2: User Story → Round 3: Constraints → C
 
 ### Round 1 — Scope (AskUserQuestion)
 
-Ask these together (2-3 questions):
+Ask these together (2 questions):
 
-**Question 1: "How big is this feature?"**
-- Small: A few hours of work, 1-3 files
-- Medium: A day or two, touches multiple components
-- Large: Multiple days, might need an epic instead
-- Not sure: Let me help you estimate after we discuss it
-
-**Question 2: "Is this for a specific user type?"**
+**Question 1: "Is this for a specific user type?"**
 - End user: Customer-facing functionality
 - Developer: API, SDK, tooling improvement
 - Admin/Ops: Dashboard, monitoring, configuration
 - Internal: Team productivity, CI/CD, automation
 
-**Question 3: "What's the priority?"**
+**Question 2: "What's the priority?"**
 - Must-have: Required for next release / blocking other work
 - Should-have: Important but not blocking
 - Nice-to-have: Improves experience but can wait
