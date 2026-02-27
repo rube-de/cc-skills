@@ -1,64 +1,6 @@
 # AGENTS.md
 
-Claude Code skills marketplace: **9 plugins** for multi-agent development, AI council reviews, project management, plugin development, quality gates, and platform-specific tooling.
-
-## Directory Structure
-
-```
-cc-skills/
-├── .claude-plugin/
-│   └── marketplace.json         ← Plugin registry (SSoT)
-├── plugin.json                  ← Root plugin metadata
-├── plugins/
-│   ├── council/                 ← AI council code reviews
-│   │   ├── agents/              # External AI consultants + internal Claude subagents
-│   │   ├── hooks/               # Pre/post tool-use hooks
-│   │   ├── scripts/             # Preflight, JSON validation
-│   │   └── skills/              # council, council-reference
-│   ├── cdt/                     ← Multi-agent dev team (Agent Teams)
-│   │   ├── agents/              # Researcher subagent (Context7)
-│   │   ├── commands/            # plan-task, dev-task, full-task, auto-task
-│   │   ├── hooks/               # Session start, prompt gating, team lifecycle
-│   │   ├── scripts/             # Agent teams prerequisite check
-│   │   └── skills/              # cdt
-│   ├── project-manager/         ← GitHub issue creation
-│   │   └── skills/              # project-manager
-│   ├── plugin-dev/              ← Plugin development tools
-│   │   ├── commands/            # create (scaffolding)
-│   │   ├── scripts/             # audit-hooks.sh
-│   │   └── skills/              # plugin-dev
-│   ├── temporal/                ← Temporal durable execution
-│   │   └── skills/              # temporal + references
-│   ├── doppler/                 ← Doppler secrets management
-│   │   └── skills/              # doppler + references
-│   ├── oasis-dev/               ← Oasis Network development
-│   │   └── skills/              # oasis-dev + references
-│   ├── jules-review/            ← Jules PR review via council
-│   │   └── skills/              # jules-review + references
-│   └── dlc/                     ← Dev Life Cycle quality gates
-│       └── skills/              # dlc, security, quality, perf, test, pr-check, pr-validity
-├── scripts/
-│   ├── validate-plugins.mjs     ← Plugin validation
-│   └── marketplace.schema.json  ← JSON Schema for marketplace.json
-├── docs/
-│   └── PLUGIN-AUTHORING.md      ← How to create plugins
-├── AGENTS.md                    ← Universal agent instructions (this file)
-├── CLAUDE.md                    ← Claude Code-specific instructions
-├── README.md                    ← Installation & overview
-├── LICENSE                      ← MIT
-├── .releaserc.yml               ← Semantic release config
-└── package.json                 ← Dependencies & scripts
-```
-
-## Key Files
-
-| File | Purpose |
-|------|---------|
-| `.claude-plugin/marketplace.json` | Plugin registry — single source of truth for all plugin metadata |
-| `plugin.json` | Root plugin metadata (name, version, description) |
-| `plugins/*/skills/*/SKILL.md` | Skill activation definitions |
-| `plugins/*/hooks/hooks.json` | Hook definitions per plugin |
-| `plugins/*/agents/*.md` | Agent/subagent definitions |
+Claude Code skills marketplace — plugins for multi-agent development, AI council reviews, project management, plugin development, quality gates, and platform-specific tooling. See `.claude-plugin/marketplace.json` for the full plugin registry.
 
 ## Plugin Architecture
 
@@ -89,19 +31,12 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 - Never commit directly to `main`
 - Use conventional commits (`feat:`, `fix:`, `docs:`, `chore:`, etc.) — semantic-release picks these up
 
-## Testing / Validation
+## Validation & PRs
 
-- Find the CI plan in `.github/workflows/` (`ci.yml` validates on PR, `release.yml` runs on merge to main)
-- Run `bun scripts/validate-plugins.mjs` to validate all plugins locally
-- Fix any validation errors until the suite is clean before committing
+- CI plan lives in `.github/workflows/` (`ci.yml` validates on PR, `release.yml` runs on merge to main)
+- Run `bun scripts/validate-plugins.mjs` before committing — CI runs the same check
 - After adding or moving plugin files, re-run validation to catch orphaned dirs or missing marketplace entries
-
-## PR Instructions
-
-- PRs target `main`
-- Always run `bun scripts/validate-plugins.mjs` before committing
-- CI will run the same validation — make sure it passes locally first
-- Semantic-release handles versioning on merge — do not edit version numbers manually
+- PRs target `main`; semantic-release handles versioning on merge — never edit versions by hand
 
 ## Learnings
 
@@ -110,10 +45,3 @@ Accumulated lessons from developing skills and plugins live in [`docs/learnings.
 **Update it automatically**: When you fix a bug, discover a pitfall, or learn something non-obvious about skill authoring, plugin structure, or agent teams — append it to `docs/learnings.md` with a `> Source:` linking to the relevant file, PR, or docs page. Don't wait to be asked.
 
 **PR review feedback is a learning trigger**: When you fix issues raised by PR reviewers (Copilot, external reviewers, council), add the underlying pattern to `docs/learnings.md` — not just the fix, but the *generalizable mistake* so it's caught at authoring time next round. Include the bad/good pattern and link to the PR. If the fix touches multiple files for the same root cause, document the root cause once (not per file).
-
-## Conventions
-
-- **Marketplace SSoT**: All plugin metadata lives in `.claude-plugin/marketplace.json`
-- **Versioning**: Semantic-release via GitHub Actions — never edit versions by hand
-- **Branching**: PRs against `main`, CI validates on PR, release on merge
-- **License**: MIT across all plugins
