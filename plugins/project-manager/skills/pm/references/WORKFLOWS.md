@@ -95,6 +95,41 @@ Guide the user through the user story format:
 4. **What should NOT happen?** — important constraints / error cases
 5. **Any UI/UX preferences?** — if applicable
 
+### Breadth Analysis (internal PM step — not a user question)
+
+After gathering the user story, check for epic-scope signals before proceeding to Round 3:
+
+**Signal 1 — Multiple independent stories**
+Does the request contain 3+ stories that could each ship independently?
+(e.g., "add webhooks + redesign the dashboard + migrate to new auth provider")
+→ Each story a user could get value from without the others = separate issue
+
+**Signal 2 — Cross-subsystem span**
+Does the request touch 3+ distinct subsystems?
+(examples: auth, payments, storage, notifications, UI, API, background jobs, data model)
+→ Changes spanning 3+ systems = coordination overhead that signals epic scope
+
+**Signal 3 — Mixed structural + behavioral change**
+Does implementing this require restructuring existing code AND adding new behavior?
+(e.g., "refactor the plugin loader so we can add hot-reload support")
+→ Structure change + feature = two separate issues (see preparatory refactor issue)
+
+**Signal 4 — Rewrite/overhaul language**
+Does the request use language like: rewrite, redesign, overhaul, migrate, replace, rebuild?
+→ Treat as epic by default
+
+**Routing rules:**
+
+- **2+ signals present** → Route to Epic Flow automatically. Announce:
+  > "This request spans [insert applicable: number of independent stories / number of subsystems / structural + behavioral change].
+  > That's epic scope — a single issue would be too broad to execute atomically.
+  > Routing to Epic Flow to decompose into independent sub-issues."
+  Do NOT proceed to Round 3 or draft a Feature issue.
+
+- **1 signal present** → Continue Feature Flow. Note the signal in the issue body under a `**Scope note:**` field.
+
+- **0 signals** → Continue Feature Flow normally, no scope note added.
+
 ### Round 3 — Boundaries (AskUserQuestion)
 
 **Question 1: "Does this require changes to existing behavior?"**
