@@ -1,3 +1,10 @@
+## [1.20.1](https://github.com/rube-de/cc-skills/compare/v1.20.0...v1.20.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* address PR review comments ([57e7cca](https://github.com/rube-de/cc-skills/commit/57e7cca743d6dbdef42eafd6d24d3d46c3ed1e64))
+
 # [1.20.0](https://github.com/rube-de/cc-skills/compare/v1.19.4...v1.20.0) (2026-02-23)
 
 
