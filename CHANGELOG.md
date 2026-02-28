@@ -1,3 +1,16 @@
+# [1.21.0](https://github.com/rube-de/cc-skills/compare/v1.20.1...v1.21.0) (2026-02-28)
+
+
+### Bug Fixes
+
+* address PR review comments ([884ed28](https://github.com/rube-de/cc-skills/commit/884ed28399c7b851fdf7781ffdfb0c5614d54041))
+
+
+### Features
+
+* **pm:** add PM-driven breadth analysis for epic auto-detection after Round 2 ([140524a](https://github.com/rube-de/cc-skills/commit/140524a24c2dac7945ff9df71cbe0b24e43b5082))
+* **pm:** remove user-facing size question from Feature Request Flow Round 1 ([07de23e](https://github.com/rube-de/cc-skills/commit/07de23e5d67721e49261a972ee873989af6b70eb))
+
 ## [1.20.1](https://github.com/rube-de/cc-skills/compare/v1.20.0...v1.20.1) (2026-02-27)
 
 
