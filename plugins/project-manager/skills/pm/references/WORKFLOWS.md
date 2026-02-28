@@ -72,21 +72,15 @@ Round 1: Scope + Priority → Round 2: User Story → Round 3: Constraints → C
 
 ### Round 1 — Scope (AskUserQuestion)
 
-Ask these together (2-3 questions):
+Ask these together (2 questions):
 
-**Question 1: "How big is this feature?"**
-- Small: A few hours of work, 1-3 files
-- Medium: A day or two, touches multiple components
-- Large: Multiple days, might need an epic instead
-- Not sure: Let me help you estimate after we discuss it
-
-**Question 2: "Is this for a specific user type?"**
+**Question 1: "Is this for a specific user type?"**
 - End user: Customer-facing functionality
 - Developer: API, SDK, tooling improvement
 - Admin/Ops: Dashboard, monitoring, configuration
 - Internal: Team productivity, CI/CD, automation
 
-**Question 3: "What's the priority?"**
+**Question 2: "What's the priority?"**
 - Must-have: Required for next release / blocking other work
 - Should-have: Important but not blocking
 - Nice-to-have: Improves experience but can wait
@@ -100,6 +94,41 @@ Guide the user through the user story format:
 3. **How should it work?** — describe the happy path
 4. **What should NOT happen?** — important constraints / error cases
 5. **Any UI/UX preferences?** — if applicable
+
+### Breadth Analysis (internal PM step — not a user question)
+
+After gathering the user story, check for epic-scope signals before proceeding to Round 3 — Boundaries:
+
+**Signal 1 — Multiple independent stories**
+Does the request contain 3+ stories that could each ship independently?
+(e.g., "add webhooks + redesign the dashboard + migrate to new auth provider")
+→ Each story a user could get value from without the others = separate issue
+
+**Signal 2 — Cross-subsystem span**
+Does the request touch 3+ distinct subsystems?
+(examples: auth, payments, storage, notifications, UI, API, background jobs, data model)
+→ Changes spanning 3+ systems = coordination overhead that signals epic scope
+
+**Signal 3 — Mixed structural + behavioral change**
+Does implementing this require restructuring existing code AND adding new behavior?
+(e.g., "refactor the plugin loader so we can add hot-reload support")
+→ Structure change + feature = two separate issues (see preparatory refactor issue)
+
+**Signal 4 — Rewrite/overhaul language**
+Does the request use language like: rewrite, redesign, overhaul, migrate, replace, rebuild?
+→ Count this as one breadth signal (always)
+
+**Routing rules:**
+
+- **2+ signals present** → Route to Epic Flow automatically. Announce:
+  > "This request shows signs of epic scope (detected signals: [list all applicable signals, e.g., 'multiple independent stories', 'rewrite/overhaul language']).
+  > That's epic scope — a single issue would be too broad to execute atomically.
+  > Routing to Epic Flow to decompose into independent sub-issues."
+  Do NOT proceed to Round 3 or draft a Feature issue.
+
+- **1 signal present** → Continue Feature Flow. Note the signal in the issue body under a **Scope note:** field.
+
+- **0 signals** → Continue Feature Flow normally, no scope note added.
 
 ### Round 3 — Boundaries (AskUserQuestion)
 
