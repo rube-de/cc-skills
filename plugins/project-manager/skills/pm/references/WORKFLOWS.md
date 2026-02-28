@@ -97,7 +97,7 @@ Guide the user through the user story format:
 
 ### Breadth Analysis (internal PM step — not a user question)
 
-After gathering the user story, check for epic-scope signals before proceeding to Round 3:
+After gathering the user story, check for epic-scope signals before proceeding to Round 3 — Boundaries:
 
 **Signal 1 — Multiple independent stories**
 Does the request contain 3+ stories that could each ship independently?
@@ -116,17 +116,17 @@ Does implementing this require restructuring existing code AND adding new behavi
 
 **Signal 4 — Rewrite/overhaul language**
 Does the request use language like: rewrite, redesign, overhaul, migrate, replace, rebuild?
-→ Treat as epic by default
+→ Count this as one breadth signal (always)
 
 **Routing rules:**
 
 - **2+ signals present** → Route to Epic Flow automatically. Announce:
-  > "This request spans [insert applicable: number of independent stories / number of subsystems / structural + behavioral change].
+  > "This request shows signs of epic scope (detected signals: [list all applicable signals, e.g., 'multiple independent stories', 'rewrite/overhaul language']).
   > That's epic scope — a single issue would be too broad to execute atomically.
   > Routing to Epic Flow to decompose into independent sub-issues."
   Do NOT proceed to Round 3 or draft a Feature issue.
 
-- **1 signal present** → Continue Feature Flow. Note the signal in the issue body under a `**Scope note:**` field.
+- **1 signal present** → Continue Feature Flow. Note the signal in the issue body under a **Scope note:** field.
 
 - **0 signals** → Continue Feature Flow normally, no scope note added.
 
