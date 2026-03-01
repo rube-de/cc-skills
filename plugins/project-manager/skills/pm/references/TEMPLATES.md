@@ -96,6 +96,16 @@ parse headers to understand structure. Humans benefit from the clarity as a side
 
 [1-2 paragraphs expanding on the problem being solved and why it matters]
 
+## Complexity Hint
+
+> This section is filled by the PM based on requirements analysis. It is a signal for the CDT
+> architect during wave planning — not an implementation plan.
+
+**Subsystems touched:** [list the distinct systems/components the requirements mention, e.g. "auth, user profile API, email notifications"]
+**Independent stories:** [count of separable user journeys in this issue, e.g. "1 — single story"]
+**Structural changes needed:** Yes / No / Unknown — [brief note if yes, e.g. "plugin loader interface must change to support dynamic loading"]
+**Scope note:** [any breadth signal detected during PM analysis, or "none detected"]
+
 ## Proposed Solution
 
 [High-level description of how this should work — NOT implementation details.
@@ -237,6 +247,16 @@ Part of #EPIC_NUMBER
 ## Context
 
 [Brief description of this task and how it fits into the parent epic's vision.]
+
+## Complexity Hint
+
+> This section is filled by the PM based on requirements analysis. It is a signal for the CDT
+> architect during wave planning — not an implementation plan.
+
+**Subsystems touched:** [list the distinct systems/components the requirements mention, e.g. "auth, user profile API, email notifications"]
+**Independent stories:** [count of separable user journeys in this issue, e.g. "1 — single story"]
+**Structural changes needed:** Yes / No / Unknown — [brief note if yes, e.g. "plugin loader interface must change to support dynamic loading"]
+**Scope note:** [any breadth signal detected during PM analysis, or "none detected"]
 
 ## Task
 
