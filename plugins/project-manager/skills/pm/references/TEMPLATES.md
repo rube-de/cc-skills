@@ -102,7 +102,7 @@ parse headers to understand structure. Humans benefit from the clarity as a side
 > architect during wave planning — not an implementation plan.
 
 **Subsystems touched:** [list the distinct systems/components the requirements mention, e.g. "auth, user profile API, email notifications"]
-**Independent stories:** [count of separable user journeys in this issue, e.g. "1 — single story"]
+**Independent stories:** [Count of separable user journeys. Per the quality checklist, this should be 1. If > 1, consider splitting the issue.]
 **Structural changes needed:** Yes / No / Unknown — [brief note if yes, e.g. "plugin loader interface must change to support dynamic loading"]
 **Scope note:** [any breadth signal detected during PM analysis, or "none detected"]
 
@@ -254,7 +254,7 @@ Part of #EPIC_NUMBER
 > architect during wave planning — not an implementation plan.
 
 **Subsystems touched:** [list the distinct systems/components the requirements mention, e.g. "auth, user profile API, email notifications"]
-**Independent stories:** [count of separable user journeys in this issue, e.g. "1 — single story"]
+**Independent stories:** [Count of separable user journeys. Per the quality checklist, this should be 1. If > 1, consider splitting the issue.]
 **Structural changes needed:** Yes / No / Unknown — [brief note if yes, e.g. "plugin loader interface must change to support dynamic loading"]
 **Scope note:** [any breadth signal detected during PM analysis, or "none detected"]
 
