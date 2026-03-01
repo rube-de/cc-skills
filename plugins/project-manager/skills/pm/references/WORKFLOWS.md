@@ -445,6 +445,22 @@ relevance guide below.
 - **Loading / async states** — spinners, skeletons, optimistic updates?
 - **Undo / reversibility** — can the action be undone?
 
+#### Structural Change Detection (features, epics)
+- **Does this feature require restructuring existing code before the new behavior can be added?**
+  Look for signals: "refactor X to support Y", "extract Z so we can add W", "change the interface to allow N"
+
+  If yes, suggest splitting:
+  > "This feature requires changing [describe: existing code structure] before the new behavior can be added.
+  > Consider two issues:
+  > **Issue A (Refactor):** Restructure [describe: component/module] to be prepared for the change — no new behavior, purely structural.
+  > **Issue B (Feature):** Build [describe: new behavior] on the restructured foundation from Issue A.
+  > Issue B is blocked by Issue A.
+  > This follows the 'make the change easy first' pattern — each issue is independently reviewable."
+
+  Ask the user: "Should I split this into a preparatory refactor + feature pair?"
+  - Yes → draft two issues (refactor first, feature second with `Blocked by: #N`)
+  - No → continue as single issue, note the structural dependency in the issue body under a **Structural Dependency** heading
+
 #### Data (features, epics, new projects)
 - **Input validation rules** — what constraints on user input?
 - **Data format and constraints** — types, ranges, lengths
@@ -462,6 +478,7 @@ relevance guide below.
 |-----------|-----|---------|------|----------|-------------|-------|----------|
 | UI/Interaction | ✓ | ✓ | ✓ | — | ✓ | — | — |
 | Behavior | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
+| Structural Change Detection | — | ✓ | ✓ | — | — | — | — |
 | Data | — | ✓ | ✓ | — | ✓ | — | — |
 | Integration | ✓ | ✓ | ✓ | ✓ | — | ✓ | — |
 
