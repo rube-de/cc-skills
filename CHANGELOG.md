@@ -1,3 +1,16 @@
+# [1.23.0](https://github.com/rube-de/cc-skills/compare/v1.22.0...v1.23.0) (2026-03-01)
+
+
+### Bug Fixes
+
+* align Independent stories template guidance with quality checklist ([d251022](https://github.com/rube-de/cc-skills/commit/d2510229b4cfc9ee6d4cc19423abcc6269e1ccb4))
+* **pm:** scope complexity hint checklist items to feature and sub-issue types ([d797949](https://github.com/rube-de/cc-skills/commit/d797949cba59dbe60388ba4a24e78635d1837af4))
+
+
+### Features
+
+* **pm:** add complexity hints to issue templates and breadth assertions to quality checklist ([ffe77c1](https://github.com/rube-de/cc-skills/commit/ffe77c135e0b9168df731432e2b9033b5b2a77d5)), closes [#92](https://github.com/rube-de/cc-skills/issues/92)
+
 # [1.22.0](https://github.com/rube-de/cc-skills/compare/v1.21.0...v1.22.0) (2026-03-01)
 
 
