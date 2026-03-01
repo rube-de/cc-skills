@@ -157,7 +157,7 @@ After gathering user input:
 ## Epic Flow
 
 ```
-Round 1: Vision + Scope → Round 2: PM Decomposition Proposal → Round 3: Dependencies → Draft sub-issues
+Round 1: Vision + Scope → Round 2: PM Decomposition Proposal → Round 3: Dependencies & Risks → Draft sub-issues
 ```
 
 ### Round 1 — Vision (AskUserQuestion + Conversation)
@@ -206,7 +206,7 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 - **Sub-issue**: imperative title (one story per row)
 - **Subsystems**: which systems/components are touched
 - **Acceptance criteria**: the single most important VERIFY condition
-- **Depends on**: sub-issue number or "—" (earlier rows = no dependencies or dependencies resolved earlier)
+- **Depends on**: The '#' of a preceding sub-issue, or "—" if none
 
 ### Round 3 — Dependencies & Risks (AskUserQuestion)
 
