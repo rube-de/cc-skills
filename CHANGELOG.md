@@ -1,3 +1,17 @@
+# [1.24.0](https://github.com/rube-de/cc-skills/compare/v1.23.0...v1.24.0) (2026-03-01)
+
+
+### Bug Fixes
+
+* address PR review comments ([fc8e671](https://github.com/rube-de/cc-skills/commit/fc8e671ec5c34d24d4e5cf2e26da82063f33644a))
+* address remaining PR review discussion items ([8a2877c](https://github.com/rube-de/cc-skills/commit/8a2877c63a7031727a9ce33a864989244cf1824f))
+* align example table placeholders with VERIFY convention ([c1b362f](https://github.com/rube-de/cc-skills/commit/c1b362fc50340b43908f8ee66c3bea50a160f68a))
+
+
+### Features
+
+* **pm:** replace Epic Flow Round 2 with PM-driven decomposition table ([0de6bcf](https://github.com/rube-de/cc-skills/commit/0de6bcf0a1d35af0b2c5911f652890ddf4836117))
+
 # [1.23.0](https://github.com/rube-de/cc-skills/compare/v1.22.0...v1.23.0) (2026-03-01)
 
 
