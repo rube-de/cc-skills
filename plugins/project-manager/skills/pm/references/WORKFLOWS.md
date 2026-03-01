@@ -179,14 +179,14 @@ Then ask (conversation):
 2. **Who are the stakeholders?**
 3. **Is there a deadline or target?**
 
-### Round 2 — PM Decomposition Proposal
+### Round 2 — PM Decomposition Proposal (AskUserQuestion + Conversation)
 
 After Round 1 (Vision), the PM generates a concrete sub-issue breakdown — do NOT ask the user
 to list pieces. The PM has the requirements and proposes the decomposition itself.
 
 1. Identify the independent stories or capability chunks from the requirements gathered in Round 1
 2. Sequence them by dependency (what must exist before what)
-3. Verify each chunk is independently completable — one story, one subsystem, no bundled structural changes
+3. Verify each chunk is independently completable — one story, focused subsystem scope, no bundled structural changes
 4. Present a decomposition table:
 
 > "Based on what you described, here's my proposed breakdown:
@@ -226,7 +226,8 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 
 After the user approves the decomposition table from Round 2 and Round 3 is complete:
 - Draft each approved row as an individual issue using the Feature or Refactor templates
-- Each sub-issue must match its row: title, subsystems, acceptance criteria, and dependency
+- Each sub-issue must match its row: title, subsystems, and dependency
+- Expand the table's single acceptance criterion into comprehensive acceptance criteria (tests, edge cases, error handling) using the template's Acceptance Criteria section
 - Each references the parent epic: `Part of #EPIC_NUMBER`
 - Order sub-issues by the dependency column (earlier rows first)
 - Include the approved decomposition table in the epic body
