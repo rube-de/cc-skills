@@ -459,7 +459,7 @@ relevance guide below.
 
   Ask the user: "Should I split this into a preparatory refactor + feature pair?"
   - Yes → draft two issues (refactor first, feature second with `Blocked by: #N`)
-  - No → continue as single issue, note the structural dependency in the issue body
+  - No → continue as single issue, note the structural dependency in the issue body under a **Structural Dependency** heading
 
 #### Data (features, epics, new projects)
 - **Input validation rules** — what constraints on user input?
@@ -478,9 +478,9 @@ relevance guide below.
 |-----------|-----|---------|------|----------|-------------|-------|----------|
 | UI/Interaction | ✓ | ✓ | ✓ | — | ✓ | — | — |
 | Behavior | ✓ | ✓ | ✓ | ✓ | ✓ | — | — |
+| Structural Change Detection | — | ✓ | ✓ | — | — | — | — |
 | Data | — | ✓ | ✓ | — | ✓ | — | — |
 | Integration | ✓ | ✓ | ✓ | ✓ | — | ✓ | — |
-| Structural | — | ✓ | ✓ | — | — | — | — |
 
 ### Mode-Specific Behavior
 
