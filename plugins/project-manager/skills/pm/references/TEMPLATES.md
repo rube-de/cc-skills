@@ -196,12 +196,12 @@ This is the "north star" for all sub-issues — agents reference this to underst
 
 Issues should be completed in this order. Dependencies are explicit.
 
-| # | Issue | Description | Depends On | Estimate |
-|---|-------|-------------|------------|----------|
-| 1 | [Task title] | [Brief description] | — | [S/M/L] |
-| 2 | [Task title] | [Brief description] | #1 | [S/M/L] |
-| 3 | [Task title] | [Brief description] | #1 | [S/M/L] |
-| 4 | [Task title] | [Brief description] | #2, #3 | [S/M/L] |
+| # | Sub-issue | Subsystems | Acceptance criteria | Depends on |
+|---|-----------|------------|---------------------|------------|
+| 1 | [Story title] | [system/component] | [key VERIFY condition] | — |
+| 2 | [Story title] | [system/component] | [key VERIFY condition] | #1 |
+| 3 | [Story title] | [system/component] | [key VERIFY condition] | #1 |
+| 4 | [Story title] | [system/component] | [key VERIFY condition] | #2, #3 |
 
 ### Sub-Issues
 
