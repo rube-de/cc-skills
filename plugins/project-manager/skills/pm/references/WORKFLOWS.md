@@ -157,7 +157,7 @@ After gathering user input:
 ## Epic Flow
 
 ```
-Round 1: Vision + Scope → Round 2: Task Breakdown → Round 3: Dependencies → Draft sub-issues
+Round 1: Vision + Scope → Round 2: PM Decomposition Proposal → Round 3: Dependencies → Draft sub-issues
 ```
 
 ### Round 1 — Vision (AskUserQuestion + Conversation)
@@ -179,13 +179,34 @@ Then ask (conversation):
 2. **Who are the stakeholders?**
 3. **Is there a deadline or target?**
 
-### Round 2 — Task Breakdown (Conversation)
+### Round 2 — PM Decomposition Proposal
 
-Guide the user through decomposition:
-1. **List the major pieces** — what are the big chunks of work?
-2. For each piece, ask: "Can this be done independently, or does it depend on another piece?"
-3. **Estimate each piece** — aim for 1-2 day chunks
-4. If any piece is > 3 days, suggest splitting it further
+After Round 1 (Vision), the PM generates a concrete sub-issue breakdown — do NOT ask the user
+to list pieces. The PM has the requirements and proposes the decomposition itself.
+
+1. Identify the independent stories or capability chunks from the requirements gathered in Round 1
+2. Sequence them by dependency (what must exist before what)
+3. Verify each chunk is independently completable — one story, one subsystem, no bundled structural changes
+4. Present a decomposition table:
+
+> "Based on what you described, here's my proposed breakdown:
+>
+> | # | Sub-issue | Subsystems | Acceptance criteria | Depends on |
+> |---|-----------|------------|---------------------|------------|
+> | 1 | [story A] | [system X] | [key criterion] | — |
+> | 2 | [story B] | [system Y] | [key criterion] | #1 |
+> | 3 | [story C] | [system Z] | [key criterion] | #1 |
+>
+> Each sub-issue is independently completable. Approve this breakdown, adjust, or add/remove items?"
+
+5. Incorporate user feedback — repeat the table with adjustments until the user approves
+6. Proceed to Round 3 (Dependencies & Risks) only after the user approves the breakdown
+
+**Table columns:**
+- **Sub-issue**: imperative title (one story per row)
+- **Subsystems**: which systems/components are touched
+- **Acceptance criteria**: the single most important VERIFY condition
+- **Depends on**: sub-issue number or "—" (earlier rows = no dependencies or dependencies resolved earlier)
 
 ### Round 3 — Dependencies & Risks (AskUserQuestion)
 
@@ -203,12 +224,12 @@ Guide the user through decomposition:
 
 ### Sub-Issue Generation
 
-After gathering all context:
-- Break down into individual issues using the Feature or Refactor templates
-- Each sub-issue must be independently completable
+After the user approves the decomposition table from Round 2 and Round 3 is complete:
+- Draft each approved row as an individual issue using the Feature or Refactor templates
+- Each sub-issue must match its row: title, subsystems, acceptance criteria, and dependency
 - Each references the parent epic: `Part of #EPIC_NUMBER`
-- Order sub-issues by dependency (what must come first)
-- Include implementation order in the epic body
+- Order sub-issues by the dependency column (earlier rows first)
+- Include the approved decomposition table in the epic body
 
 ---
 
