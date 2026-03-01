@@ -1,3 +1,15 @@
+# [1.22.0](https://github.com/rube-de/cc-skills/compare/v1.21.0...v1.22.0) (2026-03-01)
+
+
+### Bug Fixes
+
+* address PR review comments ([e440154](https://github.com/rube-de/cc-skills/commit/e4401547f4ce0ea22d780a6c5b25158768bd8389))
+
+
+### Features
+
+* **pm:** add structural change detection to requirements challenge checklist ([3d79867](https://github.com/rube-de/cc-skills/commit/3d79867dbd722595b908f84f1f37b9968f21b320)), closes [#90](https://github.com/rube-de/cc-skills/issues/90)
+
 # [1.21.0](https://github.com/rube-de/cc-skills/compare/v1.20.1...v1.21.0) (2026-02-28)
 
 
