@@ -193,9 +193,9 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 >
 > | # | Sub-issue | Subsystems | Acceptance criteria | Depends on |
 > |---|-----------|------------|---------------------|------------|
-> | 1 | [story A] | [system X] | [key criterion] | — |
-> | 2 | [story B] | [system Y] | [key criterion] | #1 |
-> | 3 | [story C] | [system Z] | [key criterion] | #1 |
+> | 1 | [story A] | [system X] | [key VERIFY condition] | — |
+> | 2 | [story B] | [system Y] | [key VERIFY condition] | #1 |
+> | 3 | [story C] | [system Z] | [key VERIFY condition] | #1 |
 >
 > Each sub-issue is independently completable. Approve this breakdown, adjust, or add/remove items?"
 
