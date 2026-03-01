@@ -247,8 +247,8 @@ Before creating any issue, verify:
 - [ ] Implementation hints reference real files found via codebase exploration
 - [ ] Scope boundaries are explicit (In/Out of Scope sections present and populated)
 - [ ] Single story: issue contains exactly one independent user journey (not 2+ bundled stories)
-- [ ] Subsystems: Complexity Hint lists the distinct systems touched
-- [ ] Structural changes: Complexity Hint declares whether structural changes are needed
+- [ ] Subsystems: Complexity Hint lists the distinct systems touched (Feature/Sub-Issue only)
+- [ ] Structural changes: Complexity Hint declares whether structural changes are needed (Feature/Sub-Issue only)
 - [ ] Dependencies are identified and linked
 - [ ] No external context required — issue is self-contained
 - [ ] Uncertainty is marked with `[NEEDS CLARIFICATION: ...]`
