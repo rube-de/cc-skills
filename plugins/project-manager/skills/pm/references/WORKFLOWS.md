@@ -67,10 +67,32 @@ After gathering user input:
 ## Feature Request Flow
 
 ```
-Round 1: Scope + Priority → Round 2: User Story → Round 3: Constraints → Codebase exploration
+Round 0: Story Framing → Round 1: Scope + Priority → Round 2: User Story → Round 3: Constraints → Codebase exploration
 ```
 
-### Round 1 — Scope (AskUserQuestion)
+### Round 0 — Story Framing (AskUserQuestion)
+
+Ask this before any other Feature Flow question:
+
+**Question 1: "Are you describing one user story or several?"**
+- One story: A single "As a [user], I want to [action] so that [benefit]" → proceed with Feature Flow
+- Multiple stories: Several distinct things a user wants, even if related → route to Epic Flow now
+
+**Routing:**
+
+- **"Multiple stories"** or user describes several distinct wants in their initial message:
+  > "You've described multiple independent stories. Each one will be a separate issue.
+  > Routing to Epic Flow to plan them as a coordinated set of sub-issues."
+  → Transition to Epic Flow immediately. Do NOT begin Feature Flow discovery.
+
+- **Unclear** — ask exactly one follow-up:
+  > "Can a user get value from [story A] without [story B] being done?"
+  - Yes → independent stories → Epic Flow
+  - No → dependent stories, handled as a single feature → Feature Flow
+
+- **"One story"** → continue to Round 1 questions below.
+
+### Round 1 — Scope + Priority (AskUserQuestion)
 
 Ask these together (2 questions):
 
