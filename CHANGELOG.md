@@ -1,3 +1,17 @@
+# [1.26.0](https://github.com/rube-de/cc-skills/compare/v1.25.0...v1.26.0) (2026-03-02)
+
+
+### Bug Fixes
+
+* address PR review comments ([f39da55](https://github.com/rube-de/cc-skills/commit/f39da55b66696146e32ce11df4e37c273f260cfc))
+* include New Project parent in no-size example comment ([9d8d22a](https://github.com/rube-de/cc-skills/commit/9d8d22a31599e907306fa5b78e9cba5ac797965e))
+* resolve size label mapping gaps from code review ([3323040](https://github.com/rube-de/cc-skills/commit/332304086879dcd463f579276392693e0aa49ed5))
+
+
+### Features
+
+* enforce size label selection on issue creation in PM skill ([01cb034](https://github.com/rube-de/cc-skills/commit/01cb0341f542170b46f0ba8afef1a4b6371f6047)), closes [#94](https://github.com/rube-de/cc-skills/issues/94)
+
 # [1.25.0](https://github.com/rube-de/cc-skills/compare/v1.24.0...v1.25.0) (2026-03-02)
 
 
