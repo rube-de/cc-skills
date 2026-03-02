@@ -213,23 +213,39 @@ For epics: also present the sub-issue breakdown before creating.
 
 #### Step 7: Create
 
+**Size label selection** (before creating the issue):
+
+Applies to: Feature, Epic sub-issue, Refactor.
+Skips: Epic parent, Bug, Chore, Research.
+
+Determine the size label deterministically from breadth analysis signals already gathered in Step 2:
+
+| Breadth analysis result | Size label |
+|-------------------------|------------|
+| 0 signals, single subsystem, no structural changes | `size/S` |
+| 1 signal OR multiple subsystems (single story) | `size/M` |
+| Structural change + feature continuing as single issue | `size/L` |
+| Multi-story routed to Epic | No size label on parent; each sub-issue labeled independently |
+
 ```bash
 gh issue create --repo OWNER/REPO \
   --title "<type-prefix>: <description>" \
   --body-file /tmp/issue-body.md \
-  --label "<type-label>"
+  --label "<type-label>,<size-label>"
 ```
 
+> `<size-label>` is omitted for types that skip sizing (Bug, Epic parent, Chore, Research).
+
 **Title prefixes by type:**
-| Type | Prefix | Label |
-|------|--------|-------|
-| Bug | `fix:` | `bug` |
-| Feature | `feat:` | `enhancement` |
-| Epic | `epic:` | `epic` |
-| Refactor | `refactor:` | `refactor` |
-| New Project | `project:` | `project` |
-| Chore | `chore:` | `chore` |
-| Research | `spike:` | `research` |
+| Type | Prefix | Label | Size? |
+|------|--------|-------|-------|
+| Bug | `fix:` | `bug` | No |
+| Feature | `feat:` | `enhancement` | Yes |
+| Epic | `epic:` | `epic` | No (sub-issues: Yes) |
+| Refactor | `refactor:` | `refactor` | Yes |
+| New Project | `project:` | `project` | No |
+| Chore | `chore:` | `chore` | No |
+| Research | `spike:` | `research` | No |
 
 **On failure:** Save draft to `/tmp/issue-draft-{timestamp}.md`, report error.
 **On success:** Remove the temp file: `rm -f /tmp/issue-body.md`
