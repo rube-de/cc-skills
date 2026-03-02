@@ -74,7 +74,7 @@ Round 0: Story Framing → Round 1: Scope + Priority → Round 2: User Story →
 
 Ask this before any other Feature Flow question:
 
-**Question: "Are you describing one user story or several?"**
+**Question 1: "Are you describing one user story or several?"**
 - One story: A single "As a [user], I want to [action] so that [benefit]" → proceed with Feature Flow
 - Multiple stories: Several distinct things a user wants, even if related → route to Epic Flow now
 
@@ -88,11 +88,11 @@ Ask this before any other Feature Flow question:
 - **Unclear** — ask exactly one follow-up:
   > "Can a user get value from [story A] without [story B] being done?"
   - Yes → independent stories → Epic Flow
-  - No → one story with dependencies → Feature Flow
+  - No → dependent stories, handled as a single feature → Feature Flow
 
 - **"One story"** → continue to Round 1 questions below.
 
-### Round 1 — Scope (AskUserQuestion)
+### Round 1 — Scope + Priority (AskUserQuestion)
 
 Ask these together (2 questions):
 
