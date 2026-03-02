@@ -1,3 +1,10 @@
+## [1.26.1](https://github.com/rube-de/cc-skills/compare/v1.26.0...v1.26.1) (2026-03-02)
+
+
+### Bug Fixes
+
+* correct step reference for feature sizing derivation ([8b9cf06](https://github.com/rube-de/cc-skills/commit/8b9cf0629b818ec6aab427d4bf0c37b29356c71c))
+
 # [1.26.0](https://github.com/rube-de/cc-skills/compare/v1.25.0...v1.26.0) (2026-03-02)
 
 
