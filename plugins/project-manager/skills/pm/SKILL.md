@@ -257,7 +257,7 @@ gh issue create --repo OWNER/REPO \
   --body-file /tmp/issue-body.md \
   --label "<type-label>,<size-label>"
 
-# Without size label (Bug, Epic parent, Chore, Research):
+# Without size label (Bug, Epic parent, New Project parent, Chore, Research):
 gh issue create --repo OWNER/REPO \
   --title "<type-prefix>: <description>" \
   --body-file /tmp/issue-body.md \
