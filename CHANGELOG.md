@@ -1,3 +1,15 @@
+# [1.25.0](https://github.com/rube-de/cc-skills/compare/v1.24.0...v1.25.0) (2026-03-02)
+
+
+### Bug Fixes
+
+* address PR review comments ([c8dbe87](https://github.com/rube-de/cc-skills/commit/c8dbe87a4498e5a926358d31a429c874524bd240))
+
+
+### Features
+
+* add pre-discovery single-story framing gate (Question 0) to Feature Flow ([b39682c](https://github.com/rube-de/cc-skills/commit/b39682caeb0c5b06180cfa31ae463510c0fb4463)), closes [#93](https://github.com/rube-de/cc-skills/issues/93)
+
 # [1.24.0](https://github.com/rube-de/cc-skills/compare/v1.23.0...v1.24.0) (2026-03-01)
 
 
