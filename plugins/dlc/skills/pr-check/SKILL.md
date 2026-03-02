@@ -153,6 +153,8 @@ Assign a confidence level:
 - **Medium**: One or two criteria are uncertain — the suggestion is plausible but not obvious
 - **Low**: Multiple criteria fail or the suggestion appears technically incorrect
 
+> **Anti-sycophancy rule**: Your confidence score is your honest technical assessment, not a politeness signal. If a suggestion is factually incorrect — wrong about the language, inconsistent with the codebase pattern, or introduces a regression — rate it **Low** and say so with specifics. Do NOT implement Low-confidence items without explicit user approval even if the reviewer is insistent. Being wrong politely is worse than being correct bluntly.
+
 ### 3c. Confidence-Gated Implementation
 
 - **High confidence** → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
