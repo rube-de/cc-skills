@@ -213,7 +213,48 @@ For epics: also present the sub-issue breakdown before creating.
 
 #### Step 7: Create
 
+**Size label selection** (before creating the issue):
+
+Applies to: Feature, Epic sub-issue, Refactor.
+Skips: Epic parent, Bug, Chore, Research.
+
+Determine the size label deterministically from analysis already gathered in earlier steps.
+
+**Features** — use breadth analysis signals from Step 2:
+
+| Breadth analysis result | Size label |
+|-------------------------|------------|
+| 0 signals, no structural changes | `size/S` |
+| 1 signal, no structural dependency retained | `size/M` |
+| Structural dependency retained in single issue (Signal 3, user declined split) | `size/L` |
+| Multi-story routed to Epic | No size label on parent; each sub-issue labeled independently |
+
+**Refactors** — use target area from Refactor Flow Round 1, Question 2:
+
+| Target area | Size label |
+|-------------|------------|
+| Single file/function | `size/S` |
+| Single module/component | `size/M` |
+| Cross-module or architecture-level | `size/L` |
+
+**Epic sub-issues** — derive from the decomposition table row:
+
+| Decomposition table row | Size label |
+|-------------------------|------------|
+| Single subsystem, no structural changes noted | `size/S` |
+| Multiple subsystems OR structural changes noted | `size/M` |
+| Multiple subsystems AND structural changes noted | `size/L` |
+
+> `size/XL` is intentionally excluded — work at that scale is always decomposed into an Epic with independently sized sub-issues.
+
 ```bash
+# With size label (Feature, Epic sub-issue, Refactor):
+gh issue create --repo OWNER/REPO \
+  --title "<type-prefix>: <description>" \
+  --body-file /tmp/issue-body.md \
+  --label "<type-label>,<size-label>"
+
+# Without size label (Bug, Epic parent, Chore, Research):
 gh issue create --repo OWNER/REPO \
   --title "<type-prefix>: <description>" \
   --body-file /tmp/issue-body.md \
@@ -221,15 +262,15 @@ gh issue create --repo OWNER/REPO \
 ```
 
 **Title prefixes by type:**
-| Type | Prefix | Label |
-|------|--------|-------|
-| Bug | `fix:` | `bug` |
-| Feature | `feat:` | `enhancement` |
-| Epic | `epic:` | `epic` |
-| Refactor | `refactor:` | `refactor` |
-| New Project | `project:` | `project` |
-| Chore | `chore:` | `chore` |
-| Research | `spike:` | `research` |
+| Type | Prefix | Label | Size? |
+|------|--------|-------|-------|
+| Bug | `fix:` | `bug` | No |
+| Feature | `feat:` | `enhancement` | Yes |
+| Epic | `epic:` | `epic` | No (sub-issues: Yes) |
+| Refactor | `refactor:` | `refactor` | Yes |
+| New Project | `project:` | `project` | No (sub-issues: Yes) |
+| Chore | `chore:` | `chore` | No |
+| Research | `spike:` | `research` | No |
 
 **On failure:** Save draft to `/tmp/issue-draft-{timestamp}.md`, report error.
 **On success:** Remove the temp file: `rm -f /tmp/issue-body.md`
