@@ -220,7 +220,7 @@ Skips: Epic parent, New Project, Bug, Chore, Research.
 
 Determine the size label deterministically from analysis already gathered in earlier steps.
 
-**Features** — derive from Step 2 analysis (breadth signals and structural change detection):
+**Features** — derive from Step 2 breadth signals and Step 3 structural change detection:
 
 | Analysis result | Size label |
 |-----------------|------------|
