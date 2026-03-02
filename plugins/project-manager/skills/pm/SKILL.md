@@ -215,18 +215,18 @@ For epics: also present the sub-issue breakdown before creating.
 
 **Size label selection** (before creating the issue):
 
-Applies to: Feature, Epic sub-issue, Refactor.
-Skips: Epic parent, Bug, Chore, Research.
+Applies to: Feature, Epic sub-issue, New Project sub-issue, Refactor.
+Skips: Epic parent, New Project, Bug, Chore, Research.
 
 Determine the size label deterministically from analysis already gathered in earlier steps.
 
-**Features** — use breadth analysis signals from Step 2:
+**Features** — derive from Step 2 analysis (breadth signals and structural change detection):
 
-| Breadth analysis result | Size label |
-|-------------------------|------------|
-| 0 signals, no structural changes | `size/S` |
-| 1 signal, no structural dependency retained | `size/M` |
-| Structural dependency retained in single issue (Signal 3, user declined split) | `size/L` |
+| Analysis result | Size label |
+|-----------------|------------|
+| 0 breadth signals, no structural changes | `size/S` |
+| 1 breadth signal, no structural dependency retained | `size/M` |
+| Structural dependency retained in single issue (user declined split) | `size/L` |
 | Multi-story routed to Epic | No size label on parent; each sub-issue labeled independently |
 
 **Refactors** — use target area from Refactor Flow Round 1, Question 2:
@@ -237,18 +237,21 @@ Determine the size label deterministically from analysis already gathered in ear
 | Single module/component | `size/M` |
 | Cross-module or architecture-level | `size/L` |
 
-**Epic sub-issues** — derive from the decomposition table row:
+**Epic sub-issues** — derive from the decomposition analysis (subsystems from the table row, structural changes from the PM's assessment during decomposition):
 
-| Decomposition table row | Size label |
-|-------------------------|------------|
-| Single subsystem, no structural changes noted | `size/S` |
-| Multiple subsystems OR structural changes noted | `size/M` |
-| Multiple subsystems AND structural changes noted | `size/L` |
+| Subsystems | Structural Changes | Size Label |
+|------------|-------------------|------------|
+| Single | No | `size/S` |
+| Single | Yes | `size/M` |
+| Multiple | No | `size/M` |
+| Multiple | Yes | `size/L` |
+
+**New Project sub-issues** — use the same decomposition-based sizing as Epic sub-issues.
 
 > `size/XL` is intentionally excluded — work at that scale is always decomposed into an Epic with independently sized sub-issues.
 
 ```bash
-# With size label (Feature, Epic sub-issue, Refactor):
+# With size label (Feature, Epic sub-issue, New Project sub-issue, Refactor):
 gh issue create --repo OWNER/REPO \
   --title "<type-prefix>: <description>" \
   --body-file /tmp/issue-body.md \
@@ -262,6 +265,7 @@ gh issue create --repo OWNER/REPO \
 ```
 
 **Title prefixes by type:**
+
 | Type | Prefix | Label | Size? |
 |------|--------|-------|-------|
 | Bug | `fix:` | `bug` | No |
