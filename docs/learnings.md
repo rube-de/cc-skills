@@ -469,6 +469,24 @@ Task(council:gemini-consultant, timeout=120s): ...
 
 > Source: [Issue #63](https://github.com/rube-de/cc-skills/issues/63), [PR #71](https://github.com/rube-de/cc-skills/pull/71) — All 8 council agents failed to resolve because SKILL.md and WORKFLOWS.md used bare names.
 
+### Use imperatives as operative directives, not aphorisms
+
+Behavioral rules in SKILL.md should lead with a direct imperative, not an aphorism. Research across Anthropic, OpenAI, and Google prompt engineering guides consistently recommends literal, imperative phrasing for agent instructions. The DICE paper (2024) found GPT-4o dropped from 84% to 49% accuracy when interpreting figurative vs. literal meaning — models may read aphorisms as rhetorical flair rather than operational rules.
+
+**Bad** — aphorism as the operative instruction:
+```markdown
+> Being wrong politely is worse than being correct bluntly.
+```
+
+**Good** — imperative first, aphorism as supporting rationale:
+```markdown
+> Prioritize technical correctness over politeness — being wrong politely is worse than being correct bluntly.
+```
+
+The imperative tells the agent *what to do*; the aphorism tells it *why*. This matches Anthropic's guidance that "providing the why helps the model generalize."
+
+> Source: [PR #125](https://github.com/rube-de/cc-skills/pull/125) — Gemini review flagged the aphorism-only phrasing in the anti-sycophancy directive. Research confirmed imperatives are more reliable for agent compliance.
+
 ### Response validation must be explicit in workflow steps, not advisory
 
 PostToolUse hooks that warn about invalid consultant output are insufficient because the orchestrating LLM follows workflow steps, not hook warnings. A hook can detect a malformed JSON response and print a warning, but the LLM proceeds to the next workflow step regardless — the warning sits in tool output it may never re-read.
