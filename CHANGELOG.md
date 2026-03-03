@@ -1,3 +1,15 @@
+# [1.28.0](https://github.com/rube-de/cc-skills/compare/v1.27.0...v1.28.0) (2026-03-03)
+
+
+### Bug Fixes
+
+* address PR review comments on conventional commit check ([9427a30](https://github.com/rube-de/cc-skills/commit/9427a3051094051b6c271eb83d00901fe7f61999))
+
+
+### Features
+
+* **dlc:** add conventional commit quality check to git-ops ([cb1267a](https://github.com/rube-de/cc-skills/commit/cb1267a4869df79794a4eeedc6d041a17c20925f)), closes [#97](https://github.com/rube-de/cc-skills/issues/97)
+
 # [1.27.0](https://github.com/rube-de/cc-skills/compare/v1.26.1...v1.27.0) (2026-03-03)
 
 
