@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/rube-de/cc-skills/compare/v1.29.0...v1.30.0) (2026-03-03)
+
+
+### Features
+
+* **dlc:** add spec-quality checks to pr-validity ([#128](https://github.com/rube-de/cc-skills/issues/128)) ([def2968](https://github.com/rube-de/cc-skills/commit/def2968757dfb18632a9517080ccb50609d6ac62)), closes [#99](https://github.com/rube-de/cc-skills/issues/99) [owner/repo#N](https://github.com/owner/repo/issues/N) [PR#N](https://github.com/PR/issues/N) [issue#N](https://github.com/issue/issues/N)
+
 # [1.29.0](https://github.com/rube-de/cc-skills/compare/v1.28.0...v1.29.0) (2026-03-03)
 
 
