@@ -128,7 +128,7 @@ For constructs where the PR also deletes code (file has both `+` and `-` lines):
 
 **Self-match guard**: When the deleted and added constructs are in the same file with overlapping line ranges, classify as **Update** (not Movement). Only flag Movement when code migrates between different files.
 
-## Step 4: Check Issue Reference
+## Step 4: Check Issue Reference & Spec Quality
 
 Check whether the PR references any GitHub issues:
 
@@ -137,13 +137,49 @@ Check whether the PR references any GitHub issues:
 echo "$PR_JSON" | jq -r '.body'
 ```
 
-Scan the PR body for `#N` issue references. For each referenced issue:
+Scan the PR body for GitHub issue references in any of these forms:
+- `#N` (e.g., `#123`)
+- `owner/repo#N` (e.g., `myorg/myrepo#456`)
+- Full issue URLs (e.g., `https://github.com/owner/repo/issues/789`)
+
+If **no issue references are found**, produce a finding:
+
+| Severity | Type | Message |
+|----------|------|---------|
+| **Low** | `spec-quality` | "PR has no linked issue — no acceptance criteria to verify" |
+
+Deduplicate the extracted issue references before fetching (a PR body may reference the same issue multiple times). Preserve both the `owner/repo` and the issue number from each matched reference. For each unique referenced issue:
 
 ```bash
-gh issue view <ISSUE_NUMBER> --json number,title,state,labels
+# For plain #N references, default to the current repo ($REPO from Step 1)
+gh issue view <ISSUE_NUMBER> --repo <OWNER/REPO> --json number,title,state,labels,body
 ```
 
+If the reference is plain `#N`, use `$REPO` as the default `<OWNER/REPO>`.
+
 Record the issue state (open/closed) and labels. This is informational only — produces Info-level findings if issues are referenced.
+
+### Body Inspection (Spec Quality)
+
+For each fetched issue, inspect the issue body for specification quality:
+
+| Condition | Severity | Type | Message |
+|-----------|----------|------|---------|
+| Issue body contains `- [ ]` or `- [x]` checkboxes | **Info** | `spec-quality` | "Issue #N has checkbox acceptance criteria" |
+| Issue body is empty or ≤ 100 chars with no checkboxes | **Low** | `spec-quality` | "Issue #N has a minimal body with no acceptance criteria" |
+| Issue body > 100 chars but no `- [ ]` or `- [x]` checkboxes | **Low** | `spec-quality` | "Issue #N lacks checkbox acceptance criteria" |
+| Issue body contains `TBD` or `NEEDS CLARIFICATION` (case-insensitive, anywhere in the body), or any heading ends with `?` | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
+
+When multiple conditions match for a single issue, emit at most one `spec-quality` finding for that issue, choosing the highest-severity match using this precedence order: **Medium** > **Low** > **Info**.
+
+Spec-quality findings are metadata-only signals and **must not** be counted toward the redundancy-focused issue-creation threshold in Step 6; only findings with `type: redundancy` are eligible to trigger a "{n} redundancies" issue.
+
+### File Field for Spec-Quality Findings
+
+Spec-quality findings describe PR or issue metadata rather than repository files. For the required `file` field, use these conventions:
+
+- PR-level findings (e.g., no linked issue): `PR#<number>` (e.g., `PR#128`)
+- Issue-level findings (e.g., missing acceptance criteria): `issue#<number>` (e.g., `issue#99`)
 
 ## Step 5: Classify & Build Findings
 
@@ -159,7 +195,7 @@ For each construct extracted in Step 2, assign a classification based on the sea
 | Trivial Overlap | Name match only, completely different signature | **Info** |
 | Code Movement | Body matches a deleted construct elsewhere | **Info** |
 
-All findings use `type: redundancy`.
+Classification findings from this step use `type: redundancy`.
 
 **Severity mapping** (reinforced here for defense-in-depth):
 
@@ -172,7 +208,7 @@ All findings use `type: redundancy`.
 
 ## Step 6: User-Gated Issue Creation
 
-**Threshold**: Create an issue only if there is any `high` finding OR 3+ `medium` findings.
+**Threshold**: Create an issue only if there is any `high` `redundancy` finding OR 3+ `medium` `redundancy` findings. Findings with `type: spec-quality` are excluded from this threshold.
 
 If the threshold is not met, skip issue creation and proceed to Step 7.
 
@@ -245,7 +281,7 @@ PR validity analysis complete.
   - PR: #{number} ({title})
   - Constructs analyzed: {n}
   - Classifications: {n} new, {n} duplicate, {n} divergent, {n} override, {n} update, {n} trivial overlap, {n} code movement
-  - Findings: {n} high, {n} medium, {n} info
+  - Findings: {n} high, {n} medium, {n} low, {n} info
   - Issue: #{number} ({url})  [only if created]
   - Referenced issues: #{n1} (open), #{n2} (closed)  [only if found in Step 4]
 ```
