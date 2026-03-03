@@ -75,6 +75,24 @@ The defense-in-depth pattern (inline critical rules as reinforcement) isn't limi
 
 > Source: [`dlc` check skills](../plugins/dlc/skills/) — each skill has a "Severity mapping (reinforced here for defense-in-depth)" section with domain-specific severity criteria inlined.
 
+### Use imperatives as operative directives, not aphorisms
+
+Behavioral rules in SKILL.md should lead with a direct imperative, not an aphorism. Research across Anthropic, OpenAI, and Google prompt engineering guides consistently recommends literal, imperative phrasing for agent instructions. [Rolling the DICE on Idiomaticity](https://arxiv.org/abs/2410.16069) (ACL 2025) found GPT-4o achieved 84% overall accuracy on individual idiom classifications but only 49% strict consistency when required to correctly handle both figurative and literal uses of the same expression — models may read aphorisms as rhetorical flair rather than operational rules.
+
+**Bad** — aphorism as the operative instruction:
+```markdown
+> Being wrong politely is worse than being correct bluntly.
+```
+
+**Good** — imperative first, aphorism as supporting rationale:
+```markdown
+> Prioritize technical correctness over politeness — being wrong politely is worse than being correct bluntly.
+```
+
+The imperative tells the agent *what to do*; the aphorism tells it *why*. This matches Anthropic's guidance that "providing the why helps the model generalize."
+
+> Source: [PR #125](https://github.com/rube-de/cc-skills/pull/125) — Gemini review flagged the aphorism-only phrasing in the anti-sycophancy directive. Research confirmed imperatives are more reliable for agent compliance.
+
 ---
 
 ## Agent Teams
