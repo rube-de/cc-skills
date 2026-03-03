@@ -84,9 +84,57 @@ For each candidate, record:
 | `reason` | `merged` (from method 1), `gone` (from method 2), or `merged + gone` (both) |
 | `has_remote` | `yes` if `git ls-remote --exit-code --heads origin "$name"` succeeds, `no` otherwise |
 
-If no candidates are found, print "No cleanup candidates found. Repository is clean." and skip to Step 5.
+If no candidates are found, print "No cleanup candidates found. Repository is clean." and skip to Step 6.
 
-## Step 3: Present and Confirm
+## Step 3: Check Commit Message Quality
+
+Check whether commits on the current branch follow the conventional commit format required by `semantic-release`.
+
+```bash
+# Check commits on current branch not yet merged into default branch
+COMMITS=$(git log --format="%s" "origin/${DEFAULT_BRANCH}..HEAD" 2>/dev/null)
+
+if [ -z "$COMMITS" ]; then
+  echo "No commits ahead of ${DEFAULT_BRANCH} — skipping commit quality check."
+else
+  TOTAL=0; CONVENTIONAL=0; NON_CONVENTIONAL=0; BAD_MSGS=""
+  while IFS= read -r msg; do
+    TOTAL=$((TOTAL + 1))
+    if echo "$msg" | grep -qE "^(feat|fix|chore|docs|style|refactor|test|perf|ci|build|revert)(\(.+\))?: .+"; then
+      CONVENTIONAL=$((CONVENTIONAL + 1))
+    else
+      NON_CONVENTIONAL=$((NON_CONVENTIONAL + 1))
+      BAD_MSGS="$BAD_MSGS\n  - \"$msg\""
+    fi
+  done <<EOF
+$COMMITS
+EOF
+
+  if [ "$NON_CONVENTIONAL" -gt 3 ]; then
+    COMMIT_SEVERITY="High"
+  elif [ "$NON_CONVENTIONAL" -gt 0 ]; then
+    COMMIT_SEVERITY="Medium"
+  else
+    COMMIT_SEVERITY="Info"
+  fi
+
+  echo "Commit quality: $COMMIT_SEVERITY ($CONVENTIONAL/$TOTAL conventional)"
+fi
+```
+
+**Severity table:**
+
+| Condition | Severity |
+|-----------|----------|
+| All commits conventional | Info (positive) |
+| Any non-conventional commit | Medium |
+| More than 3 non-conventional commits | High |
+
+Store: `total_commits`, `conventional_count`, `non_conventional_count`, list of non-conventional messages.
+
+This check is **informational only** — results feed into the Step 6 report; no GitHub issue is created.
+
+## Step 4: Present and Confirm
 
 Display the candidate list with reasons:
 
@@ -106,11 +154,11 @@ Use `AskUserQuestion` with three options:
 | **Let me pick** | Present each branch individually for yes/no selection |
 | **Skip** | Abort cleanup — no branches deleted |
 
-If the user selects **Skip**, print "Cleanup skipped." and jump to Step 5.
+If the user selects **Skip**, print "Cleanup skipped." and jump to Step 6.
 
 If the user selects **Let me pick**, iterate through each candidate and use `AskUserQuestion` to confirm deletion individually. Collect the confirmed subset.
 
-## Step 4: Execute Cleanup
+## Step 5: Execute Cleanup
 
 For each confirmed branch:
 
@@ -133,7 +181,7 @@ fi
 - If `git branch -d` fails for a branch, report the failure and continue with the next branch — do not abort the entire cleanup
 - If `git push origin --delete` fails, report the failure but count the local deletion as successful
 
-## Step 5: Report
+## Step 6: Report
 
 Print a summary:
 
@@ -155,6 +203,16 @@ Git ops complete.
     - main
     - develop
     - feature/in-progress
+
+Commit message quality:
+  - Total commits on branch: {n}
+  - Conventional: {n}  Non-conventional: {n}
+  - Status: [✓ all conventional | ⚠ {n} non-conventional — severity: Medium/High]
+  {For each non-conventional commit:}
+  - ✗ "{message}"
 ```
 
 If no branches were deleted (skip or no candidates), only print the "Remaining" section with the current branch list.
+
+If no commits are ahead of the default branch (Step 3 found an empty range), print:
+"No commits ahead of {DEFAULT_BRANCH} to check." in place of the commit quality section.
