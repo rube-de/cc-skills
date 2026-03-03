@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/rube-de/cc-skills/compare/v1.28.0...v1.29.0) (2026-03-03)
+
+
+### Features
+
+* **dlc:** add dependency staleness check to security scan ([#127](https://github.com/rube-de/cc-skills/issues/127)) ([e873d21](https://github.com/rube-de/cc-skills/commit/e873d21b87634b5d7c2d985bbd6eae796525e4ec)), closes [#98](https://github.com/rube-de/cc-skills/issues/98)
+
 # [1.28.0](https://github.com/rube-de/cc-skills/compare/v1.27.0...v1.28.0) (2026-03-03)
 
 
