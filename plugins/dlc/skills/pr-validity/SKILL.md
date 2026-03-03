@@ -137,13 +137,18 @@ Check whether the PR references any GitHub issues:
 echo "$PR_JSON" | jq -r '.body'
 ```
 
-Scan the PR body for `#N` issue references. If **no issue references are found**, produce a finding:
+Scan the PR body for GitHub issue references in any of these forms:
+- `#N` (e.g., `#123`)
+- `owner/repo#N` (e.g., `myorg/myrepo#456`)
+- Full issue URLs (e.g., `https://github.com/owner/repo/issues/789`)
+
+If **no issue references are found**, produce a finding:
 
 | Severity | Type | Message |
 |----------|------|---------|
 | **Low** | `spec-quality` | "PR has no linked issue — no acceptance criteria to verify" |
 
-For each referenced issue:
+Deduplicate the extracted issue numbers before fetching (a PR body may reference the same issue multiple times). For each unique referenced issue:
 
 ```bash
 gh issue view <ISSUE_NUMBER> --json number,title,state,labels,body
@@ -160,7 +165,16 @@ For each fetched issue, inspect the issue body for specification quality:
 | Issue body contains `- [ ]` or `- [x]` checkboxes | **Info** | `spec-quality` | "Issue #N has checkbox acceptance criteria" |
 | Issue body is empty or ≤ 100 chars with no checkboxes | **Low** | `spec-quality` | "Issue #N has a minimal body with no acceptance criteria" |
 | Issue body > 100 chars but no `- [ ]` or `- [x]` checkboxes | **Low** | `spec-quality` | "Issue #N lacks checkbox acceptance criteria" |
-| Issue body contains `TBD` or `NEEDS CLARIFICATION` in headings (lines starting with `#`) | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
+| Issue body contains `TBD` or `NEEDS CLARIFICATION` (case-insensitive, anywhere in the body) | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
+
+When multiple conditions match for a single issue, emit at most one `spec-quality` finding for that issue, choosing the highest-severity match using this precedence order: **Medium** > **Low** > **Info**.
+
+### File Field for Spec-Quality Findings
+
+Spec-quality findings describe PR or issue metadata rather than repository files. For the required `file` field, use these conventions:
+
+- PR-level findings (e.g., no linked issue): `PR#<number>` (e.g., `PR#128`)
+- Issue-level findings (e.g., missing acceptance criteria): `issue#<number>` (e.g., `issue#99`)
 
 ## Step 5: Classify & Build Findings
 
