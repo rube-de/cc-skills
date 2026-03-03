@@ -58,18 +58,24 @@ command -v govulncheck >/dev/null 2>&1 && govulncheck ./... 2>/dev/null
 
 Check for packages significantly behind the latest stable release — these accumulate security patches without formal CVEs.
 
+Select tools based on availability (`command -v`), not exit codes — staleness tools exit non-zero when outdated packages are found, which is a valid result to capture.
+
 ```bash
-# Node.js
-command -v npm >/dev/null 2>&1 && npm outdated --json 2>/dev/null
+# Node.js — prefer npm, fall back to Bun
+if command -v npm >/dev/null 2>&1; then
+  npm outdated --json 2>/dev/null
+elif command -v bun >/dev/null 2>&1; then
+  bun outdated 2>/dev/null
+fi
 
 # Python
 command -v pip >/dev/null 2>&1 && pip list --outdated --format=json 2>/dev/null
 
 # Rust
-command -v cargo-outdated >/dev/null 2>&1 && cargo outdated 2>/dev/null
+command -v cargo-outdated >/dev/null 2>&1 && cargo outdated --json 2>/dev/null
 
 # Go
-command -v go >/dev/null 2>&1 && go list -u -m all 2>/dev/null
+command -v go >/dev/null 2>&1 && go list -u -m -json all 2>/dev/null
 ```
 
 ### Static Analysis (SAST)
@@ -112,7 +118,7 @@ Map tool output to the findings format from REPORT-FORMAT.md.
 | `info` / advisory only | **Info** |
 | Dependency > 2 major versions behind latest | **Medium** — type: `dependency-staleness` |
 | Dependency > 1 major version behind | **Low** — type: `dependency-staleness` |
-| Dependency last updated > 2 years ago (unmaintained) | **Medium** — type: `dependency-staleness` |
+| Dependency last updated > 2 years ago (unmaintained, when metadata available) | **Medium** — type: `dependency-staleness` |
 | > 10 dependencies with pending updates | **Low** — type: `dependency-staleness` (aggregate) |
 
 Deduplicate findings that appear in multiple tools. Prefer the source with more detail.
