@@ -165,7 +165,7 @@ For each fetched issue, inspect the issue body for specification quality:
 | Issue body contains `- [ ]` or `- [x]` checkboxes | **Info** | `spec-quality` | "Issue #N has checkbox acceptance criteria" |
 | Issue body is empty or ≤ 100 chars with no checkboxes | **Low** | `spec-quality` | "Issue #N has a minimal body with no acceptance criteria" |
 | Issue body > 100 chars but no `- [ ]` or `- [x]` checkboxes | **Low** | `spec-quality` | "Issue #N lacks checkbox acceptance criteria" |
-| Issue body contains `TBD` or `NEEDS CLARIFICATION` (case-insensitive, anywhere in the body) | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
+| Issue body contains `TBD` or `NEEDS CLARIFICATION` (case-insensitive, anywhere in the body), or any heading ends with `?` | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
 
 When multiple conditions match for a single issue, emit at most one `spec-quality` finding for that issue, choosing the highest-severity match using this precedence order: **Medium** > **Low** > **Info**.
 
