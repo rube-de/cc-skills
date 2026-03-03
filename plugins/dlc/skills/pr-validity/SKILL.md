@@ -128,7 +128,7 @@ For constructs where the PR also deletes code (file has both `+` and `-` lines):
 
 **Self-match guard**: When the deleted and added constructs are in the same file with overlapping line ranges, classify as **Update** (not Movement). Only flag Movement when code migrates between different files.
 
-## Step 4: Check Issue Reference
+## Step 4: Check Issue Reference & Spec Quality
 
 Check whether the PR references any GitHub issues:
 
@@ -137,13 +137,29 @@ Check whether the PR references any GitHub issues:
 echo "$PR_JSON" | jq -r '.body'
 ```
 
-Scan the PR body for `#N` issue references. For each referenced issue:
+Scan the PR body for `#N` issue references. If **no issue references are found**, produce a finding:
+
+| Severity | Type | Message |
+|----------|------|---------|
+| **Low** | `spec-quality` | "PR has no linked issue — no acceptance criteria to verify" |
+
+For each referenced issue:
 
 ```bash
-gh issue view <ISSUE_NUMBER> --json number,title,state,labels
+gh issue view <ISSUE_NUMBER> --json number,title,state,labels,body
 ```
 
 Record the issue state (open/closed) and labels. This is informational only — produces Info-level findings if issues are referenced.
+
+### Body Inspection (Spec Quality)
+
+For each fetched issue, inspect the issue body for specification quality:
+
+| Condition | Severity | Type | Message |
+|-----------|----------|------|---------|
+| Issue body contains `- [ ]` checkboxes | **Info** | `spec-quality` | "Issue #N has checkbox acceptance criteria" |
+| Issue body > 100 chars but no `- [ ]` checkboxes | **Low** | `spec-quality` | "Issue #N lacks checkbox acceptance criteria" |
+| Issue body contains `TBD`, `NEEDS CLARIFICATION`, or `?` in headings (lines starting with `#`) | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
 
 ## Step 5: Classify & Build Findings
 
