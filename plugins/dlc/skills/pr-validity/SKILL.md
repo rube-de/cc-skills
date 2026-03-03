@@ -157,9 +157,10 @@ For each fetched issue, inspect the issue body for specification quality:
 
 | Condition | Severity | Type | Message |
 |-----------|----------|------|---------|
-| Issue body contains `- [ ]` checkboxes | **Info** | `spec-quality` | "Issue #N has checkbox acceptance criteria" |
-| Issue body > 100 chars but no `- [ ]` checkboxes | **Low** | `spec-quality` | "Issue #N lacks checkbox acceptance criteria" |
-| Issue body contains `TBD`, `NEEDS CLARIFICATION`, or `?` in headings (lines starting with `#`) | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
+| Issue body contains `- [ ]` or `- [x]` checkboxes | **Info** | `spec-quality` | "Issue #N has checkbox acceptance criteria" |
+| Issue body is empty or ≤ 100 chars with no checkboxes | **Low** | `spec-quality` | "Issue #N has a minimal body with no acceptance criteria" |
+| Issue body > 100 chars but no `- [ ]` or `- [x]` checkboxes | **Low** | `spec-quality` | "Issue #N lacks checkbox acceptance criteria" |
+| Issue body contains `TBD` or `NEEDS CLARIFICATION` in headings (lines starting with `#`) | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
 
 ## Step 5: Classify & Build Findings
 
@@ -175,7 +176,7 @@ For each construct extracted in Step 2, assign a classification based on the sea
 | Trivial Overlap | Name match only, completely different signature | **Info** |
 | Code Movement | Body matches a deleted construct elsewhere | **Info** |
 
-All findings use `type: redundancy`.
+Classification findings from this step use `type: redundancy`.
 
 **Severity mapping** (reinforced here for defense-in-depth):
 
@@ -261,7 +262,7 @@ PR validity analysis complete.
   - PR: #{number} ({title})
   - Constructs analyzed: {n}
   - Classifications: {n} new, {n} duplicate, {n} divergent, {n} override, {n} update, {n} trivial overlap, {n} code movement
-  - Findings: {n} high, {n} medium, {n} info
+  - Findings: {n} high, {n} medium, {n} low, {n} info
   - Issue: #{number} ({url})  [only if created]
   - Referenced issues: #{n1} (open), #{n2} (closed)  [only if found in Step 4]
 ```
