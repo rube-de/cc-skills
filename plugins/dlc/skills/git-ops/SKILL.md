@@ -42,6 +42,9 @@ if [ -n "$(git status --porcelain)" ]; then
   exit 1
 fi
 
+# Capture starting branch before switching — Step 3 uses this for the commit range
+START_REF=$(git branch --show-current)
+
 # Switch to default branch and pull (fast-forward only to avoid merge commits)
 git checkout "$DEFAULT_BRANCH"
 git pull --ff-only origin "$DEFAULT_BRANCH"
@@ -84,31 +87,33 @@ For each candidate, record:
 | `reason` | `merged` (from method 1), `gone` (from method 2), or `merged + gone` (both) |
 | `has_remote` | `yes` if `git ls-remote --exit-code --heads origin "$name"` succeeds, `no` otherwise |
 
-If no candidates are found, print "No cleanup candidates found. Repository is clean." and skip to Step 6.
+If no candidates are found, print "No cleanup candidates found. Repository is clean.", skip Steps 4 and 5, and continue with Step 3.
 
 ## Step 3: Check Commit Message Quality
 
 Check whether commits on the current branch follow the conventional commit format required by `semantic-release`.
 
 ```bash
+# Use START_REF captured before default-branch checkout in Step 1; fall back to HEAD
+TARGET_REF="${START_REF:-HEAD}"
+
 # Check commits on current branch not yet merged into default branch
-COMMITS=$(git log --format="%s" "origin/${DEFAULT_BRANCH}..HEAD" 2>/dev/null)
+COMMITS=$(git log --format="%s" "origin/${DEFAULT_BRANCH}..${TARGET_REF}" 2>/dev/null)
 
 if [ -z "$COMMITS" ]; then
-  echo "No commits ahead of ${DEFAULT_BRANCH} — skipping commit quality check."
+  echo "No commits ahead of ${DEFAULT_BRANCH} to check."
 else
   TOTAL=0; CONVENTIONAL=0; NON_CONVENTIONAL=0; BAD_MSGS=""
   while IFS= read -r msg; do
     TOTAL=$((TOTAL + 1))
-    if echo "$msg" | grep -qE "^(feat|fix|chore|docs|style|refactor|test|perf|ci|build|revert)(\(.+\))?: .+"; then
+    # Single-quoted regex avoids shell expansion; allows optional scope and breaking-change (!)
+    if echo "$msg" | grep -qE '^(feat|fix|chore|docs|style|refactor|test|perf|ci|build|revert)(\([^)]*\))?(!)?: .+'; then
       CONVENTIONAL=$((CONVENTIONAL + 1))
     else
       NON_CONVENTIONAL=$((NON_CONVENTIONAL + 1))
-      BAD_MSGS="$BAD_MSGS\n  - \"$msg\""
+      BAD_MSGS+=$'\n'"  - ✗ \"$msg\""
     fi
-  done <<EOF
-$COMMITS
-EOF
+  done < <(printf '%s\n' "$COMMITS")
 
   if [ "$NON_CONVENTIONAL" -gt 3 ]; then
     COMMIT_SEVERITY="High"
@@ -207,12 +212,15 @@ Git ops complete.
 Commit message quality:
   - Total commits on branch: {n}
   - Conventional: {n}  Non-conventional: {n}
-  - Status: [✓ all conventional | ⚠ {n} non-conventional — severity: Medium/High]
+  - Status: [✓ all conventional | ⚠ {n} non-conventional] — severity: {severity}
   {For each non-conventional commit:}
   - ✗ "{message}"
 ```
 
-If no branches were deleted (skip or no candidates), only print the "Remaining" section with the current branch list.
+If no branches were deleted (skip or no candidates), omit only the "Deleted" and "Failed" sections — always include the "Remaining" section and the "Commit message quality" section below it.
 
-If no commits are ahead of the default branch (Step 3 found an empty range), print:
-"No commits ahead of {DEFAULT_BRANCH} to check." in place of the commit quality section.
+If no commits are ahead of the default branch (Step 3 found an empty range), replace the entire "Commit message quality:" section (including the header) with:
+
+```text
+  No commits ahead of {DEFAULT_BRANCH} to check.
+```
