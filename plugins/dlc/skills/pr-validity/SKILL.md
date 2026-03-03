@@ -148,11 +148,14 @@ If **no issue references are found**, produce a finding:
 |----------|------|---------|
 | **Low** | `spec-quality` | "PR has no linked issue — no acceptance criteria to verify" |
 
-Deduplicate the extracted issue numbers before fetching (a PR body may reference the same issue multiple times). For each unique referenced issue:
+Deduplicate the extracted issue references before fetching (a PR body may reference the same issue multiple times). Preserve both the `owner/repo` and the issue number from each matched reference. For each unique referenced issue:
 
 ```bash
-gh issue view <ISSUE_NUMBER> --json number,title,state,labels,body
+# For plain #N references, default to the current repo ($REPO from Step 1)
+gh issue view <ISSUE_NUMBER> --repo <OWNER/REPO> --json number,title,state,labels,body
 ```
+
+If the reference is plain `#N`, use `$REPO` as the default `<OWNER/REPO>`.
 
 Record the issue state (open/closed) and labels. This is informational only — produces Info-level findings if issues are referenced.
 
@@ -168,6 +171,8 @@ For each fetched issue, inspect the issue body for specification quality:
 | Issue body contains `TBD` or `NEEDS CLARIFICATION` (case-insensitive, anywhere in the body), or any heading ends with `?` | **Medium** | `spec-quality` | "Issue #N has unresolved questions" |
 
 When multiple conditions match for a single issue, emit at most one `spec-quality` finding for that issue, choosing the highest-severity match using this precedence order: **Medium** > **Low** > **Info**.
+
+Spec-quality findings are metadata-only signals and **must not** be counted toward the redundancy-focused issue-creation threshold in Step 6; only findings with `type: redundancy` are eligible to trigger a "{n} redundancies" issue.
 
 ### File Field for Spec-Quality Findings
 
@@ -203,7 +208,7 @@ Classification findings from this step use `type: redundancy`.
 
 ## Step 6: User-Gated Issue Creation
 
-**Threshold**: Create an issue only if there is any `high` finding OR 3+ `medium` findings.
+**Threshold**: Create an issue only if there is any `high` `redundancy` finding OR 3+ `medium` `redundancy` findings. Findings with `type: spec-quality` are excluded from this threshold.
 
 If the threshold is not met, skip issue creation and proceed to Step 7.
 
