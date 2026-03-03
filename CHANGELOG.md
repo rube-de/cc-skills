@@ -1,3 +1,15 @@
+# [1.27.0](https://github.com/rube-de/cc-skills/compare/v1.26.1...v1.27.0) (2026-03-03)
+
+
+### Bug Fixes
+
+* use imperative-first phrasing for anti-sycophancy directive ([491ad28](https://github.com/rube-de/cc-skills/commit/491ad28ce5b09b97afe4c841b5b899101194420f))
+
+
+### Features
+
+* **dlc:** add anti-sycophancy directive to pr-check confidence evaluation ([4a0ecbb](https://github.com/rube-de/cc-skills/commit/4a0ecbbae51ffdb5e3c17574d88f55c337b824d1)), closes [#96](https://github.com/rube-de/cc-skills/issues/96)
+
 ## [1.26.1](https://github.com/rube-de/cc-skills/compare/v1.26.0...v1.26.1) (2026-03-02)
 
 
