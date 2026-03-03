@@ -77,7 +77,7 @@ The defense-in-depth pattern (inline critical rules as reinforcement) isn't limi
 
 ### Use imperatives as operative directives, not aphorisms
 
-Behavioral rules in SKILL.md should lead with a direct imperative, not an aphorism. Research across Anthropic, OpenAI, and Google prompt engineering guides consistently recommends literal, imperative phrasing for agent instructions. The DICE paper (2024) found GPT-4o dropped from 84% to 49% accuracy when interpreting figurative vs. literal meaning — models may read aphorisms as rhetorical flair rather than operational rules.
+Behavioral rules in SKILL.md should lead with a direct imperative, not an aphorism. Research across Anthropic, OpenAI, and Google prompt engineering guides consistently recommends literal, imperative phrasing for agent instructions. [Rolling the DICE on Idiomaticity](https://arxiv.org/abs/2410.16069) (ACL 2025) found GPT-4o achieved 84% overall accuracy on individual idiom classifications but only 49% strict consistency when required to correctly handle both figurative and literal uses of the same expression — models may read aphorisms as rhetorical flair rather than operational rules.
 
 **Bad** — aphorism as the operative instruction:
 ```markdown
