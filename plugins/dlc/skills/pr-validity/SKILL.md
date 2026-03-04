@@ -37,13 +37,13 @@ If no open PR is found, abort with: "No open PR found for the current branch. Pu
 
 Extract `.body` from `PR_JSON` and evaluate against a minimal structure rubric:
 
-| Missing Element | Severity | Type | Message |
-|-----------------|----------|------|---------|
-| PR body is empty or < 50 chars | **High** | `pr-description` | "PR has no meaningful description — reviewers need context" |
-| No summary section heading (`## Summary`, `## What`, `## Changes`, `## Description`, or equivalent) | **Medium** | `pr-description` | "PR lacks a summary section — add a `## Summary` heading" |
-| No mention of testing (`test`, `verify`, `check`, `how to`, case-insensitive) | **Low** | `pr-description` | "PR description has no test plan or verification instructions" |
+| # | Missing Element | Severity | Type | Message |
+|---|-----------------|----------|------|---------|
+| 1 | PR body is empty or < 50 chars | **High** | `pr-description` | "PR has no meaningful description — reviewers need context" |
+| 2 | No summary section heading — any markdown heading level (`#`–`######`) containing `Summary`, `What`, `Changes`, `Description`, `Overview`, `Context`, or `Motivation` (case-insensitive) | **Medium** | `pr-description` | "PR lacks a summary section — add a heading like `## Summary` or `## Description`" |
+| 3 | No mention of testing — `test plan`, `tested`, `how to test`, `verify`, `verified`, `verification`, `steps to verify`, `manual test` (case-insensitive) | **Low** | `pr-description` | "PR description has no test plan or verification instructions" |
 
-When multiple conditions match, emit **all** matching findings (unlike spec-quality's precedence rule — each missing element is independently actionable).
+**Evaluation order**: Check #1 first. If the body is empty or under 50 chars, emit only the High finding and skip checks #2 and #3 (they are logically entailed and not independently actionable on an empty body). When the body is ≥ 50 chars, evaluate checks #2 and #3 and emit **all** that match (unlike spec-quality's precedence rule — each missing element is independently actionable).
 
 For the required `file` field, use `PR#<number>` (same convention as spec-quality PR-level findings).
 
@@ -296,7 +296,7 @@ PR validity analysis complete.
   - Constructs analyzed: {n}
   - Classifications: {n} new, {n} duplicate, {n} divergent, {n} override, {n} update, {n} trivial overlap, {n} code movement
   - Findings: {n} high, {n} medium, {n} low, {n} info
-  - PR description: {n} findings ({severities})  [only if pr-description findings exist]
+  - PR description: {n} findings ({n} high, {n} medium, {n} low)  [only if pr-description findings exist]
   - Issue: #{number} ({url})  [only if created]
   - Referenced issues: #{n1} (open), #{n2} (closed)  [only if found in Step 4]
 ```
