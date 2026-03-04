@@ -84,6 +84,36 @@ For each changed file:
 3. Flag files with < 80% coverage (or project-configured threshold)
 4. Flag changed files with **zero** test coverage
 
+### TDD Commit Order Check
+
+For each (source file, test file) pair identified above, check whether the test was written *before* the source — a signal of TDD discipline:
+
+```bash
+# Get the earliest commit timestamp where the file was first added
+git log --format="%ct" --diff-filter=A -- <source-file> | tail -1
+git log --format="%ct" --diff-filter=A -- <test-file>   | tail -1
+```
+
+For each pair, compare timestamps:
+
+| Condition | Action |
+|-----------|--------|
+| Source timestamp < test timestamp | **Low** `tdd-order` finding — test written after source (confirmation bias risk) |
+| Test timestamp ≤ source timestamp | No finding — TDD discipline confirmed for this pair |
+| Both files in the same commit (equal timestamps) | Skip pair — no finding |
+| `--diff-filter=A` returns empty (shallow clone, renamed file) | Skip pair with note — insufficient history |
+
+If **all** new source files in the branch diff have pre-dating or same-commit tests, emit a single **Info** `tdd-order` finding: "TDD discipline confirmed for this branch."
+
+**Scope**: Only check files already in the branch diff (from the `git diff --name-only origin/main...HEAD` list above). Do not scan the entire repository.
+
+**Finding messages**:
+
+| Severity | Type | Message |
+|----------|------|---------|
+| **Low** | `tdd-order` | "Test for `{source}` written after source — risk of confirmation bias in test assertions" |
+| **Info** | `tdd-order` | "TDD discipline confirmed for this branch" |
+
 ## Step 4: Classify Findings
 
 Map results to the findings format from REPORT-FORMAT.md.
@@ -99,7 +129,9 @@ Map results to the findings format from REPORT-FORMAT.md.
 | Changed files with < 80% coverage | **Medium** |
 | Missing test file for new module | **Medium** |
 | Flaky tests (pass on retry) | **Low** |
+| Source file committed before its test file | **Low** |
 | Coverage informational metrics | **Info** |
+| TDD discipline confirmed (all tests pre-date source) | **Info** |
 
 ## Step 5: Create GitHub Issue
 
