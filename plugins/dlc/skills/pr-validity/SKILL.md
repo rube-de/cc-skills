@@ -40,7 +40,7 @@ Extract `.body` from `PR_JSON` and evaluate against a minimal structure rubric:
 | # | Missing Element | Severity | Type | Message |
 |---|-----------------|----------|------|---------|
 | 1 | PR body is empty or < 50 chars | **High** | `pr-description` | "PR has no meaningful description — reviewers need context" |
-| 2 | No summary section heading — any markdown heading level (`#`–`######`) containing `Summary`, `What`, `Changes`, `Description`, `Overview`, `Context`, or `Motivation` (case-insensitive) | **Medium** | `pr-description` | "PR lacks a summary section — add a heading like `## Summary` or `## Description`" |
+| 2 | No summary section heading — any Markdown heading level (`#`–`######`) containing `Summary`, `What`, `Changes`, `Description`, `Overview`, `Context`, or `Motivation` (case-insensitive) | **Medium** | `pr-description` | "PR lacks a summary section — add a heading like `## Summary` or `## Description`" |
 | 3 | No mention of testing — `test plan`, `tested`, `how to test`, `verify`, `verified`, `verification`, `steps to verify`, `manual test` (case-insensitive) | **Low** | `pr-description` | "PR description has no test plan or verification instructions" |
 
 **Evaluation order**: Check #1 first. If the body is empty or under 50 chars, emit only the High finding and skip checks #2 and #3 (they are logically entailed and not independently actionable on an empty body). When the body is ≥ 50 chars, evaluate checks #2 and #3 and emit **all** that match (unlike spec-quality's precedence rule — each missing element is independently actionable).
