@@ -89,23 +89,23 @@ For each changed file:
 For each (source file, test file) pair identified above, check whether the test was written *before* the source — a signal of TDD discipline:
 
 ```bash
-# Get the earliest commit timestamp where the file was first added
-git log --format="%ct" --diff-filter=A -- <source-file> | tail -1
-git log --format="%ct" --diff-filter=A -- <test-file>   | tail -1
+# Get the commit hash and timestamp where the file was first added on this branch
+git log origin/main..HEAD --format="%H %ct" --diff-filter=A -- <source-file> | tail -1
+git log origin/main..HEAD --format="%H %ct" --diff-filter=A -- <test-file>   | tail -1
 ```
 
-For each pair, compare timestamps:
+**Scope**: Only check files **added on the current branch** (the `origin/main..HEAD` range above). Files that already exist in `main` are excluded — the TDD order signal is only meaningful for new files introduced in this branch. Reuse the same file list from `git diff --name-only origin/main...HEAD`.
+
+For each pair, first compare **commit hashes**, then timestamps:
 
 | Condition | Action |
 |-----------|--------|
-| Source timestamp < test timestamp | **Low** `tdd-order` finding — test written after source (confirmation bias risk) |
-| Test timestamp ≤ source timestamp | No finding — TDD discipline confirmed for this pair |
-| Both files in the same commit (equal timestamps) | Skip pair — no finding |
-| `--diff-filter=A` returns empty (shallow clone, renamed file) | Skip pair with note — insufficient history |
+| Either file has no `--diff-filter=A` output (shallow clone, renamed/moved file, or file not added on this branch) | Skip pair — log a note to stdout (not a finding): "Skipping TDD order check for `{file}`: insufficient git history" |
+| Both files share the same add-commit hash | Skip pair — no finding (added atomically) |
+| Source add-commit timestamp < test add-commit timestamp | **Low** `tdd-order` finding — test written after source (confirmation bias risk) |
+| Test add-commit timestamp < source add-commit timestamp | No finding — TDD discipline confirmed for this pair |
 
 If **all** new source files in the branch diff have pre-dating or same-commit tests, emit a single **Info** `tdd-order` finding: "TDD discipline confirmed for this branch."
-
-**Scope**: Only check files already in the branch diff (from the `git diff --name-only origin/main...HEAD` list above). Do not scan the entire repository.
 
 **Finding messages**:
 
