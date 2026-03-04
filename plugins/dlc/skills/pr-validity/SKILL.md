@@ -33,6 +33,20 @@ echo "$PR_JSON" | jq '{number, title, url, headRefName, state, additions, change
 
 If no open PR is found, abort with: "No open PR found for the current branch. Push your changes and open a PR first."
 
+### PR Description Quality Check
+
+Extract `.body` from `PR_JSON` and evaluate against a minimal structure rubric:
+
+| # | Missing Element | Severity | Type | Message |
+|---|-----------------|----------|------|---------|
+| 1 | PR body is empty or < 50 chars | **High** | `pr-description` | "PR has no meaningful description — reviewers need context" |
+| 2 | No summary section heading — any Markdown heading level (`#`–`######`) containing `Summary`, `What`, `Changes`, `Description`, `Overview`, `Context`, or `Motivation` (case-insensitive) | **Medium** | `pr-description` | "PR lacks a summary section — add a heading like `## Summary` or `## Description`" |
+| 3 | No mention of testing — `test plan`, `tested`, `how to test`, `verify`, `verified`, `verification`, `steps to verify`, `manual test` (case-insensitive) | **Low** | `pr-description` | "PR description has no test plan or verification instructions" |
+
+**Evaluation order**: Check #1 first. If the body is empty or under 50 chars, emit only the High finding and skip checks #2 and #3 (they are logically entailed and not independently actionable on an empty body). When the body is ≥ 50 chars, evaluate checks #2 and #3 and emit **all** that match (unlike spec-quality's precedence rule — each missing element is independently actionable).
+
+For the required `file` field, use `PR#<number>` (same convention as spec-quality PR-level findings).
+
 **Large PR gate**: If the PR has 500+ additions, use `AskUserQuestion` before proceeding:
 
 - Present the addition count and file count (use `changedFiles` for the accurate total — `.files | length` caps at 100)
@@ -208,7 +222,7 @@ Classification findings from this step use `type: redundancy`.
 
 ## Step 6: User-Gated Issue Creation
 
-**Threshold**: Create an issue only if there is any `high` `redundancy` finding OR 3+ `medium` `redundancy` findings. Findings with `type: spec-quality` are excluded from this threshold.
+**Threshold**: Create an issue only if there is any `high` `redundancy` finding OR 3+ `medium` `redundancy` findings. Findings with `type: spec-quality` or `type: pr-description` are excluded from this threshold.
 
 If the threshold is not met, skip issue creation and proceed to Step 7.
 
@@ -282,6 +296,7 @@ PR validity analysis complete.
   - Constructs analyzed: {n}
   - Classifications: {n} new, {n} duplicate, {n} divergent, {n} override, {n} update, {n} trivial overlap, {n} code movement
   - Findings: {n} high, {n} medium, {n} low, {n} info
+  - PR description: {n} findings ({n} high, {n} medium, {n} low)  [only if pr-description findings exist]
   - Issue: #{number} ({url})  [only if created]
   - Referenced issues: #{n1} (open), #{n2} (closed)  [only if found in Step 4]
 ```

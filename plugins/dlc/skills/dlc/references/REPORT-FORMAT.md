@@ -9,8 +9,8 @@ Each finding is a structured record with these fields:
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `severity` | enum | yes | `critical`, `high`, `medium`, `low`, `info` |
-| `type` | string | yes | Category: `vulnerability`, `dependency`, `dependency-staleness`, `lint`, `complexity`, `duplication`, `dead-code`, `performance`, `coverage`, `test-failure`, `pr-comment`, `redundancy`, `spec-quality` |
-| `file` | string | yes | Relative file path from repo root (e.g. `src/auth/login.ts`). For non-file findings (e.g. `spec-quality`), use a metadata reference: `PR#<number>` for PR-level or `issue#<number>` for issue-level findings. |
+| `type` | string | yes | Category: `vulnerability`, `dependency`, `dependency-staleness`, `lint`, `complexity`, `duplication`, `dead-code`, `performance`, `coverage`, `test-failure`, `pr-comment`, `redundancy`, `spec-quality`, `pr-description` |
+| `file` | string | yes | Relative file path from repo root (e.g. `src/auth/login.ts`). For non-file findings (e.g. `spec-quality`, `pr-description`), use a metadata reference: `PR#<number>` for PR-level or `issue#<number>` for issue-level findings. |
 | `line` | number | no | Line number where the issue occurs |
 | `message` | string | yes | Human-readable description of the finding |
 | `tool` | string | yes | Tool or method that detected it (e.g. `npm audit`, `eslint`, `Claude analysis`) |
