@@ -1,3 +1,10 @@
+# [1.31.0](https://github.com/rube-de/cc-skills/compare/v1.30.0...v1.31.0) (2026-03-04)
+
+
+### Features
+
+* **dlc:** add PR description quality check to pr-validity ([#129](https://github.com/rube-de/cc-skills/issues/129)) ([3f98582](https://github.com/rube-de/cc-skills/commit/3f98582c957c6c293a77518e33f556d69e25f8b3)), closes [#100](https://github.com/rube-de/cc-skills/issues/100)
+
 # [1.30.0](https://github.com/rube-de/cc-skills/compare/v1.29.0...v1.30.0) (2026-03-03)
 
 
