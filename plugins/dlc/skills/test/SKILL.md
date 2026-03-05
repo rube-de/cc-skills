@@ -84,6 +84,40 @@ For each changed file:
 3. Flag files with < 80% coverage (or project-configured threshold)
 4. Flag changed files with **zero** test coverage
 
+### TDD Commit Order Check
+
+For each (source file, test file) pair identified above, check whether the test was written *before* the source — a signal of TDD discipline:
+
+```bash
+# Compute merge-base once — use $MB..HEAD consistently for both diff and log
+MB=$(git merge-base origin/main HEAD)
+
+# Get the commit hash and timestamp where the file was first added on this branch
+git log $MB..HEAD --format="%H %ct" --diff-filter=A -- <source-file> | tail -1
+git log $MB..HEAD --format="%H %ct" --diff-filter=A -- <test-file>   | tail -1
+```
+
+**Scope**: Only check files **added on the current branch** (the `$MB..HEAD` range above). Files that already exist in `main` are excluded — the TDD order signal is only meaningful for new files introduced in this branch. Reuse the same file list from `git diff --name-only $MB..HEAD`.
+
+For each pair, first compare **commit hashes**, then timestamps:
+
+| Condition | Action |
+|-----------|--------|
+| Either file has no `--diff-filter=A` output (shallow clone, renamed/moved file, or file not added on this branch) | Skip pair — log a note to stdout (not a finding): "Skipping TDD order check for `{file}`: insufficient git history" |
+| Both files share the same add-commit hash | No per-pair finding — same-commit pair counts as TDD-confirming for the branch-level check |
+| Add-commit hashes differ but timestamps are equal | Skip pair — log a note to stdout (not a finding): "Skipping TDD order check for `{source}` / `{test}`: unable to determine order (identical-second commit timestamps)" |
+| Source add-commit timestamp < test add-commit timestamp | **Low** `tdd-order` finding — test written after source (confirmation bias risk) |
+| Test add-commit timestamp < source add-commit timestamp | No finding — TDD discipline confirmed for this pair |
+
+If at least one new source/test pair was evaluated, **no** new source file in the branch diff is missing a corresponding test file, and **all** evaluated pairs have pre-dating or same-commit tests, emit a single **Info** `tdd-order` finding: "TDD discipline confirmed for this branch."
+
+**Finding messages**:
+
+| Severity | Type | Message |
+|----------|------|---------|
+| **Low** | `tdd-order` | "Test for `{source}` written after source — risk of confirmation bias in test assertions" |
+| **Info** | `tdd-order` | "TDD discipline confirmed for this branch" |
+
 ## Step 4: Classify Findings
 
 Map results to the findings format from REPORT-FORMAT.md.
@@ -99,7 +133,9 @@ Map results to the findings format from REPORT-FORMAT.md.
 | Changed files with < 80% coverage | **Medium** |
 | Missing test file for new module | **Medium** |
 | Flaky tests (pass on retry) | **Low** |
+| Source file committed before its test file | **Low** |
 | Coverage informational metrics | **Info** |
+| TDD discipline confirmed (all tests pre-date source or are added in the same commit) | **Info** |
 
 ## Step 5: Create GitHub Issue
 
