@@ -25,6 +25,10 @@ The team creation hook will attempt to assign and move to "In Progress" (best-ef
 
 Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves. Check files-per-task for conflict avoidance.
 
+Extract `developer_model` from plan metadata (the `**Developer Model**:` field).
+Normalize before validation: trim whitespace, lowercase, and parse only the first token after the `:`.
+If missing or not one of `opus`/`sonnet`, default to `opus`.
+
 ## 2. Generate Timestamp
 
 Generate a timestamp in `YYYYMMDD-HHMM` format for the dev report output path. Store as `$TIMESTAMP`.
@@ -49,7 +53,7 @@ TaskCreate for each plan task (preserve `depends_on` via `addBlockedBy`). Also c
 Teammate tool:
   team_name: "dev-team"
   name: "developer"
-  model: opus
+  model: [developer_model from plan, default opus]
   prompt: >
     You are the developer. Plan: [plan-path] — read it first.
     Working directory: [path]
