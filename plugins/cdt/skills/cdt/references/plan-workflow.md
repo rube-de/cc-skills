@@ -70,6 +70,7 @@ Teammate tool:
     4. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
     5. If you need library docs, message the lead
     6. Design: components, interfaces, file changes, data flow, testing strategy
+       Set `Developer Model: sonnet` if the implementation is straightforward file modifications. Keep `opus` for complex algorithm design, intricate state management, or security-critical code.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: documentation-update tasks may touch more files.
     8. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
@@ -84,6 +85,7 @@ Teammate tool:
         # Plan: [Task Name]
 
         **Generated**: [Date]  **Target**: [Original request]
+        **Developer Model**: [opus|sonnet] (default: opus — use sonnet for straightforward implementation, opus for complex logic)
 
         ## Overview
         [Architecture, key decisions, research findings — 2-3 paragraphs]
@@ -188,6 +190,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 # Plan: [Task Name]
 
 **Generated**: [Date]  **Target**: [Original request]
+**Developer Model**: [opus|sonnet] (default: opus — use sonnet for straightforward implementation, opus for complex logic)
 
 ## Overview
 [Architecture, key decisions, research findings — 2-3 paragraphs]
