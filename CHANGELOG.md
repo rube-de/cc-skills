@@ -1,3 +1,10 @@
+# [1.35.0](https://github.com/rube-de/cc-skills/compare/v1.34.0...v1.35.0) (2026-03-05)
+
+
+### Features
+
+* **cdt:** make developer model configurable with Opus default ([#133](https://github.com/rube-de/cc-skills/issues/133)) ([df25851](https://github.com/rube-de/cc-skills/commit/df25851ee9550d645a4840685dfd54fe6fa0e8d2)), closes [#107](https://github.com/rube-de/cc-skills/issues/107)
+
 # [1.34.0](https://github.com/rube-de/cc-skills/compare/v1.33.0...v1.34.0) (2026-03-05)
 
 
