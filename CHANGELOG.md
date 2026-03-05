@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/rube-de/cc-skills/compare/v1.33.0...v1.34.0) (2026-03-05)
+
+
+### Features
+
+* **cdt:** enforce task size ≤3 files and strengthen scope lock ([#132](https://github.com/rube-de/cc-skills/issues/132)) ([253db7d](https://github.com/rube-de/cc-skills/commit/253db7d4d059b35a93772cfb37bfb70c6e6a562e)), closes [#106](https://github.com/rube-de/cc-skills/issues/106)
+
 # [1.33.0](https://github.com/rube-de/cc-skills/compare/v1.32.0...v1.33.0) (2026-03-05)
 
 
