@@ -106,7 +106,7 @@ For each pair, first compare **commit hashes**, then timestamps:
 | Source add-commit timestamp < test add-commit timestamp | **Low** `tdd-order` finding — test written after source (confirmation bias risk) |
 | Test add-commit timestamp < source add-commit timestamp | No finding — TDD discipline confirmed for this pair |
 
-If at least one new source/test pair was evaluated, and **all** evaluated new source files in the branch diff have pre-dating or same-commit tests, emit a single **Info** `tdd-order` finding: "TDD discipline confirmed for this branch."
+If at least one new source/test pair was evaluated, **no** new source file in the branch diff is missing a corresponding test file, and **all** evaluated pairs have pre-dating or same-commit tests, emit a single **Info** `tdd-order` finding: "TDD discipline confirmed for this branch."
 
 **Finding messages**:
 
