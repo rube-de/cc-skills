@@ -216,16 +216,20 @@ For each wave:
 3. Monitor TaskList
 4. If developer teammate needs docs — spawn Researcher subagent, relay results
 5. Verify wave: check build, update plan file (status, log, files_changed)
+6. Commit wave (save point):
+   - Stage files changed in this wave (including deletions/renames): `git add -A -- [paths from the wave's files_changed list]`
+   - If there are staged changes (`! git diff --cached --quiet`), commit: `git commit -m "feat(wave-N): [brief wave description from plan]"`
+   - If nothing is staged in this wave (coordination-only), skip the commit
 
 After all impl waves:
-6. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
-7. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
-8. Code-tester and qa-tester run in parallel — they test different aspects.
-9. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly. Intervene only on escalation.
+7. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
+8. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
+9. Code-tester and qa-tester run in parallel — they test different aspects.
+10. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly. Intervene only on escalation.
 
 After all test tasks complete:
-10. Message reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
-11. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+11. Message reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
+12. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 
 After activating testers/reviewer, stand back:
 - Do NOT expect failure reports — those go Developer↔Tester/Reviewer directly
@@ -297,17 +301,17 @@ AskUserQuestion:
 ```
 
 If creating PR:
-1. Stage changed files
-2. Commit with conventional commit message based on task
-3. Push branch
+1. Stage all remaining changes (doc updates, dev report, and any post-wave fixes from test/review cycles)
+2. Commit with conventional commit message based on task (this is the final wrap-up commit)
+3. Push branch (includes all per-wave commits plus this wrap-up commit)
 4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
 5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:
-1. Stage changed files
-2. Commit with conventional commit message based on task
-3. Push branch
+1. Stage all remaining changes (doc updates, dev report, and any post-wave fixes from test/review cycles)
+2. Commit with conventional commit message based on task (this is the final wrap-up commit)
+3. Push branch (includes all per-wave commits plus this wrap-up commit)
 
 ## Anti-Patterns (Lead MUST avoid)
 
