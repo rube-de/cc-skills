@@ -217,9 +217,9 @@ For each wave:
 4. If developer teammate needs docs — spawn Researcher subagent, relay results
 5. Verify wave: check build, update plan file (status, log, files_changed)
 6. Commit wave (save point):
-   - Stage files changed in this wave: `git add [files from plan task.files_changed]`
-   - Commit: `git commit -m "feat(wave-N): [brief wave description from plan]"`
-   - If no files changed in this wave (coordination-only), skip commit
+   - Stage files changed in this wave (including deletions/renames): `git add -A -- [paths from the wave's files_changed list]`
+   - If there are staged changes (`! git diff --cached --quiet`), commit: `git commit -m "feat(wave-N): [brief wave description from plan]"`
+   - If nothing is staged in this wave (coordination-only), skip the commit
 
 After all impl waves:
 7. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
@@ -301,7 +301,7 @@ AskUserQuestion:
 ```
 
 If creating PR:
-1. Stage changed files (doc updates, dev report — implementation files were committed per-wave)
+1. Stage all remaining changes (doc updates, dev report, and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
 4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
@@ -309,7 +309,7 @@ If creating PR:
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:
-1. Stage changed files (doc updates, dev report — implementation files were committed per-wave)
+1. Stage all remaining changes (doc updates, dev report, and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
 
