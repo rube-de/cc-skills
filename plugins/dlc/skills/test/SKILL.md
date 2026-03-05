@@ -89,12 +89,15 @@ For each changed file:
 For each (source file, test file) pair identified above, check whether the test was written *before* the source — a signal of TDD discipline:
 
 ```bash
+# Compute merge-base once — use $MB..HEAD consistently for both diff and log
+MB=$(git merge-base origin/main HEAD)
+
 # Get the commit hash and timestamp where the file was first added on this branch
-git log origin/main..HEAD --format="%H %ct" --diff-filter=A -- <source-file> | tail -1
-git log origin/main..HEAD --format="%H %ct" --diff-filter=A -- <test-file>   | tail -1
+git log $MB..HEAD --format="%H %ct" --diff-filter=A -- <source-file> | tail -1
+git log $MB..HEAD --format="%H %ct" --diff-filter=A -- <test-file>   | tail -1
 ```
 
-**Scope**: Only check files **added on the current branch** (the `origin/main..HEAD` range above). Files that already exist in `main` are excluded — the TDD order signal is only meaningful for new files introduced in this branch. Reuse the same file list from `git diff --name-only origin/main...HEAD`.
+**Scope**: Only check files **added on the current branch** (the `$MB..HEAD` range above). Files that already exist in `main` are excluded — the TDD order signal is only meaningful for new files introduced in this branch. Reuse the same file list from `git diff --name-only $MB..HEAD`.
 
 For each pair, first compare **commit hashes**, then timestamps:
 
