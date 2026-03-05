@@ -101,7 +101,8 @@ For each pair, first compare **commit hashes**, then timestamps:
 | Condition | Action |
 |-----------|--------|
 | Either file has no `--diff-filter=A` output (shallow clone, renamed/moved file, or file not added on this branch) | Skip pair — log a note to stdout (not a finding): "Skipping TDD order check for `{file}`: insufficient git history" |
-| Both files share the same add-commit hash | Skip pair — no finding (added atomically) |
+| Both files share the same add-commit hash | No per-pair finding — same-commit pair counts as TDD-confirming for the branch-level check |
+| Add-commit hashes differ but timestamps are equal | Skip pair — log a note to stdout (not a finding): "Skipping TDD order check for `{source}` / `{test}`: unable to determine order (identical-second commit timestamps)" |
 | Source add-commit timestamp < test add-commit timestamp | **Low** `tdd-order` finding — test written after source (confirmation bias risk) |
 | Test add-commit timestamp < source add-commit timestamp | No finding — TDD discipline confirmed for this pair |
 
