@@ -89,7 +89,7 @@ Teammate tool:
     - Test failures → message DEVELOPER (with failure details + root cause)
     - All tests pass → message LEAD (with results summary)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
-    - Circuit breaker: If you report the same failure twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately — the developer may be in a bad state.
+    - Circuit breaker: If you report the same failure twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately with details of the repeated failure and the developer's attempts — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-test round-trip.
     Do not report failures directly to the lead except via the escalation rules above. The developer fixes bugs, not the lead.
 
@@ -119,7 +119,7 @@ Teammate tool:
     - QA issues found → message DEVELOPER (with what failed, expected vs actual, evidence)
     - All QA checks pass → message LEAD (with results summary)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
-    - Circuit breaker: If you report the same issue twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately — the developer may be in a bad state.
+    - Circuit breaker: If you report the same issue twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately with details of the repeated issue and the developer's attempts — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-test round-trip.
     Do not report issues directly to the lead except via the escalation rules above. The developer fixes issues, not the lead.
 
