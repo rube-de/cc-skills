@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/rube-de/cc-skills/compare/v1.31.0...v1.32.0) (2026-03-05)
+
+
+### Features
+
+* **dlc:** add TDD commit order detection to test coverage analysis ([#130](https://github.com/rube-de/cc-skills/issues/130)) ([a470816](https://github.com/rube-de/cc-skills/commit/a470816c6181b83111516589af81b761255ab951)), closes [#101](https://github.com/rube-de/cc-skills/issues/101)
+
 # [1.31.0](https://github.com/rube-de/cc-skills/compare/v1.30.0...v1.31.0) (2026-03-04)
 
 
