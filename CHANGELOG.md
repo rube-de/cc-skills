@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/rube-de/cc-skills/compare/v1.32.0...v1.33.0) (2026-03-05)
+
+
+### Features
+
+* **cdt:** add per-wave commits after wave verification ([#131](https://github.com/rube-de/cc-skills/issues/131)) ([586b07d](https://github.com/rube-de/cc-skills/commit/586b07da505d5c0619676fb4b3147e74fc59cb29)), closes [#105](https://github.com/rube-de/cc-skills/issues/105)
+
 # [1.32.0](https://github.com/rube-de/cc-skills/compare/v1.31.0...v1.32.0) (2026-03-05)
 
 
