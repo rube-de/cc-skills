@@ -25,7 +25,9 @@ The team creation hook will attempt to assign and move to "In Progress" (best-ef
 
 Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves. Check files-per-task for conflict avoidance.
 
-Extract `developer_model` from plan metadata (the `**Developer Model**:` field). If not specified or not one of `opus`/`sonnet`, default to `opus`.
+Extract `developer_model` from plan metadata (the `**Developer Model**:` field).
+Normalize before validation: trim whitespace, lowercase, and parse only the first token after the `:`.
+If missing or not one of `opus`/`sonnet`, default to `opus`.
 
 ## 2. Generate Timestamp
 
