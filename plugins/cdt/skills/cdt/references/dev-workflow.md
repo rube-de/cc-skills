@@ -66,6 +66,7 @@ Teammate tool:
     6. If code-tester reports failures — fix, message them to re-run
     7. If qa-tester teammate reports issues — fix, message them to re-test
     8. If reviewer requests changes — fix, message them to re-review
+    Circuit breaker: If you receive the same failure report twice in a row (same root cause, same failing test/behavior), do NOT attempt a third fix on your own. Instead, message the lead with: what failed, what you tried (both attempts), and why you're stuck.
     9. Mark task complete, check TaskList for next
     10. After all implementation tasks are complete, update project documentation
         (README.md, AGENTS.md, CLAUDE.md) to reflect what changed
@@ -88,6 +89,7 @@ Teammate tool:
     - Test failures → message DEVELOPER (with failure details + root cause)
     - All tests pass → message LEAD (with results summary)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
+    - Circuit breaker: If you report the same failure twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-test round-trip.
     Never report failures to the lead. The developer fixes bugs, not the lead.
 
@@ -117,6 +119,7 @@ Teammate tool:
     - QA issues found → message DEVELOPER (with what failed, expected vs actual, evidence)
     - All QA checks pass → message LEAD (with results summary)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
+    - Circuit breaker: If you report the same issue twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-test round-trip.
     Never report issues to the lead. The developer fixes issues, not the lead.
 
@@ -166,6 +169,7 @@ Teammate tool:
     - Blocking issues → message DEVELOPER (with file:line + fix suggestion)
     - Review approved → message LEAD (with verdict + report path)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
+    - Circuit breaker: If the same review issue persists after 2 fix attempts by the developer, escalate to lead.
     A cycle = one report-to-developer → developer-fix → re-review round-trip.
     Never send unapproved reviews to the lead. The developer addresses review feedback, not the lead.
 
