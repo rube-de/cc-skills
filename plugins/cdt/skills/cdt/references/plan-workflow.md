@@ -70,15 +70,16 @@ Teammate tool:
     4. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
     5. If you need library docs, message the lead
     6. Design: components, interfaces, file changes, data flow, testing strategy
-    7. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
+    7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: documentation-update tasks may touch more files.
+    8. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
        - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
        - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
-    8. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
-    9. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
-    10. Iterate on PM teammate feedback
-    11. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
+    9. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
+    10. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
+    11. Iterate on PM teammate feedback
+    12. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
 
         # Plan: [Task Name]
 
@@ -110,7 +111,7 @@ Teammate tool:
 
         ### T1: [Name]
         - **depends_on**: []
-        - **location**: [file paths]
+        - **location**: [file paths — max 3 files per task]
         - **description**: [specific and actionable]
         - **validation**: [how to verify]
         - **status**: Not Started
@@ -134,8 +135,8 @@ Teammate tool:
         ## Validation
         [PM verdict]
 
-    12. Message the lead and product-manager that the plan is ready at [plan-path]
-    13. Mark task complete
+    13. Message the lead and product-manager that the plan is ready at [plan-path]
+    14. Mark task complete
 ```
 
 **PM teammate**:
@@ -214,7 +215,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 
 ### T1: [Name]
 - **depends_on**: []
-- **location**: [file paths]
+- **location**: [file paths — max 3 files per task]
 - **description**: [specific and actionable]
 - **validation**: [how to verify]
 - **status**: Not Started
