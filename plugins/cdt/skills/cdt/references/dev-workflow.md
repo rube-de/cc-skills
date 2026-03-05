@@ -67,7 +67,7 @@ Teammate tool:
         (README.md, AGENTS.md, CLAUDE.md) to reflect what changed
     11. When done, message the lead
 
-    Scope lock: ONLY modify files listed in your task's `location` field. If you discover a needed change outside your task's files, message the lead — do NOT expand scope. Exception: Step 10 documentation updates are always in scope. Need docs? Message the lead.
+    Scope lock: Your edit scope is limited to (a) files listed in your task's `location` field and (b) for Step 10 only, the following docs: README.md, AGENTS.md, CLAUDE.md. If you discover a needed change outside this set, message the lead — do NOT expand scope. Need additional docs? Message the lead.
 ```
 
 **Code-tester teammate** (always spawned):

@@ -70,7 +70,7 @@ Teammate tool:
     4. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
     5. If you need library docs, message the lead
     6. Design: components, interfaces, file changes, data flow, testing strategy
-    7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, split into multiple tasks with explicit dependencies. Exception: documentation-update tasks may touch more files.
+    7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: documentation-update tasks may touch more files.
     8. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
