@@ -66,13 +66,13 @@ Teammate tool:
     6. If code-tester reports failures — fix, message them to re-run
     7. If qa-tester teammate reports issues — fix, message them to re-test
     8. If reviewer requests changes — fix, message them to re-review
-    Circuit breaker: If you receive the same failure report twice in a row (same root cause, same failing test/behavior), do NOT attempt a third fix on your own. Instead, message the lead with: what failed, what you tried (both attempts), and why you're stuck.
-    9. Mark task complete, check TaskList for next
-    10. After all implementation tasks are complete, update project documentation
+    9. Circuit breaker (steps 6-8): If you receive the same failure report twice in a row (same root cause, same failing test/behavior), do NOT attempt a third fix on your own. Instead, message the lead with: what failed, what you tried (both attempts), and why you're stuck.
+    10. Mark task complete, check TaskList for next
+    11. After all implementation tasks are complete, update project documentation
         (README.md, AGENTS.md, CLAUDE.md) to reflect what changed
-    11. When done, message the lead
+    12. When done, message the lead
 
-    Scope lock: Your edit scope is limited to (a) files listed in your task's `location` field and (b) for Step 10 only, the following docs: README.md, AGENTS.md, CLAUDE.md. If you discover a needed change outside this set, message the lead — do NOT expand scope. Need additional docs? Message the lead.
+    Scope lock: Your edit scope is limited to (a) files listed in your task's `location` field and (b) for Step 11 only, the following docs: README.md, AGENTS.md, CLAUDE.md. If you discover a needed change outside this set, message the lead — do NOT expand scope. Need additional docs? Message the lead.
 ```
 
 **Code-tester teammate** (always spawned):
@@ -91,7 +91,7 @@ Teammate tool:
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
     - Circuit breaker: If you report the same failure twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-test round-trip.
-    Never report failures to the lead. The developer fixes bugs, not the lead.
+    Do not report failures directly to the lead except via the escalation rules above. The developer fixes bugs, not the lead.
 
     1. Check TaskList — your task is blocked until implementation completes
     2. Wait for developer to message what they changed
@@ -121,7 +121,7 @@ Teammate tool:
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
     - Circuit breaker: If you report the same issue twice and the developer's fix didn't change the failing behavior (same error, same location), escalate to lead immediately — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-test round-trip.
-    Never report issues to the lead. The developer fixes issues, not the lead.
+    Do not report issues directly to the lead except via the escalation rules above. The developer fixes issues, not the lead.
 
     **For UI/frontend tasks:**
     You test user-facing behavior using agent-browser via Bash. Ask lead if unsure about app URL.
@@ -169,9 +169,9 @@ Teammate tool:
     - Blocking issues → message DEVELOPER (with file:line + fix suggestion)
     - Review approved → message LEAD (with verdict + report path)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
-    - Circuit breaker: If the same review issue persists after 2 fix attempts by the developer, escalate to lead.
+    - Circuit breaker: If the same review issue persists after 2 fix attempts by the developer, escalate to lead with: the persistent issue, what the developer tried in both attempts, and why it's not being resolved — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-review round-trip.
-    Never send unapproved reviews to the lead. The developer addresses review feedback, not the lead.
+    Do not send unapproved reviews to the lead except via the escalation rules above. The developer addresses review feedback, not the lead.
 
     1. Check TaskList — wait until your task is unblocked (tests must pass first)
     2. Review all changed files: completeness, correctness, security, quality, plan adherence
