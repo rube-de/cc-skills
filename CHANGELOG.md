@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/rube-de/cc-skills/compare/v1.36.0...v1.37.0) (2026-03-06)
+
+
+### Features
+
+* **cdt:** add TDD test-first ordering rule to architect prompt ([#135](https://github.com/rube-de/cc-skills/issues/135)) ([af05e02](https://github.com/rube-de/cc-skills/commit/af05e025fa2676347a0d8b296c5c9395cc81eab3)), closes [#109](https://github.com/rube-de/cc-skills/issues/109)
+
 # [1.36.0](https://github.com/rube-de/cc-skills/compare/v1.35.0...v1.36.0) (2026-03-06)
 
 
