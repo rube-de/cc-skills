@@ -72,13 +72,13 @@ Teammate tool:
     6. Design: components, interfaces, file changes, data flow, testing strategy
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-type tasks may touch more files.
-    8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), note the dependency explicitly.
+    8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), set `depends_on` on the test task to list the scaffolding task(s).
     9. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
        - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
        - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
-    10. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
+    10. If you created ADRs in step 9, check whether `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
     11. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
     12. Iterate on PM teammate feedback
     13. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
@@ -115,7 +115,7 @@ Teammate tool:
         ### T1: [Name]
         - **type**: [impl|test|docs]
         - **depends_on**: []
-        - **location**: [file paths — max 3 files per task]
+        - **location**: [file paths — max 3 files per task; docs-only tasks may touch more]
         - **description**: [specific and actionable]
         - **validation**: [how to verify]
         - **status**: Not Started
@@ -223,7 +223,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 ### T1: [Name]
 - **type**: [impl|test|docs]
 - **depends_on**: []
-- **location**: [file paths — max 3 files per task]
+- **location**: [file paths — max 3 files per task; docs-only tasks may touch more]
 - **description**: [specific and actionable]
 - **validation**: [how to verify]
 - **status**: Not Started
