@@ -71,7 +71,7 @@ Teammate tool:
     5. If you need library docs, message the lead
     6. Design: components, interfaces, file changes, data flow, testing strategy
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
-    7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: documentation-update tasks may touch more files.
+    7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-type tasks may touch more files.
     8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), note the dependency explicitly.
     9. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
