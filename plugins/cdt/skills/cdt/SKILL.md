@@ -75,7 +75,7 @@ Reviews changed files for completeness, correctness, security, quality, plan adh
 - Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate)
 - Researcher is always a subagent — Lead relays results
 - Plan.md is the single source of truth and handoff artifact
-- Every task declares `depends_on`; parallel within waves, sequential between
+- Every task declares `type` (impl|test|docs) and `depends_on`; parallel within waves, sequential between
 - Verify build between waves
 - Avoid file conflicts between parallel tasks
 - Testing + review are mandatory quality gates

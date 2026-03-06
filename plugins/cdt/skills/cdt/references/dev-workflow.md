@@ -23,7 +23,7 @@ The team creation hook will attempt to assign and move to "In Progress" (best-ef
 
 ## 1. Parse Plan
 
-Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves. Check files-per-task for conflict avoidance.
+Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves, and task `type` (impl|test|docs). For conflict avoidance, enforce the ≤3-files-per-task limit only for `impl` and `test` tasks; `docs` tasks may exceed this limit.
 
 Extract `developer_model` from plan metadata (the `**Developer Model**:` field).
 Normalize before validation: trim whitespace, lowercase, and parse only the first token after the `:`.
