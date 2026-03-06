@@ -178,7 +178,7 @@ Teammate tool:
 
     Anti-sycophancy rule: Do NOT approve unless genuinely satisfied. Challenge:
     - Code that works but doesn't match the plan's architecture
-    - Missing error handling or edge cases from the spec
+    - Missing error handling or edge cases from the plan
     - Over-engineering beyond what the task requires
     - Inconsistencies with existing codebase patterns
     Your job is to find real problems. If everything is genuinely clean, approve — but never rubber-stamp.
