@@ -72,15 +72,16 @@ Teammate tool:
     6. Design: components, interfaces, file changes, data flow, testing strategy
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: documentation-update tasks may touch more files.
-    8. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
+    8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), note the dependency explicitly.
+    9. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
        - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
        - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
-    9. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
-    10. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
-    11. Iterate on PM teammate feedback
-    12. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
+    10. Check if `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
+    11. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
+    12. Iterate on PM teammate feedback
+    13. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
 
         # Plan: [Task Name]
 
@@ -112,6 +113,7 @@ Teammate tool:
         ## Tasks
 
         ### T1: [Name]
+        - **type**: [impl|test|docs]
         - **depends_on**: []
         - **location**: [file paths — max 3 files per task]
         - **description**: [specific and actionable]
@@ -121,6 +123,7 @@ Teammate tool:
         - **files_changed**:
 
         ### T2: [Name]
+        - **type**: [impl|test|docs]
         - **depends_on**: [T1]
         ...
 
@@ -131,14 +134,15 @@ Teammate tool:
         ## Testing Strategy
         [Framework, scenarios, acceptance criteria]
         [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
+        [TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
 
         ## Risks & Mitigations
 
         ## Validation
         [PM verdict]
 
-    13. Message the lead and product-manager that the plan is ready at [plan-path]
-    14. Mark task complete
+    14. Message the lead and product-manager that the plan is ready at [plan-path]
+    15. Mark task complete
 ```
 
 **PM teammate**:
@@ -217,6 +221,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 ## Tasks
 
 ### T1: [Name]
+- **type**: [impl|test|docs]
 - **depends_on**: []
 - **location**: [file paths — max 3 files per task]
 - **description**: [specific and actionable]
@@ -226,6 +231,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 - **files_changed**:
 
 ### T2: [Name]
+- **type**: [impl|test|docs]
 - **depends_on**: [T1]
 ...
 
@@ -236,6 +242,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 ## Testing Strategy
 [Framework, scenarios, acceptance criteria]
 [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
+[TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
 
 ## Risks & Mitigations
 
