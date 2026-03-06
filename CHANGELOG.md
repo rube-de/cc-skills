@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/rube-de/cc-skills/compare/v1.37.0...v1.38.0) (2026-03-06)
+
+
+### Features
+
+* **cdt:** add anti-sycophancy challenge directives to PM and reviewer ([#136](https://github.com/rube-de/cc-skills/issues/136)) ([ec0fc31](https://github.com/rube-de/cc-skills/commit/ec0fc311b96ad7351a4f455ad17479c6633e5c58)), closes [#110](https://github.com/rube-de/cc-skills/issues/110)
+
 # [1.37.0](https://github.com/rube-de/cc-skills/compare/v1.36.0...v1.37.0) (2026-03-06)
 
 
