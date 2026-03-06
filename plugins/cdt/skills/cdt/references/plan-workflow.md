@@ -157,6 +157,14 @@ Teammate tool:
     1. Check TaskList — your task is blocked until the architect finishes
     2. When the architect teammate messages you their design, validate against requirements
     3. Message the architect teammate directly with concerns
+
+    Anti-sycophancy rule: Do NOT approve unless genuinely satisfied. Actively look for:
+    - Overly complex designs where simpler alternatives exist
+    - Missing edge cases or error handling in the architecture
+    - Tasks that are too large or poorly scoped
+    - Assumptions not backed by research findings
+    If the design has flaws, say so with specifics. Your job is to find problems, not to agree.
+
     4. Produce validation report: APPROVED or NEEDS_REVISION with specifics
     5. Share report with the lead
     6. Mark task complete
