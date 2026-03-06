@@ -2,7 +2,7 @@
 
 A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plugins and [agent skills](https://agentskills.io).
 
-[![Plugins](https://img.shields.io/badge/plugins-8-green.svg)](#plugins)
+[![Plugins](https://img.shields.io/badge/plugins-9-green.svg)](#plugins)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](./LICENSE)
 
 ## Plugins
@@ -17,6 +17,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 | [doppler](./plugins/doppler/) | DevOps | Plugin or Skill | Doppler secrets management: CLI, secrets injection, CI/CD integrations |
 | [oasis-dev](./plugins/oasis-dev/) | Development | Plugin or Skill | Oasis Network: Sapphire confidential EVM, ROFL apps, CLI, SDK patterns |
 | [jules-review](./plugins/jules-review/) | Code Review | Plugin or Skill | Review Jules AI agent PRs using council with smart quick/full mode |
+| [dlc](./plugins/dlc/) | Quality | Plugin or Skill | Dev Life Cycle quality gates: security scans, code quality, performance analysis, test coverage, and PR review compliance |
 
 > **Plugin vs Skill**: Plugins use the full Claude Code plugin system (hooks, agents, commands, scripts). Skills install only SKILL.md definitions via [skills.sh](https://skills.sh). Plugins that rely on hooks, commands, or agent definitions need plugin install. See each plugin's README for details.
 
@@ -44,7 +45,7 @@ This clones the marketplace to `~/.claude/plugins/marketplaces/rube-cc-skills/`.
 </details>
 
 > [!TIP]
-> After installing, restart Claude Code (fresh session) to activate the plugins. Type `/` and look for `/council`, `/cdt`, `/pm`, etc.
+> After installing, restart Claude Code (fresh session) to activate the plugins. Type `/` and look for `/council`, `/cdt`, `/pm`, `/dlc`, etc.
 
 <details>
 <summary><strong>Alternative: Install from the terminal</strong></summary>
@@ -59,9 +60,10 @@ claude plugin install temporal@rube-cc-skills
 claude plugin install doppler@rube-cc-skills
 claude plugin install oasis-dev@rube-cc-skills
 claude plugin install jules-review@rube-cc-skills
+claude plugin install dlc@rube-cc-skills
 
 # Or install all at once
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review; do claude plugin install "$p@rube-cc-skills"; done
+for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review dlc; do claude plugin install "$p@rube-cc-skills"; done
 
 # Restart Claude Code to activate
 claude
@@ -139,7 +141,7 @@ To make plugins available to Claude cloud agents, CI runners, or teammates witho
 claude plugin marketplace add rube-de/cc-skills
 
 # 2. Install plugins at project scope
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review; do
+for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review dlc; do
   claude plugin install "$p@rube-cc-skills" --scope project
 done
 
@@ -173,7 +175,7 @@ cc-skills/
 │   │   ├── scripts/         # Agent team checks
 │   │   └── skills/          # cdt
 │   ├── project-manager/     # Issue lifecycle
-│   │   └── skills/          # pm, next, update
+│   │   └── skills/          # pm, next, update, review
 │   ├── plugin-dev/          # Plugin development tools
 │   │   ├── commands/        # Scaffolding command
 │   │   ├── scripts/         # Hook audit script
@@ -184,8 +186,11 @@ cc-skills/
 │   │   └── skills/          # doppler + references
 │   ├── oasis-dev/           # Oasis Network development
 │   │   └── skills/          # oasis-dev + references
-│   └── jules-review/        # Jules PR review via council
-│       └── skills/          # jules-review + references
+│   ├── jules-review/        # Jules PR review via council
+│   │   └── skills/          # jules-review + references
+│   └── dlc/                 # Dev lifecycle quality gates
+│       ├── scripts/         # Quality gate scripts
+│       └── skills/          # dlc, security, quality, perf, test, pr-check, pr-validity, git-ops
 ├── scripts/
 │   └── validate-plugins.mjs # Plugin validation
 ├── CLAUDE.md                # Claude Code context
@@ -208,7 +213,7 @@ cd ~/.claude/plugins/marketplaces/rube-cc-skills && git pull
 claude plugin install council@rube-cc-skills
 
 # Or reinstall all plugins
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review; do
+for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review dlc; do
   claude plugin install "$p@rube-cc-skills"
 done
 
@@ -221,7 +226,7 @@ For **project-scoped** plugins, add `--scope project` and re-commit:
 ```bash
 cd ~/.claude/plugins/marketplaces/rube-cc-skills && git pull
 
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review; do
+for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review dlc; do
   claude plugin install "$p@rube-cc-skills" --scope project
 done
 
