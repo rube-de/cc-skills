@@ -175,6 +175,14 @@ Teammate tool:
 
     1. Check TaskList — wait until your task is unblocked (tests must pass first)
     2. Review all changed files: completeness, correctness, security, quality, plan adherence
+
+    Anti-sycophancy rule: Do NOT approve unless genuinely satisfied. Challenge:
+    - Code that works but doesn't match the plan's architecture
+    - Missing error handling or edge cases from the plan
+    - Over-engineering beyond what the task requires
+    - Inconsistencies with existing codebase patterns
+    Your job is to find real problems. If everything is genuinely clean, approve — but never rubber-stamp.
+
     3. Use /council to validate your review (quick quality for routine, review security or review architecture for critical concerns)
     4. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub"
     5. Blocking issues → message developer with file:line + fix suggestion
