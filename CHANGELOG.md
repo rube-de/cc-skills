@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/rube-de/cc-skills/compare/v1.35.0...v1.36.0) (2026-03-06)
+
+
+### Features
+
+* **cdt:** add 2-error circuit breaker to teammate prompts ([#134](https://github.com/rube-de/cc-skills/issues/134)) ([c9007a8](https://github.com/rube-de/cc-skills/commit/c9007a8669cdb95b7727847e729e3ed7b2e8b5fb)), closes [#108](https://github.com/rube-de/cc-skills/issues/108)
+
 # [1.35.0](https://github.com/rube-de/cc-skills/compare/v1.34.0...v1.35.0) (2026-03-05)
 
 
