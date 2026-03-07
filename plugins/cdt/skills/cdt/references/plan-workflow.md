@@ -45,13 +45,30 @@ TeamCreate: team_name "plan-team"
 ## 4. Create Tasks
 
 TaskCreate:
-1. "Research libraries and patterns" — you handle via Researcher subagent
-2. "Design architecture" — for Architect
-3. "Validate requirements" — for PM (blocked by #2)
+1. "Research libraries and patterns" — you handle via Researcher subagent (completes before #2 and #3 start)
+2. "Design architecture" — for Architect (receives research findings)
+3. "Validate requirements" — for PM (blocked by #2, receives research findings)
 
-## 5. Launch (parallel)
+## 5a. Research (if needed)
 
-Spawn all three simultaneously:
+If the task involves external libraries, APIs, or patterns the architect needs:
+
+1. Spawn Researcher subagent and wait for findings
+2. Store findings as `$RESEARCH_CONTEXT`
+
+```
+Task tool:
+  subagent_type: "researcher"
+  prompt: >
+    Research for: [task]. Look up: [libraries], [patterns], [APIs].
+    Stack: [detected]. Return structured findings with code examples.
+```
+
+If no research is needed (pure internal refactor, well-known patterns), set `$RESEARCH_CONTEXT` = "No external research needed." and proceed immediately to Step 5b.
+
+## 5b. Launch Architect + PM (parallel)
+
+Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prompts.
 
 **Architect teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
 ```
@@ -64,11 +81,14 @@ Teammate tool:
 
     Codebase: [path]. Constraints: [any].
 
+    Research findings (pre-loaded — do NOT message lead for these):
+    $RESEARCH_CONTEXT
+
     1. Check TaskList, claim your task
     2. **Discover**: Use the Explore agent to survey the codebase — identify stack, patterns, conventions, and all relevant files. Use repomix-explorer (if available) for large or unfamiliar codebases to get a structural overview.
     3. **Target**: Use Glob, Grep, and Read to drill into specific files and patterns identified during discovery
     4. Read all files in `docs/adrs/` (if the directory exists) to understand prior architecture decisions before designing
-    5. If you need library docs, message the lead
+    5. If you need additional library docs beyond the pre-loaded research, message the lead
     6. Design: components, interfaces, file changes, data flow, testing strategy
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-only tasks (type: docs) may touch more files.
@@ -154,6 +174,8 @@ Teammate tool:
   prompt: >
     You are the PM. Requirements: [task description]
 
+    Research context: $RESEARCH_CONTEXT
+
     1. Check TaskList — your task is blocked until the architect finishes
     2. When the architect teammate messages you their design, validate against requirements
     Anti-sycophancy rule: Do NOT approve unless genuinely satisfied. Actively look for:
@@ -169,22 +191,12 @@ Teammate tool:
     6. Mark task complete
 ```
 
-**Researcher** subagent (no team_name):
-```
-Task tool:
-  subagent_type: "researcher"
-  prompt: >
-    Research for: [task]. Look up: [libraries], [patterns], [APIs].
-    Stack: [detected]. Return structured findings with code examples.
-```
-
 ## 6. Coordinate
 
-1. **When Researcher returns** — SendMessage findings to architect teammate
-2. **When architect teammate needs docs** — spawn another Researcher subagent, relay results
-3. **When architect teammate shares design** — verify it aligns with research findings, confirm the plan file path was communicated
-4. **When PM teammate validates** — if NEEDS_REVISION, architect revises their design directly (max 2 cycles)
-5. **If they disagree** — you decide based on requirements + research
+1. **When architect teammate needs additional docs** — spawn another Researcher subagent, relay results
+2. **When architect teammate shares design** — verify it aligns with research findings, confirm the plan file path was communicated
+3. **When PM teammate validates** — if NEEDS_REVISION, architect revises their design directly (max 2 cycles)
+4. **If they disagree** — you decide based on requirements + research
 
 ## 7. Verify Plan
 
