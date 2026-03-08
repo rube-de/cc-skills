@@ -46,9 +46,9 @@ TeamCreate: team_name "plan-team"
 
 ```text
 TaskCreate:
-1. "Research libraries and patterns" — you handle via Researcher subagent (completes before #2 and #3 start)
+1. "Research libraries and patterns" — you handle via Researcher subagent (completes before Task 2 and Task 3 start)
 2. "Design architecture" — for Architect (receives research findings)
-3. "Validate requirements" — for PM (blocked by #2, receives research findings)
+3. "Validate requirements" — for PM (blocked by Task 2, receives research findings)
 ```
 
 ## 5a. Research (if needed)
