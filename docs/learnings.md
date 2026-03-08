@@ -111,6 +111,12 @@ The Lead coordinator's job is orchestration, not authorship. When the Lead write
 
 > Source: [Issue #51](https://github.com/rube-de/cc-skills/issues/51)
 
+### Plan template exists in two locations — update both
+
+`plan-workflow.md` contains the plan template twice: once in the architect's prompt (Step 5b, item 14) and once in the Lead's verification section (Step 7). Any structural change to the template (new sections, reordered fields, updated placeholders) must be applied to both copies identically. Grep for the section header in both locations to verify synchronization.
+
+> Source: [Issue #113](https://github.com/rube-de/cc-skills/issues/113) — Added `## Acceptance Criteria` and `## Boundaries` sections to both template copies.
+
 ### PreToolUse hooks cannot enforce role boundaries (yet)
 
 Claude Code's hook protocol passes only `tool_input` JSON to PreToolUse hooks — there is **no agent identity field** (no `agent_role`, `agent_id`, or similar). A hook that blocks `Edit`/`Write` during active team sessions blocks *all* agents equally, including the teammates the lead is delegating to.

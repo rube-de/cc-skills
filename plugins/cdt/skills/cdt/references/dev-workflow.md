@@ -23,7 +23,7 @@ The team creation hook will attempt to assign and move to "In Progress" (best-ef
 
 ## 1. Parse Plan
 
-Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves, and task `type` (impl|test|docs). For conflict avoidance, enforce the ≤3-files-per-task limit only for `impl` and `test` tasks; `docs` tasks may exceed this limit.
+Read the plan file from `$ARGUMENTS`. Extract tasks, dependencies, waves, task `type` (impl|test|docs), and **acceptance criteria** (items in the `## Acceptance Criteria` section with `VERIFY:`, including checkbox forms like `- [ ] VERIFY: ...` and `- [x] VERIFY: ...`). For conflict avoidance, enforce the ≤3-files-per-task limit only for `impl` and `test` tasks; `docs` tasks may exceed this limit.
 
 Extract `developer_model` from plan metadata (the `**Developer Model**:` field).
 Normalize before validation: trim whitespace, lowercase, and parse only the first token after the `:`.
@@ -206,8 +206,8 @@ For each wave:
    - If nothing is staged in this wave (coordination-only), skip the commit
 
 After all impl waves:
-7. Message code-tester teammate: "Implementation complete. Files: [list]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
-8. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
+7. Message code-tester teammate: "Implementation complete. Files: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
+8. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
 9. Code-tester and qa-tester run in parallel — they test different aspects.
 10. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly. Intervene only on escalation.
 
@@ -226,7 +226,13 @@ After APPROVED:
 1. Run full test suite
 2. Verify build
 3. `rg "TODO|FIXME|HACK|XXX|stub" --type-not md`
-4. Update plan file to final state
+4. Check acceptance criteria from plan — verify each `VERIFY:` item passes (run commands, check output, or inspect code as needed). For each item: mark passing items `- [x]` and reset failing items to `- [ ]` in the plan file. If any VERIFY item fails:
+   - Document which items failed and why
+   - Message the developer teammate with the failing criteria and evidence
+   - After the developer fixes, re-run tests (message code-tester and qa-tester)
+   - If the fix changed files, message the reviewer teammate to re-review before continuing
+   - Return to this step to re-verify all VERIFY items
+5. Update plan file to final state (optionally record key evidence/commands used for each VERIFY item)
 
 ## 8. Cleanup
 

@@ -107,15 +107,16 @@ Teammate tool:
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-only tasks (type: docs) may touch more files.
     8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), set `depends_on` on the test task to list the scaffolding task(s).
-    9. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
+    9. **Acceptance criteria**: Write every acceptance criterion as a testable assertion using a Markdown checkbox item that begins with `- [ ] VERIFY:` (for example: `- [ ] VERIFY: <condition>`). Each must be verifiable by running a command, checking output, or inspecting code — never subjective prose like "improved performance" or "better UX". Place them in the plan's `## Acceptance Criteria` section.
+    10. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
        - When a new decision supersedes an old one, update the old ADR's status to `superseded` and link to the new ADR
        - Reference existing ADRs when relevant (e.g., "per ADR-0003, we use Redis for caching")
-    10. If you created or referenced ADRs in step 9, check whether `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
-    11. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
-    12. Iterate on PM teammate feedback
-    13. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
+    11. If you created or referenced ADRs in step 10, check whether `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
+    12. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
+    13. Iterate on PM teammate feedback
+    14. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
 
         # Plan: [Task Name]
 
@@ -165,18 +166,31 @@ Teammate tool:
         | Wave | Tasks | Starts When |
         |------|-------|-------------|
 
+        ## Acceptance Criteria
+        [Machine-verifiable — each must be testable by an agent without human judgment]
+        - [ ] VERIFY: [Function/endpoint/component] returns [expected] given [input]
+        - [ ] VERIFY: [Performance target: e.g., API response time < 100ms p95]
+        - [ ] VERIFY: Zero regressions on existing test suite
+        - [ ] VERIFY: [Additional criteria specific to this task]
+
         ## Testing Strategy
-        [Framework, scenarios, acceptance criteria]
+        [Framework, test types, QA scenarios]
         [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
         [TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
+        [Tests should validate the Acceptance Criteria above — each VERIFY item should map to at least one test]
+
+        ## Boundaries
+        - 🟢 Agent proceeds freely: [implementation details, naming, internal structure]
+        - 🟡 Pause and confirm with lead: [new dependencies, public API changes, schema changes]
+        - 🔴 Never without explicit approval: [deleting tests, modifying auth code, changing prod config]
 
         ## Risks & Mitigations
 
         ## Validation
         [PM verdict]
 
-    14. Message the lead and product-manager that the plan is ready at [plan-path]
-    15. Mark task complete
+    15. Message the lead and product-manager that the plan is ready at [plan-path]
+    16. Mark task complete
 ```
 
 **PM teammate**:
@@ -280,10 +294,23 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 | Wave | Tasks | Starts When |
 |------|-------|-------------|
 
+## Acceptance Criteria
+[Machine-verifiable — each must be testable by an agent without human judgment]
+- [ ] VERIFY: [Function/endpoint/component] returns [expected] given [input]
+- [ ] VERIFY: [Performance target: e.g., API response time < 100ms p95]
+- [ ] VERIFY: Zero regressions on existing test suite
+- [ ] VERIFY: [Additional criteria specific to this task]
+
 ## Testing Strategy
-[Framework, scenarios, acceptance criteria]
+[Framework, test types, QA scenarios]
 [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
 [TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
+[Tests should validate the Acceptance Criteria above — each VERIFY item should map to at least one test]
+
+## Boundaries
+- 🟢 Agent proceeds freely: [implementation details, naming, internal structure]
+- 🟡 Pause and confirm with lead: [new dependencies, public API changes, schema changes]
+- 🔴 Never without explicit approval: [deleting tests, modifying auth code, changing prod config]
 
 ## Risks & Mitigations
 
