@@ -81,7 +81,7 @@ Do NOT proceed without approval. If revisions: update plan, re-present.
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above). dev-workflow.md generates its own timestamp for the dev report.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip section 10 — this command handles wrap-up). dev-workflow.md generates its own timestamp for the session handoff.
 
 ## Phase 2: Completion Audit
 
@@ -105,7 +105,7 @@ If any role was created but never used: **WARN** "Role {name} was created but ne
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Report written to [dev report path]. Ready to commit, push, and create a PR?"
+  "Development complete. Session handoff written to .claude/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 

@@ -73,7 +73,7 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above). dev-workflow.md generates its own timestamp for the dev report.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9 and 10 — this command handles handoff and wrap-up). dev-workflow.md generates its own timestamp for the session handoff.
 
 ## Phase 2: Completion Audit
 
@@ -101,8 +101,30 @@ Automatically finalize without user interaction:
 4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
 5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
-7. Print PR URL to user
+6. Ensure handoff directory exists: `mkdir -p .claude/handoffs`
+7. Write session handoff to `.claude/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
+
+    ```markdown
+    # Session Handoff
+
+    **Task**: [original task from $ARGUMENTS]
+    **Branch**: [branch name]  **Date**: [date]  **Plan**: [plan path from Phase 1]
+
+    ## What's Done
+    [1-2 sentences — what was accomplished]
+
+    ## Open Questions
+    [Unresolved items, deferred decisions, known limitations]
+
+    ## Context for Next Session
+    [What a future session working in this area needs to know that isn't obvious from the code/PR]
+
+    ## References
+    - PR: [PR URL from step 4]
+    ```
+
+8. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
+9. Print PR URL to user
 
 ## Bridge
 

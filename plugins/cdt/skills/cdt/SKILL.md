@@ -67,7 +67,7 @@ Always spawned. Adapts testing approach based on task type: for UI tasks, writes
 
 ### Reviewer (teammate — spawn via Teammate tool, dev phase)
 
-Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Writes the dev report as their final deliverable after review is approved.
+Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Messages lead with verdict, review cycles, issues found/fixed, and known limitations after approval.
 
 ## Rules
 

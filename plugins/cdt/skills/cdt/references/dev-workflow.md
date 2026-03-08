@@ -17,7 +17,7 @@ Detailed execution steps for the development phase. The Lead reads this before r
 1. First, check `$ARGUMENTS` and the plan file for GitHub issue references (`#N`, URL).
 2. If found, extract the number into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".claude/$BRANCH" && echo "$ISSUE_NUM" > ".claude/$BRANCH/.cdt-issue"`
 3. Otherwise, if `".claude/$BRANCH/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
-4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for the dev report: `gh issue view "$ISSUE_NUM" --json title,body`
+4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for context: `gh issue view "$ISSUE_NUM" --json title,body`
 
 The team creation hook will attempt to assign and move to "In Progress" (best-effort — may no-op if no project item exists).
 
@@ -31,7 +31,7 @@ If missing or not one of `opus`/`sonnet`, default to `opus`.
 
 ## 2. Generate Timestamp
 
-Generate a timestamp in `YYYYMMDD-HHMM` format for the dev report output path. Store as `$TIMESTAMP`.
+Generate a timestamp in `YYYYMMDD-HHMM` format for the session handoff output path. Store as `$TIMESTAMP`.
 
 ## 3. Create Team
 
@@ -155,7 +155,7 @@ Teammate tool:
     Focus on behavior and correctness — not internal implementation details.
 ```
 
-**Reviewer teammate** (substitute `[report-path]` → `.claude/files/dev-report-$TIMESTAMP.md` from Step 2):
+**Reviewer teammate**:
 ```
 Teammate tool:
   team_name: "dev-team"
@@ -163,11 +163,10 @@ Teammate tool:
   model: opus
   prompt: >
     You are the code reviewer. Plan: [plan-path] — read Architecture.
-    Dev report path: [report-path] — you will write the report after review.
 
     Communication rules:
     - Blocking issues → message DEVELOPER (with file:line + fix suggestion)
-    - Review approved → message LEAD (with verdict + report path)
+    - Review approved → message LEAD (with verdict, review cycles, issues found/fixed, known limitations)
     - Escalation (after 3 failed cycles) → message LEAD (with summary of all attempts, current blocker, and what was tried)
     - Circuit breaker: If the same review issue persists after 2 fix attempts by the developer, escalate to LEAD with: the persistent issue, what the developer tried in both attempts, and why it's not being resolved — the developer may be in a bad state.
     A cycle = one report-to-developer → developer-fix → re-review round-trip.
@@ -187,39 +186,8 @@ Teammate tool:
     4. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub"
     5. Blocking issues → message developer with file:line + fix suggestion
        Wait for fix, re-review (max 3 cycles, then escalate to lead)
-    6. When approved, write the dev report to [report-path] using this template:
-
-        # Development Report: [Task Name]
-
-        **Plan**: [path]  **Date**: [date]
-
-        ## Summary
-        [What was built]
-
-        ## Execution
-        | Wave | Tasks | Status |
-        |------|-------|--------|
-
-        ## Changes
-        | File | Action | Description |
-        |------|--------|-------------|
-
-        ## Test Results
-        [Pass/fail counts]
-
-        ## Review
-        [Verdict, cycles, issues fixed]
-
-        ## Developer↔Code-Tester Iterations
-        [Cycle count, key fixes]
-
-        ## Developer↔QA-Tester Iterations
-        [Cycle count, issues found, tests written, screenshots taken (if UI)]
-
-        ## Known Limitations
-
-    7. Message lead with verdict and report path
-    8. Mark task complete
+    6. When approved, message lead with: verdict, review cycles completed, issues found/fixed, known limitations (if any)
+    7. Mark task complete
 
     Be specific: file paths, line numbers, concrete fixes.
 ```
@@ -266,45 +234,26 @@ After APPROVED:
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-## 9. Verify Report
+## 9. Write Session Handoff
 
-The reviewer teammate writes the dev report. Your role is to verify it exists and is complete.
+Ensure directory exists: `mkdir -p .claude/handoffs`
 
-1. Confirm the report file exists at `.claude/files/dev-report-$TIMESTAMP.md`
-2. Read the report — verify it follows the template below
-3. If incomplete, message the reviewer teammate to fix it
-
-### Report Template (reviewer references this)
+Write the session handoff to `.claude/handoffs/handoff-$TIMESTAMP.md`:
 
 ```markdown
-# Development Report: [Task Name]
+# Session Handoff
 
-**Plan**: [path]  **Date**: [date]
+**Task**: [original request from plan's "Target" field]
+**Branch**: [branch name]  **Date**: [date]  **Plan**: [plan path from $ARGUMENTS]
 
-## Summary
-[What was built]
+## What's Done
+[1-2 sentences — what was accomplished]
 
-## Execution
-| Wave | Tasks | Status |
-|------|-------|--------|
+## Open Questions
+[Unresolved items, deferred decisions, known limitations]
 
-## Changes
-| File | Action | Description |
-|------|--------|-------------|
-
-## Test Results
-[Pass/fail counts]
-
-## Review
-[Verdict, cycles, issues fixed]
-
-## Developer↔Code-Tester Iterations
-[Cycle count, key fixes]
-
-## Developer↔QA-Tester Iterations
-[Cycle count, issues found, tests written, screenshots taken (if UI)]
-
-## Known Limitations
+## Context for Next Session
+[What a future session working in this area needs to know that isn't obvious from the code/PR]
 ```
 
 ## 10. Wrap Up
@@ -312,12 +261,12 @@ The reviewer teammate writes the dev report. Your role is to verify it exists an
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Report written to .claude/files/dev-report-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
+  "Development complete. Session handoff written to .claude/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 
 If creating PR:
-1. Stage all remaining changes (doc updates, dev report, and any post-wave fixes from test/review cycles)
+1. Stage all remaining changes (doc updates and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
 4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
@@ -325,7 +274,7 @@ If creating PR:
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:
-1. Stage all remaining changes (doc updates, dev report, and any post-wave fixes from test/review cycles)
+1. Stage all remaining changes (doc updates and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
 
@@ -336,7 +285,7 @@ If commit & push only:
 - Fixing bugs yourself when developer↔tester cycles haven't been exhausted
 - Reviewing code yourself instead of messaging reviewer teammate
 - "Quick fixing" a file because it's faster than delegating
-- Writing the dev report yourself instead of delegating to reviewer teammate
+- Skipping the session handoff (section 9) before wrap-up
 - Updating project documentation yourself instead of delegating to developer teammate
 
 ## Rules
