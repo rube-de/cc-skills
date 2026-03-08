@@ -266,7 +266,7 @@ AskUserQuestion:
 ```
 
 If creating PR:
-1. Stage all remaining changes (doc updates, session handoff, and any post-wave fixes from test/review cycles)
+1. Stage all remaining changes (doc updates and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
 4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
@@ -274,7 +274,7 @@ If creating PR:
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:
-1. Stage all remaining changes (doc updates, session handoff, and any post-wave fixes from test/review cycles)
+1. Stage all remaining changes (doc updates and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
 
