@@ -120,7 +120,7 @@ Automatically finalize without user interaction:
     [What a future session working in this area needs to know that isn't obvious from the code/PR]
 
     ## References
-    - PR: [PR URL from step 6]
+    - PR: [PR URL from step 4]
     ```
 
 8. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
