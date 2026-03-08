@@ -107,7 +107,7 @@ Teammate tool:
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-only tasks (type: docs) may touch more files.
     8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), set `depends_on` on the test task to list the scaffolding task(s).
-    9. **Acceptance criteria**: Write every acceptance criterion as a testable assertion prefixed with `VERIFY:`. Each must be verifiable by running a command, checking output, or inspecting code — never subjective prose like "improved performance" or "better UX". Place them in the plan's `## Acceptance Criteria` section.
+    9. **Acceptance criteria**: Write every acceptance criterion as a testable assertion using a Markdown checkbox item that begins with `- [ ] VERIFY:` (for example: `- [ ] VERIFY: <condition>`). Each must be verifiable by running a command, checking output, or inspecting code — never subjective prose like "improved performance" or "better UX". Place them in the plan's `## Acceptance Criteria` section.
     10. Write new Architecture Decision Records (ADRs) to `docs/adrs/adr-NNNN-<slug>.md` for each significant decision:
        - Format: title, status (proposed/accepted/rejected/superseded), context, decision, consequences
        - Number sequentially from existing ADRs (start at 0001 if none exist)
@@ -175,7 +175,7 @@ Teammate tool:
         ## Acceptance Criteria
         [Machine-verifiable — each must be testable by an agent without human judgment]
         - [ ] VERIFY: [Function/endpoint/component] returns [expected] given [input]
-        - [ ] VERIFY: [Performance target: specific numbers]
+        - [ ] VERIFY: [Performance target: e.g., API response time < 100ms p95]
         - [ ] VERIFY: Zero regressions on existing test suite
         - [ ] VERIFY: [Additional criteria specific to this task]
 
