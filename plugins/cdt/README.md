@@ -62,9 +62,9 @@ Planning Phase                    Development Phase
 | Command | Purpose | Approval Gate | Output |
 |---------|---------|---------------|--------|
 | `/cdt:plan-task` | Planning only | N/A | `.claude/plans/plan-YYYYMMDD-HHMM.md` |
-| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.claude/files/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.claude/files/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.claude/files/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` |
 
 ### `/cdt:plan-task` — Design Phase
 
@@ -76,7 +76,7 @@ Spawns Architect + PM + Researcher. The Architect designs the solution, the PM v
 
 Spawns Developer + Code-Tester + Reviewer + Researcher + QA-Tester. Executes tasks wave-by-wave from the plan, with parallel tasks within each wave and sequential ordering between waves.
 
-**Output**: Updated plan + `.claude/files/handoff-YYYYMMDD-HHMM.md` with session context, open questions, and notes for future sessions.
+**Output**: Updated plan + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` with session context, open questions, and notes for future sessions.
 
 ### `/cdt:full-task` — Plan + Approve + Dev
 

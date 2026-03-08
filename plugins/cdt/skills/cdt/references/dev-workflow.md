@@ -236,9 +236,9 @@ After APPROVED:
 
 ## 9. Write Session Handoff
 
-Ensure directory exists: `mkdir -p .claude/files`
+Ensure directory exists: `mkdir -p .claude/handoffs`
 
-Write the session handoff to `.claude/files/handoff-$TIMESTAMP.md`:
+Write the session handoff to `.claude/handoffs/handoff-$TIMESTAMP.md`:
 
 ```markdown
 # Session Handoff
@@ -261,7 +261,7 @@ Write the session handoff to `.claude/files/handoff-$TIMESTAMP.md`:
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Session handoff written to .claude/files/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
+  "Development complete. Session handoff written to .claude/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 

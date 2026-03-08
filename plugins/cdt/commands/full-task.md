@@ -105,7 +105,7 @@ If any role was created but never used: **WARN** "Role {name} was created but ne
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Session handoff written to .claude/files/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
+  "Development complete. Session handoff written to .claude/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 

@@ -101,8 +101,8 @@ Automatically finalize without user interaction:
 4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
 5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Ensure handoff directory exists: `mkdir -p .claude/files`
-7. Write session handoff to `.claude/files/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
+6. Ensure handoff directory exists: `mkdir -p .claude/handoffs`
+7. Write session handoff to `.claude/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
 
     ```markdown
     # Session Handoff
