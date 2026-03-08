@@ -496,3 +496,13 @@ PostToolUse hooks that warn about invalid consultant output are insufficient bec
 The same pattern applies to **layer completion guarantees** and **mode boundaries** (e.g., quick mode agent selection). If the LLM must choose which agents to run, list them in an explicit table at the step level — don't rely on the LLM inferring the boundary from surrounding context.
 
 > Source: [Issue #65](https://github.com/rube-de/cc-skills/issues/65) — Claude skipped Layer 2 in quick mode and posted reviews with wrong formatting because it inferred behavior from context instead of following explicit steps.
+
+### Don't create separate artifacts for the same information
+
+When designing multi-agent workflows, resist the urge to create distinct output files for each role (e.g., "dev report" from the reviewer + "session handoff" from the lead). If two artifacts overlap heavily, consolidate into one. Ask: **what does this capture that isn't already in git history, PR metadata, or the plan file?** If the answer is "nothing unique," it's dead documentation that nobody will read.
+
+**Bad pattern**: Reviewer writes a dev report (summary, changes table, test results, execution waves) AND the Lead writes a handoff (task summary, files changed, decisions, context). The changes table duplicates `git log`, test results duplicate CI, and the summary duplicates the PR description.
+
+**Good pattern**: Single lean handoff capturing only what's NOT elsewhere — open questions, unresolved items, and context a future session can't infer from the code.
+
+> Source: [PR #142](https://github.com/rube-de/cc-skills/pull/142) — consolidated dev report + session handoff into a single artifact, removing ~91 lines of template and report-writing logic from the reviewer teammate prompt.
