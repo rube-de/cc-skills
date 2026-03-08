@@ -62,9 +62,9 @@ Planning Phase                    Development Phase
 | Command | Purpose | Approval Gate | Output |
 |---------|---------|---------------|--------|
 | `/cdt:plan-task` | Planning only | N/A | `.claude/plans/plan-YYYYMMDD-HHMM.md` |
-| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `handoff.md` (timestamped) |
-| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `handoff.md` (timestamped) |
+| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.claude/files/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.claude/files/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.claude/files/handoff-YYYYMMDD-HHMM.md` |
 
 ### `/cdt:plan-task` — Design Phase
 
