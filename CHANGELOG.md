@@ -1,3 +1,10 @@
+# [1.40.0](https://github.com/rube-de/cc-skills/compare/v1.39.0...v1.40.0) (2026-03-08)
+
+
+### Features
+
+* **cdt:** add machine-verifiable acceptance criteria to plan template ([#144](https://github.com/rube-de/cc-skills/issues/144)) ([1f861dc](https://github.com/rube-de/cc-skills/commit/1f861dce7ccf3fb146f77c096fd55d8c5600173f)), closes [#113](https://github.com/rube-de/cc-skills/issues/113)
+
 # [1.39.0](https://github.com/rube-de/cc-skills/compare/v1.38.2...v1.39.0) (2026-03-08)
 
 
