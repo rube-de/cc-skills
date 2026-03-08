@@ -73,7 +73,7 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9a and 10 — this command handles handoff and wrap-up). dev-workflow.md generates its own timestamp for the dev report.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9 and 10 — this command handles handoff and wrap-up). dev-workflow.md generates its own timestamp for the session handoff.
 
 ## Phase 2: Completion Audit
 
@@ -108,27 +108,19 @@ Automatically finalize without user interaction:
     # Session Handoff
 
     **Task**: [original task from $ARGUMENTS]
-    **Date**: [date]  **Branch**: [branch name]
+    **Branch**: [branch name]  **Date**: [date]  **Plan**: [plan path from Phase 1]
 
-    ## Task Summary
-    [Brief summary of what was completed in this session]
-
-    ## Decisions Made
-    [Key architectural and implementation decisions with rationale — WHY, not just WHAT]
-
-    ## Files Changed
-    [List of all changed files (created, modified, deleted)]
-
-    ## Plan & Report
-    - Plan: [plan path from Phase 1]
-    - Dev Report: `.claude/files/dev-report-$TIMESTAMP.md`
-    - PR: [PR URL from step 4]
+    ## What's Done
+    [1-2 sentences — what was accomplished]
 
     ## Open Questions
-    [Anything unresolved, deferred, or uncertain]
+    [Unresolved items, deferred decisions, known limitations]
 
     ## Context for Next Session
-    [What a future session working in this area should know]
+    [What a future session working in this area needs to know that isn't obvious from the code/PR]
+
+    ## References
+    - PR: [PR URL from step 6]
     ```
 
 8. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
