@@ -244,7 +244,7 @@ Write the session handoff to `.claude/files/handoff-$TIMESTAMP.md`:
 # Session Handoff
 
 **Task**: [original request from plan's "Target" field]
-**Branch**: [branch name]  **Date**: [date]  **Plan**: $PLAN_PATH
+**Branch**: [branch name]  **Date**: [date]  **Plan**: [plan path from $ARGUMENTS]
 
 ## What's Done
 [1-2 sentences — what was accomplished]
