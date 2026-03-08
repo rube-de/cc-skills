@@ -73,7 +73,7 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above). dev-workflow.md generates its own timestamp for the dev report.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9a and 10 — this command handles handoff and wrap-up). dev-workflow.md generates its own timestamp for the dev report.
 
 ## Phase 2: Completion Audit
 
@@ -101,8 +101,33 @@ Automatically finalize without user interaction:
 4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
 5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
-7. Print PR URL to user
+6. Write session handoff to `.claude/files/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
+
+    ```markdown
+    # Session Handoff
+
+    **Task**: [original task description]
+    **Date**: [date]  **Branch**: [branch name]
+
+    ## Decisions Made
+    [Key architectural and implementation decisions with rationale — WHY, not just WHAT]
+
+    ## Files Changed
+    [List of all modified/created files]
+
+    ## Plan & Report
+    - Plan: [plan path]
+    - Dev Report: `.claude/files/dev-report-$TIMESTAMP.md`
+
+    ## Open Questions
+    [Anything unresolved, deferred, or uncertain]
+
+    ## Context for Next Session
+    [What a future session working in this area should know]
+    ```
+
+7. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
+8. Print PR URL to user
 
 ## Bridge
 

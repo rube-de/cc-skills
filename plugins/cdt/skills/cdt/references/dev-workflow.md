@@ -307,6 +307,33 @@ The reviewer teammate writes the dev report. Your role is to verify it exists an
 ## Known Limitations
 ```
 
+## 9a. Write Session Handoff
+
+Write a structured handoff to `.claude/files/handoff-$TIMESTAMP.md` before wrapping up:
+
+```markdown
+# Session Handoff
+
+**Task**: [original task description]
+**Date**: [date]  **Branch**: [branch name]
+
+## Decisions Made
+[Key architectural and implementation decisions with rationale — WHY, not just WHAT]
+
+## Files Changed
+[List of all modified/created files]
+
+## Plan & Report
+- Plan: [plan path]
+- Dev Report: `.claude/files/dev-report-$TIMESTAMP.md`
+
+## Open Questions
+[Anything unresolved, deferred, or uncertain]
+
+## Context for Next Session
+[What a future session working in this area should know]
+```
+
 ## 10. Wrap Up
 
 Ask user:
