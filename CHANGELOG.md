@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/rube-de/cc-skills/compare/v1.38.2...v1.39.0) (2026-03-08)
+
+
+### Features
+
+* **cdt:** consolidate dev report and handoff into single session artifact ([#142](https://github.com/rube-de/cc-skills/issues/142)) ([59a72ca](https://github.com/rube-de/cc-skills/commit/59a72cad0522f8c3966ff7784d756dfea78e7f7e)), closes [#111](https://github.com/rube-de/cc-skills/issues/111)
+
 ## [1.38.2](https://github.com/rube-de/cc-skills/compare/v1.38.1...v1.38.2) (2026-03-08)
 
 ## [1.38.1](https://github.com/rube-de/cc-skills/compare/v1.38.0...v1.38.1) (2026-03-06)
