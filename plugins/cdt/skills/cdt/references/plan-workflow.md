@@ -303,7 +303,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 ## Acceptance Criteria
 [Machine-verifiable — each must be testable by an agent without human judgment]
 - [ ] VERIFY: [Function/endpoint/component] returns [expected] given [input]
-- [ ] VERIFY: [Performance target: specific numbers]
+- [ ] VERIFY: [Performance target: e.g., API response time < 100ms p95]
 - [ ] VERIFY: Zero regressions on existing test suite
 - [ ] VERIFY: [Additional criteria specific to this task]
 
