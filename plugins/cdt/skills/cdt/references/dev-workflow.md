@@ -226,7 +226,7 @@ After APPROVED:
 1. Run full test suite
 2. Verify build
 3. `rg "TODO|FIXME|HACK|XXX|stub" --type-not md`
-4. Check acceptance criteria from plan — verify each `VERIFY:` item passes (run commands, check output, or inspect code as needed). If any VERIFY item fails:
+4. Check acceptance criteria from plan — verify each `VERIFY:` item passes (run commands, check output, or inspect code as needed). Mark each passing item `- [x]` in the plan file. If any VERIFY item fails:
    - Document which items failed and why
    - Message the developer teammate with the failing criteria and evidence
    - After the developer fixes, re-run tests (message code-tester and qa-tester)
