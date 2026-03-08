@@ -166,18 +166,18 @@ Teammate tool:
         | Wave | Tasks | Starts When |
         |------|-------|-------------|
 
-        ## Testing Strategy
-        [Framework, test types, QA scenarios]
-        [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
-        [TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
-        [Tests should validate the Acceptance Criteria below — each VERIFY item should map to at least one test]
-
         ## Acceptance Criteria
         [Machine-verifiable — each must be testable by an agent without human judgment]
         - [ ] VERIFY: [Function/endpoint/component] returns [expected] given [input]
         - [ ] VERIFY: [Performance target: e.g., API response time < 100ms p95]
         - [ ] VERIFY: Zero regressions on existing test suite
         - [ ] VERIFY: [Additional criteria specific to this task]
+
+        ## Testing Strategy
+        [Framework, test types, QA scenarios]
+        [Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
+        [TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
+        [Tests should validate the Acceptance Criteria above — each VERIFY item should map to at least one test]
 
         ## Boundaries
         - 🟢 Agent proceeds freely: [implementation details, naming, internal structure]
@@ -294,18 +294,18 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 | Wave | Tasks | Starts When |
 |------|-------|-------------|
 
-## Testing Strategy
-[Framework, test types, QA scenarios]
-[Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
-[TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
-[Tests should validate the Acceptance Criteria below — each VERIFY item should map to at least one test]
-
 ## Acceptance Criteria
 [Machine-verifiable — each must be testable by an agent without human judgment]
 - [ ] VERIFY: [Function/endpoint/component] returns [expected] given [input]
 - [ ] VERIFY: [Performance target: e.g., API response time < 100ms p95]
 - [ ] VERIFY: Zero regressions on existing test suite
 - [ ] VERIFY: [Additional criteria specific to this task]
+
+## Testing Strategy
+[Framework, test types, QA scenarios]
+[Include QA test scenarios: integration/smoke tests for non-UI tasks; user flows, interactions, navigation, and Storybook stories for UI tasks.]
+[TDD: List which test tasks should run before implementation. If all tests must follow implementation, explain why.]
+[Tests should validate the Acceptance Criteria above — each VERIFY item should map to at least one test]
 
 ## Boundaries
 - 🟢 Agent proceeds freely: [implementation details, naming, internal structure]
