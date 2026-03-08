@@ -34,7 +34,7 @@ Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this 
 Read project context files (`CLAUDE.md`, `AGENTS.md`) to understand conventions and stack.
 If requirements are ambiguous — ask the user via AskUserQuestion with recommendations.
 
-Do NOT explore the codebase with Glob/Grep — that is the architect's job in Step 5.
+Do NOT explore the codebase with Glob/Grep — that is the architect's job in Step 5b.
 
 ## 3. Create Team
 
