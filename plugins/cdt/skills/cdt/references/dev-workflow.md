@@ -309,22 +309,27 @@ The reviewer teammate writes the dev report. Your role is to verify it exists an
 
 ## 9a. Write Session Handoff
 
+Ensure directory exists: `mkdir -p .claude/files`
+
 Write a structured handoff to `.claude/files/handoff-$TIMESTAMP.md` before wrapping up:
 
 ```markdown
 # Session Handoff
 
-**Task**: [original task description]
+**Task**: [original request from plan's "Target" field]
 **Date**: [date]  **Branch**: [branch name]
+
+## Task Summary
+[Brief summary of what was completed in this session]
 
 ## Decisions Made
 [Key architectural and implementation decisions with rationale — WHY, not just WHAT]
 
 ## Files Changed
-[List of all modified/created files]
+[List of all changed files (created, modified, deleted)]
 
 ## Plan & Report
-- Plan: [plan path]
+- Plan: $PLAN_PATH (from $ARGUMENTS)
 - Dev Report: `.claude/files/dev-report-$TIMESTAMP.md`
 
 ## Open Questions
