@@ -34,7 +34,7 @@ Planning Phase                    Development Phase
                                  │  Researcher               │
                                  │  (on-demand lookups)      │
                                  ├───────────────────────────┤
-                                 │  Output: session-handoff   │
+                                 │  Output: session-handoff  │
                                  └───────────────────────────┘
 ```
 
