@@ -107,7 +107,7 @@ Teammate tool:
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
        Set `**Council Review**: true` if the architecture involves security-critical code,
        complex state management, or novel patterns that benefit from external validation.
-       Default is `false`. Can also be enabled via `--review-plan` flag in `$ARGUMENTS`.
+       Default is `false`. The lead may inject this directive when `--review-plan` is passed.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-only tasks (type: docs) may touch more files.
     8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), set `depends_on` on the test task to list the scaffolding task(s).
     9. **Acceptance criteria**: Write every acceptance criterion as a testable assertion using a Markdown checkbox item that begins with `- [ ] VERIFY:` (for example: `- [ ] VERIFY: <condition>`). Each must be verifiable by running a command, checking output, or inspecting code — never subjective prose like "improved performance" or "better UX". Place them in the plan's `## Acceptance Criteria` section.
@@ -199,11 +199,10 @@ Teammate tool:
 
 **PM teammate**:
 
-If `$ARGUMENTS` includes `--review-plan`, inject into the PM prompt below:
+If `$ARGUMENTS` includes `--review-plan`, inject after `Plan path: [plan-path]` in the PM prompt below:
 "Council review has been requested via `--review-plan` flag."
-Also inject `[plan-path]` into the PM prompt so the PM can pass it to council.
 
-```
+```text
 Teammate tool:
   team_name: "plan-team"
   name: "product-manager"
@@ -231,16 +230,18 @@ Teammate tool:
     - Assumptions not backed by research findings
     If the design has flaws, say so with specifics. Your job is to find real problems. If the design is genuinely sound, approve — but never rubber-stamp.
 
-    3. Message the architect teammate directly with initial concerns
-    4. If opt-in council review is enabled (the Lead indicated `--review-plan` was
-       in $ARGUMENTS, or the architect's plan metadata includes `Council Review: true`):
+    3. Message the architect teammate directly with initial concerns.
+       If council review is enabled, note that additional feedback may follow after council review.
+    4. Opt-in council review (skip entirely if neither trigger is present — no added latency):
        a. After the architect writes the plan file and shares its path (architect step 15),
-          invoke: Skill tool with skill "council", args "quick quality [plan-path]"
-       b. Incorporate council findings into your assessment
-       c. Include council feedback verbatim in your message to the architect when NEEDS_REVISION
+          read the plan at [plan-path] and parse its metadata
+       b. Council triggers if: the Lead indicated `--review-plan` was passed, OR the plan
+          metadata includes `Council Review: true`
+       c. Invoke: Skill tool with skill "council", args "plan [plan-path]"
+       d. Incorporate council findings into your assessment
+       e. Include council feedback verbatim in your message to the architect when NEEDS_REVISION
        Note: Council rejection does NOT independently block — synthesize it as advisory input
        into your own verdict. You remain the single source of feedback to the architect.
-       If neither flag is set, skip this step entirely (no added latency).
     5. Produce validation report: APPROVED or NEEDS_REVISION with specifics
     6. Share report with the lead
     7. Mark task complete
