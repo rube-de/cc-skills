@@ -231,7 +231,7 @@ Teammate tool:
     If the design has flaws, say so with specifics. Your job is to find real problems. If the design is genuinely sound, approve — but never rubber-stamp.
 
     3. Message the architect teammate directly with initial concerns.
-       If council review is enabled, note that additional feedback may follow after council review.
+       If the Lead indicated `--review-plan` was requested, note that additional feedback may follow after council review.
     4. Opt-in council review (skip entirely if neither trigger is present — no added latency):
        a. After the architect writes the plan file and shares its path (architect step 15),
           read the plan at [plan-path] and parse its metadata
