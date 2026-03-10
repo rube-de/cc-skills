@@ -73,7 +73,7 @@ If no research is needed (pure internal refactor, well-known patterns), set `$RE
 
 Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prompts.
 
-If `$ARGUMENTS` includes `--review-plan`, inject after line `Default is \`false\`.` in the architect prompt below:
+If `$ARGUMENTS` includes `--review-plan`, inject before the `Set \`**Council Review**: true\`` line in the architect prompt below:
 "The Lead has requested council review via `--review-plan` flag — set `**Council Review**: true` in the plan metadata."
 
 **Architect teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
@@ -202,7 +202,7 @@ Teammate tool:
 
 **PM teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
 
-If `$ARGUMENTS` includes `--review-plan`, inject after `Plan path: [plan-path]` in the PM prompt below:
+If `$ARGUMENTS` includes `--review-plan`, inject after the `Plan path:` line in the PM prompt below:
 "Council review has been requested via `--review-plan` flag."
 
 ```text
@@ -248,8 +248,9 @@ Teammate tool:
           Invoke council at most once per plan; do not re-run on subsequent revision cycles.
        c. Otherwise, skip council invocation entirely (no council latency added)
     5. Produce validation report: APPROVED or NEEDS_REVISION with specifics
-    6. Share report with the lead
-    7. Mark task complete
+    6. Write your verdict into the `## Validation` section of [plan-path] (replacing `[PM verdict]`)
+    7. Share report with the lead
+    8. Mark task complete
 ```
 
 ## 6. Coordinate
