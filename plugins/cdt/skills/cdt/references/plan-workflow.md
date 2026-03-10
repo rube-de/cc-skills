@@ -73,6 +73,9 @@ If no research is needed (pure internal refactor, well-known patterns), set `$RE
 
 Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prompts.
 
+If `$ARGUMENTS` includes `--review-plan`, inject after line `Default is \`false\`.` in the architect prompt below:
+"The Lead has requested council review via `--review-plan` flag — set `**Council Review**: true` in the plan metadata."
+
 **Architect teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
 ```
 Teammate tool:
@@ -107,7 +110,7 @@ Teammate tool:
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
        Set `**Council Review**: true` if the architecture involves security-critical code,
        complex state management, or novel patterns that benefit from external validation.
-       Default is `false`. The lead may inject this directive when `--review-plan` is passed.
+       Default is `false`. When `--review-plan` is passed, the lead will inject an explicit directive above.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-only tasks (type: docs) may touch more files.
     8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), set `depends_on` on the test task to list the scaffolding task(s).
     9. **Acceptance criteria**: Write every acceptance criterion as a testable assertion using a Markdown checkbox item that begins with `- [ ] VERIFY:` (for example: `- [ ] VERIFY: <condition>`). Each must be verifiable by running a command, checking output, or inspecting code — never subjective prose like "improved performance" or "better UX". Place them in the plan's `## Acceptance Criteria` section.
@@ -242,7 +245,8 @@ Teammate tool:
           iii. Include council feedback verbatim in your message to the architect when NEEDS_REVISION
           Note: Council rejection does NOT independently block — synthesize it as advisory input
           into your own verdict. You remain the single source of feedback to the architect.
-       c. Otherwise, skip council invocation entirely (no added latency)
+          Invoke council at most once per plan; do not re-run on subsequent revision cycles.
+       c. Otherwise, skip council invocation entirely (no council latency added)
     5. Produce validation report: APPROVED or NEEDS_REVISION with specifics
     6. Share report with the lead
     7. Mark task complete
