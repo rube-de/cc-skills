@@ -197,7 +197,7 @@ Teammate tool:
     16. Mark task complete
 ```
 
-**PM teammate**:
+**PM teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
 
 If `$ARGUMENTS` includes `--review-plan`, inject after `Plan path: [plan-path]` in the PM prompt below:
 "Council review has been requested via `--review-plan` flag."
@@ -232,16 +232,17 @@ Teammate tool:
 
     3. Message the architect teammate directly with initial concerns.
        If the Lead indicated `--review-plan` was requested, note that additional feedback may follow after council review.
-    4. Opt-in council review (skip entirely if neither trigger is present — no added latency):
-       a. After the architect writes the plan file and shares its path (architect step 15),
+    4. Opt-in council review:
+       a. After the architect messages you that the plan file is ready and provides its path,
           read the plan at [plan-path] and parse its metadata
-       b. Council triggers if: the Lead indicated `--review-plan` was passed, OR the plan
-          metadata includes `Council Review: true`
-       c. Invoke: Skill tool with skill "council", args "plan [plan-path]"
-       d. Incorporate council findings into your assessment
-       e. Include council feedback verbatim in your message to the architect when NEEDS_REVISION
-       Note: Council rejection does NOT independently block — synthesize it as advisory input
-       into your own verdict. You remain the single source of feedback to the architect.
+       b. If the Lead indicated `--review-plan` was passed, OR the plan metadata includes
+          `Council Review: true`:
+          i. Invoke: Skill tool with skill "council", args "plan [plan-path]"
+          ii. Incorporate council findings into your assessment
+          iii. Include council feedback verbatim in your message to the architect when NEEDS_REVISION
+          Note: Council rejection does NOT independently block — synthesize it as advisory input
+          into your own verdict. You remain the single source of feedback to the architect.
+       c. Otherwise, skip council invocation entirely (no added latency)
     5. Produce validation report: APPROVED or NEEDS_REVISION with specifics
     6. Share report with the lead
     7. Mark task complete
