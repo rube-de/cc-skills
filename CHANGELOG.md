@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/rube-de/cc-skills/compare/v1.42.0...v1.43.0) (2026-03-11)
+
+
+### Features
+
+* **dlc,cdt:** add implementation-bias reminders to pr-check and CDT developer ([#165](https://github.com/rube-de/cc-skills/issues/165)) ([d2d610d](https://github.com/rube-de/cc-skills/commit/d2d610df849663562bceaa5d093806d0ba65d211)), closes [#141](https://github.com/rube-de/cc-skills/issues/141)
+
 # [1.42.0](https://github.com/rube-de/cc-skills/compare/v1.41.0...v1.42.0) (2026-03-11)
 
 
