@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/rube-de/cc-skills/compare/v1.40.0...v1.41.0) (2026-03-11)
+
+
+### Features
+
+* **cdt:** add opt-in council review on plan before dev phase ([#148](https://github.com/rube-de/cc-skills/issues/148)) ([abe001d](https://github.com/rube-de/cc-skills/commit/abe001d80d322991e96de88345b388c1ccb2f361)), closes [#114](https://github.com/rube-de/cc-skills/issues/114)
+
 # [1.40.0](https://github.com/rube-de/cc-skills/compare/v1.39.0...v1.40.0) (2026-03-08)
 
 
