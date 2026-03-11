@@ -385,6 +385,7 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | `echo "$var"` piped to `jq` in `#!/bin/sh` scripts | JSON corrupted on macOS — `\n` in body text expanded to real newlines; `jq` exits 5 | Use `printf '%s\n' "$var"` — never `echo` for variable content piped to parsers |
 | Injection anchor contains substitutable placeholder | Lead can't find anchor after substitution runs | Use substitution-independent anchors (e.g., `Plan path:` not `Plan path: [plan-path]`) |
 | Advisory findings routed to nonexistent message step | Council/tool feedback silently dropped | Ensure the "include in message to X" step has a matching numbered send step that fires *after* the tool invocation |
+| Preamble bullets contain literal actions before numbered workflow | LLM executes preamble actions before Step 1 gate (e.g., reads files before task is unblocked) | Keep preambles purely attitudinal/mindset-oriented; all executable actions belong in numbered workflow steps |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
