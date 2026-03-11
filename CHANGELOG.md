@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/rube-de/cc-skills/compare/v1.41.0...v1.42.0) (2026-03-11)
+
+
+### Features
+
+* **cdt:** add context isolation guidance for reviewer teammate ([#157](https://github.com/rube-de/cc-skills/issues/157)) ([fe9b81e](https://github.com/rube-de/cc-skills/commit/fe9b81e1119d2cae7d3c2433627ea96e2265ba8c)), closes [#115](https://github.com/rube-de/cc-skills/issues/115) [#115](https://github.com/rube-de/cc-skills/issues/115) [#115](https://github.com/rube-de/cc-skills/issues/115) [#115](https://github.com/rube-de/cc-skills/issues/115) [#115](https://github.com/rube-de/cc-skills/issues/115)
+
 # [1.41.0](https://github.com/rube-de/cc-skills/compare/v1.40.0...v1.41.0) (2026-03-11)
 
 
