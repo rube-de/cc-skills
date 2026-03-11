@@ -111,6 +111,55 @@ The Lead coordinator's job is orchestration, not authorship. When the Lead write
 
 > Source: [Issue #51](https://github.com/rube-de/cc-skills/issues/51)
 
+### Injection anchors in multi-agent prompts must be substitution-independent
+
+When a Lead dynamically injects text into a teammate's prompt, the anchor text (the line used to locate the injection point) must not contain substitutable placeholders. If substitution runs before injection, the anchor won't match the rendered prompt.
+
+**Bad** — anchor contains `[plan-path]` placeholder:
+```markdown
+If `$ARGUMENTS` includes `--review-plan`, inject after `Plan path: [plan-path]` in the PM prompt below:
+```
+If `[plan-path]` is substituted first → `Plan path: .claude/plans/plan-20260207-1430.md` — the anchor `Plan path: [plan-path]` no longer exists.
+
+**Good** — anchor is substitution-independent:
+```markdown
+If `$ARGUMENTS` includes `--review-plan`, inject after the `Plan path:` line in the PM prompt below:
+```
+
+Also verify that positional references ("above" / "below") match the actual injection position. If the architect prompt says "the lead will inject an explicit directive **above**", the injection instruction must specify `inject before` the relevant line — not `inject after`.
+
+> Source: [PR #148](https://github.com/rube-de/cc-skills/pull/148) — Two independent reviewers (coderabbitai, copilot) caught the same anchor mismatch; a third (greptile) caught the PM-side substitution ordering ambiguity.
+
+### Cross-agent artifact write-back requires explicit steps
+
+When Agent A writes an artifact (plan file) and Agent B produces content (verdict) that belongs in that artifact, add an explicit write step to Agent B's flow. Without it, the artifact has a permanent placeholder, and verification steps that check for the content will loop.
+
+**Bad** — PM produces verdict but never writes it to the plan:
+```
+5. Produce validation report: APPROVED or NEEDS_REVISION
+6. Share report with the lead
+```
+→ `## Validation` section remains `[PM verdict]` → Lead's verification step 7.3 fails → triggers re-write loop.
+
+**Good** — PM explicitly writes verdict into the artifact:
+```
+5. Produce validation report: APPROVED or NEEDS_REVISION
+6. Write verdict into `## Validation` section of [plan-path]
+7. Share report with the lead
+```
+
+> Source: [PR #148](https://github.com/rube-de/cc-skills/pull/148) — greptile-apps identified the sequencing gap; architect writes plan at step 14 before PM produces verdict at step 5.
+
+### Advisory tool invocations need explicit routing and single-invocation guards
+
+When a teammate invokes an external tool (e.g., council review) as advisory input rather than a blocking gate, three pitfalls emerge:
+
+1. **Feedback routing**: The step that says "include findings in your message to X" must have a corresponding numbered step that actually sends that message. If the send step fires *before* the tool invocation, findings are silently dropped.
+2. **Re-invocation on iteration**: Without an explicit guard, the tool runs on every revision cycle — expensive and redundant. Add: "Invoke at most once per [artifact]; do not re-run on subsequent revision cycles."
+3. **Tool availability**: If the teammate invokes a tool via `Skill`, verify that `Skill` is in `allowed-tools` for *all* entry-point commands that reach this workflow — not just the one being actively developed.
+
+> Source: [PR #148](https://github.com/rube-de/cc-skills/pull/148) — Council review integration surfaced all three: feedback targeted a nonexistent architect message (greptile), no re-invocation guard (greptile), and `Skill` missing from `dev-task.md` (copilot).
+
 ### Plan template exists in two locations — update both
 
 `plan-workflow.md` contains the plan template twice: once in the architect's prompt (Step 5b, item 14) and once in the Lead's verification section (Step 7). Any structural change to the template (new sections, reordered fields, updated placeholders) must be applied to both copies identically. Grep for the section header in both locations to verify synchronization.
@@ -334,6 +383,8 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 | Advisory hooks instead of inline validation | PostToolUse hook warns about invalid output, but LLM follows workflow steps — warning is ignored | Make validation a named workflow step with explicit "mark as failed" semantics; hooks remain as defense-in-depth only |
 | Ambiguous mode boundaries (e.g., quick mode) | LLM infers which agents to run from context, skips layers it shouldn't | Enumerate exactly which agents run and which are skipped in explicit tables at the workflow step level |
 | `echo "$var"` piped to `jq` in `#!/bin/sh` scripts | JSON corrupted on macOS — `\n` in body text expanded to real newlines; `jq` exits 5 | Use `printf '%s\n' "$var"` — never `echo` for variable content piped to parsers |
+| Injection anchor contains substitutable placeholder | Lead can't find anchor after substitution runs | Use substitution-independent anchors (e.g., `Plan path:` not `Plan path: [plan-path]`) |
+| Advisory findings routed to nonexistent message step | Council/tool feedback silently dropped | Ensure the "include in message to X" step has a matching numbered send step that fires *after* the tool invocation |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59)
 
