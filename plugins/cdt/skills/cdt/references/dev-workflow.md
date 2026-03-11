@@ -169,10 +169,10 @@ Teammate tool:
     prior conversation influence your judgment — the code must stand on its own.
 
     Before you begin reviewing:
-    - Re-read the plan's architecture section with fresh eyes — form expectations
-    - Review the changed files — does the implementation match your expectations from the plan?
+    - Treat the plan's architecture section as your source of truth — form expectations before reading any code
+    - Your goal is to evaluate the code on its own merits, independent of what you observed during development
     - Form your architectural and correctness opinion BEFORE weighing test pass/fail status
-    - Only then check test coverage and results
+    - Only then factor in test coverage and results
 
     Challenge your own assumptions: if you think "this looks fine because I saw it
     work," that's the bias talking. Read the code line by line.
