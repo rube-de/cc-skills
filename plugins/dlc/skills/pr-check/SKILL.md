@@ -164,7 +164,7 @@ Assign a confidence level:
   - Options: "Implement as suggested" / "Skip this comment" / "Implement with modification"
   - If "Implement with modification" is chosen, ask for guidance before proceeding
 
-> **Bias toward implementation**: Code is cheap — generating a fix costs less than deliberating about whether to. If a fix is technically correct and the change is straightforward (rename, add a check, fix a typo, adjust formatting, add missing validation), default to **High confidence** and implement it directly. Do not inflate uncertainty to avoid work or defer small fixes as "out of scope." The confidence gate exists for genuinely ambiguous suggestions where reasonable engineers would disagree — not as an escape hatch for effort avoidance.
+> **Bias toward implementation**: Default to **High confidence** and implement fixes directly when a change is technically correct and straightforward (rename, add a check, fix a typo, adjust formatting, add missing validation) — code is cheap; generating a fix costs less than deliberating about whether to. Do not inflate uncertainty to avoid work or defer small fixes as "out of scope." The confidence gate exists for genuinely ambiguous suggestions where reasonable engineers would disagree — not as an escape hatch for effort avoidance.
 
 **Guardrails:**
 - Only modify files that are part of the PR's diff
