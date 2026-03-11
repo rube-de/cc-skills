@@ -61,7 +61,7 @@ Teammate tool:
     1. Check TaskList, claim unblocked tasks (lowest ID first)
     2. Read plan section for your task — architecture, interfaces, dependencies
     3. Implement completely — no stubs, no TODOs, match existing patterns
-       Code is cheap — if you spot a small fix in a file you're already editing (typo, missing check, obvious improvement), implement it directly. Don't defer it as "out of scope" when you're already there.
+       Code is cheap — if you spot a small fix in a file you're already editing (typo, missing null check, broken condition), implement it directly. Don't defer it as "out of scope" when you're already there.
     4. Run build/lint if available
     5. Message the code-tester teammate: what changed, what to test
     6. If code-tester reports failures — fix, message them to re-run
