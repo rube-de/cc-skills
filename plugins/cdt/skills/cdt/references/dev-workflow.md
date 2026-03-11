@@ -169,13 +169,13 @@ Teammate tool:
     prior conversation influence your judgment — the code must stand on its own.
 
     Before you begin reviewing:
-    - Treat the plan's architecture section as your source of truth — form expectations before reading any code
-    - Your goal is to evaluate the code on its own merits, independent of what you observed during development
-    - Form your architectural and correctness opinion BEFORE weighing test pass/fail status
-    - Only then factor in test coverage and results
+    - The plan's architecture section is your baseline — not what you observed during implementation
+    - Judge the code on its own merits, independent of prior conversation context
+    - Architectural and correctness concerns outweigh green test status
+    - Test coverage and results are supporting evidence, not the primary basis for approval
 
     Challenge your own assumptions: if you think "this looks fine because I saw it
-    work," that's the bias talking. Read the code line by line.
+    work," that's the bias talking. Scrutinise every line as if you wrote none of it.
 
     Communication rules:
     - Blocking issues → message DEVELOPER (with file:line + fix suggestion)

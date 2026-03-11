@@ -37,7 +37,7 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 - Run `bun scripts/validate-plugins.mjs` and fix any errors before committing — CI runs the same check
 - After adding or moving plugin directories or updating marketplace entries, re-run validation to catch orphaned plugin directories or missing source paths
 - PRs target `main`; semantic-release handles versioning on merge — never edit versions by hand
-- **Prompt engineering review**: When a change touches agent prompts (`prompt: >` blocks, SKILL.md instructions, `*-workflow.md` teammate prompts, `agents/*.md`), review it against known pitfalls in [`docs/learnings.md`](docs/learnings.md) and [`memory/prompt-engineering.md`] before creating the PR. Specifically check: no literal actions in preambles before numbered workflow gates, no dual numbered sequences, imperatives over aphorisms, and no terminology mismatches with existing workflow steps.
+- **Prompt engineering review**: When a change touches agent prompts (`prompt: >` blocks, SKILL.md instructions, `*-workflow.md` teammate prompts, `agents/*.md`), review it against known pitfalls in [`docs/learnings.md`](docs/learnings.md) before creating the PR. Specifically check: no literal actions in preambles before numbered workflow gates, no dual numbered sequences, imperatives over aphorisms, and no terminology mismatches with existing workflow steps.
 
 ## Learnings
 
