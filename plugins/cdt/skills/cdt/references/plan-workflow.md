@@ -242,12 +242,14 @@ Teammate tool:
           `Council Review: true`:
           i. Invoke: Skill tool with skill "council", args "plan [plan-path]"
           ii. Incorporate council findings into your assessment
-          iii. Include council feedback verbatim in your message to the architect when NEEDS_REVISION
+          iii. Include council feedback verbatim in your validation report (step 5) when NEEDS_REVISION
           Note: Council rejection does NOT independently block — synthesize it as advisory input
           into your own verdict. You remain the single source of feedback to the architect.
           Invoke council at most once per plan; do not re-run on subsequent revision cycles.
        c. Otherwise, skip council invocation entirely (no council latency added)
     5. Produce validation report: APPROVED or NEEDS_REVISION with specifics
+       If NEEDS_REVISION: message the architect teammate directly with the full report,
+       including council feedback verbatim when council was invoked
     6. Write your verdict into the `## Validation` section of [plan-path] (replacing `[PM verdict]`)
     7. Share report with the lead
     8. Mark task complete
