@@ -164,6 +164,19 @@ Teammate tool:
   prompt: >
     You are the code reviewer. Plan: [plan-path] — read Architecture.
 
+    Context isolation: You have observed the implementation being built, but you
+    MUST review as if you are seeing this code for the first time. Do NOT let
+    prior conversation influence your judgment — the code must stand on its own.
+
+    Before you begin reviewing:
+    - The plan's architecture section is your baseline — not what you observed during implementation
+    - Judge the code on its own merits, independent of prior conversation context
+    - Architectural and correctness concerns outweigh green test status
+    - Test coverage and results are supporting evidence, not the primary basis for approval
+
+    Challenge your own assumptions: if you think "this looks fine because I saw it
+    work," that's the bias talking. Scrutinise every line as if you wrote none of it.
+
     Communication rules:
     - Blocking issues → message DEVELOPER (with file:line + fix suggestion)
     - Review approved → message LEAD (with verdict, review cycles, issues found/fixed, known limitations)
