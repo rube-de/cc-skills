@@ -566,3 +566,13 @@ When designing multi-agent workflows, resist the urge to create distinct output 
 **Good pattern**: Single lean handoff capturing only what's NOT elsewhere — open questions, unresolved items, and context a future session can't infer from the code.
 
 > Source: [PR #142](https://github.com/rube-de/cc-skills/pull/142) — consolidated dev report + session handoff into a single artifact, removing ~91 lines of template and report-writing logic from the reviewer teammate prompt.
+
+### GitHub PRs have three comment types — don't forget issue comments
+
+GitHub's GraphQL API surfaces three distinct comment types on pull requests: `reviewThreads` (inline code comments), `reviews` (top-level review bodies with APPROVE/REQUEST_CHANGES/COMMENT state), and `comments` (general PR-level issue comments). Tools that only query the first two will silently miss any comment posted via `gh pr comment`, the Issues API, or bots that use the issue comment mechanism (e.g., `claude[bot]`, `coderabbitai`, `gemini-code-assist`).
+
+**Bad pattern**: Querying only `reviews` and `reviewThreads` — bot findings posted as issue comments are invisible.
+
+**Good pattern**: Query all three (`comments`, `reviews`, `reviewThreads`) and assign distinct `reply_type` values (`issue_comment`, `pr_comment`, `inline`) so downstream consumers can route replies correctly.
+
+> Source: [Issue #166](https://github.com/rube-de/cc-skills/issues/166) — `claude[bot]` issue comment with 3 actionable findings was silently dropped because `pr-comments.sh` didn't query `comments`.
