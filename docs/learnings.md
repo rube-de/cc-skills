@@ -93,6 +93,24 @@ The imperative tells the agent *what to do*; the aphorism tells it *why*. This m
 
 > Source: [PR #125](https://github.com/rube-de/cc-skills/pull/125) — Gemini review flagged the aphorism-only phrasing in the anti-sycophancy directive. Research confirmed imperatives are more reliable for agent compliance.
 
+### Downstream rules must consume formally recorded inputs, not implicit assessments
+
+When a decision rule (e.g., a sizing table) consumes a value derived from an earlier workflow step, that value must be explicitly recorded as a formal artifact column — not left as an implicit "PM assessment." If the input isn't formally captured, the rule's data provenance is broken: reviewers can't audit the decision, agents can't reliably reference it, and the workflow has a hidden dependency on context that may not survive across steps or sessions.
+
+**Bad** — sizing rule references implicit context:
+```markdown
+**Epic sub-issues** — derive from the decomposition analysis (subsystems from the table row, structural changes from the PM's assessment during decomposition):
+```
+
+**Good** — sizing rule references a formal table column:
+```markdown
+**Epic sub-issues** — derive from the decomposition table columns (Subsystems and Structural Changes recorded during Round 2 decomposition):
+```
+
+The fix is always the same: add the consumed value as an explicit column/field in the artifact that feeds the downstream rule.
+
+> Source: [Issue #124](https://github.com/rube-de/cc-skills/issues/124), [PR #171](https://github.com/rube-de/cc-skills/pull/171) — Three independent reviewers across two review rounds flagged the same gap: Epic sub-issue sizing consumed "structural changes" but the decomposition table had no column for it.
+
 ---
 
 ## Agent Teams
