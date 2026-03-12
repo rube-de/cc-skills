@@ -38,6 +38,8 @@ sh ../../scripts/pr-comments.sh
   - `PR_REPO` ← `.pr.repo`
   - `REVIEW_DECISION` ← `.pr.reviewDecision`
   - `REVIEW_BODIES` ← `.review_bodies`
+  - `ISSUE_COMMENTS` ← `.issue_comments` (unfiltered — includes PR author + DLC sentinel replies, used for "already replied" detection)
+  - `REVIEWER_ISSUE_COMMENTS` ← `.reviewer_issue_comments` (filtered — excludes PR author + DLC sentinels, used for categorization and coverage)
 
 **State check:** If `PR_STATE` is not `OPEN`, abort with: "PR #{PR_NUMBER} is {PR_STATE} — only open PRs can be checked."
 
@@ -46,11 +48,11 @@ sh ../../scripts/pr-comments.sh
 **Print reviewer inventory** from the pre-built `.reviewers` array:
 
 ```text
-Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads, {summary.total_review_bodies} review bodies):
-  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies)
+Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads, {summary.total_review_bodies} review bodies, {summary.total_issue_comments} issue comments):
+  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies, {reviewer.issue_comments} issue comments)
 ```
 
-Store each reviewer's `top_level_threads` and `review_bodies` counts as the coverage targets for Step 4b.
+Store each reviewer's `top_level_threads`, `review_bodies`, and `issue_comments` counts as the coverage targets for Step 4b.
 
 ## Step 1b: Verify and Checkout PR Branch
 
@@ -105,15 +107,27 @@ Using the `REVIEW_BODIES` array from Step 1, classify each review body:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | A DLC reply was already posted for this review body, OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
+| **Resolved** | A DLC reply was already posted for this review body (detected by scanning `ISSUE_COMMENTS` for a sentinel `<!-- dlc-reply:{database_id} -->` where `{database_id}` matches this review body's `database_id`), OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
 | **Dismissed** | `state == "DISMISSED"` |
 | **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) |
 
-> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved.
+> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
+
+### Issue comment categorization
+
+Using the `REVIEWER_ISSUE_COMMENTS` array from Step 1 (the filtered set that matches summary/reviewer counts), classify each issue comment. Use the unfiltered `ISSUE_COMMENTS` array only for sentinel-based "already replied" detection in review body categorization above.
+
+| Category | Criteria |
+|----------|----------|
+| **Resolved** | Either (a) a subsequent issue comment contains the sentinel `<!-- dlc-reply:{database_id} -->` where `{database_id}` matches this comment's `database_id`, **or** (b) the issue comment body is purely informational / non-actionable and does not require a DLC reply (e.g., status updates, CI results with no action items). |
+| **Dismissed** | Not applicable for issue comments — there is no GitHub dismiss mechanism. Note: a "Dismissed:" prefix in the Resolved criteria above is a DLC reply label (marking the comment as resolved via dismissal), not this category. This category will typically be 0 for issue comments. |
+| **Unresolved** | All other issue comments with actionable items, questions, or concerns that have not been resolved via a DLC reply. Issue comments have no `state` field — treat all non-resolved actionable comments as unresolved. |
+
+> **Note:** Issue comments have no `path`/`line` like threads, no `state` like review bodies, and no parent-child links (they are a flat array). To reliably detect prior DLC replies, check for the `<!-- dlc-reply:{database_id} -->` sentinel in subsequent issue comments. Parse the body for actionable items (specific change requests, code findings, questions). If the body is purely informational (status updates, CI results with no action items) and does not require any follow-up, classify it as **Resolved**, even if no DLC reply was posted.
 
 ### Unresolved sub-categories
 
-For unresolved comments (both threads and review bodies), further classify by actionability:
+For unresolved comments (threads, review bodies, and issue comments), further classify by actionability:
 
 | Sub-Category | Criteria |
 |-------------|----------|
@@ -136,6 +150,11 @@ For each **fixable unresolved** comment, follow a three-phase workflow:
 1. Review bodies have no `path`/`line` — parse the body for file paths, function names, or code snippets
 2. If the body references specific files, read those files for context
 3. If no specific files are mentioned, use the PR diff to understand the scope of the review
+
+**For issue comments** (`reply_type == "issue_comment"`):
+1. Issue comments have no `path`/`line` — parse the body for file paths, function names, or code snippets
+2. If the body references specific files, read those files for context
+3. If no specific files are mentioned, use the PR diff to understand the scope of the comment
 
 ### 3b. Critically Evaluate
 
@@ -190,13 +209,25 @@ gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   -F in_reply_to={rest_id}
 ```
 
-- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original:
+- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel:
 
 ```bash
 gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
-{reply text}"
+{reply text}
+<!-- dlc-reply:{database_id} -->"
 ```
+
+- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel:
+
+```bash
+gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+
+{reply text}
+<!-- dlc-reply:{database_id} -->"
+```
+
+> **Why the sentinel?** Issue comments are a flat array with no parent-child links. The `<!-- dlc-reply:{database_id} -->` HTML comment embeds the original comment's identifier so that (1) "already replied" detection is reliable and (2) the script can filter DLC's own replies from the reviewer inventory on re-runs.
 
 ### Reply text by category
 
@@ -212,28 +243,29 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 4b: Coverage Verification
 
-Verify that every top-level thread **and** every review body from Step 1 has been accounted for. For each reviewer, count the items that appear across **all** categories:
+Verify that every top-level thread, every review body, **and** every issue comment from Step 1 has been accounted for. For each reviewer, count the items that appear across **all** categories:
 
-| Category | Counts toward thread coverage? | Counts toward review body coverage? |
-|----------|-------------------------------|-------------------------------------|
-| Resolved | Yes | Yes |
-| Dismissed | Yes | Yes |
-| Fixed by DLC | Yes | Yes |
-| Skipped (user decision) | Yes | Yes |
-| Discussion | Yes | Yes |
-| Blocked | Yes | Yes |
+| Category | Counts toward thread coverage? | Counts toward review body coverage? | Counts toward issue comment coverage? |
+|----------|-------------------------------|-------------------------------------|---------------------------------------|
+| Resolved | Yes | Yes | Yes |
+| Dismissed | Yes | Yes | Yes |
+| Fixed by DLC | Yes | Yes | Yes |
+| Skipped (user decision) | Yes | Yes | Yes |
+| Discussion | Yes | Yes | Yes |
+| Blocked | Yes | Yes | Yes |
 
-For each reviewer from Step 1, assert **both**:
+For each reviewer from Step 1, assert **all three**:
 
 ```text
 covered threads (sum across all categories) == top_level_threads from Step 1
 covered review bodies (sum across all categories) == review_bodies count from Step 1
+covered issue comments (sum across all categories) == issue_comments count from Step 1
 ```
 
 **If all reviewers pass:** Print confirmation and continue to Step 5.
 
 ```text
-Coverage verification passed: {thread_count}/{thread_count} threads + {body_count}/{body_count} review bodies verified across {r} reviewers.
+Coverage verification passed: {thread_count}/{thread_count} threads + {body_count}/{body_count} review bodies + {issue_comment_count}/{issue_comment_count} issue comments verified across {r} reviewers.
 ```
 
 **If any reviewer has a mismatch: HALT.**
@@ -242,7 +274,7 @@ Do **not** proceed to Step 5. Print the error:
 
 ```text
 ERROR: Coverage verification failed.
-  Reviewer @{name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized.
+  Reviewer @{name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized. Expected {expected_issue_comments} issue comments, found {actual_issue_comments} categorized.
   Missing IDs: {id1}, {id2}, ...
   Recovery: re-processing missed items through Steps 2-3.
 ```
@@ -262,7 +294,7 @@ FATAL: Coverage verification failed after retry.
 
 Do **not** retry more than once. A second failure indicates a structural issue that automated re-processing cannot fix.
 
-> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" (Step 1) and "comments addressed" — ensuring that every reviewer's feedback (both inline threads and review bodies) is categorized before fixes are committed and replies are posted.
+> **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" (Step 1) and "comments addressed" — ensuring that every reviewer's feedback (inline threads, review bodies, and issue comments) is categorized before fixes are committed and replies are posted.
 
 ## Step 5: User-Gated Issue Creation
 
@@ -343,7 +375,16 @@ gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
 ```bash
 gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
-{decision-aware reply text}"
+{decision-aware reply text}
+<!-- dlc-reply:{database_id} -->"
+```
+
+- **Issue comment** (`reply_type == "issue_comment"`):
+```bash
+gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+
+{decision-aware reply text}
+<!-- dlc-reply:{database_id} -->"
 ```
 
 ## Step 5c: PR Summary Comment
@@ -357,20 +398,21 @@ Build the summary with these sections:
 ```markdown
 ## PR Comment Status
 
-| Status | Threads | Review Bodies | Total |
-|--------|---------|---------------|-------|
-| Resolved | {n} | {n} | {n} |
-| Fixed by DLC | {n} | {n} | {n} |
-| Skipped (user decision) | {n} | {n} | {n} |
-| Discussion (needs human) | {n} | {n} | {n} |
-| Blocked | {n} | {n} | {n} |
-| Dismissed | {n} | {n} | {n} |
-| **Total** | **{n}** | **{n}** | **{n}** |
+| Status | Threads | Review Bodies | Issue Comments | Total |
+|--------|---------|---------------|----------------|-------|
+| Resolved | {n} | {n} | {n} | {n} |
+| Fixed by DLC | {n} | {n} | {n} | {n} |
+| Skipped (user decision) | {n} | {n} | {n} | {n} |
+| Discussion (needs human) | {n} | {n} | {n} | {n} |
+| Blocked | {n} | {n} | {n} | {n} |
+| Dismissed | {n} | {n} | {n} | {n} |
+| **Total** | **{n}** | **{n}** | **{n}** | **{n}** |
 
 ## Decisions
 
 {For each Discussion/Blocked/skipped Fixable item, one line:}
-- `{path}:{line}` — {decision}: {brief description}
+- Inline thread: `{path}:{line}` — {decision}: {brief description}
+- Review body / issue comment: `{reply_type}:{database_id}` — {decision}: {brief description}
 
 ## Follow-up
 
@@ -425,12 +467,12 @@ Print summary:
 ```text
 PR review compliance check complete.
   - PR: #{number} ({title})
-  - Total comments: {n} ({thread_count} threads + {review_body_count} review bodies)
+  - Total comments: {n} ({thread_count} threads + {review_body_count} review bodies + {issue_comment_count} issue comments)
   - Resolved: {n}, Fixed by DLC: {n}, Skipped (user decision): {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
-  - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies) (Step 4b passed)
+  - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

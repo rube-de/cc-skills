@@ -566,3 +566,23 @@ When designing multi-agent workflows, resist the urge to create distinct output 
 **Good pattern**: Single lean handoff capturing only what's NOT elsewhere — open questions, unresolved items, and context a future session can't infer from the code.
 
 > Source: [PR #142](https://github.com/rube-de/cc-skills/pull/142) — consolidated dev report + session handoff into a single artifact, removing ~91 lines of template and report-writing logic from the reviewer teammate prompt.
+
+### GitHub PRs have three comment types — don't forget issue comments
+
+GitHub's GraphQL API surfaces three distinct comment types on pull requests: `reviewThreads` (inline code comments), `reviews` (top-level review bodies with `APPROVED` / `CHANGES_REQUESTED` / `COMMENTED` state), and `comments` (general PR-level issue comments). Tools that only query the first two will silently miss any comment posted via `gh pr comment`, the Issues API, or bots that use the issue comment mechanism (e.g., `claude[bot]`, `coderabbitai`, `gemini-code-assist`).
+
+**Bad pattern**: Querying only `reviews` and `reviewThreads` — bot findings posted as issue comments are invisible.
+
+**Good pattern**: Query all three (`comments`, `reviews`, `reviewThreads`) and assign distinct `reply_type` values (`issue_comment`, `pr_comment`, `inline`) so downstream consumers can route replies correctly.
+
+> Source: [Issue #166](https://github.com/rube-de/cc-skills/issues/166) — `claude[bot]` issue comment with 3 actionable findings was silently dropped because `pr-comments.sh` didn't query `comments`.
+
+### Issue comments are a flat array — use sentinels for reply attribution
+
+GitHub's `pullRequest.comments` (issue comments) is a flat list with no `in_reply_to_id` or parent-child structure. This means DLC replies posted via `gh pr comment` are indistinguishable from original reviewer comments on re-runs. Two problems arise: (1) "already replied" detection based on body-matching heuristics (e.g., quoting the first 100 chars) is fragile and can false-match, and (2) DLC's own replies appear as new issue comments, inflating reviewer inventories and creating phantom coverage targets.
+
+**Bad pattern**: Detecting prior DLC replies by matching body text prefixes against a flat comment array — coincidental matches cause false positives; DLC's own replies create ghost reviewers.
+
+**Good pattern**: Embed a `<!-- dlc-reply:{database_id} -->` HTML comment sentinel in every DLC reply body. On re-runs, the script filters sentinel-bearing comments from the reviewer inventory, and the skill matches by `database_id` for reliable "already replied" detection.
+
+> Source: [PR #167](https://github.com/rube-de/cc-skills/pull/167) — `claude[bot]` identified the re-ingestion bug and the unreliable Resolved heuristic; sentinel approach fixes both.
