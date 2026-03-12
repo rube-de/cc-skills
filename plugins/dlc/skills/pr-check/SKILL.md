@@ -106,11 +106,11 @@ Using the `REVIEW_BODIES` array from Step 1, classify each review body:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | A DLC reply was already posted for this review body, OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
+| **Resolved** | A DLC reply was already posted for this review body (detected by scanning `ISSUE_COMMENTS` for a sentinel `<!-- dlc-reply:{database_id} -->` where `{database_id}` matches this review body's `database_id`), OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
 | **Dismissed** | `state == "DISMISSED"` |
 | **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) |
 
-> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved.
+> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
 
 ### Issue comment categorization
 

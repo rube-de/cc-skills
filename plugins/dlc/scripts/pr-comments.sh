@@ -180,16 +180,20 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     }
   ] as $threads |
 
-  # Build reviewer inventory (from threads, review bodies, and issue comments)
-  # Exclude from inventory:
-  #   - PR author issue comments (retained for "already replied" detection)
-  #   - DLC sentinel-bearing issue comments (replies posted by DLC on prior runs)
-  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $issue_comments[] | select(.author != $pr_author and (.body | contains("<!-- dlc-reply:") | not)) | .author ] | unique) |
+  # Filter issue comments for reviewer inventory and summary totals:
+  # exclude PR author comments and DLC sentinel replies (both retained in
+  # the raw $issue_comments array for "already replied" detection).
+  [ $issue_comments[] |
+    select(.author != $pr_author and (.body | contains("<!-- dlc-reply:") | not))
+  ] as $reviewer_issue_comments |
+
+  # Build reviewer inventory (from threads, review bodies, and filtered issue comments)
+  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $reviewer_issue_comments[] | .author ] | unique) |
   map(. as $login |
     ([ $threads[] | select(.author == $login) ]) as $user_threads |
     ([ $threads[].replies[] | select(.author == $login) ]) as $user_replies |
     ([ $review_bodies[] | select(.author == $login) ]) as $user_review_bodies |
-    ([ $issue_comments[] | select(.author == $login and .author != $pr_author and (.body | contains("<!-- dlc-reply:") | not)) ]) as $user_issue_comments |
+    ([ $reviewer_issue_comments[] | select(.author == $login) ]) as $user_issue_comments |
     {
       login: $login,
       total_comments: (($user_threads | length) + ($user_replies | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),
@@ -223,10 +227,10 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     summary: {
       total_comments:                (([ $threads[] | 1 + .reply_count ] | add // 0) +
                                       ($review_bodies | length) +
-                                      ($issue_comments | length)),
+                                      ($reviewer_issue_comments | length)),
       total_threads:                 ($threads | length),
       total_review_bodies:           ($review_bodies | length),
-      total_issue_comments:          ($issue_comments | length),
+      total_issue_comments:          ($reviewer_issue_comments | length),
       review_bodies_with_content:    ($review_bodies | length),
       resolved_threads:              ([ $threads[] | select(.is_resolved) ] | length),
       unresolved_threads:            ([ $threads[] | select(.is_resolved | not) ] | length),

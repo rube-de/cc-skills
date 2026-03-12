@@ -569,7 +569,7 @@ When designing multi-agent workflows, resist the urge to create distinct output 
 
 ### GitHub PRs have three comment types — don't forget issue comments
 
-GitHub's GraphQL API surfaces three distinct comment types on pull requests: `reviewThreads` (inline code comments), `reviews` (top-level review bodies with APPROVE/REQUEST_CHANGES/COMMENT state), and `comments` (general PR-level issue comments). Tools that only query the first two will silently miss any comment posted via `gh pr comment`, the Issues API, or bots that use the issue comment mechanism (e.g., `claude[bot]`, `coderabbitai`, `gemini-code-assist`).
+GitHub's GraphQL API surfaces three distinct comment types on pull requests: `reviewThreads` (inline code comments), `reviews` (top-level review bodies with `APPROVED` / `CHANGES_REQUESTED` / `COMMENTED` state), and `comments` (general PR-level issue comments). Tools that only query the first two will silently miss any comment posted via `gh pr comment`, the Issues API, or bots that use the issue comment mechanism (e.g., `claude[bot]`, `coderabbitai`, `gemini-code-assist`).
 
 **Bad pattern**: Querying only `reviews` and `reviewThreads` — bot findings posted as issue comments are invisible.
 
