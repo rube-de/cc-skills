@@ -119,7 +119,7 @@ Using the `ISSUE_COMMENTS` array from Step 1, classify each issue comment:
 | Category | Criteria |
 |----------|----------|
 | **Resolved** | Either (a) a DLC reply was already posted for this issue comment (a subsequent issue comment quoting the first 100 chars and prefixed with "Fixed:", "Dismissed:", or "Acknowledged:"), **or** (b) the issue comment body is purely informational / non-actionable and does not require a DLC reply (e.g., status updates, CI results with no action items). |
-| **Dismissed** | Not applicable for issue comments — there is no dismiss mechanism. This category will typically be 0 for issue comments. |
+| **Dismissed** | Not applicable for issue comments — there is no GitHub dismiss mechanism. Note: a "Dismissed:" prefix in the Resolved criteria above is a DLC reply label (marking the comment as resolved via dismissal), not this category. This category will typically be 0 for issue comments. |
 | **Unresolved** | All other issue comments with actionable items, questions, or concerns that have not been resolved via a DLC reply. Issue comments have no `state` field — treat all non-resolved actionable comments as unresolved. |
 
 > **Note:** Issue comments have no `path`/`line` like threads and no `state` like review bodies. Parse the body for actionable items (specific change requests, code findings, questions). If the body is purely informational (status updates, CI results with no action items) and does not require any follow-up, classify it as **Resolved**, even if no DLC reply was posted.

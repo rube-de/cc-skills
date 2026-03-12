@@ -138,7 +138,7 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     }
   ] as $review_bodies |
 
-  # Extract issue comments (general PR-level comments via Issues API)
+  # Extract issue comments (general PR-level comments via pullRequest.comments)
   # Keep all issue comments (including those from the PR author) for "already replied"
   # detection; PR author is excluded from reviewer inventory below, not here.
   [ $pr.comments.nodes[] |
@@ -191,7 +191,7 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     ([ $issue_comments[] | select(.author == $login and .author != $pr_author) ]) as $user_issue_comments |
     {
       login: $login,
-      total_comments: (($user_threads | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),
+      total_comments: (($user_threads | length) + ($user_replies | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),
       top_level_threads: ($user_threads | length),
       review_bodies: ($user_review_bodies | length),
       issue_comments: ($user_issue_comments | length)
@@ -220,7 +220,7 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     review_bodies: $review_bodies,
     issue_comments: $issue_comments,
     summary: {
-      total_comments:                (($threads | length) +
+      total_comments:                (([ $threads[] | 1 + .reply_count ] | add // 0) +
                                       ($review_bodies | length) +
                                       ($issue_comments | length)),
       total_threads:                 ($threads | length),
