@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/rube-de/cc-skills/compare/v1.43.0...v1.44.0) (2026-03-12)
+
+
+### Features
+
+* **dlc:** add issue comment support to pr-comments.sh and pr-check ([#167](https://github.com/rube-de/cc-skills/issues/167)) ([8e9bbc5](https://github.com/rube-de/cc-skills/commit/8e9bbc55f46bf14852651e4b64947cbbe1bfa472)), closes [#166](https://github.com/rube-de/cc-skills/issues/166)
+
 # [1.43.0](https://github.com/rube-de/cc-skills/compare/v1.42.0...v1.43.0) (2026-03-11)
 
 
