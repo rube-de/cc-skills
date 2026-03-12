@@ -181,14 +181,15 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
   ] as $threads |
 
   # Build reviewer inventory (from threads, review bodies, and issue comments)
-  # Exclude PR author issue comments from inventory -- they are retained in the
-  # output for "already replied" detection but should not create coverage targets.
-  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $issue_comments[] | select(.author != $pr_author) | .author ] | unique) |
+  # Exclude from inventory:
+  #   - PR author issue comments (retained for "already replied" detection)
+  #   - DLC sentinel-bearing issue comments (replies posted by DLC on prior runs)
+  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $issue_comments[] | select(.author != $pr_author and (.body | contains("<!-- dlc-reply:") | not)) | .author ] | unique) |
   map(. as $login |
     ([ $threads[] | select(.author == $login) ]) as $user_threads |
     ([ $threads[].replies[] | select(.author == $login) ]) as $user_replies |
     ([ $review_bodies[] | select(.author == $login) ]) as $user_review_bodies |
-    ([ $issue_comments[] | select(.author == $login and .author != $pr_author) ]) as $user_issue_comments |
+    ([ $issue_comments[] | select(.author == $login and .author != $pr_author and (.body | contains("<!-- dlc-reply:") | not)) ]) as $user_issue_comments |
     {
       login: $login,
       total_comments: (($user_threads | length) + ($user_replies | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),

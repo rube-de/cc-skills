@@ -118,11 +118,11 @@ Using the `ISSUE_COMMENTS` array from Step 1, classify each issue comment:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | Either (a) a DLC reply was already posted for this issue comment (a subsequent issue comment quoting the first 100 chars and prefixed with "Fixed:", "Dismissed:", or "Acknowledged:"), **or** (b) the issue comment body is purely informational / non-actionable and does not require a DLC reply (e.g., status updates, CI results with no action items). |
+| **Resolved** | Either (a) a subsequent issue comment contains the sentinel `<!-- dlc-reply:{database_id} -->` where `{database_id}` matches this comment's `database_id`, **or** (b) the issue comment body is purely informational / non-actionable and does not require a DLC reply (e.g., status updates, CI results with no action items). |
 | **Dismissed** | Not applicable for issue comments — there is no GitHub dismiss mechanism. Note: a "Dismissed:" prefix in the Resolved criteria above is a DLC reply label (marking the comment as resolved via dismissal), not this category. This category will typically be 0 for issue comments. |
 | **Unresolved** | All other issue comments with actionable items, questions, or concerns that have not been resolved via a DLC reply. Issue comments have no `state` field — treat all non-resolved actionable comments as unresolved. |
 
-> **Note:** Issue comments have no `path`/`line` like threads and no `state` like review bodies. Parse the body for actionable items (specific change requests, code findings, questions). If the body is purely informational (status updates, CI results with no action items) and does not require any follow-up, classify it as **Resolved**, even if no DLC reply was posted.
+> **Note:** Issue comments have no `path`/`line` like threads, no `state` like review bodies, and no parent-child links (they are a flat array). To reliably detect prior DLC replies, check for the `<!-- dlc-reply:{database_id} -->` sentinel in subsequent issue comments. Parse the body for actionable items (specific change requests, code findings, questions). If the body is purely informational (status updates, CI results with no action items) and does not require any follow-up, classify it as **Resolved**, even if no DLC reply was posted.
 
 ### Unresolved sub-categories
 
@@ -208,21 +208,25 @@ gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   -F in_reply_to={rest_id}
 ```
 
-- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original:
+- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel:
 
 ```bash
 gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
-{reply text}"
+{reply text}
+<!-- dlc-reply:{database_id} -->"
 ```
 
-- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original:
+- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel:
 
 ```bash
 gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
-{reply text}"
+{reply text}
+<!-- dlc-reply:{database_id} -->"
 ```
+
+> **Why the sentinel?** Issue comments are a flat array with no parent-child links. The `<!-- dlc-reply:{database_id} -->` HTML comment embeds the original comment's identifier so that (1) "already replied" detection is reliable and (2) the script can filter DLC's own replies from the reviewer inventory on re-runs.
 
 ### Reply text by category
 
@@ -370,14 +374,16 @@ gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
 ```bash
 gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
-{decision-aware reply text}"
+{decision-aware reply text}
+<!-- dlc-reply:{database_id} -->"
 ```
 
 - **Issue comment** (`reply_type == "issue_comment"`):
 ```bash
 gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
-{decision-aware reply text}"
+{decision-aware reply text}
+<!-- dlc-reply:{database_id} -->"
 ```
 
 ## Step 5c: PR Summary Comment
