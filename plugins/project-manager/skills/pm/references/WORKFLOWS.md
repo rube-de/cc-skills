@@ -208,16 +208,16 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 
 1. Identify the independent stories or capability chunks from the requirements gathered in Round 1
 2. Sequence them by dependency (what must exist before what)
-3. Verify each chunk is independently completable — one story, focused subsystem scope, no bundled structural changes
+3. Verify each chunk is independently completable — one story, focused subsystem scope. For each chunk, determine whether it requires structural changes (restructuring existing code before new behavior can be added). If a chunk bundles structural changes with new behavior, consider splitting them into separate sub-issues.
 4. Present a decomposition table:
 
 > "Based on what you described, here's my proposed breakdown:
 >
-> | # | Sub-issue | Subsystems | Acceptance criteria | Depends on |
-> |---|-----------|------------|---------------------|------------|
-> | 1 | [story A] | [system X] | [key VERIFY condition] | — |
-> | 2 | [story B] | [system Y] | [key VERIFY condition] | #1 |
-> | 3 | [story C] | [system Z] | [key VERIFY condition] | #1 |
+> | # | Sub-issue | Subsystems | Structural Changes | Acceptance criteria | Depends on |
+> |---|-----------|------------|--------------------|---------------------|------------|
+> | 1 | [story A] | [system X] | No | [key VERIFY condition] | — |
+> | 2 | [story B] | [system Y] | Yes | [key VERIFY condition] | #1 |
+> | 3 | [story C] | [system Z] | No | [key VERIFY condition] | #1 |
 >
 > Each sub-issue is independently completable. Approve this breakdown, adjust, or add/remove items?"
 
@@ -227,6 +227,7 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 **Table columns:**
 - **Sub-issue**: imperative title (one story per row)
 - **Subsystems**: which systems/components are touched
+- **Structural Changes**: `Yes` / `No` — use exactly these literals to indicate whether the sub-issue requires restructuring existing code before new behavior can be added (e.g., changing an interface, extracting a module, refactoring a loader). This column drives size label selection for sub-issues.
 - **Acceptance criteria**: the single most important VERIFY condition
 - **Depends on**: The '#' of a preceding sub-issue, or "—" if none
 
@@ -248,7 +249,8 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 
 After the user approves the decomposition table from Round 2 and Round 3 is complete:
 - Draft each approved row as an individual issue using the Feature or Refactor templates
-- Each sub-issue must match its row: title, subsystems, and dependency
+- Each sub-issue must match its row: title, subsystems, structural changes, and dependency
+- Populate the sub-issue's Complexity Hint section using the table row's Subsystems and Structural Changes columns
 - Expand the table's single acceptance criterion into comprehensive acceptance criteria (tests, edge cases, error handling) using the template's Acceptance Criteria section
 - Each references the parent epic: `Part of #EPIC_NUMBER`
 - Order sub-issues by the dependency column (earlier rows first)
