@@ -224,6 +224,7 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     threads: $threads,
     review_bodies: $review_bodies,
     issue_comments: $issue_comments,
+    reviewer_issue_comments: $reviewer_issue_comments,
     summary: {
       total_comments:                (([ $threads[] | 1 + .reply_count ] | add // 0) +
                                       ($review_bodies | length) +

@@ -38,7 +38,8 @@ sh ../../scripts/pr-comments.sh
   - `PR_REPO` ← `.pr.repo`
   - `REVIEW_DECISION` ← `.pr.reviewDecision`
   - `REVIEW_BODIES` ← `.review_bodies`
-  - `ISSUE_COMMENTS` ← `.issue_comments`
+  - `ISSUE_COMMENTS` ← `.issue_comments` (unfiltered — includes PR author + DLC sentinel replies, used for "already replied" detection)
+  - `REVIEWER_ISSUE_COMMENTS` ← `.reviewer_issue_comments` (filtered — excludes PR author + DLC sentinels, used for categorization and coverage)
 
 **State check:** If `PR_STATE` is not `OPEN`, abort with: "PR #{PR_NUMBER} is {PR_STATE} — only open PRs can be checked."
 
@@ -114,7 +115,7 @@ Using the `REVIEW_BODIES` array from Step 1, classify each review body:
 
 ### Issue comment categorization
 
-Using the `ISSUE_COMMENTS` array from Step 1, classify each issue comment:
+Using the `REVIEWER_ISSUE_COMMENTS` array from Step 1 (the filtered set that matches summary/reviewer counts), classify each issue comment. Use the unfiltered `ISSUE_COMMENTS` array only for sentinel-based "already replied" detection in review body categorization above.
 
 | Category | Criteria |
 |----------|----------|
