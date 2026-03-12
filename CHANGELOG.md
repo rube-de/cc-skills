@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/rube-de/cc-skills/compare/v1.44.0...v1.45.0) (2026-03-12)
+
+
+### Features
+
+* **pm:** add structural changes column to epic decomposition table ([#171](https://github.com/rube-de/cc-skills/issues/171)) ([b9fead2](https://github.com/rube-de/cc-skills/commit/b9fead2f7f260a001411b6fbeabd2179b6b8e0e1)), closes [#124](https://github.com/rube-de/cc-skills/issues/124)
+
 # [1.44.0](https://github.com/rube-de/cc-skills/compare/v1.43.0...v1.44.0) (2026-03-12)
 
 
