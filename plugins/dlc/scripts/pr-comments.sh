@@ -139,9 +139,10 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
   ] as $review_bodies |
 
   # Extract issue comments (general PR-level comments via Issues API)
+  # Keep all issue comments (including those from the PR author) for "already replied"
+  # detection; PR author is excluded from reviewer inventory below, not here.
   [ $pr.comments.nodes[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
-    select((.author.login // "ghost") != $pr_author) |
     {
       id:          .id,
       database_id: (.databaseId // null),
@@ -180,15 +181,17 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
   ] as $threads |
 
   # Build reviewer inventory (from threads, review bodies, and issue comments)
-  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $issue_comments[] | .author ] | unique) |
+  # Exclude PR author issue comments from inventory -- they are retained in the
+  # output for "already replied" detection but should not create coverage targets.
+  ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $issue_comments[] | select(.author != $pr_author) | .author ] | unique) |
   map(. as $login |
     ([ $threads[] | select(.author == $login) ]) as $user_threads |
     ([ $threads[].replies[] | select(.author == $login) ]) as $user_replies |
     ([ $review_bodies[] | select(.author == $login) ]) as $user_review_bodies |
-    ([ $issue_comments[] | select(.author == $login) ]) as $user_issue_comments |
+    ([ $issue_comments[] | select(.author == $login and .author != $pr_author) ]) as $user_issue_comments |
     {
       login: $login,
-      total_comments: (($user_threads | length) + ($user_replies | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),
+      total_comments: (($user_threads | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),
       top_level_threads: ($user_threads | length),
       review_bodies: ($user_review_bodies | length),
       issue_comments: ($user_issue_comments | length)
@@ -217,7 +220,7 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     review_bodies: $review_bodies,
     issue_comments: $issue_comments,
     summary: {
-      total_comments:                (([ $threads[] | 1 + .reply_count ] | add // 0) +
+      total_comments:                (($threads | length) +
                                       ($review_bodies | length) +
                                       ($issue_comments | length)),
       total_threads:                 ($threads | length),

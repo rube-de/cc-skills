@@ -404,7 +404,8 @@ Build the summary with these sections:
 ## Decisions
 
 {For each Discussion/Blocked/skipped Fixable item, one line:}
-- `{path}:{line}` — {decision}: {brief description}
+- Inline thread: `{path}:{line}` — {decision}: {brief description}
+- Review body / issue comment: `{reply_type}:{database_id}` — {decision}: {brief description}
 
 ## Follow-up
 
