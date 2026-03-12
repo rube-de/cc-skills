@@ -282,7 +282,7 @@ The user can always override the recommendation by choosing any option.
 |-------------|--------|----------------------|
 | **Implement now** | Confidence-gated implementation (see above) | Reclassify as **Fixed** — enters Step 4 reply queue with `Fixed:` prefix |
 | **Reply with explanation** | Draft the explanation reply text | Reclassify as **Discussion-Answered** — enters Step 4 reply queue |
-| **Defer to author** | No immediate action | Remains **Discussion** — enters Step 5b for decision-aware reply |
+| **Defer to author** | No immediate action | Reclassify as **Discussion-deferred** — enters Step 5b for decision-aware reply |
 | **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue |
 
 > **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in Step 4.
@@ -348,7 +348,7 @@ Verify that every top-level thread, every review body, **and** every issue comme
 | Dismissed | Yes | Yes | Yes |
 | Fixed by DLC | Yes | Yes | Yes |
 | Skipped (user decision) | Yes | Yes | Yes |
-| Discussion (deferred) | Yes | Yes | Yes |
+| Discussion-deferred | Yes | Yes | Yes |
 | Discussion-Answered | Yes | Yes | Yes |
 | Discussion-Tracked | Yes | Yes | Yes |
 | Blocked | Yes | Yes | Yes |
@@ -407,7 +407,12 @@ If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Ste
 
 **If only Discussion-Tracked items exist** (no Blocked or skipped Fixable), create the follow-up issue directly — no `AskUserQuestion` needed.
 
-**If Blocked or user-skipped Fixable items also exist**, use `AskUserQuestion` to ask whether to include them in the same follow-up issue:
+**If only Blocked or user-skipped Fixable items exist** (no Discussion-Tracked), use `AskUserQuestion` to ask whether to create a follow-up issue for these items:
+
+- Present the count and brief summary of the undecided items (Blocked + skipped Fixable)
+- Options: "Yes, create follow-up issue" / "No, I'll handle those manually" / "Show me details first"
+
+**If both Discussion-Tracked and Blocked or user-skipped Fixable items exist**, use `AskUserQuestion` to ask whether to include the undecided items in the same follow-up issue:
 
 - Present the count and brief summary of the undecided items (Blocked + skipped Fixable), noting that {n} Discussion-Tracked items will be included regardless
 - Options: "Yes, include in follow-up issue" / "No, I'll handle those manually" / "Show me details first"
@@ -451,7 +456,7 @@ If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and prin
 
 ## Step 5b: Decision-Aware Inline Replies
 
-If there are no remaining Discussion (deferred from Step 3.5), Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion-deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post inline replies reflecting each item's outcome. Items arrive here from different decision paths:
 
@@ -509,7 +514,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 5c: PR Summary Comment
 
-If there are no remaining Discussion (deferred from Step 3.5), Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion-deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post a PR-level summary comment containing the overall status and decisions.
 
@@ -524,7 +529,7 @@ Build the summary with these sections:
 | Fixed by DLC | {n} | {n} | {n} | {n} |
 | Answered by DLC | {n} | {n} | {n} | {n} |
 | Skipped (user decision) | {n} | {n} | {n} | {n} |
-| Discussion (deferred) | {n} | {n} | {n} | {n} |
+| Discussion-deferred | {n} | {n} | {n} | {n} |
 | Discussion-Tracked | {n} | {n} | {n} | {n} |
 | Blocked | {n} | {n} | {n} | {n} |
 | Dismissed | {n} | {n} | {n} | {n} |
@@ -593,8 +598,8 @@ PR review compliance check complete.
   - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked), Blocked: {n}, Dismissed: {n}
   - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]
