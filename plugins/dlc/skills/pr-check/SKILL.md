@@ -95,7 +95,7 @@ Using the `.threads` array from Step 1, classify each top-level review thread:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", or "Acknowledged:") |
+| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", "Acknowledged:", or "Answered:") |
 | **Dismissed** | Not applicable for inline threads — threads use GitHub's resolve mechanism, not dismiss. This category will typically be 0 for threads. |
 | **Unresolved** | Everything else. This includes `is_outdated` threads (the agent must re-check the current code state), and threads containing nit/optional/consider comments (these are still legitimate feedback) |
 
@@ -244,17 +244,17 @@ Classification: {Implementable Fix | Clarification Answer | Design Decision | Ou
 Assessment: {your analysis of what the reviewer is asking/concerned about and why you classified it this way}
 
 Options:
-  1. {Recommended action} (Recommended)
-  2. Skip — defer to author
+  1. Implement now
+  2. Defer to author
   3. Create follow-up issue
   4. Reply with explanation only
 ```
 
-Adjust the recommended option based on classification:
-- **Implementable Fix** → "Implement now" as option 1
-- **Clarification Answer** → "Reply with explanation" as option 1
-- **Design Decision** → "Defer to author" as option 1
-- **Out-of-PR-Scope** → "Create follow-up issue" as option 1
+Mark the option matching the classification as "(Recommended)":
+- **Implementable Fix** → option 1 (Recommended)
+- **Clarification Answer** → option 4 (Recommended)
+- **Design Decision** → option 2 (Recommended)
+- **Out-of-PR-Scope** → option 3 (Recommended)
 
 **Multiple implementation approaches:** When an Implementable Fix has more than one reasonable way to address the reviewer's feedback, split option 1 into sub-options with your recommendation marked:
 
@@ -286,7 +286,6 @@ The user can always override the recommendation by choosing any option.
 | **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue |
 
 > **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in Step 4.
-
 > **If an implementation fails** (tool error, file not found, conflict), reclassify as **Blocked** with the reason "implementation failed: {error}" — same guardrail as Step 3c.
 
 ## Step 4: Reply to Fixed, Dismissed, and Answered Comments
@@ -332,7 +331,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 |----------|-------------|---------|
 | **Fixed** | `Fixed: {brief description}` | `Fixed: renamed variable to camelCase` |
 | **Dismissed** | `Dismissed: {reason}` | `Dismissed: review formally dismissed via GitHub` |
-| **Discussion-Answered** | (no prefix — post the explanation directly) | `The function is async because it awaits the database query on line 45. The null check exists in the caller at api.ts:23.` |
+| **Discussion-Answered** | `Answered: {explanation}` | `Answered: The function is async because it awaits the database query on line 45. The null check exists in the caller at api.ts:23.` |
 
 **Dismissed reasons:**
 - "review formally dismissed via GitHub" — for review bodies with `state == "DISMISSED"`
@@ -429,7 +428,7 @@ If the user selects "Show me details first", display each undecided item with yo
 | Comment Category | Severity |
 |-----------------|----------|
 | Unresolved — Blocked | **High** |
-| Unresolved — Discussion | **Medium** |
+| Unresolved — Discussion-Tracked | **Medium** |
 | Unresolved — Fixable (unfixed due to error) | **Medium** |
 | Dismissed | **Info** |
 
@@ -452,7 +451,7 @@ If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and prin
 
 ## Step 5b: Decision-Aware Inline Replies
 
-If there are no remaining Discussion (deferred from Step 3.5), Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion (deferred from Step 3.5), Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post inline replies reflecting each item's outcome. Items arrive here from different decision paths:
 
@@ -462,11 +461,12 @@ For each **Discussion-deferred** item (user chose "Defer to author" in Step 3.5)
 |-------------|-------------------|
 | Discussion-deferred | `Acknowledged — will be addressed by the author` |
 
-For each **Discussion-Tracked** item (included in follow-up issue in Step 5), always reply:
+For each **Discussion-Tracked** item (included in follow-up issue in Step 5), reply based on issue creation outcome:
 
 | Item Status | Inline Reply Text |
 |-------------|-------------------|
-| Discussion-Tracked | `Acknowledged — tracked in #ISSUE_NUMBER` |
+| Discussion-Tracked (issue created) | `Acknowledged — tracked in #ISSUE_NUMBER` |
+| Discussion-Tracked (issue creation failed) | `Acknowledged — tracked in follow-up issue (draft saved to {draft_path})` |
 
 For each **Blocked** comment, map the user's Step 5 decision:
 
@@ -509,7 +509,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 5c: PR Summary Comment
 
-If there are no remaining Discussion (deferred from Step 3.5), Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion (deferred from Step 3.5), Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post a PR-level summary comment containing the overall status and decisions.
 
@@ -525,6 +525,7 @@ Build the summary with these sections:
 | Answered by DLC | {n} | {n} | {n} | {n} |
 | Skipped (user decision) | {n} | {n} | {n} | {n} |
 | Discussion (deferred) | {n} | {n} | {n} | {n} |
+| Discussion-Tracked | {n} | {n} | {n} | {n} |
 | Blocked | {n} | {n} | {n} | {n} |
 | Dismissed | {n} | {n} | {n} | {n} |
 | **Total** | **{n}** | **{n}** | **{n}** | **{n}** |
@@ -592,8 +593,8 @@ PR review compliance check complete.
   - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked), Blocked: {n}, Dismissed: {n}
   - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]
