@@ -208,16 +208,16 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 
 1. Identify the independent stories or capability chunks from the requirements gathered in Round 1
 2. Sequence them by dependency (what must exist before what)
-3. Verify each chunk is independently completable — one story, focused subsystem scope, no bundled structural changes
+3. Verify each chunk is independently completable — one story, focused subsystem scope. For each chunk, determine whether it requires structural changes (restructuring existing code before new behavior can be added)
 4. Present a decomposition table:
 
 > "Based on what you described, here's my proposed breakdown:
 >
-> | # | Sub-issue | Subsystems | Acceptance criteria | Depends on |
-> |---|-----------|------------|---------------------|------------|
-> | 1 | [story A] | [system X] | [key VERIFY condition] | — |
-> | 2 | [story B] | [system Y] | [key VERIFY condition] | #1 |
-> | 3 | [story C] | [system Z] | [key VERIFY condition] | #1 |
+> | # | Sub-issue | Subsystems | Structural Changes | Acceptance criteria | Depends on |
+> |---|-----------|------------|--------------------|---------------------|------------|
+> | 1 | [story A] | [system X] | No | [key VERIFY condition] | — |
+> | 2 | [story B] | [system Y] | Yes | [key VERIFY condition] | #1 |
+> | 3 | [story C] | [system Z] | No | [key VERIFY condition] | #1 |
 >
 > Each sub-issue is independently completable. Approve this breakdown, adjust, or add/remove items?"
 
@@ -227,6 +227,7 @@ to list pieces. The PM has the requirements and proposes the decomposition itsel
 **Table columns:**
 - **Sub-issue**: imperative title (one story per row)
 - **Subsystems**: which systems/components are touched
+- **Structural Changes**: Yes / No — whether the sub-issue requires restructuring existing code before new behavior can be added (e.g., changing an interface, extracting a module, refactoring a loader). This column drives size label selection for sub-issues.
 - **Acceptance criteria**: the single most important VERIFY condition
 - **Depends on**: The '#' of a preceding sub-issue, or "—" if none
 

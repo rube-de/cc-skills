@@ -196,12 +196,12 @@ This is the "north star" for all sub-issues — agents reference this to underst
 
 Issues should be completed in this order. Dependencies are explicit.
 
-| # | Sub-issue | Subsystems | Acceptance criteria | Depends on |
-|---|-----------|------------|---------------------|------------|
-| 1 | [Story title] | [system/component] | [key VERIFY condition] | — |
-| 2 | [Story title] | [system/component] | [key VERIFY condition] | #1 |
-| 3 | [Story title] | [system/component] | [key VERIFY condition] | #1 |
-| 4 | [Story title] | [system/component] | [key VERIFY condition] | #2, #3 |
+| # | Sub-issue | Subsystems | Structural Changes | Acceptance criteria | Depends on |
+|---|-----------|------------|--------------------|---------------------|------------|
+| 1 | [Story title] | [system/component] | No | [key VERIFY condition] | — |
+| 2 | [Story title] | [system/component] | Yes | [key VERIFY condition] | #1 |
+| 3 | [Story title] | [system/component] | No | [key VERIFY condition] | #1 |
+| 4 | [Story title] | [system/component] | No | [key VERIFY condition] | #2, #3 |
 
 ### Sub-Issues
 

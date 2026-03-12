@@ -237,7 +237,7 @@ Determine the size label deterministically from analysis already gathered in ear
 | Single module/component | `size/M` |
 | Cross-module or architecture-level | `size/L` |
 
-**Epic sub-issues** — derive from the decomposition analysis (subsystems from the table row, structural changes from the PM's assessment during decomposition):
+**Epic sub-issues** — derive from the decomposition table columns (Subsystems and Structural Changes recorded during Round 2 decomposition):
 
 | Subsystems | Structural Changes | Size Label |
 |------------|-------------------|------------|
