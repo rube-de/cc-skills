@@ -141,6 +141,7 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
   # Extract issue comments (general PR-level comments via Issues API)
   [ $pr.comments.nodes[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
+    select((.author.login // "ghost") != $pr_author) |
     {
       id:          .id,
       database_id: (.databaseId // null),
@@ -180,16 +181,19 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
 
   # Build reviewer inventory (from threads, review bodies, and issue comments)
   ([ $threads[] | .author ] + [ $review_bodies[] | .author ] + [ $issue_comments[] | .author ] | unique) |
-  map(. as $login | {
-    login: $login,
-    total_comments: (([ $threads[] | select(.author == $login) ] | length) +
-                     ([ $threads[].replies[] | select(.author == $login) ] | length) +
-                     ([ $review_bodies[] | select(.author == $login) ] | length) +
-                     ([ $issue_comments[] | select(.author == $login) ] | length)),
-    top_level_threads: ([ $threads[] | select(.author == $login) ] | length),
-    review_bodies: ([ $review_bodies[] | select(.author == $login) ] | length),
-    issue_comments: ([ $issue_comments[] | select(.author == $login) ] | length)
-  }) as $reviewers |
+  map(. as $login |
+    ([ $threads[] | select(.author == $login) ]) as $user_threads |
+    ([ $threads[].replies[] | select(.author == $login) ]) as $user_replies |
+    ([ $review_bodies[] | select(.author == $login) ]) as $user_review_bodies |
+    ([ $issue_comments[] | select(.author == $login) ]) as $user_issue_comments |
+    {
+      login: $login,
+      total_comments: (($user_threads | length) + ($user_replies | length) + ($user_review_bodies | length) + ($user_issue_comments | length)),
+      top_level_threads: ($user_threads | length),
+      review_bodies: ($user_review_bodies | length),
+      issue_comments: ($user_issue_comments | length)
+    }
+  ) as $reviewers |
 
   # Truncation flag (compare against unfiltered node counts to avoid false positives from content filtering)
   ($pr.reviewThreads.totalCount > ($threads | length) or
