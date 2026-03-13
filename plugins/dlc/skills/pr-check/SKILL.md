@@ -421,7 +421,7 @@ If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Ste
 
 If the user selects "Show me details first", display each undecided item with your assessment, then re-ask with the first two options.
 
-**Outcome based on user choice:**
+**Outcome based on user choice (Branch 3 only):**
 - "Yes" → create issue including Discussion-Tracked + Blocked/skipped items
 - "No" → create issue with only Discussion-Tracked items (Blocked/skipped items are handled manually by the author)
 
