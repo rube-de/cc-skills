@@ -232,12 +232,12 @@ Assess the effort and nature of each discussion item:
 
 ### 3.5c. Present to User or Auto-Implement
 
-**High-confidence Implementable Fix** items (all four criteria from Step 3b pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`.
+**High-confidence Implementable Fix** items (all four criteria from Step 3b pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
 
 **All other items** — Medium/Low-confidence Implementable Fix, Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
 
 ```text
-Discussion item {n}/{total}: @{reviewer} at {path}:{line}
+Discussion item {n}/{total}: @{reviewer} at {location}
 > "{first 100 chars of comment}..."
 
 Classification: {Implementable Fix | Clarification Answer | Design Decision | Out-of-PR-Scope}
@@ -249,6 +249,8 @@ Options:
   3. Create follow-up issue
   4. Reply with explanation
 ```
+
+Where `{location}` is `{path}:{line}` for inline items, or `{reply_type}:{database_id}` for review bodies and issue comments.
 
 Mark the option matching the classification as "(Recommended)":
 - **Implementable Fix** → option 1 (Recommended)
@@ -405,14 +407,14 @@ If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Ste
 - **Discussion-Tracked** items are automatically included in the follow-up issue — the user already approved per-item in Step 3.5. Do not re-ask.
 - **Discussion-Deferred** items go directly to Step 5b ("will be addressed by the author"). They are not candidates for issue creation.
 
-**If only Discussion-Tracked items exist** (no Blocked or skipped Fixable), create the follow-up issue directly — no `AskUserQuestion` needed.
+**Branch 1:** If only Discussion-Tracked items exist (no Blocked or skipped Fixable), create the follow-up issue directly — no `AskUserQuestion` needed.
 
-**If only Blocked or user-skipped Fixable items exist** (no Discussion-Tracked), use `AskUserQuestion` to ask whether to create a follow-up issue for these items:
+**Branch 2:** If only Blocked or user-skipped Fixable items exist (no Discussion-Tracked), use `AskUserQuestion` to ask whether to create a follow-up issue for these items:
 
 - Present the count and brief summary of the undecided items (Blocked + skipped Fixable)
 - Options: "Yes, create follow-up issue" / "No, I'll handle those manually" / "Show me details first"
 
-**If both Discussion-Tracked and Blocked or user-skipped Fixable items exist**, use `AskUserQuestion` to ask whether to include the undecided items in the same follow-up issue:
+**Branch 3:** If both Discussion-Tracked and Blocked or user-skipped Fixable items exist, use `AskUserQuestion` to ask whether to include the undecided items in the same follow-up issue:
 
 - Present the count and brief summary of the undecided items (Blocked + skipped Fixable), noting that {n} Discussion-Tracked items will be included in the issue
 - Options: "Yes, include in follow-up issue" / "No, I'll handle those manually" / "Show me details first"
