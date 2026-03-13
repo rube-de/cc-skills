@@ -247,7 +247,7 @@ Options:
   1. Implement now
   2. Defer to author
   3. Create follow-up issue
-  4. Reply with explanation only
+  4. Reply with explanation
 ```
 
 Mark the option matching the classification as "(Recommended)":
@@ -264,7 +264,7 @@ Options:
   1b. Implement: use Optional<T> return type instead
   2. Defer to author
   3. Create follow-up issue
-  4. Reply with explanation only
+  4. Reply with explanation
 ```
 
 Include a brief rationale for why you recommend one approach over the others. The user picks a sub-option; execution proceeds as normal for "Implement now."
@@ -543,7 +543,7 @@ Build the summary with these sections:
 
 ## Decisions
 
-{For each Discussion/Blocked/skipped Fixable item, one line:}
+{For each Discussion-Deferred, Discussion-Tracked, Blocked, or skipped Fixable item, one line:}
 - Inline thread: `{path}:{line}` — {decision}: {brief description}
 - Review body / issue comment: `{reply_type}:{database_id}` — {decision}: {brief description}
 
