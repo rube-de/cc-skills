@@ -262,7 +262,7 @@ Mark the option matching the classification as "(Recommended)":
 Options:
   1a. Implement: add null check in the caller (Recommended)
   1b. Implement: use Optional<T> return type instead
-  2. Skip — defer to author
+  2. Defer to author
   3. Create follow-up issue
   4. Reply with explanation only
 ```
@@ -282,7 +282,7 @@ The user can always override the recommendation by choosing any option.
 |-------------|--------|----------------------|
 | **Implement now** | Confidence-gated implementation (see above) | Reclassify as **Fixed** — enters Step 4 reply queue with `Fixed:` prefix |
 | **Reply with explanation** | Draft the explanation reply text | Reclassify as **Discussion-Answered** — enters Step 4 reply queue |
-| **Defer to author** | No immediate action | Reclassify as **Discussion-deferred** — enters Step 5b for decision-aware reply |
+| **Defer to author** | No immediate action | Reclassify as **Discussion-Deferred** — enters Step 5b for decision-aware reply |
 | **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue |
 
 > **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in Step 4.
@@ -348,7 +348,7 @@ Verify that every top-level thread, every review body, **and** every issue comme
 | Dismissed | Yes | Yes | Yes |
 | Fixed by DLC | Yes | Yes | Yes |
 | Skipped (user decision) | Yes | Yes | Yes |
-| Discussion-deferred | Yes | Yes | Yes |
+| Discussion-Deferred | Yes | Yes | Yes |
 | Discussion-Answered | Yes | Yes | Yes |
 | Discussion-Tracked | Yes | Yes | Yes |
 | Blocked | Yes | Yes | Yes |
@@ -403,7 +403,7 @@ If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Ste
 
 **Per-item decisions from Step 3.5 are final:**
 - **Discussion-Tracked** items are automatically included in the follow-up issue — the user already approved per-item in Step 3.5. Do not re-ask.
-- **Discussion-deferred** items go directly to Step 5b ("will be addressed by the author"). They are not candidates for issue creation.
+- **Discussion-Deferred** items go directly to Step 5b ("will be addressed by the author"). They are not candidates for issue creation.
 
 **If only Discussion-Tracked items exist** (no Blocked or skipped Fixable), create the follow-up issue directly — no `AskUserQuestion` needed.
 
@@ -414,10 +414,14 @@ If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Ste
 
 **If both Discussion-Tracked and Blocked or user-skipped Fixable items exist**, use `AskUserQuestion` to ask whether to include the undecided items in the same follow-up issue:
 
-- Present the count and brief summary of the undecided items (Blocked + skipped Fixable), noting that {n} Discussion-Tracked items will be included regardless
+- Present the count and brief summary of the undecided items (Blocked + skipped Fixable), noting that {n} Discussion-Tracked items will be included in the issue
 - Options: "Yes, include in follow-up issue" / "No, I'll handle those manually" / "Show me details first"
 
 If the user selects "Show me details first", display each undecided item with your assessment, then re-ask with the first two options.
+
+**Outcome based on user choice:**
+- "Yes" → create issue including Discussion-Tracked + Blocked/skipped items
+- "No" → create issue with only Discussion-Tracked items (Blocked/skipped items are handled manually by the author)
 
 **If issue creation proceeds** (either auto or approved):
 
@@ -452,19 +456,21 @@ gh issue create \
 
 If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
-**If the user chooses "No, I'll handle manually"**, skip issue creation and proceed to Step 5b.
+**If the user chooses "No, I'll handle manually":**
+- **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
+- **Branch 3** (both Discussion-Tracked and Blocked/skipped items): create the follow-up issue with only Discussion-Tracked items. The Blocked/skipped items proceed to Step 5b as "will be addressed by the author."
 
 ## Step 5b: Decision-Aware Inline Replies
 
-If there are no remaining Discussion-deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post inline replies reflecting each item's outcome. Items arrive here from different decision paths:
 
-For each **Discussion-deferred** item (user chose "Defer to author" in Step 3.5), always reply:
+For each **Discussion-Deferred** item (user chose "Defer to author" in Step 3.5), always reply:
 
 | Item Status | Inline Reply Text |
 |-------------|-------------------|
-| Discussion-deferred | `Acknowledged — will be addressed by the author` |
+| Discussion-Deferred | `Acknowledged — will be addressed by the author` |
 
 For each **Discussion-Tracked** item (included in follow-up issue in Step 5), reply based on issue creation outcome:
 
@@ -514,7 +520,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 5c: PR Summary Comment
 
-If there are no remaining Discussion-deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post a PR-level summary comment containing the overall status and decisions.
 
@@ -529,7 +535,7 @@ Build the summary with these sections:
 | Fixed by DLC | {n} | {n} | {n} | {n} |
 | Answered by DLC | {n} | {n} | {n} | {n} |
 | Skipped (user decision) | {n} | {n} | {n} | {n} |
-| Discussion-deferred | {n} | {n} | {n} | {n} |
+| Discussion-Deferred | {n} | {n} | {n} | {n} |
 | Discussion-Tracked | {n} | {n} | {n} | {n} |
 | Blocked | {n} | {n} | {n} | {n} |
 | Dismissed | {n} | {n} | {n} | {n} |
