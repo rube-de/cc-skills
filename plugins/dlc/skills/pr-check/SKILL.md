@@ -232,7 +232,7 @@ Assess the effort and nature of each discussion item:
 
 ### 3.5c. Present to User or Auto-Implement
 
-**High-confidence Implementable Fix** items (all four criteria from Step 3b pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
+**High-confidence Implementable Fix** items (all four criteria from Step 3b (Critically Evaluate) pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
 
 **All other items** — Medium/Low-confidence Implementable Fix, Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
 
@@ -277,7 +277,7 @@ The user can always override the recommendation by choosing any option.
 
 **For "Implement now"**: Apply the same confidence-gated implementation as Step 3c:
 
-- **High confidence** (all four criteria from Step 3b pass) → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
+- **High confidence** (all four criteria from Step 3b (Critically Evaluate) pass) → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
 - **Medium or Low confidence** → Present your assessment (which criteria passed/failed) alongside the implementation. The user already chose "Implement now" so proceed unless they intervene — but surface any technical concerns so they can course-correct.
 
 | User Choice | Action | Item Reclassification |
