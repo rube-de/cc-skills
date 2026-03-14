@@ -95,7 +95,7 @@ Using the `.threads` array from Step 1, classify each top-level review thread:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", or "Acknowledged:") |
+| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", "Acknowledged:", or "Answered:") |
 | **Dismissed** | Not applicable for inline threads — threads use GitHub's resolve mechanism, not dismiss. This category will typically be 0 for threads. |
 | **Unresolved** | Everything else. This includes `is_outdated` threads (the agent must re-check the current code state), and threads containing nit/optional/consider comments (these are still legitimate feedback) |
 
@@ -192,9 +192,107 @@ Assign a confidence level:
 - Never implement a suggestion assessed as technically incorrect without explicit user approval
 - If an `Edit` or `Write` call fails (tool error, file not found, conflict), reclassify the item as **Blocked** with the reason "implementation failed: {error}" — do not leave it in the Fixable state
 
-## Step 4: Reply to Fixed and Dismissed Comments
+## Step 3.5: Evaluate Discussion Items
 
-For each **Fixed** and **Dismissed** comment, post a reply using the appropriate routing based on `reply_type`.
+If no **Discussion** items exist, **skip this step**.
+
+For each **Discussion** unresolved comment, follow a four-phase workflow:
+
+### 3.5a. Read Context
+
+Use the same context-reading approach as Step 3a:
+
+**For inline threads** (`reply_type == "inline"`):
+1. Read the file at the referenced `path`
+2. Read at least 20 lines of surrounding context (before and after the target `line`)
+3. Read the full comment thread (including any replies)
+
+**For review bodies** (`reply_type == "pr_comment"`):
+1. Parse the body for file paths, function names, or code snippets
+2. If the body references specific files, read those files for context
+3. If no specific files are mentioned, use the PR diff to understand the scope
+
+**For issue comments** (`reply_type == "issue_comment"`):
+1. Parse the body for file paths, function names, or code snippets
+2. If the body references specific files, read those files for context
+3. If no specific files are mentioned, use the PR diff to understand the scope
+
+### 3.5b. Classify Discussion Item
+
+Assess the effort and nature of each discussion item:
+
+| Classification | Criteria | Default Recommendation |
+|---------------|----------|------------------------|
+| **Implementable Fix** | Technically straightforward code change directly related to the PR feedback — rename, add/edit comment, tweak condition, fix typo, add validation, refactor a block. Size doesn't matter; complexity does. | **Implement now** (code is free) |
+| **Clarification Answer** | Reviewer asked a question the agent can answer from codebase context (e.g., "why is this async?", "does this handle nulls?") | **Reply with explanation** |
+| **Design Decision** | Requires architectural judgment, product scope decision, or trade-off the PR author must make | **Defer to author** |
+| **Out-of-PR-Scope** | Valid concern but belongs in a separate PR/issue (large refactor, cross-cutting change) | **Create follow-up issue** |
+
+> **Bias toward action**: Default to **Implementable Fix** or **Clarification Answer** when the change is technically straightforward. Do not inflate complexity to avoid work — if the change doesn't require architectural judgment and is directly related to the reviewer's feedback, recommend implementing it regardless of size. The classification gate exists for genuinely complex items where the PR author must decide, not as an escape hatch for effort avoidance.
+
+### 3.5c. Present to User or Auto-Implement
+
+**High-confidence Implementable Fix** items (all four criteria from Step 3b (Critically Evaluate) pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
+
+**All other items** — Medium/Low-confidence Implementable Fix, Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
+
+```text
+Discussion item {n}/{total}: @{reviewer} at {location}
+> "{first 100 chars of comment}..."
+
+Classification: {Implementable Fix | Clarification Answer | Design Decision | Out-of-PR-Scope}
+Assessment: {your analysis of what the reviewer is asking/concerned about and why you classified it this way}
+
+Options:
+  1. Implement now
+  2. Defer to author
+  3. Create follow-up issue
+  4. Reply with explanation
+```
+
+Where `{location}` is `{path}:{line}` for inline items, or `{reply_type}:{database_id}` for review bodies and issue comments.
+
+Mark the option matching the classification as "(Recommended)":
+- **Implementable Fix** → option 1 (Recommended)
+- **Clarification Answer** → option 4 (Recommended)
+- **Design Decision** → option 2 (Recommended)
+- **Out-of-PR-Scope** → option 3 (Recommended)
+
+**Multiple implementation approaches:** When an Implementable Fix has more than one reasonable way to address the reviewer's feedback, split option 1 into sub-options with your recommendation marked:
+
+```text
+Options:
+  1a. Implement: add null check in the caller (Recommended)
+  1b. Implement: use Optional<T> return type instead
+  2. Defer to author
+  3. Create follow-up issue
+  4. Reply with explanation
+```
+
+Include a brief rationale for why you recommend one approach over the others. The user picks a sub-option; execution proceeds as normal for "Implement now."
+
+The user can always override the recommendation by choosing any option.
+
+### 3.5d. Execute Chosen Action
+
+**For "Implement now"**: Apply the same confidence-gated implementation as Step 3c:
+
+- **High confidence** (all four criteria from Step 3b (Critically Evaluate) pass) → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
+- **Medium or Low confidence** → Present your assessment (which criteria passed/failed) alongside the implementation. The user already chose "Implement now" so proceed unless they intervene — but surface any technical concerns so they can course-correct.
+
+| User Choice | Action | Item Reclassification |
+|-------------|--------|----------------------|
+| **Implement now** | Confidence-gated implementation (see above) | Reclassify as **Fixed** — enters Step 4 reply queue with `Fixed:` prefix |
+| **Reply with explanation** | Draft the explanation reply text | Reclassify as **Discussion-Answered** — enters Step 4 reply queue |
+| **Defer to author** | No immediate action | Reclassify as **Discussion-Deferred** — enters Step 5b for decision-aware reply |
+| **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue |
+
+> **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in Step 4.
+> **If an implementation fails** (tool error, file not found, conflict), reclassify as **Blocked** with the reason "implementation failed: {error}" — same guardrail as Step 3c.
+
+## Step 4: Reply to Fixed, Dismissed, and Answered Comments
+
+For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a reply using the appropriate routing based on `reply_type`.
 
 ### Reply routing
 
@@ -235,11 +333,12 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 |----------|-------------|---------|
 | **Fixed** | `Fixed: {brief description}` | `Fixed: renamed variable to camelCase` |
 | **Dismissed** | `Dismissed: {reason}` | `Dismissed: review formally dismissed via GitHub` |
+| **Discussion-Answered** | `Answered: {explanation}` | `Answered: The function is async because it awaits the database query on line 45. The null check exists in the caller at api.ts:23.` |
 
 **Dismissed reasons:**
 - "review formally dismissed via GitHub" — for review bodies with `state == "DISMISSED"`
 
-> **Note:** Discussion and Blocked replies are deferred to Step 5b (after user decision).
+> **Note:** Remaining Discussion items (deferred to author or tracked for follow-up) and Blocked replies are deferred to Step 5b (after user decision).
 
 ## Step 4b: Coverage Verification
 
@@ -251,7 +350,9 @@ Verify that every top-level thread, every review body, **and** every issue comme
 | Dismissed | Yes | Yes | Yes |
 | Fixed by DLC | Yes | Yes | Yes |
 | Skipped (user decision) | Yes | Yes | Yes |
-| Discussion | Yes | Yes | Yes |
+| Discussion-Deferred | Yes | Yes | Yes |
+| Discussion-Answered | Yes | Yes | Yes |
+| Discussion-Tracked | Yes | Yes | Yes |
 | Blocked | Yes | Yes | Yes |
 
 For each reviewer from Step 1, assert **all three**:
@@ -298,16 +399,33 @@ Do **not** retry more than once. A second failure indicates a structural issue t
 
 ## Step 5: User-Gated Issue Creation
 
-If no Discussion, Blocked, or user-skipped Fixable items remain after Step 3, **skip this step entirely**.
+If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Steps 3 and 3.5, **skip this step entirely**.
 
-If out-of-scope items remain (Discussion, Blocked, or items the user chose to skip), use `AskUserQuestion` to ask:
+> **Note:** Discussion items resolved in Step 3.5 (implemented as Implementable Fix or answered as Clarification) are already handled. Discussion items deferred to the author proceed directly to Step 5b — they do not appear here.
 
-- Present the count and a brief summary of remaining items
-- Options: "Yes, create follow-up issue" / "No, I'll handle manually" / "Show me details first"
+**Per-item decisions from Step 3.5 are final:**
+- **Discussion-Tracked** items are automatically included in the follow-up issue — the user already approved per-item in Step 3.5. Do not re-ask.
+- **Discussion-Deferred** items go directly to Step 5b ("will be addressed by the author"). They are not candidates for issue creation.
 
-If the user selects "Show me details first", display each remaining item with your assessment, then re-ask with the first two options.
+**Branch 1:** If only Discussion-Tracked items exist (no Blocked or skipped Fixable), create the follow-up issue directly — no `AskUserQuestion` needed.
 
-**If the user approves issue creation**, proceed:
+**Branch 2:** If only Blocked or user-skipped Fixable items exist (no Discussion-Tracked), use `AskUserQuestion` to ask whether to create a follow-up issue for these items:
+
+- Present the count and brief summary of the undecided items (Blocked + skipped Fixable)
+- Options: "Yes, create follow-up issue" / "No, I'll handle those manually" / "Show me details first"
+
+**Branch 3:** If both Discussion-Tracked and Blocked or user-skipped Fixable items exist, use `AskUserQuestion` to ask whether to include the undecided items in the same follow-up issue:
+
+- Present the count and brief summary of the undecided items (Blocked + skipped Fixable), noting that {n} Discussion-Tracked items will be included in the issue
+- Options: "Yes, include in follow-up issue" / "No, I'll handle those manually" / "Show me details first"
+
+If the user selects "Show me details first", display each undecided item with your assessment, then re-ask with the first two options.
+
+**Outcome based on user choice (Branch 3 only):**
+- "Yes" → create issue including Discussion-Tracked + Blocked/skipped items
+- "No" → create issue with only Discussion-Tracked items (Blocked/skipped items are handled manually by the author)
+
+**If issue creation proceeds** (either auto or approved):
 
 **Read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/ISSUE-TEMPLATE.md) now** and format the issue body exactly as specified.
 
@@ -321,7 +439,7 @@ If the user selects "Show me details first", display each remaining item with yo
 | Comment Category | Severity |
 |-----------------|----------|
 | Unresolved — Blocked | **High** |
-| Unresolved — Discussion | **Medium** |
+| Unresolved — Discussion-Tracked | **Medium** |
 | Unresolved — Fixable (unfixed due to error) | **Medium** |
 | Dismissed | **Info** |
 
@@ -340,19 +458,34 @@ gh issue create \
 
 If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
-**If the user chooses "No, I'll handle manually"**, skip issue creation and proceed to Step 5b.
+**If the user chooses "No, I'll handle manually":**
+- **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
+- **Branch 3** (both Discussion-Tracked and Blocked/skipped items): create the follow-up issue with only Discussion-Tracked items. The Blocked/skipped items proceed to Step 5b as "will be addressed by the author."
 
 ## Step 5b: Decision-Aware Inline Replies
 
-If there are no Discussion, Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
-After the user's decision in Step 5, post inline replies reflecting the actual outcome. Separate the global decision (for Discussion/Blocked items) from the per-item decision (for skipped Fixable items).
+Post inline replies reflecting each item's outcome. Items arrive here from different decision paths:
 
-For each **Discussion** or **Blocked** comment, map the user's Step 5 decision:
+For each **Discussion-Deferred** item (user chose "Defer to author" in Step 3.5), always reply:
+
+| Item Status | Inline Reply Text |
+|-------------|-------------------|
+| Discussion-Deferred | `Acknowledged — will be addressed by the author` |
+
+For each **Discussion-Tracked** item (included in follow-up issue in Step 5), reply based on issue creation outcome:
+
+| Item Status | Inline Reply Text |
+|-------------|-------------------|
+| Discussion-Tracked (issue created) | `Acknowledged — tracked in #ISSUE_NUMBER` |
+| Discussion-Tracked (issue creation failed) | `Acknowledged — tracked in follow-up issue (draft saved to {draft_path})` |
+
+For each **Blocked** comment, map the user's Step 5 decision:
 
 | User Decision (Step 5) | Inline Reply Text |
 |------------------------|-------------------|
-| Created follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
+| Included in follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
 | Handle manually | `Acknowledged — will be addressed by the author` |
 
 For each **user-skipped Fixable** comment, always reply:
@@ -389,7 +522,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 5c: PR Summary Comment
 
-If there are no Discussion, Blocked, or user-skipped Fixable items, **skip this step**.
+If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
 
 Post a PR-level summary comment containing the overall status and decisions.
 
@@ -402,15 +535,17 @@ Build the summary with these sections:
 |--------|---------|---------------|----------------|-------|
 | Resolved | {n} | {n} | {n} | {n} |
 | Fixed by DLC | {n} | {n} | {n} | {n} |
+| Answered by DLC | {n} | {n} | {n} | {n} |
 | Skipped (user decision) | {n} | {n} | {n} | {n} |
-| Discussion (needs human) | {n} | {n} | {n} | {n} |
+| Discussion-Deferred | {n} | {n} | {n} | {n} |
+| Discussion-Tracked | {n} | {n} | {n} | {n} |
 | Blocked | {n} | {n} | {n} | {n} |
 | Dismissed | {n} | {n} | {n} | {n} |
 | **Total** | **{n}** | **{n}** | **{n}** | **{n}** |
 
 ## Decisions
 
-{For each Discussion/Blocked/skipped Fixable item, one line:}
+{For each Discussion-Deferred, Discussion-Tracked, Blocked, or skipped Fixable item, one line:}
 - Inline thread: `{path}:{line}` — {decision}: {brief description}
 - Review body / issue comment: `{reply_type}:{database_id}` — {decision}: {brief description}
 
@@ -468,11 +603,11 @@ Print summary:
 PR review compliance check complete.
   - PR: #{number} ({title})
   - Total comments: {n} ({thread_count} threads + {review_body_count} review bodies + {issue_comment_count} issue comments)
-  - Resolved: {n}, Fixed by DLC: {n}, Skipped (user decision): {n}, Discussion: {n}, Blocked: {n}, Dismissed: {n}
+  - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked), Blocked: {n}, Dismissed: {n}
   - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Skipped={skipped_count}, Discussion={discussion_count}, Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]
