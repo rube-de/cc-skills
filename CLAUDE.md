@@ -9,7 +9,7 @@
 | council | Code Review | `/council` |
 | cdt | Development | `/cdt` |
 | project-manager | Productivity | `/pm`, `/pm:next`, `/pm:update`, `/pm:review` |
-| plugin-dev | Development | `/plugin-dev`, `/plugin-dev:create` |
+| plugin-dev | Development | `/plugin-dev`, `/plugin-dev:create`, `/plugin-dev:develop` |
 | temporal | Development | `/temporal` |
 | doppler | DevOps | `/doppler` |
 | oasis-dev | Development | `/oasis-dev` |
