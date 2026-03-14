@@ -7,7 +7,7 @@ allowed-tools:
   - Read
   - Write
   - Edit
-  - Bash(git:*, gh:*)
+  - Bash(git:*, gh:*, bun:*)
   - Grep
   - Glob
   - TodoWrite
@@ -41,7 +41,7 @@ Implement skill development issues through iterative planning, TDD-governed impl
 | 2. Plan | Draft implementation plan | Plan complete |
 | 3-4. Validate | Gemini review loop (max 5) | `APPROVED` status |
 | 4.5. Baseline (RED) | TODO: #163 — capture baseline behavior | Baseline saved |
-| 5-7. Implement (GREEN) | Write minimal skill addressing failures | All tasks done + criteria met |
+| 5-7. Implement (GREEN) | Write minimal skill addressing failures | All tasks done + criteria met + validation passing |
 | 7.5. Verify (REFACTOR) | TODO: #163 — compare against baseline | Benchmark passes or escalated |
 | 8-9. Review | Council review (max 3) | `APPROVED` status |
 | 10. Finalize | Commit + PR | PR created |
@@ -60,7 +60,7 @@ Implement skill development issues through iterative planning, TDD-governed impl
 
 During Phase 1, detect and note these skill-related files for domain-specific handling:
 - `SKILL.md` — Skill activation definitions (YAML frontmatter + instructions)
-- `*-workflow.md` — Workflow reference files
+- `references/*.md` — Workflow reference files (e.g., `references/WORKFLOW.md`)
 - `agents/*.md` — Agent/subagent definitions
 - `hooks/` — Hook definitions and scripts (hooks.json + shell/python scripts)
 
