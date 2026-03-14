@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/rube-de/cc-skills/compare/v1.45.0...v1.46.0) (2026-03-14)
+
+
+### Features
+
+* **dlc:** per-item Discussion evaluation in pr-check ([#174](https://github.com/rube-de/cc-skills/issues/174)) ([c70d28f](https://github.com/rube-de/cc-skills/commit/c70d28f5499715e18f4477fd554946fea9f01345)), closes [Hi#confidence](https://github.com/Hi/issues/confidence) [#143](https://github.com/rube-de/cc-skills/issues/143)
+
 # [1.45.0](https://github.com/rube-de/cc-skills/compare/v1.44.0...v1.45.0) (2026-03-12)
 
 
