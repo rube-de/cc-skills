@@ -16,14 +16,24 @@ git fetch origin
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)$' | head -1 | sed 's@.*origin/@@')
 
-# 3. Reset to clean default branch
+# 3. Guard against uncommitted work before reset
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo "⛔ BLOCKED: Uncommitted changes detected. Stash or commit before proceeding."
+  exit 1
+fi
+
+# 4. Reset to clean default branch
 git checkout "$DEFAULT_BRANCH"
 git reset --hard "origin/$DEFAULT_BRANCH"
 
-# 4. ALWAYS create a new branch - NON-NEGOTIABLE
-git checkout -b feature/issue-${ISSUE_NUM}
+# 5. Create branch (handle existing branch)
+if git show-ref --verify --quiet "refs/heads/feature/issue-${ISSUE_NUM}"; then
+  echo "Branch feature/issue-${ISSUE_NUM} already exists — see Phase 0 Step 4 for options."
+else
+  git checkout -b "feature/issue-${ISSUE_NUM}"
+fi
 
-# 5. Verify NOT on main/master
+# 6. Verify NOT on main/master
 if [[ "$(git branch --show-current)" =~ ^(main|master)$ ]]; then
   echo "⛔ BLOCKED: Branch creation failed. Cannot proceed."
   exit 1
@@ -36,7 +46,7 @@ fi
 
 Track these counters throughout workflow execution:
 
-```
+```text
 # Per-loop counters (reset when loop exits successfully)
 validation_iterations = 0      # Phase 3-4
 implementation_cycles = 0      # Phase 5-7
@@ -49,7 +59,7 @@ total_workflow_iterations = 0  # Increments on ANY loop iteration
 # Limits
 MAX_VALIDATION_ITERATIONS = 5
 MAX_IMPLEMENTATION_CYCLES = 10
-MAX_REFACTOR_ITERATIONS = 5    # Phase 7.5 verify+fix loop
+MAX_REFACTOR_ITERATIONS = 3    # Phase 7.5 verify+fix loop
 MAX_REVIEW_ITERATIONS = 3
 MAX_TOTAL_WORKFLOW_ITERATIONS = 25  # Hard cap across all loops (higher than base due to TDD phases)
 ```
@@ -57,7 +67,7 @@ MAX_TOTAL_WORKFLOW_ITERATIONS = 25  # Hard cap across all loops (higher than bas
 **Cross-loop escalation:**
 
 When `total_workflow_iterations >= MAX_TOTAL_WORKFLOW_ITERATIONS`:
-```
+```text
 Use AskUserQuestion tool:
 
 Question: "Workflow has run 25 total iterations across all phases without completing."
@@ -99,7 +109,7 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 
 ### ⛔ CRITICAL: Branch Creation is MANDATORY
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │  ⛔ NEVER work on main/master branch                                        │
 │  ⛔ NEVER skip branch creation, no matter how small the change              │
@@ -128,6 +138,13 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
    git fetch origin
    DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
    [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)$' | head -1 | sed 's@.*origin/@@')
+
+   # Guard against uncommitted work
+   if ! git diff --quiet || ! git diff --cached --quiet; then
+     # Escalate: "Uncommitted changes detected. Stash, commit, or discard?"
+     # Do NOT proceed with git reset --hard until user confirms
+   fi
+
    git checkout "$DEFAULT_BRANCH"
    git reset --hard "origin/$DEFAULT_BRANCH"
    ```
@@ -196,19 +213,20 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 
 3. **Detect skill-related files** ← SKILL DEVELOPMENT SPECIFIC
 
-   Scan the target plugin directory for domain-specific files:
-   ```bash
+   Scan the target plugin directory for domain-specific files using Glob/Grep tools:
+   ```text
    # Detect SKILL.md files
-   fd SKILL.md plugins/ --type f
+   Glob: plugins/**/SKILL.md
 
-   # Detect workflow references
-   fd -e md plugins/ --type f | rg 'workflow'
+   # Detect workflow references (any .md file with "workflow" in name or path)
+   Glob: plugins/**/references/*.md
+   Glob: plugins/**/*workflow*.md
 
    # Detect agent definitions
-   fd -e md plugins/*/agents/ --type f 2>/dev/null
+   Glob: plugins/*/agents/*.md
 
    # Detect hook definitions
-   fd hooks.json plugins/ --type f 2>/dev/null
+   Glob: plugins/**/hooks.json
    ```
 
    **Record findings** for use in Phase 2 planning:
@@ -286,8 +304,8 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 
 **Step 3: Submit to Gemini**
 
-```
-Use Task tool with subagent_type: gemini-consultant
+```text
+Use Task tool with subagent_type: council:gemini-consultant
 
 Prompt:
 Review this implementation plan for a skill development issue #{ISSUE_NUM}:
@@ -310,18 +328,18 @@ Evaluate:
 6. Is the task breakdown appropriate?
 7. Will `bun scripts/validate-plugins.mjs` pass after implementation?
 
-Provide specific feedback. State clearly if you AGREE or have CONCERNS.
+Provide specific feedback. State clearly: APPROVED or NEEDS CHANGES (with specifics).
 ```
 
 **Step 4: Process Feedback**
 
 - **Full agreement:** → Exit loop, proceed to Phase 4.5
-- **Hard limit reached:** (`iteration_count >= 5`) → Escalate to user
-- **Concerns raised:** → Revise plan, return to Step 3
+- **Hard limit reached:** (`validation_iterations >= 5`) → Escalate to user
+- **Concerns raised:** → Increment `validation_iterations` and `total_workflow_iterations`, revise plan, return to Step 3
 
 **Exit conditions:**
 1. Gemini returns `APPROVED` — proceed to Phase 4.5
-2. `iteration_count >= 5` — hard escalate to user
+2. `validation_iterations >= 5` — hard escalate to user
 
 ---
 
@@ -342,7 +360,7 @@ Provide specific feedback. State clearly if you AGREE or have CONCERNS.
 
 Until #163 integrates the testing tooling:
 
-```
+```text
 Log: "Phase 4.5 (Baseline/RED) — skipped: awaiting #163 integration"
 ```
 
@@ -412,7 +430,7 @@ If NO and within limit → Return to Step 5
 
 **Exit conditions:**
 1. All BD tasks done + all criteria met + tests passing + validation passing — proceed to Phase 7.5
-2. `cycle_count >= 10` — hard escalate to user
+2. `implementation_cycles >= 10` — hard escalate to user
 3. Same task fails 3 times — escalate that specific task
 
 ---
@@ -431,7 +449,7 @@ If NO and within limit → Return to Step 5
    - Identify new rationalizations (ways the model circumvents the skill)
    - Fix skill to close the loophole
    - Re-verify
-4. **Repeat** up to `MAX_REFACTOR_ITERATIONS` (default: 5)
+4. **Repeat** up to `MAX_REFACTOR_ITERATIONS` (default: 3)
 5. **If max iterations reached without full pass:** Escalate to user with:
    - Which test prompts still fail
    - What rationalizations were identified
@@ -439,7 +457,7 @@ If NO and within limit → Return to Step 5
 
 ### REFACTOR Loop Structure
 
-```
+```text
 refactor_iterations = 0
 
 while refactor_iterations < MAX_REFACTOR_ITERATIONS:
@@ -462,7 +480,7 @@ if refactor_iterations >= MAX_REFACTOR_ITERATIONS:
 
 Until #163 integrates the testing tooling:
 
-```
+```text
 Log: "Phase 7.5 (Verify+Benchmark/REFACTOR) — skipped: awaiting #163 integration"
 ```
 
@@ -489,13 +507,13 @@ Determine review scope based on change size:
 | Change Size | Criteria | Action |
 |-------------|----------|--------|
 | **Trivial** | <10 lines, no logic (typos, comments, config) | Skip review → Phase 10 |
-| **Small** | 1-2 files, simple logic | gemini-consultant |
+| **Small** | 1-2 files, simple logic | council:gemini-consultant |
 | **Medium** | 3-5 files, moderate complexity | gemini + codex |
 | **Large** | 6+ files, architectural impact | `/council` skill |
 
 **For Small Changes:**
-```
-Use Task tool with subagent_type: gemini-consultant
+```text
+Use Task tool with subagent_type: council:gemini-consultant
 
 Prompt:
 Review this skill development implementation for issue #{ISSUE_NUM}:
@@ -523,7 +541,7 @@ State clearly: APPROVED or NEEDS CHANGES (with specifics).
 ```
 
 **For Large Changes:**
-```
+```text
 Use Skill tool:
 skill: "council"
 args: "Review skill development implementation for issue #${ISSUE_NUM}"
@@ -532,8 +550,8 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 **Step 9: Process Review**
 
 - **Approved:** → Exit loop, proceed to Phase 10
-- **Hard limit reached:** (`review_count >= 3`) → Escalate to user
-- **Changes requested:** → Create BD tasks for fixes, return to Phase 5
+- **Hard limit reached:** (`review_iterations >= 3`) → Escalate to user
+- **Changes requested:** → Increment `review_iterations` and `total_workflow_iterations`, create BD tasks for fixes, return to Phase 5
 
 ### Consultant Arbitration (Medium Changes)
 
@@ -547,7 +565,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 **Exit conditions:**
 1. All reviewers return `APPROVED` — proceed to Phase 10
-2. `review_count >= 3` — hard escalate to user
+2. `review_iterations >= 3` — hard escalate to user
 
 ---
 
@@ -564,7 +582,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 2. **Stage changes**
    ```bash
-   git add -A
+   git add -- .
    git status
    ```
 
@@ -583,12 +601,13 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
    git push -u origin ${BRANCH_NAME}
    ```
 
-5. **Create PR**
+5. **Create PR** (capture PR_NUM for Phase 11)
    ```bash
-   gh pr create \
+   PR_URL=$(gh pr create \
      --title "feat(plugin-name): implement #${ISSUE_NUM} - brief description" \
      --body-file /tmp/issue-${ISSUE_NUM}-pr.md \
-     --label "enhancement"
+     --label "enhancement")
+   PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
    ```
 
 6. **Report to user**
@@ -618,6 +637,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 ### Post-Merge Cleanup
 
 ```bash
+# PR_NUM is the PR number from Phase 10's gh pr create output
 gh pr view ${PR_NUM} --json state --jq '.state'
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 git checkout "$DEFAULT_BRANCH"

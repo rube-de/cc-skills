@@ -9,7 +9,7 @@ Implement a GitHub issue for skill development using the skill-developer workflo
 
 ## Usage
 
-```
+```text
 /plugin-dev:develop #160
 /plugin-dev:develop owner/repo#160
 ```
@@ -18,7 +18,7 @@ Implement a GitHub issue for skill development using the skill-developer workflo
 
 This command activates the `develop` skill which runs the full skill-developer workflow:
 
-```
+```text
 setup → context → plan → validate → [baseline] → implement → [verify] → review → finalize
 ```
 
@@ -45,6 +45,6 @@ setup → context → plan → validate → [baseline] → implement → [verify
 
 The workflow automatically detects skill-related files for domain-specific handling:
 - `SKILL.md` — Skill activation definitions
-- `*-workflow.md` — Workflow reference files
+- `references/*.md` — Workflow reference files (e.g., `references/WORKFLOW.md`)
 - `agents/*.md` — Agent/subagent definitions
 - `hooks/` — Hook definitions and scripts
