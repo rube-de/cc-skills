@@ -24,6 +24,10 @@ MAX_IMPLEMENTATION_CYCLES = 10
 MAX_REFACTOR_ITERATIONS = 3    # Phase 7.5 verify+fix loop
 MAX_REVIEW_ITERATIONS = 3
 MAX_TOTAL_WORKFLOW_ITERATIONS = 25  # Hard cap across all loops (higher than base due to TDD phases)
+MAX_TASK_RETRIES = 3           # Per-individual-task retry cap (Phase 5-7)
+
+# Per-task retry tracking (reset when task completes or escalates)
+task_retry_count = {}          # Map of task_id → retry count
 ```
 
 **Cross-loop escalation:**
@@ -412,12 +416,12 @@ After each task or logical unit of work:
 - Within cycle limit?
 
 If YES to all → Exit loop, proceed to Phase 7.5
-If NO and within limit → Increment `implementation_cycles` and `total_workflow_iterations`, return to Step 5
+If NO and within limit → Increment `implementation_cycles` and `total_workflow_iterations`. If retrying the same task, increment `task_retry_count[task_id]`; if `task_retry_count[task_id] >= MAX_TASK_RETRIES`, escalate that task to user instead of retrying. Return to Step 5.
 
 **Exit conditions:**
 1. All BD tasks done + all criteria met + tests passing + validation passing — proceed to Phase 7.5
 2. `implementation_cycles >= 10` — hard escalate to user
-3. Same task fails 3 times — escalate that specific task
+3. `task_retry_count[task_id] >= MAX_TASK_RETRIES` — escalate that specific task to user
 
 ---
 
@@ -645,7 +649,9 @@ gh pr view ${PR_NUM} --json state --jq '.state'
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
 git checkout "$DEFAULT_BRANCH"
 git pull origin "$DEFAULT_BRANCH"
-git branch -d "feature/issue-${ISSUE_NUM}"
+# Use -D because squash/rebase merges don't produce a local merge commit
+git branch -D "feature/issue-${ISSUE_NUM}" 2>/dev/null || \
+  echo "Could not delete branch feature/issue-${ISSUE_NUM} — delete manually if needed."
 ```
 
 **Exit condition:** Temp files cleaned, branch deleted after merge.
