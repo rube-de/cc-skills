@@ -1,6 +1,6 @@
 ---
 name: develop
-description: "Use when implementing GitHub issues for skill or plugin development that require TDD-governed phases with baseline testing, iterative implementation, and verify+benchmark loops. Use this whenever the issue involves SKILL.md files, agent prompts, hook scripts, or plugin workflows. Triggers: develop skill, skill dev, plugin develop, develop issue, skill workflow."
+description: "Use when implementing GitHub issues for skill or plugin development that require TDD-governed phases with baseline testing, iterative implementation, and verify+benchmark loops. Use this whenever the issue involves SKILL.md files, agent prompts, hook scripts, or plugin workflows."
 allowed-tools:
   - Task
   - Skill
@@ -63,6 +63,10 @@ During Phase 1, detect and note these skill-related files for domain-specific ha
 - `references/*.md` — Workflow reference files (e.g., `references/WORKFLOW.md`)
 - `agents/*.md` — Agent/subagent definitions
 - `hooks/` — Hook definitions and scripts (hooks.json + shell/python scripts)
+
+## Triggers
+
+Use this skill when the user says: "develop skill", "skill dev", "plugin develop", "develop issue", "skill workflow", "implement skill issue", "TDD skill development".
 
 ## Workflow Reference
 

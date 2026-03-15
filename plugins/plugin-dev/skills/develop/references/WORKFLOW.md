@@ -4,44 +4,6 @@ Detailed step-by-step procedures for skill development with TDD extension points
 
 ---
 
-## ⛔ MANDATORY PRE-CHECK (Read First!)
-
-**Before starting ANY work on ANY issue, no matter how small:**
-
-```bash
-# 1. Sync with remote
-git fetch origin
-
-# 2. Detect default branch (main or master)
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-[[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)$' | head -1 | sed 's@.*origin/@@')
-
-# 3. Guard against uncommitted work before reset
-if ! git diff --quiet || ! git diff --cached --quiet; then
-  echo "⛔ BLOCKED: Uncommitted changes detected. Stash or commit before proceeding."
-  exit 1
-fi
-
-# 4. Reset to clean default branch
-git checkout "$DEFAULT_BRANCH"
-git reset --hard "origin/$DEFAULT_BRANCH"
-
-# 5. Create branch (handle existing branch)
-if git show-ref --verify --quiet "refs/heads/feature/issue-${ISSUE_NUM}"; then
-  echo "Branch feature/issue-${ISSUE_NUM} already exists — see Phase 0 Step 4 for options."
-else
-  git checkout -b "feature/issue-${ISSUE_NUM}"
-fi
-
-# 6. Verify NOT on main/master
-if [[ "$(git branch --show-current)" =~ ^(main|master)$ ]]; then
-  echo "⛔ BLOCKED: Branch creation failed. Cannot proceed."
-  exit 1
-fi
-```
-
----
-
 ## Global State & Limits
 
 Track these counters throughout workflow execution:
@@ -79,6 +41,8 @@ Options:
 ```
 
 ### State Persistence (Optional)
+
+> **Note:** This is a future enhancement. Initial implementations can skip state persistence. When implemented, save state at each phase transition and check for existing state on workflow start.
 
 Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 
@@ -155,7 +119,7 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
    ```
 
    If exists → Ask user:
-   ```
+   ```text
    Question: "Branch feature/issue-${ISSUE_NUM} already exists"
 
    Options:
@@ -426,7 +390,7 @@ After each task or logical unit of work:
 - Within cycle limit?
 
 If YES to all → Exit loop, proceed to Phase 7.5
-If NO and within limit → Return to Step 5
+If NO and within limit → Increment `implementation_cycles` and `total_workflow_iterations`, return to Step 5
 
 **Exit conditions:**
 1. All BD tasks done + all criteria met + tests passing + validation passing — proceed to Phase 7.5
@@ -551,7 +515,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 - **Approved:** → Exit loop, proceed to Phase 10
 - **Hard limit reached:** (`review_iterations >= 3`) → Escalate to user
-- **Changes requested:** → Increment `review_iterations` and `total_workflow_iterations`, create BD tasks for fixes, return to Phase 5
+- **Changes requested:** → Increment `review_iterations` and `total_workflow_iterations`, create BD tasks for fixes, return to Phase 5 (proceed through Phase 7.5 before re-submitting for review)
 
 ### Consultant Arbitration (Medium Changes)
 
@@ -580,9 +544,9 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
    bun scripts/validate-plugins.mjs
    ```
 
-2. **Stage changes**
+2. **Stage changes** (only files modified during this workflow)
    ```bash
-   git add -- .
+   git diff --name-only HEAD | xargs git add --
    git status
    ```
 
@@ -598,10 +562,26 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 4. **Push branch**
    ```bash
-   git push -u origin ${BRANCH_NAME}
+   git push -u origin "feature/issue-${ISSUE_NUM}"
    ```
 
-5. **Create PR** (capture PR_NUM for Phase 11)
+5. **Write PR body**
+   ```bash
+   cat > /tmp/issue-${ISSUE_NUM}-pr.md << EOF
+   ## Summary
+
+   Brief description of changes for issue #${ISSUE_NUM}.
+
+   ## Changes
+
+   - Change 1
+   - Change 2
+
+   Closes #${ISSUE_NUM}
+   EOF
+   ```
+
+6. **Create PR** (capture PR_NUM for Phase 11)
    ```bash
    PR_URL=$(gh pr create \
      --title "feat(plugin-name): implement #${ISSUE_NUM} - brief description" \
@@ -610,7 +590,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
    PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
    ```
 
-6. **Report to user**
+7. **Report to user**
    - PR URL
    - Summary of changes
    - Any notes for reviewers
