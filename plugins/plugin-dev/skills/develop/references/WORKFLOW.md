@@ -108,12 +108,21 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
    DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
    [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)$' | head -1 | sed 's@.*origin/@@')
 
-   # Guard against uncommitted work
+   # Guard against uncommitted work — MUST block before reset
    if ! git diff --quiet || ! git diff --cached --quiet; then
-     # Escalate: "Uncommitted changes detected. Stash, commit, or discard?"
-     # Do NOT proceed with git reset --hard until user confirms
+     echo "⚠️ Uncommitted changes detected."
+     # Use AskUserQuestion:
+     # Question: "Uncommitted changes detected. How should I proceed?"
+     # Options:
+     #   - "Stash changes (git stash)"
+     #   - "Commit changes first"
+     #   - "Discard changes (git checkout .)"
+     #   - "Abort workflow"
+     # Do NOT proceed until the user responds and the chosen action completes.
+     # If "Abort workflow" → stop immediately.
    fi
 
+   # Only safe to reset after user has resolved uncommitted work above
    git checkout "$DEFAULT_BRANCH"
    git reset --hard "origin/$DEFAULT_BRANCH"
    ```
@@ -204,7 +213,7 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
    Glob: plugins/*/agents/*.md
 
    # Detect hook definitions
-   Glob: plugins/**/hooks.json
+   Glob: plugins/*/hooks/hooks.json
    ```
 
    **Record findings** for use in Phase 2 planning:
@@ -283,10 +292,9 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
 **Step 3: Submit to Gemini**
 
 ```text
-Use Task tool with subagent_type: council:gemini-consultant
+Task(council:gemini-consultant):
 
-Prompt:
-Review this implementation plan for a skill development issue #{ISSUE_NUM}:
+Review this implementation plan for a skill development issue #${ISSUE_NUM}:
 
 ## Issue Summary
 [paste issue summary and acceptance criteria]
@@ -491,10 +499,9 @@ Determine review scope based on change size:
 
 **For Small Changes:**
 ```text
-Use Task tool with subagent_type: council:gemini-consultant
+Task(council:gemini-consultant):
 
-Prompt:
-Review this skill development implementation for issue #{ISSUE_NUM}:
+Review this skill development implementation for issue #${ISSUE_NUM}:
 
 ## Changes Summary
 [list files changed and what was done]
