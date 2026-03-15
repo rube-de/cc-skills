@@ -306,7 +306,7 @@ Evaluate:
 6. Is the task breakdown appropriate?
 7. Will `bun scripts/validate-plugins.mjs` pass after implementation?
 
-Provide specific feedback. State clearly: APPROVED or NEEDS CHANGES (with specifics).
+Provide specific feedback. State clearly: APPROVED or NEEDS_CHANGES (with specifics).
 ```
 
 **Step 4: Process Feedback**
@@ -515,7 +515,7 @@ Evaluate:
 4. Edge cases handled
 5. Any bugs or issues?
 
-State clearly: APPROVED or NEEDS CHANGES (with specifics).
+State clearly: APPROVED or NEEDS_CHANGES (with specifics).
 ```
 
 **For Large Changes:**
@@ -529,7 +529,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 - **Approved:** → Exit loop, proceed to Phase 10
 - **Hard limit reached:** (`review_iterations >= 3`) → Escalate to user
-- **Changes requested:** → Increment `review_iterations` and `total_workflow_iterations`, create BD tasks for fixes, return to Phase 5 (proceed through Phase 7.5 before re-submitting for review)
+- **Changes requested:** → Increment `review_iterations` and `total_workflow_iterations`, reset `implementation_cycles` to 0, create BD tasks for fixes, return to Phase 5 (proceed through Phase 7.5 before re-submitting for review)
 
 ### Consultant Arbitration (Medium Changes)
 
@@ -602,8 +602,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
    ```bash
    PR_URL=$(gh pr create \
      --title "feat(plugin-name): implement #${ISSUE_NUM} - brief description" \
-     --body-file /tmp/issue-${ISSUE_NUM}-pr.md \
-     --label "enhancement")
+     --body-file /tmp/issue-${ISSUE_NUM}-pr.md)
    PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
    ```
 
