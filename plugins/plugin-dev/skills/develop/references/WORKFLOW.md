@@ -44,7 +44,7 @@ Options:
 
 > **Note:** This is a future enhancement. Initial implementations can skip state persistence. When implemented, save state at each phase transition and check for existing state on workflow start.
 
-Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
+Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/state.json`:
 
 ```json
 {
@@ -86,10 +86,15 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 1. **Parse issue reference**
    - Extract owner, repo, issue number from input
    - Formats: `#123`, `owner/repo#123`, issue URL
+   - If input is plain `#123` (no owner/repo), derive from current repo:
+     ```bash
+     REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+     ```
+   - Use `REPO` consistently in all subsequent `gh` commands
 
 2. **Validate issue exists**
    ```bash
-   gh issue view ${ISSUE_NUM} --repo OWNER/REPO --json state,title,labels
+   gh issue view ${ISSUE_NUM} --repo ${REPO} --json state,title,labels
    ```
 
    **Abort conditions:**
@@ -115,7 +120,7 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 
 4. **Check for existing branch**
    ```bash
-   git branch -a | grep "feature/issue-${ISSUE_NUM}"
+   git branch -a | grep -E "(^|[[:space:]]|remotes/origin/)feature/issue-${ISSUE_NUM}$"
    ```
 
    If exists → Ask user:
@@ -128,9 +133,18 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
    - "Create new branch with suffix"
    ```
 
-5. **Create feature branch** ← MANDATORY
+5. **Enter selected branch path** ← MANDATORY
    ```bash
+   # Based on Step 4 decision:
+   # - No existing branch:
    git checkout -b "feature/issue-${ISSUE_NUM}"
+   # - Continue existing work:
+   #   git checkout "feature/issue-${ISSUE_NUM}"
+   # - Delete and start fresh:
+   #   git branch -D "feature/issue-${ISSUE_NUM}"
+   #   git checkout -b "feature/issue-${ISSUE_NUM}"
+   # - Create new branch with suffix:
+   #   git checkout -b "feature/issue-${ISSUE_NUM}-v2"
    ```
 
 6. **Verify branch (MANDATORY final check)**
@@ -160,7 +174,7 @@ Save state for session recovery at `.claude/issue-work/${ISSUE_NUM}/state.json`:
 
 1. **Read the issue**
    ```bash
-   gh issue view ${ISSUE_NUM} --repo OWNER/REPO
+   gh issue view ${ISSUE_NUM} --repo ${REPO}
    ```
 
    Extract:
@@ -546,7 +560,10 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 2. **Stage changes** (only files modified during this workflow)
    ```bash
-   git diff --name-only HEAD | xargs git add --
+   # Stage tracked modified files (null-delimited for safe filenames)
+   git diff -z --name-only HEAD | xargs -0 -r git add --
+   # Stage untracked new files (e.g., newly created SKILL.md, WORKFLOW.md)
+   git ls-files -z --others --exclude-standard | xargs -0 -r git add --
    git status
    ```
 
