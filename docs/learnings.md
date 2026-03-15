@@ -604,3 +604,13 @@ GitHub's `pullRequest.comments` (issue comments) is a flat list with no `in_repl
 **Good pattern**: Embed a `<!-- dlc-reply:{database_id} -->` HTML comment sentinel in every DLC reply body. On re-runs, the script filters sentinel-bearing comments from the reviewer inventory, and the skill matches by `database_id` for reliable "already replied" detection.
 
 > Source: [PR #167](https://github.com/rube-de/cc-skills/pull/167) — `claude[bot]` identified the re-ingestion bug and the unreliable Resolved heuristic; sentinel approach fixes both.
+
+### Forking workflows: preserve phase numbering, use half-phases for extensions
+
+When forking a multi-phase workflow (e.g., `github-issue-work` → `plugin-dev:develop`), preserve the original phase numbers (0, 1, 2, 3-4, 5-7, 8-9, 10, 11) so readers can cross-reference between workflows. New extension phases should use half-numbers (4.5, 7.5) to slot between existing phases without renumbering. This makes diffs between the base and forked workflow obvious and keeps the mental model portable across variants.
+
+**Bad pattern**: Renumbering all phases after inserting new ones — breaks cross-references and makes it hard to see what's forked vs. original.
+
+**Good pattern**: Phase 4.5 (RED baseline) slots between Phase 3-4 (validate) and Phase 5-7 (implement). Phase 7.5 (REFACTOR verify) slots between Phase 5-7 (implement) and Phase 8-9 (review). Original numbering is untouched.
+
+> Source: [Issue #160](https://github.com/rube-de/cc-skills/issues/160) — fork of github-issue-work into `/plugin-dev:develop` with TDD extension points.
