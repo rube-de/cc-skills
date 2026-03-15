@@ -36,7 +36,7 @@ When `total_workflow_iterations >= MAX_TOTAL_WORKFLOW_ITERATIONS`:
 ```text
 Use AskUserQuestion tool:
 
-Question: "Workflow has run 25 total iterations across all phases without completing."
+Question: "Workflow has run {MAX_TOTAL_WORKFLOW_ITERATIONS} total iterations across all phases without completing."
 
 Options:
 - "Show me iteration breakdown by phase"
@@ -111,6 +111,11 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
    git fetch origin
    DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
    [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)$' | head -1 | sed 's@.*origin/@@')
+
+   if [[ -z "$DEFAULT_BRANCH" ]]; then
+     echo "❌ FATAL: Could not detect default branch (neither symbolic-ref nor origin/main|master found). Aborting."
+     exit 1
+   fi
 
    # Guard against uncommitted work — MUST block before reset
    if ! git diff --quiet || ! git diff --cached --quiet; then
@@ -204,20 +209,20 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
 
 3. **Detect skill-related files** ← SKILL DEVELOPMENT SPECIFIC
 
-   Scan the target plugin directory for domain-specific files using Glob/Grep tools:
+   Determine the target plugin directory from the issue context (e.g., `PLUGIN_DIR=plugins/plugin-dev`), then scan for domain-specific files using Glob/Grep tools:
    ```text
-   # Detect SKILL.md files
-   Glob: plugins/**/SKILL.md
+   # Detect SKILL.md files (scoped to target plugin)
+   Glob: ${PLUGIN_DIR}/**/SKILL.md
 
    # Detect workflow references (any .md file with "workflow" in name or path)
-   Glob: plugins/**/references/*.md
-   Glob: plugins/**/*workflow*.md
+   Glob: ${PLUGIN_DIR}/**/references/*.md
+   Glob: ${PLUGIN_DIR}/**/*workflow*.md
 
    # Detect agent definitions
-   Glob: plugins/*/agents/*.md
+   Glob: ${PLUGIN_DIR}/agents/*.md
 
    # Detect hook definitions
-   Glob: plugins/*/hooks/hooks.json
+   Glob: ${PLUGIN_DIR}/hooks/hooks.json
    ```
 
    **Record findings** for use in Phase 2 planning:
@@ -498,7 +503,7 @@ Determine review scope based on change size:
 |-------------|----------|--------|
 | **Trivial** | <10 lines, no logic (typos, comments, config) | Skip review → Phase 10 |
 | **Small** | 1-2 files, simple logic | council:gemini-consultant |
-| **Medium** | 3-5 files, moderate complexity | gemini + codex |
+| **Medium** | 3-5 files, moderate complexity | council:gemini-consultant + council:codex-consultant |
 | **Large** | 6+ files, architectural impact | `/council` skill |
 
 **For Small Changes:**
@@ -645,13 +650,17 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 ```bash
 # PR_NUM is the PR number from Phase 10's gh pr create output
-gh pr view ${PR_NUM} --json state --jq '.state'
-DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
-git checkout "$DEFAULT_BRANCH"
-git pull origin "$DEFAULT_BRANCH"
-# Use -D because squash/rebase merges don't produce a local merge commit
-git branch -D "feature/issue-${ISSUE_NUM}" 2>/dev/null || \
-  echo "Could not delete branch feature/issue-${ISSUE_NUM} — delete manually if needed."
+PR_STATE=$(gh pr view ${PR_NUM} --json state --jq '.state')
+if [[ "$PR_STATE" != "MERGED" && "$PR_STATE" != "CLOSED" ]]; then
+  echo "PR #${PR_NUM} is still ${PR_STATE} — skipping branch deletion."
+else
+  DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+  git checkout "$DEFAULT_BRANCH"
+  git pull origin "$DEFAULT_BRANCH"
+  # Use -D because squash/rebase merges don't produce a local merge commit
+  git branch -D "feature/issue-${ISSUE_NUM}" 2>/dev/null || \
+    echo "Could not delete branch feature/issue-${ISSUE_NUM} — delete manually if needed."
+fi
 ```
 
 **Exit condition:** Temp files cleaned, branch deleted after merge.

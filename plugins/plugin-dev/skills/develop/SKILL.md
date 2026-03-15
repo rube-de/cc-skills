@@ -40,9 +40,9 @@ Implement skill development issues through iterative planning, TDD-governed impl
 | 1. Context | Read issue + detect skill files | Requirements clear, skill files noted |
 | 2. Plan | Draft implementation plan | Plan complete |
 | 3-4. Validate | Gemini review loop (max 5) | `APPROVED` status |
-| 4.5. Baseline (RED) | TODO: #163 — capture baseline behavior | Baseline saved |
-| 5-7. Implement (GREEN) | Write minimal skill addressing failures | All tasks done + criteria met + validation passing |
-| 7.5. Verify (REFACTOR) | TODO: #163 — compare against baseline | Benchmark passes or escalated |
+| 4.5. Baseline (RED) | TODO: #163 — capture baseline behavior | Baseline captured (or skipped pending #163) |
+| 5-7. Implement (GREEN) | Write minimal skill addressing failures | All tasks done + criteria met + tests passing + validation passing |
+| 7.5. Verify (REFACTOR) | TODO: #163 — compare against baseline | Benchmark passes (or skipped pending #163) or escalated |
 | 8-9. Review | Council review (max 3) | `APPROVED` status |
 | 10. Finalize | Commit + PR | PR created |
 | 11. Cleanup | Clean temps, delete branch | Branch deleted after merge |
@@ -52,9 +52,9 @@ Implement skill development issues through iterative planning, TDD-governed impl
 | Change Size | Criteria | Consultants |
 |-------------|----------|-------------|
 | Trivial | <10 lines, no logic changes | Skip review → Phase 10 |
-| Small | 1-2 files, simple logic | gemini-consultant only |
-| Medium | 3-5 files, moderate complexity | gemini + codex |
-| Large | 6+ files, architectural impact | Full council |
+| Small | 1-2 files, simple logic | council:gemini-consultant only |
+| Medium | 3-5 files, moderate complexity | council:gemini-consultant + council:codex-consultant |
+| Large | 6+ files, architectural impact | `/council` skill |
 
 ## Skill File Detection
 
