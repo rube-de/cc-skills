@@ -696,7 +696,7 @@ else
   git branch -D "feature/issue-${ISSUE_NUM}" 2>/dev/null || \
     echo "Could not delete branch feature/issue-${ISSUE_NUM} — delete manually if needed."
 
-  # Restore stashed changes on the default branch (stash was created here in Phase 0)
+  # Restore stashed changes on the default branch (if Phase 0 stashed uncommitted work)
   STASH_REF=$(git stash list | grep "plugin-dev-workflow-issue-${ISSUE_NUM}" | head -1 | cut -d: -f1)
   if [ -n "$STASH_REF" ]; then
     echo "Restoring stashed changes from Phase 0 ($STASH_REF)..."
