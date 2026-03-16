@@ -37,6 +37,12 @@ setup → context → plan → validate → [baseline] → implement → [verify
 - **Phase 5-7 (GREEN):** Implementation constrained by baseline failures (active when baseline exists)
 - **Phase 7.5 (REFACTOR):** Verify + benchmark — compare against baseline, iterate on loopholes (currently skipped)
 
+## First Action
+
+1. Parse `$ARGUMENTS` as the GitHub issue reference
+2. Read `skills/develop/SKILL.md` to load the skill activation context
+3. Read `skills/develop/references/WORKFLOW.md` and follow it phase-by-phase, using the parsed issue reference as `${ISSUE_NUM}`
+
 ## Arguments
 
 - `$ARGUMENTS` — GitHub issue reference in any format: `#123`, `owner/repo#123`, or issue URL

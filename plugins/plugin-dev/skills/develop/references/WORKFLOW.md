@@ -586,19 +586,22 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
    ```bash
    # Stage all tracked changes — modifications, deletions, and renames
    git add -u --
-   # Stage untracked new files (e.g., newly created SKILL.md, WORKFLOW.md)
-   git ls-files -z --others --exclude-standard | while IFS= read -r -d '' file; do git add -- "$file"; done
+   # Stage untracked new files — scoped to plugin dir and known workflow paths to avoid staging secrets or unrelated artifacts
+   git ls-files -z --others --exclude-standard -- "${PLUGIN_DIR}" docs/ CLAUDE.md AGENTS.md | while IFS= read -r -d '' file; do git add -- "$file"; done
    git status
    ```
 
 3. **Commit with conventional message**
    ```bash
-   git commit -m "feat(plugin-name): implement feature description
+   git commit -m "$(cat <<'EOF'
+   feat(plugin-name): implement feature description
 
    - Change 1
    - Change 2
 
-   Fixes #${ISSUE_NUM}"
+   Fixes #${ISSUE_NUM}
+   EOF
+   )"
    ```
 
 4. **Push branch**
@@ -653,19 +656,7 @@ EOF
 
 ### Steps
 
-1. **Restore stashed changes** (if stash was used in Phase 0)
-   ```bash
-   # Only if "Stash changes" was chosen in Phase 0 — pop by message to avoid applying unrelated stashes
-   STASH_REF=$(git stash list | grep "plugin-dev-workflow-issue-${ISSUE_NUM}" | head -1 | cut -d: -f1)
-   if [ -n "$STASH_REF" ]; then
-     echo "Restoring stashed changes from Phase 0 ($STASH_REF)..."
-     git stash pop "$STASH_REF" || {
-       echo "⚠️  Stash pop failed (possible conflicts). Resolve conflicts manually, then run: git stash drop $STASH_REF"
-     }
-   fi
-   ```
-
-2. **Clean temp files**
+1. **Clean temp files**
    ```bash
    rm -f /tmp/issue-${ISSUE_NUM}-*.md
    ```
@@ -693,6 +684,15 @@ else
   # Use -D because squash/rebase merges don't produce a local merge commit
   git branch -D "feature/issue-${ISSUE_NUM}" 2>/dev/null || \
     echo "Could not delete branch feature/issue-${ISSUE_NUM} — delete manually if needed."
+
+  # Restore stashed changes on the default branch (stash was created here in Phase 0)
+  STASH_REF=$(git stash list | grep "plugin-dev-workflow-issue-${ISSUE_NUM}" | head -1 | cut -d: -f1)
+  if [ -n "$STASH_REF" ]; then
+    echo "Restoring stashed changes from Phase 0 ($STASH_REF)..."
+    git stash pop "$STASH_REF" || {
+      echo "⚠️  Stash pop failed (possible conflicts). Resolve conflicts manually, then run: git stash drop $STASH_REF"
+    }
+  fi
 fi
 ```
 
