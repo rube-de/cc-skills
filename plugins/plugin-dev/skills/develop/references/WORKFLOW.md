@@ -336,12 +336,14 @@ Provide specific feedback. State clearly: APPROVED, NEEDS_CHANGES (BLOCKING) for
 **Step 4: Process Feedback**
 
 - **Full agreement:** → Exit loop, proceed to Phase 4.5
+- **Approved with warnings only** (Gemini returns `NEEDS_CHANGES (WARNING only)`) → Note warnings in plan, proceed to Phase 4.5
 - **Hard limit reached:** (`validation_iterations >= 5`) → Escalate to user
-- **Concerns raised:** → Increment `validation_iterations` and `total_workflow_iterations`, revise plan, return to Step 3
+- **Concerns raised (BLOCKING):** → Increment `validation_iterations` and `total_workflow_iterations`, revise plan, return to Step 3
 
 **Exit conditions:**
 1. Gemini returns `APPROVED` — proceed to Phase 4.5
-2. `validation_iterations >= 5` — hard escalate to user
+2. Gemini returns `NEEDS_CHANGES (WARNING only)` — note warnings, proceed to Phase 4.5
+3. `validation_iterations >= 5` — hard escalate to user
 
 ---
 
@@ -593,7 +595,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 3. **Commit with conventional message**
    ```bash
-   git commit -m "$(cat <<'EOF'
+   git commit -m "$(cat << EOF
    feat(plugin-name): implement feature description
 
    - Change 1
