@@ -618,8 +618,15 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
    ```bash
    PR_URL=$(gh pr create \
      --title "feat(plugin-name): implement #${ISSUE_NUM} - brief description" \
-     --body-file /tmp/issue-${ISSUE_NUM}-pr.md)
+     --body-file /tmp/issue-${ISSUE_NUM}-pr.md) || {
+     echo "❌ FATAL: gh pr create failed. Aborting Phase 10."
+     exit 1
+   }
    PR_NUM=$(echo "$PR_URL" | grep -oE '[0-9]+$')
+   if [[ -z "$PR_NUM" ]]; then
+     echo "❌ FATAL: Could not extract PR number from URL: ${PR_URL}. Aborting."
+     exit 1
+   fi
    ```
 
 7. **Report to user**
@@ -655,6 +662,11 @@ if [[ "$PR_STATE" != "MERGED" && "$PR_STATE" != "CLOSED" ]]; then
   echo "PR #${PR_NUM} is still ${PR_STATE} — skipping branch deletion."
 else
   DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+  [[ -z "$DEFAULT_BRANCH" ]] && DEFAULT_BRANCH=$(git branch -r | grep -E 'origin/(main|master)$' | head -1 | sed 's@.*origin/@@')
+  if [[ -z "$DEFAULT_BRANCH" ]]; then
+    echo "❌ FATAL: Could not detect default branch in Phase 11. Aborting cleanup."
+    exit 1
+  fi
   git checkout "$DEFAULT_BRANCH"
   git pull origin "$DEFAULT_BRANCH"
   # Use -D because squash/rebase merges don't produce a local merge commit
