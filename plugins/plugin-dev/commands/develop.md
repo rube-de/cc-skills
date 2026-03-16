@@ -32,10 +32,10 @@ setup → context → plan → validate → [baseline] → implement → [verify
 - **Phase 10:** Finalize — commit, push, create PR
 - **Phase 11:** Cleanup — clean temps
 
-### TDD Extension Points (skill-development specific)
-- **Phase 4.5 (RED):** Baseline capture — run test prompts without skill changes (TODO: #163)
-- **Phase 5-7 (GREEN):** Implementation constrained by baseline failures
-- **Phase 7.5 (REFACTOR):** Verify + benchmark — compare against baseline, iterate on loopholes (TODO: #163)
+### TDD Extension Points (planned — see #163)
+- **Phase 4.5 (RED):** Baseline capture — run test prompts without skill changes (currently skipped)
+- **Phase 5-7 (GREEN):** Implementation constrained by baseline failures (active when baseline exists)
+- **Phase 7.5 (REFACTOR):** Verify + benchmark — compare against baseline, iterate on loopholes (currently skipped)
 
 ## Arguments
 

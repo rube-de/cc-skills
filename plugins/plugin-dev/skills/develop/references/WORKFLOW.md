@@ -124,7 +124,7 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
      # Use AskUserQuestion:
      # Question: "Uncommitted changes detected. How should I proceed?"
      # Options:
-     #   - "Stash changes (git stash)"
+     #   - "Stash changes (git stash push -u -m 'plugin-dev-workflow-issue-${ISSUE_NUM}')"
      #   - "Commit changes first"
      #   - "Discard changes (git restore . && git clean -fd)"
      #   - "Abort workflow"
@@ -584,8 +584,8 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 2. **Stage changes** (only files modified during this workflow)
    ```bash
-   # Stage tracked modified files (null-delimited, portable — no GNU xargs -r)
-   git diff -z --name-only HEAD | while IFS= read -r -d '' file; do git add -- "$file"; done
+   # Stage all tracked changes — modifications, deletions, and renames
+   git add -u --
    # Stage untracked new files (e.g., newly created SKILL.md, WORKFLOW.md)
    git ls-files -z --others --exclude-standard | while IFS= read -r -d '' file; do git add -- "$file"; done
    git status
@@ -655,10 +655,11 @@ EOF
 
 1. **Restore stashed changes** (if stash was used in Phase 0)
    ```bash
-   # Only if "Stash changes" was chosen in Phase 0
-   if git stash list | grep -q .; then
-     echo "Restoring stashed changes from Phase 0..."
-     git stash pop
+   # Only if "Stash changes" was chosen in Phase 0 — pop by message to avoid applying unrelated stashes
+   STASH_REF=$(git stash list | grep "plugin-dev-workflow-issue-${ISSUE_NUM}" | head -1 | cut -d: -f1)
+   if [ -n "$STASH_REF" ]; then
+     echo "Restoring stashed changes from Phase 0 ($STASH_REF)..."
+     git stash pop "$STASH_REF"
    fi
    ```
 

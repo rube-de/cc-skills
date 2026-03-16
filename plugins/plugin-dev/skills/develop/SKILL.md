@@ -1,6 +1,6 @@
 ---
 name: develop
-description: "Use when implementing GitHub issues for skill or plugin development that require TDD-governed phases with baseline testing, iterative implementation, and verify+benchmark loops. Use this whenever the issue involves SKILL.md files, agent prompts, hook scripts, or plugin workflows."
+description: "Use when implementing GitHub issues for skill or plugin development through TDD-governed phases with iterative planning, implementation, and review loops. Baseline testing and verify+benchmark phases are planned extensions (see #163). Use this whenever the issue involves SKILL.md files, agent prompts, hook scripts, or plugin workflows."
 allowed-tools:
   - Task
   - Skill
