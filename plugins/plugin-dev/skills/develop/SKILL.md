@@ -7,9 +7,7 @@ allowed-tools:
   - Read
   - Write
   - Edit
-  - "Bash(git:*)"
-  - "Bash(gh:*)"
-  - "Bash(bun:*)"
+  - Bash
   - Grep
   - Glob
   - TodoWrite

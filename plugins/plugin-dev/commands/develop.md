@@ -1,5 +1,5 @@
 ---
-allowed-tools: [Task, Skill, Read, Write, Edit, "Bash(git:*)", "Bash(gh:*)", "Bash(bun:*)", Grep, Glob, TodoWrite, WebFetch, AskUserQuestion]
+allowed-tools: [Task, Skill, Read, Write, Edit, Bash, Grep, Glob, TodoWrite, WebFetch, AskUserQuestion]
 description: "Implement skill development issues with TDD-governed workflow"
 ---
 

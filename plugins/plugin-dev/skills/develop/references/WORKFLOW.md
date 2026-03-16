@@ -129,7 +129,7 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
      # Use AskUserQuestion:
      # Question: "Uncommitted changes detected. How should I proceed?"
      # Options:
-     #   - "Stash changes (git stash push -u -m 'plugin-dev-workflow-issue-${ISSUE_NUM}')"
+     #   - "Stash changes (git stash push -u -m \"plugin-dev-workflow-issue-${ISSUE_NUM}\")"
      #   - "Commit changes first"
      #   - "Discard changes (git restore . && git clean -fd)"
      #   - "Abort workflow"
@@ -605,13 +605,13 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 3. **Commit with conventional message**
    ```bash
    git commit -m "$(cat << EOF
-   feat(plugin-name): implement feature description
+feat(plugin-name): implement feature description
 
-   - Change 1
-   - Change 2
+- Change 1
+- Change 2
 
-   Fixes #${ISSUE_NUM}
-   EOF
+Fixes #${ISSUE_NUM}
+EOF
    )"
    ```
 
