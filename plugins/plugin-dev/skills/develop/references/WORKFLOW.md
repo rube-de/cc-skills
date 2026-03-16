@@ -330,7 +330,7 @@ Evaluate:
 6. Is the task breakdown appropriate?
 7. Will `bun scripts/validate-plugins.mjs` pass after implementation?
 
-Provide specific feedback. State clearly: APPROVED or NEEDS_CHANGES (with specifics).
+Provide specific feedback. State clearly: APPROVED, NEEDS_CHANGES (BLOCKING) for issues that must be fixed before merge, or NEEDS_CHANGES (WARNING only) for non-blocking suggestions.
 ```
 
 **Step 4: Process Feedback**
@@ -538,7 +538,7 @@ Evaluate:
 4. Edge cases handled
 5. Any bugs or issues?
 
-State clearly: APPROVED or NEEDS_CHANGES (with specifics).
+State clearly: APPROVED, NEEDS_CHANGES (BLOCKING) for issues that must be fixed before merge, or NEEDS_CHANGES (WARNING only) for non-blocking suggestions.
 ```
 
 **For Large Changes:**
@@ -659,7 +659,9 @@ EOF
    STASH_REF=$(git stash list | grep "plugin-dev-workflow-issue-${ISSUE_NUM}" | head -1 | cut -d: -f1)
    if [ -n "$STASH_REF" ]; then
      echo "Restoring stashed changes from Phase 0 ($STASH_REF)..."
-     git stash pop "$STASH_REF"
+     git stash pop "$STASH_REF" || {
+       echo "⚠️  Stash pop failed (possible conflicts). Resolve conflicts manually, then run: git stash drop $STASH_REF"
+     }
    fi
    ```
 
