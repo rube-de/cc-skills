@@ -61,6 +61,7 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
     "review_iterations": 0,
     "total_workflow_iterations": 5
   },
+  "pr_num": null,
   "baseline_results": null,
   "completed_tasks": ["task-1", "task-2"],
   "last_updated": "2024-01-15T10:30:00Z"
@@ -601,22 +602,23 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 5. **Write PR body**
    ```bash
    cat > /tmp/issue-${ISSUE_NUM}-pr.md << EOF
-   ## Summary
+## Summary
 
-   Brief description of changes for issue #${ISSUE_NUM}.
+Brief description of changes for issue #${ISSUE_NUM}.
 
-   ## Changes
+## Changes
 
-   - Change 1
-   - Change 2
+- Change 1
+- Change 2
 
-   Closes #${ISSUE_NUM}
-   EOF
+Closes #${ISSUE_NUM}
+EOF
    ```
 
 6. **Create PR** (capture PR_NUM for Phase 11)
    ```bash
    PR_URL=$(gh pr create \
+     --base "$DEFAULT_BRANCH" \
      --title "feat(plugin-name): implement #${ISSUE_NUM} - brief description" \
      --body-file /tmp/issue-${ISSUE_NUM}-pr.md) || {
      echo "❌ FATAL: gh pr create failed. Aborting Phase 10."
