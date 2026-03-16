@@ -36,7 +36,7 @@ When `total_workflow_iterations >= MAX_TOTAL_WORKFLOW_ITERATIONS`:
 ```text
 Use AskUserQuestion tool:
 
-Question: "Workflow has run {MAX_TOTAL_WORKFLOW_ITERATIONS} total iterations across all phases without completing."
+Question: "Workflow has run ${MAX_TOTAL_WORKFLOW_ITERATIONS} total iterations across all phases without completing."
 
 Options:
 - "Show me iteration breakdown by phase"
@@ -117,8 +117,8 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
      exit 1
    fi
 
-   # Guard against uncommitted work — MUST block before reset
-   if ! git diff --quiet || ! git diff --cached --quiet; then
+   # Guard against uncommitted work (tracked AND untracked) — MUST block before reset
+   if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
      echo "⚠️ Uncommitted changes detected."
      # Use AskUserQuestion:
      # Question: "Uncommitted changes detected. How should I proceed?"
@@ -576,10 +576,10 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 
 2. **Stage changes** (only files modified during this workflow)
    ```bash
-   # Stage tracked modified files (null-delimited for safe filenames)
-   git diff -z --name-only HEAD | xargs -0 -r git add --
+   # Stage tracked modified files (null-delimited, portable — no GNU xargs -r)
+   git diff -z --name-only HEAD | while IFS= read -r -d '' file; do git add -- "$file"; done
    # Stage untracked new files (e.g., newly created SKILL.md, WORKFLOW.md)
-   git ls-files -z --others --exclude-standard | xargs -0 -r git add --
+   git ls-files -z --others --exclude-standard | while IFS= read -r -d '' file; do git add -- "$file"; done
    git status
    ```
 
