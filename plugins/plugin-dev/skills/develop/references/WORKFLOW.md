@@ -395,7 +395,7 @@ Proceed directly to Phase 5-7.
    - Follow the plan
    - Run tests as you go
    - **If baseline exists (Phase 4.5 completed):** Frame implementation as writing the minimal skill changes that address the specific baseline failures — don't over-engineer beyond what the failing test prompts require
-   - Mark task `completed` when done
+   - Mark task `completed` when done, reset `task_retry_count[task_id]` to 0
 
 **Step 6: Verify**
 
@@ -551,8 +551,9 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 **Step 9: Process Review**
 
 - **Approved:** → Exit loop, proceed to Phase 10
+- **Approved with warnings only** (per arbitration table: one reviewer returns `NEEDS_CHANGES (WARNING only)` but resolution is "Proceed, note warnings") → Note warnings in commit/PR description, proceed to Phase 10
 - **Hard limit reached:** (`review_iterations >= 3`) → Escalate to user
-- **Changes requested:** → Increment `review_iterations` and `total_workflow_iterations`, reset `implementation_cycles` to 0, create BD tasks for fixes, return to Phase 5 (proceed through Phase 7.5 before re-submitting for review)
+- **Changes requested (BLOCKING):** → Increment `review_iterations` and `total_workflow_iterations`, reset `implementation_cycles` to 0, create BD tasks for fixes, return to Phase 5 (proceed through Phase 7.5 before re-submitting for review)
 
 ### Consultant Arbitration (Medium Changes)
 
@@ -565,7 +566,7 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 | NEEDS_CHANGES | NEEDS_CHANGES | Fix union of BLOCKING issues |
 
 **Exit conditions:**
-1. All reviewers return `APPROVED` — proceed to Phase 10
+1. All reviewers return `APPROVED`, OR arbitration table resolves to "Proceed" (including "Proceed, note warnings") — proceed to Phase 10
 2. `review_iterations >= 3` — hard escalate to user
 
 ---
