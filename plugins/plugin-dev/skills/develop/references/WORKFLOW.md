@@ -91,11 +91,16 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
 1. **Parse issue reference**
    - Extract owner, repo, issue number from input
    - Formats: `#123`, `owner/repo#123`, issue URL
+   - **Normalize `ISSUE_NUM` to bare numeric ID** (strip leading `#` if present):
+     ```bash
+     ISSUE_NUM="${ISSUE_NUM#\#}"  # #123 → 123
+     ```
    - If input is plain `#123` (no owner/repo), derive from current repo:
      ```bash
      REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
      ```
    - Use `REPO` consistently in all subsequent `gh` commands
+   - All bash commands use the numeric form of `ISSUE_NUM` (never with `#` prefix)
 
 2. **Validate issue exists**
    ```bash
@@ -663,7 +668,7 @@ EOF
    rm -f /tmp/issue-${ISSUE_NUM}-*.md
    ```
 
-3. **Report status**
+2. **Report status**
    - If PR created: "PR ready for review. Run cleanup after merge."
    - If aborted: "Branch preserved for debugging."
 
