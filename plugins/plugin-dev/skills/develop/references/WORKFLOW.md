@@ -569,8 +569,12 @@ args: "Review skill development implementation for issue #${ISSUE_NUM}"
 | APPROVED | APPROVED | Proceed |
 | APPROVED | NEEDS_CHANGES (BLOCKING) | Fix blocking issues |
 | APPROVED | NEEDS_CHANGES (WARNING only) | Proceed, note warnings |
-| NEEDS_CHANGES | APPROVED | Fix gemini's issues |
-| NEEDS_CHANGES | NEEDS_CHANGES | Fix union of BLOCKING issues |
+| NEEDS_CHANGES (BLOCKING) | APPROVED | Fix Gemini's blocking issues |
+| NEEDS_CHANGES (WARNING only) | APPROVED | Proceed, note warnings |
+| NEEDS_CHANGES (BLOCKING) | NEEDS_CHANGES (BLOCKING) | Fix union of BLOCKING issues |
+| NEEDS_CHANGES (BLOCKING) | NEEDS_CHANGES (WARNING only) | Fix Gemini's blocking issues |
+| NEEDS_CHANGES (WARNING only) | NEEDS_CHANGES (BLOCKING) | Fix Codex's blocking issues |
+| NEEDS_CHANGES (WARNING only) | NEEDS_CHANGES (WARNING only) | Proceed, note warnings |
 
 **Exit conditions:**
 1. All reviewers return `APPROVED`, OR arbitration table resolves to "Proceed" (including "Proceed, note warnings") — proceed to Phase 10
