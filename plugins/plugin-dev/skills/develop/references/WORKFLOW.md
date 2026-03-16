@@ -126,7 +126,7 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
      # Options:
      #   - "Stash changes (git stash)"
      #   - "Commit changes first"
-     #   - "Discard changes (git checkout .)"
+     #   - "Discard changes (git restore . && git clean -fd)"
      #   - "Abort workflow"
      # Do NOT proceed until the user responds and the chosen action completes.
      # If "Abort workflow" → stop immediately.
@@ -210,7 +210,13 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
 
 3. **Detect skill-related files** ← SKILL DEVELOPMENT SPECIFIC
 
-   Determine the target plugin directory from the issue context (e.g., `PLUGIN_DIR=plugins/plugin-dev`), then scan for domain-specific files using Glob/Grep tools:
+   Determine and assign the target plugin directory from the issue context:
+   ```bash
+   # Derive from issue title/labels/body — e.g., if issue mentions "plugin-dev"
+   PLUGIN_DIR="plugins/<plugin-name>"  # e.g., PLUGIN_DIR="plugins/plugin-dev"
+   ```
+
+   Then scan for domain-specific files using Glob/Grep tools:
    ```text
    # Detect SKILL.md files (scoped to target plugin)
    Glob: ${PLUGIN_DIR}/**/SKILL.md
@@ -646,12 +652,21 @@ EOF
 
 ### Steps
 
-1. **Clean temp files**
+1. **Restore stashed changes** (if stash was used in Phase 0)
+   ```bash
+   # Only if "Stash changes" was chosen in Phase 0
+   if git stash list | grep -q .; then
+     echo "Restoring stashed changes from Phase 0..."
+     git stash pop
+   fi
+   ```
+
+2. **Clean temp files**
    ```bash
    rm -f /tmp/issue-${ISSUE_NUM}-*.md
    ```
 
-2. **Report status**
+3. **Report status**
    - If PR created: "PR ready for review. Run cleanup after merge."
    - If aborted: "Branch preserved for debugging."
 
