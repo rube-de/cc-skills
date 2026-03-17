@@ -618,7 +618,7 @@ After both consultants respond, apply the **Consultant Arbitration (Medium Chang
 ```text
 Use Skill tool:
 skill: "council"
-args: "Review skill development implementation for issue #${ISSUE_NUM}"
+args: "Review skill development implementation for issue #${ISSUE_NUM}. Each reviewer must conclude with: APPROVED, NEEDS_CHANGES (BLOCKING), or NEEDS_CHANGES (WARNING only)."
 ```
 
 **Step 9: Process Review**
