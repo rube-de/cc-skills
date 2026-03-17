@@ -53,4 +53,5 @@ The workflow automatically detects skill-related files for domain-specific handl
 - `SKILL.md` — Skill activation definitions
 - `references/*.md` — Workflow reference files (e.g., `references/WORKFLOW.md`)
 - `agents/*.md` — Agent/subagent definitions
-- `hooks/` — Hook definitions and scripts
+- `hooks/hooks.json` — Hook config (declares hook types, matchers, and script references)
+- `scripts/` — Hook scripts (executables referenced by `hooks.json`)

@@ -241,15 +241,18 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
    # Detect agent definitions
    Glob: ${PLUGIN_DIR}/agents/*.md
 
-   # Detect hook definitions
+   # Detect hook config
    Glob: ${PLUGIN_DIR}/hooks/hooks.json
+
+   # Detect hook scripts (executables referenced by hooks.json)
+   Glob: ${PLUGIN_DIR}/scripts/**
    ```
 
    **Record findings** for use in Phase 2 planning:
    - Which SKILL.md files exist and their frontmatter
    - Which workflow references exist
    - Which agents are defined
-   - Which hooks are active
+   - Which hooks are configured (`hooks/hooks.json`) and which scripts they reference (`scripts/`)
 
    This information constrains the implementation plan — changes to these files require specific validation (frontmatter schema, hook audit, etc.)
 

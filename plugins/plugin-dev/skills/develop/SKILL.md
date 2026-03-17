@@ -62,7 +62,8 @@ During Phase 1, detect and note these skill-related files for domain-specific ha
 - `SKILL.md` — Skill activation definitions (YAML frontmatter + instructions)
 - `references/*.md` — Workflow reference files (e.g., `references/WORKFLOW.md`)
 - `agents/*.md` — Agent/subagent definitions
-- `hooks/hooks.json` — Hook definitions; `hooks/` also contains shell/python scripts
+- `hooks/hooks.json` — Hook config (declares hook types, matchers, and script references)
+- `scripts/` — Hook scripts (executables referenced by `hooks.json` via `${CLAUDE_PLUGIN_ROOT}/scripts/...`)
 
 ## Triggers
 
