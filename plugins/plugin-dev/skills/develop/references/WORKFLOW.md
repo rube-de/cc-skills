@@ -91,13 +91,21 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
 1. **Parse issue reference**
    - Extract owner, repo, issue number from input
    - Formats: `#123`, `owner/repo#123`, issue URL
-   - **Normalize `ISSUE_NUM` to bare numeric ID** (strip leading `#` if present):
+   - **Detect format and extract `REPO` + `ISSUE_NUM`:**
      ```bash
-     ISSUE_NUM="${ISSUE_NUM#\#}"  # #123 → 123
-     ```
-   - If input is plain `#123` (no owner/repo), derive from current repo:
-     ```bash
-     REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+     INPUT="$1"  # raw input from $ARGUMENTS
+     if [[ "$INPUT" =~ ^https://github.com/([^/]+/[^/]+)/issues/([0-9]+) ]]; then
+       REPO="${BASH_REMATCH[1]}"
+       ISSUE_NUM="${BASH_REMATCH[2]}"
+     elif [[ "$INPUT" =~ ^([^#]+)#([0-9]+)$ ]]; then
+       REPO="${BASH_REMATCH[1]}"
+       ISSUE_NUM="${BASH_REMATCH[2]}"
+     elif [[ "$INPUT" =~ ^#?([0-9]+)$ ]]; then
+       ISSUE_NUM="${BASH_REMATCH[1]}"
+       REPO=$(gh repo view --json nameWithOwner -q '.nameWithOwner')
+     else
+       echo "❌ FATAL: Unrecognised issue reference format: ${INPUT}. Aborting." && exit 1
+     fi
      ```
    - Use `REPO` consistently in all subsequent `gh` commands
    - All bash commands use the numeric form of `ISSUE_NUM` (never with `#` prefix)
