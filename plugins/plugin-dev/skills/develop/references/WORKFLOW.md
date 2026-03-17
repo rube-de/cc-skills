@@ -548,6 +548,61 @@ Evaluate:
 State clearly: APPROVED, NEEDS_CHANGES (BLOCKING) for issues that must be fixed before merge, or NEEDS_CHANGES (WARNING only) for non-blocking suggestions.
 ```
 
+**For Medium Changes:**
+```text
+Task(council:gemini-consultant):
+
+Review this skill development implementation for issue #${ISSUE_NUM}:
+
+## Changes Summary
+[list files changed and what was done]
+
+## Skill-Specific Changes
+[highlight SKILL.md, workflow, agent, hook changes]
+
+## Key Code
+[paste the most important code changes]
+
+## Acceptance Criteria
+[list criteria and how each is satisfied]
+
+Evaluate:
+1. Code correctness
+2. SKILL.md frontmatter validity
+3. Workflow phase structure
+4. Edge cases handled
+5. Any bugs or issues?
+
+State clearly: APPROVED, NEEDS_CHANGES (BLOCKING) for issues that must be fixed before merge, or NEEDS_CHANGES (WARNING only) for non-blocking suggestions.
+
+Task(council:codex-consultant):
+
+Review this skill development implementation for issue #${ISSUE_NUM}:
+
+## Changes Summary
+[list files changed and what was done]
+
+## Skill-Specific Changes
+[highlight SKILL.md, workflow, agent, hook changes]
+
+## Key Code
+[paste the most important code changes]
+
+## Acceptance Criteria
+[list criteria and how each is satisfied]
+
+Evaluate:
+1. Code correctness
+2. SKILL.md frontmatter validity
+3. Workflow phase structure
+4. Edge cases handled
+5. Any bugs or issues?
+
+State clearly: APPROVED, NEEDS_CHANGES (BLOCKING) for issues that must be fixed before merge, or NEEDS_CHANGES (WARNING only) for non-blocking suggestions.
+```
+
+After both consultants respond, apply the **Consultant Arbitration (Medium Changes)** table below Step 9 to determine resolution.
+
 **For Large Changes:**
 ```text
 Use Skill tool:
