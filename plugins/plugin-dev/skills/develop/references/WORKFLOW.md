@@ -93,7 +93,7 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
    - Formats: `#123`, `owner/repo#123`, issue URL
    - **Detect format and extract `REPO` + `ISSUE_NUM`:**
      ```bash
-     INPUT="$1"  # raw input from $ARGUMENTS
+     INPUT="$ARGUMENTS"  # raw input from command invocation
      if [[ "$INPUT" =~ ^https://github.com/([^/]+/[^/]+)/issues/([0-9]+) ]]; then
        REPO="${BASH_REMATCH[1]}"
        ISSUE_NUM="${BASH_REMATCH[2]}"
@@ -134,18 +134,27 @@ Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/stat
    # Guard against uncommitted work (tracked AND untracked) — MUST block before reset
    if ! git diff --quiet || ! git diff --cached --quiet || [ -n "$(git ls-files --others --exclude-standard)" ]; then
      echo "⚠️ Uncommitted changes detected."
-     # Use AskUserQuestion:
-     # Question: "Uncommitted changes detected. How should I proceed?"
-     # Options:
-     #   - "Stash changes (git stash push -u -m \"plugin-dev-workflow-issue-${ISSUE_NUM}\")"
-     #   - "Commit changes first"
-     #   - "Discard changes (git restore . && git clean -fd)"
-     #   - "Abort workflow"
-     # Do NOT proceed until the user responds and the chosen action completes.
-     # If "Abort workflow" → stop immediately.
+     exit 1  # Stop here — must ask user before proceeding
    fi
+   ```
 
-   # Only safe to reset after user has resolved uncommitted work above
+   **If uncommitted changes detected**, stop and ask before any destructive operation:
+   ```text
+   Use AskUserQuestion tool:
+
+   Question: "Uncommitted changes detected. How should I proceed?"
+
+   Options:
+   - "Stash changes (git stash push -u -m 'plugin-dev-workflow-issue-${ISSUE_NUM}')"
+   - "Commit changes first"
+   - "Discard changes (git restore . && git clean -fd)"
+   - "Abort workflow"
+   ```
+   Do NOT proceed until the user responds and the chosen action completes.
+   If "Abort workflow" → stop immediately.
+
+   **After user resolves uncommitted work:**
+   ```bash
    git checkout "$DEFAULT_BRANCH"
    git reset --hard "origin/$DEFAULT_BRANCH"
    ```

@@ -39,9 +39,8 @@ setup → context → plan → validate → [baseline] → implement → [verify
 
 ## First Action
 
-1. Parse `$ARGUMENTS` as the GitHub issue reference
-2. Read `plugins/plugin-dev/skills/develop/SKILL.md` to load the skill activation context
-3. Read `plugins/plugin-dev/skills/develop/references/WORKFLOW.md` and follow it phase-by-phase, using the parsed issue reference as `${ISSUE_NUM}`
+1. Read `plugins/plugin-dev/skills/develop/SKILL.md` to load the skill activation context
+2. Read `plugins/plugin-dev/skills/develop/references/WORKFLOW.md` and follow it phase-by-phase, passing `$ARGUMENTS` as the raw issue reference (WORKFLOW.md Phase 0 handles all parsing to extract `REPO` and `ISSUE_NUM`)
 
 ## Arguments
 
