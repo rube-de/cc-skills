@@ -614,3 +614,13 @@ When forking a multi-phase workflow (e.g., `github-issue-work` → `plugin-dev:d
 **Good pattern**: Phase 4.5 (RED baseline) slots between Phase 3-4 (validate) and Phase 5-7 (implement). Phase 7.5 (REFACTOR verify) slots between Phase 5-7 (implement) and Phase 8-9 (review). Original numbering is untouched.
 
 > Source: [Issue #160](https://github.com/rube-de/cc-skills/issues/160) — fork of github-issue-work into `/plugin-dev:develop` with TDD extension points.
+
+### jq `==` comparisons inside object constructors require parentheses on Apple jq
+
+Apple ships `jq-1.7.1-apple` which throws `syntax error, unexpected ==` when `==` comparisons appear directly inside a jq object constructor without explicit outer parentheses. Standard jq is more permissive. Always wrap comparisons used as object field values in outer parentheses: `field: ((expr) == other)` instead of `field: (expr) == other`.
+
+**Bad pattern**: `blockers_resolved: (expr) == (.blocked_by | length),` — works on standard jq, fails on Apple jq.
+
+**Good pattern**: `blockers_resolved: ((expr) == (.blocked_by | length)),` — works on both.
+
+> Source: [PR #179](https://github.com/rube-de/cc-skills/pull/179), fixes [#177](https://github.com/rube-de/cc-skills/issues/177) — `plugins/project-manager/scripts/open-issues.sh`
