@@ -234,7 +234,20 @@ Assess the effort and nature of each discussion item:
 
 **High-confidence Implementable Fix** items (all four criteria from Step 3b (Critically Evaluate) pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
 
-**All other items** — Medium/Low-confidence Implementable Fix, Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
+**High-confidence Clarification Answer** items skip `AskUserQuestion` and auto-reply when the agent can draft a factual answer entirely from codebase evidence. A Clarification Answer is high-confidence when all four of these criteria pass:
+
+| Criterion | Question |
+|-----------|----------|
+| **Evidence-backed** | Does the answer cite specific code (`file:line`), commits, or documented decisions — not speculation? |
+| **Factually verifiable** | Can the claims be confirmed by reading the referenced code? |
+| **Non-controversial** | Does the answer explain what IS (factual state), not argue what SHOULD BE (design opinion/trade-off)? |
+| **Complete** | Does the answer fully address the reviewer's concern with no open threads? |
+
+When all four pass → auto-draft and post the reply without asking. Print: `Auto-replying to Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Discussion-Answered** — it enters the Step 4 reply queue with the `Answered:` prefix.
+
+> **Bias toward action for Clarification Answers**: When in doubt between high and medium confidence, default to high for factual explanations backed by code evidence. If the agent can point to a specific `file:line` that resolves the reviewer's question, that's high-confidence — don't manufacture uncertainty to justify an interruption. The anti-sycophancy rule still applies: if the agent would need to speculate, argue a design opinion, or address only part of the concern, it must NOT auto-reply — fall through to `AskUserQuestion` instead.
+
+**All other items** — Medium/Low-confidence Implementable Fix, Medium/Low-confidence Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
 
 ```text
 Discussion item {n}/{total}: @{reviewer} at {location}
