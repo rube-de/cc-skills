@@ -100,12 +100,12 @@ printf '%s\n' "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_
 
   # Compute resolved status and unblocked flag
   [ .[] | . + {
-    blockers_resolved: (
+    blockers_resolved: ((
       [.blocked_by[] | select(. as $b | $open_set | index($b) | not)] | length
-    ) == (.blocked_by | length),
-    unblocked: (
-      [.blocked_by[] | select(. as $b | $open_set | index($b))] | length == 0
-    )
+    ) == (.blocked_by | length)),
+    unblocked: ((
+      [.blocked_by[] | select(. as $b | $open_set | index($b))] | length
+    ) == 0)
   }] as $augmented_issues |
 
   # Count unassigned from full list (before assignment filter)
