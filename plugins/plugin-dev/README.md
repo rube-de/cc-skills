@@ -1,8 +1,8 @@
 # plugin-dev
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-1-blue.svg)]()
-[![Commands](https://img.shields.io/badge/Commands-1-green.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-2-blue.svg)]()
+[![Commands](https://img.shields.io/badge/Commands-2-green.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
@@ -13,6 +13,7 @@ Plugin development tools for the cc-skills marketplace: scaffold new plugins, va
 | Tool | Type | What it does |
 |------|------|-------------|
 | `/plugin-dev:create` | Command | Interactive scaffolding — creates directory structure, SKILL.md, marketplace entry |
+| `/plugin-dev:develop` | Command | TDD-governed workflow for implementing skill development issues |
 | `bun scripts/validate-plugins.mjs` | Script | Validates schema, source paths, orphans, and SKILL.md frontmatter |
 | `bash plugins/plugin-dev/scripts/audit-hooks.sh` | Script | Detects silent failure patterns in hook/script files |
 
