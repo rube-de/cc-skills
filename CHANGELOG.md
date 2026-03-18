@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/rube-de/cc-skills/compare/v1.46.0...v1.47.0) (2026-03-18)
+
+
+### Features
+
+* **plugin-dev:** add /plugin-dev:develop skill with TDD extension points ([#175](https://github.com/rube-de/cc-skills/issues/175)) ([ee8adcb](https://github.com/rube-de/cc-skills/commit/ee8adcb09af49ba5e182fa71abc64208ddfe581c)), closes [#163](https://github.com/rube-de/cc-skills/issues/163) [#160](https://github.com/rube-de/cc-skills/issues/160) [#123](https://github.com/rube-de/cc-skills/issues/123) [#163](https://github.com/rube-de/cc-skills/issues/163) [#163](https://github.com/rube-de/cc-skills/issues/163) [#123](https://github.com/rube-de/cc-skills/issues/123) [owner/repo#123](https://github.com/owner/repo/issues/123)
+
 # [1.46.0](https://github.com/rube-de/cc-skills/compare/v1.45.0...v1.46.0) (2026-03-14)
 
 
