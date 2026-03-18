@@ -1,3 +1,10 @@
+## [1.47.1](https://github.com/rube-de/cc-skills/compare/v1.47.0...v1.47.1) (2026-03-18)
+
+
+### Bug Fixes
+
+* **pm:** parenthesize jq comparisons for Apple jq compatibility ([#179](https://github.com/rube-de/cc-skills/issues/179)) ([b81d303](https://github.com/rube-de/cc-skills/commit/b81d303914ec2c6fbd9f28707b601b9886b17f2f)), closes [#177](https://github.com/rube-de/cc-skills/issues/177)
+
 # [1.47.0](https://github.com/rube-de/cc-skills/compare/v1.46.0...v1.47.0) (2026-03-18)
 
 
