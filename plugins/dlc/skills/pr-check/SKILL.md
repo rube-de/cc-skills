@@ -243,14 +243,17 @@ Skip `AskUserQuestion` and auto-reply **high-confidence Clarification Answer** i
 | **Non-controversial** | Does the answer explain what IS (factual state), not argue what SHOULD BE (design opinion/trade-off)? |
 | **Complete** | Does the answer fully address the reviewer's concern with no open threads? |
 
+> **Defect-revealing answers**: If the truthful answer reveals a gap, missing check, or unhandled edge case (e.g., "does this handle nulls?" → "no"), reclassify the item as **Implementable Fix** — the reviewer's question implies a code change, not just an explanation. An answer that exposes an action item is NOT complete even if it literally answers the question.
+
 When all four pass → auto-draft the reply without asking. Print: `Auto-replying to Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Discussion-Answered** — it enters the Step 4 reply queue with the `Answered:` prefix.
 
 > **Bias toward action for Clarification Answers**: When in doubt between high and medium confidence, default to high for factual explanations backed by code evidence. If the agent can point to a specific `file:line` that resolves the reviewer's question, that's high-confidence — don't manufacture uncertainty to justify an interruption. The anti-sycophancy rule still applies; do NOT auto-reply if the answer would:
 > - Be speculative (violating **Evidence-backed**)
 > - Argue a design opinion (violating **Non-controversial**)
 > - Be incomplete (violating **Complete**)
+> - Reveal a bug or missing functionality (reclassify as **Implementable Fix**)
 >
-> In these cases, fall through to `AskUserQuestion` instead.
+> In these cases, fall through to `AskUserQuestion` instead (or reclassify per the defect-revealing rule above).
 
 **All other items** — Medium/Low-confidence Implementable Fix, Medium/Low-confidence Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
 
