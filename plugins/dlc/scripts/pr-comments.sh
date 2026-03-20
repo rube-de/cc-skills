@@ -206,8 +206,7 @@ paginate_resource() {
       -F owner="$OWNER" -F repo="$REPO" -F number="$PR_NUMBER" \
       -f cursor="$_pg_cursor" \
       > "$_tmpdir/page.json" 2>"$_tmpdir/page_err.txt"; then
-      echo "Warning: GraphQL pagination query for '$_pg_res' failed. Results may be truncated." >&2
-      break
+      die_json "GraphQL pagination query for '$_pg_res' failed: $(tr '"' "'" < "$_tmpdir/page_err.txt")" "GRAPHQL_PAGE_FAIL"
     fi
     jq --slurpfile page "$_tmpdir/page.json" --arg res "$_pg_res" '
       .data.repository.pullRequest[($res)].nodes += $page[0].data.repository.pullRequest[($res)].nodes
@@ -215,6 +214,10 @@ paginate_resource() {
     _pg_cursor=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.endCursor // empty" "$_tmpdir/page.json")
     _pg_has_next=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.hasNextPage" "$_tmpdir/page.json")
   done
+
+  if [ "$_pg_has_next" = "true" ]; then
+    die_json "Pagination for '$_pg_res' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" "PAGINATION_LIMIT"
+  fi
 }
 
 # --- initial fetch ---------------------------------------------------------
@@ -226,6 +229,12 @@ if ! gh api graphql \
   -F number="$PR_NUMBER" \
   > "$_tmpdir/raw.json" 2>"$_tmpdir/err.txt"; then
   die_json "GraphQL query failed: $(tr '"' "'" < "$_tmpdir/err.txt")" "GRAPHQL_FAIL"
+fi
+
+# --- check for GraphQL errors ----------------------------------------------
+
+if jq -e '(.errors // []) | length > 0' "$_tmpdir/raw.json" >/dev/null 2>&1; then
+  die_json "GraphQL query failed: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/raw.json")" "GRAPHQL_FAIL"
 fi
 
 # --- null check ------------------------------------------------------------
@@ -260,8 +269,7 @@ while [ "$_ti" -lt "$_thread_count" ]; do
         -f nodeId="$_tr_node_id" \
         -f cursor="$_tr_cursor" \
         > "$_tmpdir/reply_page.json" 2>"$_tmpdir/page_err.txt"; then
-        echo "Warning: GraphQL pagination query for replies in thread '$_tr_node_id' failed. Results may be truncated." >&2
-        break
+        die_json "GraphQL pagination for replies in thread '$_tr_node_id' failed: $(tr '"' "'" < "$_tmpdir/page_err.txt")" "GRAPHQL_PAGE_FAIL"
       fi
       jq --slurpfile page "$_tmpdir/reply_page.json" --argjson idx "$_ti" '
         .data.repository.pullRequest.reviewThreads.nodes[$idx].comments.nodes += $page[0].data.node.comments.nodes
@@ -269,6 +277,10 @@ while [ "$_ti" -lt "$_thread_count" ]; do
       _tr_cursor=$(jq -r '.data.node.comments.pageInfo.endCursor // empty' "$_tmpdir/reply_page.json")
       _tr_has_next=$(jq -r '.data.node.comments.pageInfo.hasNextPage' "$_tmpdir/reply_page.json")
     done
+
+    if [ "$_tr_has_next" = "true" ]; then
+      die_json "Reply pagination for thread '$_tr_node_id' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" "PAGINATION_LIMIT"
+    fi
   fi
   _ti=$((_ti + 1))
 done
