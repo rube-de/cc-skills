@@ -62,7 +62,7 @@ fi
 
 # --- temp files & cleanup --------------------------------------------------
 
-_tmpdir=$(mktemp -d)
+_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
 trap 'rm -rf "$_tmpdir"' EXIT
 
 # Safety limit: prevents infinite loops if the API returns hasNextPage
@@ -205,7 +205,8 @@ paginate_resource() {
       -f query="$_pg_query" \
       -F owner="$OWNER" -F repo="$REPO" -F number="$PR_NUMBER" \
       -f cursor="$_pg_cursor" \
-      > "$_tmpdir/page.json" 2>/dev/null; then
+      > "$_tmpdir/page.json" 2>"$_tmpdir/page_err.txt"; then
+      echo "Warning: GraphQL pagination query for '$_pg_res' failed. Results may be truncated." >&2
       break
     fi
     jq --slurpfile page "$_tmpdir/page.json" --arg res "$_pg_res" '
@@ -258,7 +259,8 @@ while [ "$_ti" -lt "$_thread_count" ]; do
         -f query="$REPLIES_PAGE_QUERY" \
         -f nodeId="$_tr_node_id" \
         -f cursor="$_tr_cursor" \
-        > "$_tmpdir/reply_page.json" 2>/dev/null; then
+        > "$_tmpdir/reply_page.json" 2>"$_tmpdir/page_err.txt"; then
+        echo "Warning: GraphQL pagination query for replies in thread '$_tr_node_id' failed. Results may be truncated." >&2
         break
       fi
       jq --slurpfile page "$_tmpdir/reply_page.json" --argjson idx "$_ti" '
