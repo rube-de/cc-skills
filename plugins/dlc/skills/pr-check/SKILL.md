@@ -230,7 +230,7 @@ Assess the effort and nature of each discussion item:
 
 > **Bias toward action**: Default to **Implementable Fix** or **Clarification Answer** when the change is technically straightforward. Do not inflate complexity to avoid work — if the change doesn't require architectural judgment and is directly related to the reviewer's feedback, recommend implementing it regardless of size. The classification gate exists for genuinely complex items where the PR author must decide, not as an escape hatch for effort avoidance.
 
-### 3.5c. Present to User or Auto-Implement
+### 3.5c. Present to User, Auto-Implement, or Auto-Reply
 
 **High-confidence Implementable Fix** items (all four criteria from Step 3b (Critically Evaluate) pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
 
@@ -244,6 +244,11 @@ Skip `AskUserQuestion` and auto-reply **high-confidence Clarification Answer** i
 | **Complete** | Does the answer fully address the reviewer's concern with no open threads? |
 
 > **Defect-revealing answers**: If the truthful answer reveals a gap, missing check, or unhandled edge case (e.g., "does this handle nulls?" → "no"), reclassify the item as **Implementable Fix** — the reviewer's question implies a code change, not just an explanation. An answer that exposes an action item is NOT complete even if it literally answers the question.
+>
+> **Boundary cases**: If the answer reveals partial handling or upstream mitigation, apply this test: does the reviewer's concern require a code change in *this* PR? Examples:
+> - "Does this handle nulls?" → "No, nulls are not checked" → **Reclassify as Implementable Fix** (clear gap)
+> - "Does this handle empty strings?" → "No, but empty strings are filtered upstream at `caller.ts:23`" → **Auto-reply** (upstream responsibility is clear, no local change needed)
+> - "Does this handle edge case X?" → "Partially — X1 is handled on line 45, but X2 is not" → **Reclassify as Implementable Fix** (incomplete handling requires a code change)
 
 When all four pass → auto-draft the reply without asking. Print: `Auto-replying to Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Discussion-Answered** — it enters the Step 4 reply queue with the `Answered:` prefix.
 
