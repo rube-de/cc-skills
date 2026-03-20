@@ -1,3 +1,10 @@
+# [1.48.0](https://github.com/rube-de/cc-skills/compare/v1.47.1...v1.48.0) (2026-03-20)
+
+
+### Features
+
+* **dlc:** auto-reply high-confidence Clarification Answer items in pr-check ([#180](https://github.com/rube-de/cc-skills/issues/180)) ([fe46622](https://github.com/rube-de/cc-skills/commit/fe4662254e506258a43abf641c6cbe582530e7d4)), closes [hi#confidence](https://github.com/hi/issues/confidence) [hi#confidence](https://github.com/hi/issues/confidence) [#176](https://github.com/rube-de/cc-skills/issues/176)
+
 ## [1.47.1](https://github.com/rube-de/cc-skills/compare/v1.47.0...v1.47.1) (2026-03-18)
 
 
