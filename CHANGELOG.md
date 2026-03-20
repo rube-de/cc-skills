@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/rube-de/cc-skills/compare/v1.48.0...v1.49.0) (2026-03-20)
+
+
+### Features
+
+* **dlc:** add cursor-based pagination to pr-comments.sh ([#181](https://github.com/rube-de/cc-skills/issues/181)) ([fed5398](https://github.com/rube-de/cc-skills/commit/fed5398cb4ef7d07585727a21096cf82ff27dc46)), closes [#175](https://github.com/rube-de/cc-skills/issues/175) [#178](https://github.com/rube-de/cc-skills/issues/178)
+
 # [1.48.0](https://github.com/rube-de/cc-skills/compare/v1.47.1...v1.48.0) (2026-03-20)
 
 
