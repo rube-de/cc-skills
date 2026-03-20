@@ -2,6 +2,7 @@
 # pr-comments.sh — Fetch PR review comments via GitHub GraphQL API
 # Usage: pr-comments.sh [PR_NUMBER] [OWNER/REPO]
 # Returns structured JSON with PR metadata, review threads, and summary stats.
+# Automatically paginates to fetch all data regardless of count.
 
 # --- helpers ---------------------------------------------------------------
 
@@ -59,8 +60,18 @@ if [ -z "$PR_NUMBER" ] || ! printf '%s\n' "$PR_NUMBER" | grep -qE '^[0-9]+$'; th
   die_json "Invalid PR number: ${PR_NUMBER}" "PR_INVALID"
 fi
 
-# --- GraphQL query ---------------------------------------------------------
+# --- temp files & cleanup --------------------------------------------------
 
+_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
+trap 'rm -rf "$_tmpdir"' EXIT
+
+# Safety limit: prevents infinite loops if the API returns hasNextPage
+# indefinitely. 20 pages × 50–100 nodes/page = 1000–2000 items per resource.
+MAX_PAGES=20
+
+# --- GraphQL queries -------------------------------------------------------
+
+# Initial query — includes pageInfo for cursor-based pagination
 QUERY='
 query($owner: String!, $repo: String!, $number: Int!) {
   repository(owner: $owner, name: $repo) {
@@ -69,6 +80,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
       author { login }
       comments(first: 50) {
         totalCount
+        pageInfo { hasNextPage endCursor }
         nodes {
           id databaseId body createdAt
           author { login }
@@ -76,6 +88,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
       }
       reviews(first: 50) {
         totalCount
+        pageInfo { hasNextPage endCursor }
         nodes {
           id databaseId body state createdAt
           author { login }
@@ -83,9 +96,12 @@ query($owner: String!, $repo: String!, $number: Int!) {
       }
       reviewThreads(first: 100) {
         totalCount
+        pageInfo { hasNextPage endCursor }
         nodes {
           id isResolved isOutdated path line
           comments(first: 50) {
+            totalCount
+            pageInfo { hasNextPage endCursor }
             nodes {
               id databaseId body createdAt
               author { login }
@@ -98,27 +114,192 @@ query($owner: String!, $repo: String!, $number: Int!) {
 }
 '
 
-_err=$(mktemp)
-trap 'rm -f "$_err"' EXIT
-RAW=$(gh api graphql \
+# Per-resource pagination queries (fetch one resource at a time using cursor)
+COMMENTS_PAGE_QUERY='
+query($owner: String!, $repo: String!, $number: Int!, $cursor: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      comments(first: 50, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id databaseId body createdAt
+          author { login }
+        }
+      }
+    }
+  }
+}
+'
+
+REVIEWS_PAGE_QUERY='
+query($owner: String!, $repo: String!, $number: Int!, $cursor: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      reviews(first: 50, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id databaseId body state createdAt
+          author { login }
+        }
+      }
+    }
+  }
+}
+'
+
+THREADS_PAGE_QUERY='
+query($owner: String!, $repo: String!, $number: Int!, $cursor: String!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $number) {
+      reviewThreads(first: 100, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id isResolved isOutdated path line
+          comments(first: 50) {
+            totalCount
+            pageInfo { hasNextPage endCursor }
+            nodes {
+              id databaseId body createdAt
+              author { login }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+'
+
+# Thread reply pagination uses GraphQL node interface to fetch a specific thread
+REPLIES_PAGE_QUERY='
+query($nodeId: ID!, $cursor: String!) {
+  node(id: $nodeId) {
+    ... on PullRequestReviewThread {
+      comments(first: 50, after: $cursor) {
+        pageInfo { hasNextPage endCursor }
+        nodes {
+          id databaseId body createdAt
+          author { login }
+        }
+      }
+    }
+  }
+}
+'
+
+# --- pagination helper -----------------------------------------------------
+
+# Fetches all remaining pages for a top-level PR connection field and merges
+# them into $_tmpdir/raw.json. Uses cursor from the previous page's pageInfo.
+# Args: $1 = resource name (comments|reviews|reviewThreads), $2 = query
+paginate_resource() {
+  _pg_res="$1"
+  _pg_query="$2"
+  _pg_cursor=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.endCursor // empty" "$_tmpdir/raw.json")
+  _pg_has_next=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.hasNextPage" "$_tmpdir/raw.json")
+  _pg_n=0
+
+  while [ "$_pg_has_next" = "true" ] && [ -n "$_pg_cursor" ] && [ "$_pg_n" -lt "$MAX_PAGES" ]; do
+    _pg_n=$((_pg_n + 1))
+    if ! gh api graphql \
+      -f query="$_pg_query" \
+      -F owner="$OWNER" -F repo="$REPO" -F number="$PR_NUMBER" \
+      -f cursor="$_pg_cursor" \
+      > "$_tmpdir/page.json" 2>"$_tmpdir/page_err.txt"; then
+      die_json "GraphQL pagination query for '$_pg_res' failed: $(tr '"' "'" < "$_tmpdir/page_err.txt")" "GRAPHQL_PAGE_FAIL"
+    fi
+    if jq -e '(.errors // []) | length > 0' "$_tmpdir/page.json" >/dev/null 2>&1; then
+      die_json "GraphQL pagination for '$_pg_res' returned errors: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/page.json")" "GRAPHQL_PAGE_FAIL"
+    fi
+    if ! jq --slurpfile page "$_tmpdir/page.json" --arg res "$_pg_res" '
+      .data.repository.pullRequest[($res)].nodes += $page[0].data.repository.pullRequest[($res)].nodes
+    ' "$_tmpdir/raw.json" > "$_tmpdir/merged.json"; then
+      die_json "Failed to merge paginated data for '$_pg_res' on page $_pg_n" "JQ_MERGE_FAIL"
+    fi
+    mv "$_tmpdir/merged.json" "$_tmpdir/raw.json"
+    _pg_cursor=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.endCursor // empty" "$_tmpdir/page.json")
+    _pg_has_next=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.hasNextPage" "$_tmpdir/page.json")
+  done
+
+  if [ "$_pg_has_next" = "true" ]; then
+    echo "Warning: Pagination for '$_pg_res' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" >&2
+  fi
+}
+
+# --- initial fetch ---------------------------------------------------------
+
+if ! gh api graphql \
   -f query="$QUERY" \
   -F owner="$OWNER" \
   -F repo="$REPO" \
-  -F number="$PR_NUMBER" 2>"$_err")
-_status=$?
-if [ $_status -ne 0 ]; then
-  die_json "GraphQL query failed: $(tr '"' "'" <"$_err")" "GRAPHQL_FAIL"
+  -F number="$PR_NUMBER" \
+  > "$_tmpdir/raw.json" 2>"$_tmpdir/err.txt"; then
+  die_json "GraphQL query failed: $(tr '"' "'" < "$_tmpdir/err.txt")" "GRAPHQL_FAIL"
 fi
-rm -f "$_err"
+
+# --- check for GraphQL errors ----------------------------------------------
+
+if jq -e '(.errors // []) | length > 0' "$_tmpdir/raw.json" >/dev/null 2>&1; then
+  die_json "GraphQL query failed: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/raw.json")" "GRAPHQL_FAIL"
+fi
 
 # --- null check ------------------------------------------------------------
 
-printf '%s\n' "$RAW" | jq -e '.data.repository.pullRequest' >/dev/null 2>&1 \
+jq -e '.data.repository.pullRequest' "$_tmpdir/raw.json" >/dev/null 2>&1 \
   || die_json "PR #${PR_NUMBER} not found in ${OWNER}/${REPO}" "PR_NOT_FOUND"
+
+# --- paginate top-level resources ------------------------------------------
+
+paginate_resource "comments" "$COMMENTS_PAGE_QUERY"
+paginate_resource "reviews" "$REVIEWS_PAGE_QUERY"
+paginate_resource "reviewThreads" "$THREADS_PAGE_QUERY"
+
+# --- paginate nested thread replies ----------------------------------------
+
+# Each review thread has its own comments connection. If any thread has >50
+# replies, fetch the remaining pages via the GraphQL node interface.
+_thread_count=$(jq '.data.repository.pullRequest.reviewThreads.nodes | length' "$_tmpdir/raw.json")
+_ti=0
+
+while [ "$_ti" -lt "$_thread_count" ]; do
+  _tr_has_next=$(jq -r ".data.repository.pullRequest.reviewThreads.nodes[$_ti].comments.pageInfo.hasNextPage" "$_tmpdir/raw.json")
+  if [ "$_tr_has_next" = "true" ]; then
+    _tr_node_id=$(jq -r ".data.repository.pullRequest.reviewThreads.nodes[$_ti].id" "$_tmpdir/raw.json")
+    _tr_cursor=$(jq -r ".data.repository.pullRequest.reviewThreads.nodes[$_ti].comments.pageInfo.endCursor" "$_tmpdir/raw.json")
+    _tr_n=0
+
+    while [ "$_tr_has_next" = "true" ] && [ -n "$_tr_cursor" ] && [ "$_tr_n" -lt "$MAX_PAGES" ]; do
+      _tr_n=$((_tr_n + 1))
+      if ! gh api graphql \
+        -f query="$REPLIES_PAGE_QUERY" \
+        -f nodeId="$_tr_node_id" \
+        -f cursor="$_tr_cursor" \
+        > "$_tmpdir/reply_page.json" 2>"$_tmpdir/page_err.txt"; then
+        die_json "GraphQL pagination for replies in thread '$_tr_node_id' failed: $(tr '"' "'" < "$_tmpdir/page_err.txt")" "GRAPHQL_PAGE_FAIL"
+      fi
+      if jq -e '(.errors // []) | length > 0' "$_tmpdir/reply_page.json" >/dev/null 2>&1; then
+        die_json "GraphQL reply pagination failed: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/reply_page.json")" "GRAPHQL_PAGE_FAIL"
+      fi
+      if ! jq --slurpfile page "$_tmpdir/reply_page.json" --argjson idx "$_ti" '
+        .data.repository.pullRequest.reviewThreads.nodes[$idx].comments.nodes += $page[0].data.node.comments.nodes
+      ' "$_tmpdir/raw.json" > "$_tmpdir/merged.json"; then
+        die_json "Failed to merge reply pagination for thread '$_tr_node_id'" "JQ_MERGE_FAIL"
+      fi
+      mv "$_tmpdir/merged.json" "$_tmpdir/raw.json"
+      _tr_cursor=$(jq -r '.data.node.comments.pageInfo.endCursor // empty' "$_tmpdir/reply_page.json")
+      _tr_has_next=$(jq -r '.data.node.comments.pageInfo.hasNextPage' "$_tmpdir/reply_page.json")
+    done
+
+    if [ "$_tr_has_next" = "true" ]; then
+      echo "Warning: Reply pagination for thread '$_tr_node_id' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" >&2
+    fi
+  fi
+  _ti=$((_ti + 1))
+done
 
 # --- jq transform ----------------------------------------------------------
 
-printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
+jq --arg owner "$OWNER" --arg repo "$REPO" '
   .data.repository.pullRequest as $pr |
 
   # Extract PR author for has_author_reply detection
@@ -203,10 +384,15 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
     }
   ) as $reviewers |
 
-  # Truncation flag (compare against unfiltered node counts to avoid false positives from content filtering)
-  ($pr.reviewThreads.totalCount > ($threads | length) or
-   $pr.reviews.totalCount > ($pr.reviews.nodes | length) or
-   $pr.comments.totalCount > ($pr.comments.nodes | length)) as $truncated |
+  # Truncation flag — compares totalCount (from initial query) against node
+  # arrays (accumulated across all pages). True only when pagination left data
+  # behind (e.g. API error mid-pagination or MAX_PAGES hit).
+  # Uses unfiltered node counts to avoid false positives from content filtering.
+  (($pr.reviewThreads.totalCount > ($threads | length)) or
+   ($pr.reviews.totalCount > ($pr.reviews.nodes | length)) or
+   ($pr.comments.totalCount > ($pr.comments.nodes | length)) or
+   ([$pr.reviewThreads.nodes[] |
+     select(.comments.totalCount > (.comments.nodes | length))] | length > 0)) as $truncated |
 
   {
     pr: {
@@ -242,4 +428,4 @@ printf '%s\n' "$RAW" | jq --arg owner "$OWNER" --arg repo "$REPO" '
       truncated:                     $truncated
     }
   }
-'
+' "$_tmpdir/raw.json"
