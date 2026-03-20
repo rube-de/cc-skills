@@ -12,3 +12,7 @@ node_modules/
 
 # Auto-generated plans
 docs/plans/
+
+# Pnevma
+.pnevma/
+pnevma.toml
