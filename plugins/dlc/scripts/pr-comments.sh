@@ -208,15 +208,21 @@ paginate_resource() {
       > "$_tmpdir/page.json" 2>"$_tmpdir/page_err.txt"; then
       die_json "GraphQL pagination query for '$_pg_res' failed: $(tr '"' "'" < "$_tmpdir/page_err.txt")" "GRAPHQL_PAGE_FAIL"
     fi
-    jq --slurpfile page "$_tmpdir/page.json" --arg res "$_pg_res" '
+    if jq -e '(.errors // []) | length > 0' "$_tmpdir/page.json" >/dev/null 2>&1; then
+      die_json "GraphQL pagination for '$_pg_res' returned errors: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/page.json")" "GRAPHQL_PAGE_FAIL"
+    fi
+    if ! jq --slurpfile page "$_tmpdir/page.json" --arg res "$_pg_res" '
       .data.repository.pullRequest[($res)].nodes += $page[0].data.repository.pullRequest[($res)].nodes
-    ' "$_tmpdir/raw.json" > "$_tmpdir/merged.json" && mv "$_tmpdir/merged.json" "$_tmpdir/raw.json"
+    ' "$_tmpdir/raw.json" > "$_tmpdir/merged.json"; then
+      die_json "Failed to merge paginated data for '$_pg_res' on page $_pg_n" "JQ_MERGE_FAIL"
+    fi
+    mv "$_tmpdir/merged.json" "$_tmpdir/raw.json"
     _pg_cursor=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.endCursor // empty" "$_tmpdir/page.json")
     _pg_has_next=$(jq -r ".data.repository.pullRequest.${_pg_res}.pageInfo.hasNextPage" "$_tmpdir/page.json")
   done
 
   if [ "$_pg_has_next" = "true" ]; then
-    die_json "Pagination for '$_pg_res' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" "PAGINATION_LIMIT"
+    echo "Warning: Pagination for '$_pg_res' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" >&2
   fi
 }
 
@@ -271,15 +277,21 @@ while [ "$_ti" -lt "$_thread_count" ]; do
         > "$_tmpdir/reply_page.json" 2>"$_tmpdir/page_err.txt"; then
         die_json "GraphQL pagination for replies in thread '$_tr_node_id' failed: $(tr '"' "'" < "$_tmpdir/page_err.txt")" "GRAPHQL_PAGE_FAIL"
       fi
-      jq --slurpfile page "$_tmpdir/reply_page.json" --argjson idx "$_ti" '
+      if jq -e '(.errors // []) | length > 0' "$_tmpdir/reply_page.json" >/dev/null 2>&1; then
+        die_json "GraphQL reply pagination failed: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/reply_page.json")" "GRAPHQL_PAGE_FAIL"
+      fi
+      if ! jq --slurpfile page "$_tmpdir/reply_page.json" --argjson idx "$_ti" '
         .data.repository.pullRequest.reviewThreads.nodes[$idx].comments.nodes += $page[0].data.node.comments.nodes
-      ' "$_tmpdir/raw.json" > "$_tmpdir/merged.json" && mv "$_tmpdir/merged.json" "$_tmpdir/raw.json"
+      ' "$_tmpdir/raw.json" > "$_tmpdir/merged.json"; then
+        die_json "Failed to merge reply pagination for thread '$_tr_node_id'" "JQ_MERGE_FAIL"
+      fi
+      mv "$_tmpdir/merged.json" "$_tmpdir/raw.json"
       _tr_cursor=$(jq -r '.data.node.comments.pageInfo.endCursor // empty' "$_tmpdir/reply_page.json")
       _tr_has_next=$(jq -r '.data.node.comments.pageInfo.hasNextPage' "$_tmpdir/reply_page.json")
     done
 
     if [ "$_tr_has_next" = "true" ]; then
-      die_json "Reply pagination for thread '$_tr_node_id' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" "PAGINATION_LIMIT"
+      echo "Warning: Reply pagination for thread '$_tr_node_id' exceeded MAX_PAGES=$MAX_PAGES — data is incomplete" >&2
     fi
   fi
   _ti=$((_ti + 1))
