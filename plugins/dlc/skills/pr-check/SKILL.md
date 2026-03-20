@@ -322,16 +322,28 @@ For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a r
 
 ### Reply routing
 
-Use the `reply_type` field from the comment data to determine the reply mechanism:
+Use the `reply_type` field from the comment data to determine the reply mechanism. Note: threads have two ID fields — `rest_id` (integer, used for REST API `in_reply_to`) and `id` (GraphQL node ID like `PRRT_kwDORKvRbs510iY6`, used for `resolveReviewThread`). Use the correct one for each call.
 
-- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`:
+- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub:
 
 ```bash
+# Post the reply (uses rest_id for the REST API)
 gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="{reply text}" \
   -F in_reply_to={rest_id}
+
+# Resolve the thread on GitHub (uses GraphQL node id)
+if ! gh api graphql -f query='mutation($threadId: ID!) {
+  resolveReviewThread(input: {threadId: $threadId}) {
+    thread { isResolved }
+  }
+}' -f threadId="{id}" >/dev/null 2>&1; then
+  echo "Warning: Failed to resolve thread {id} — reply was posted successfully" >&2
+fi
 ```
+
+> **Thread resolution**: Only inline threads (`reply_type == "inline"`) are resolved — review bodies and issue comments have no GitHub resolve mechanism. If `resolveReviewThread` fails (permissions, rate limit), log a warning and continue — the reply is the primary deliverable, resolution is a UX enhancement. The mutation is idempotent, so calling it on an already-resolved thread is a harmless no-op.
 
 - **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel:
 
@@ -520,10 +532,11 @@ For each **user-skipped Fixable** comment, always reply:
 |-------------|-------------------|
 | Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
 
-Use the same reply routing as Step 4 — route based on the item's `reply_type`:
+Use the same reply routing as Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.
 
 - **Inline** (`reply_type == "inline"`):
 ```bash
+# Post the reply only — do NOT resolve the thread (work is pending)
 gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="{decision-aware reply text}" \
