@@ -95,7 +95,7 @@ Using the `.threads` array from Step 1, classify each top-level review thread:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", "Acknowledged:", or "Answered:") |
+| **Resolved** | `is_resolved == true`, OR PR author replied with affirmative language, OR thread already has a DLC reply (prefixed with "Fixed:", "Dismissed:", or "Answered:"). Note: "Acknowledged:" replies do NOT count — those threads intentionally remain unresolved because the underlying work is pending (see Step 5b). |
 | **Dismissed** | Not applicable for inline threads — threads use GitHub's resolve mechanism, not dismiss. This category will typically be 0 for threads. |
 | **Unresolved** | Everything else. This includes `is_outdated` threads (the agent must re-check the current code state), and threads containing nit/optional/consider comments (these are still legitimate feedback) |
 
@@ -328,18 +328,18 @@ Use the `reply_type` field from the comment data to determine the reply mechanis
 
 ```bash
 # Post the reply (uses rest_id for the REST API)
-gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
+if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -f body="{reply text}" \
-  -F in_reply_to={rest_id}
-
-# Resolve the thread on GitHub (uses GraphQL node id)
-if ! gh api graphql -f query='mutation($threadId: ID!) {
-  resolveReviewThread(input: {threadId: $threadId}) {
-    thread { isResolved }
-  }
-}' -f threadId="{id}" >/dev/null 2>&1; then
-  echo "Warning: Failed to resolve thread {id} — reply was posted successfully" >&2
+  -F in_reply_to={rest_id}; then
+  # Resolve the thread on GitHub (uses GraphQL node id, only after successful reply)
+  if ! gh api graphql -f query='mutation($threadId: ID!) {
+    resolveReviewThread(input: {threadId: $threadId}) {
+      thread { isResolved }
+    }
+  }' -f threadId="{id}" >/dev/null; then
+    echo "Warning: Failed to resolve thread {id} — reply was posted successfully" >&2
+  fi
 fi
 ```
 

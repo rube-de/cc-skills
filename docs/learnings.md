@@ -615,6 +615,21 @@ When forking a multi-phase workflow (e.g., `github-issue-work` → `plugin-dev:d
 
 > Source: [Issue #160](https://github.com/rube-de/cc-skills/issues/160) — fork of github-issue-work into `/plugin-dev:develop` with TDD extension points.
 
+### DLC reply prefixes must align with thread resolution semantics on reruns
+
+When a skill posts replies with different prefixes (`Fixed:`, `Answered:`, `Dismissed:`, `Acknowledged:`), the rerun classification logic must treat them differently based on whether the thread was resolved on GitHub:
+
+- **"Fixed:", "Dismissed:", "Answered:"** → thread was resolved via `resolveReviewThread` → classify as **Resolved** on rerun
+- **"Acknowledged:"** → thread intentionally left unresolved (work is pending) → classify as **Unresolved** on rerun
+
+If the rerun classification treats all DLC reply prefixes equally as "Resolved," threads that are still open on GitHub get silently skipped — a coverage gap invisible to both the agent and the reviewer.
+
+**Related pattern**: When a workflow adds a secondary API call after a primary one (e.g., `resolveReviewThread` after posting a reply), gate the secondary call on the primary's success. Otherwise a failed reply + successful resolve leaves the reviewer with a closed conversation and no explanation.
+
+**Related pattern**: When suppressing command output for non-fatal calls (`>/dev/null`), only redirect stdout — keep stderr visible for debugging. `>/dev/null 2>&1` hides error messages that would explain why a call failed.
+
+> Source: [PR #183](https://github.com/rube-de/cc-skills/pull/183) — Three independent reviewers (Gemini, Codex, Claude) identified these patterns across the `resolveReviewThread` addition.
+
 ### jq `==` comparisons inside object constructors require parentheses on Apple jq
 
 Apple ships `jq-1.7.1-apple` which throws `syntax error, unexpected ==` when `==` comparisons appear directly inside a jq object constructor without explicit outer parentheses. Standard jq is more permissive. Always wrap comparisons used as object field values in outer parentheses: `field: ((expr) == other)` instead of `field: (expr) == other`.
