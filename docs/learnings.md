@@ -639,3 +639,13 @@ Apple ships `jq-1.7.1-apple` which throws `syntax error, unexpected ==` when `==
 **Good pattern**: `blockers_resolved: ((expr) == (.blocked_by | length)),` — works on both.
 
 > Source: [PR #179](https://github.com/rube-de/cc-skills/pull/179), fixes [#177](https://github.com/rube-de/cc-skills/issues/177) — `plugins/project-manager/scripts/open-issues.sh`
+
+### Use `-F` (not `-f`) for integer fields in `gh api` calls
+
+`gh api` has two field flags: `-f` (lowercase) always sends a string, while `-F` (uppercase) performs JSON type inference so integers stay integers. APIs that require an integer field (e.g. `sub_issue_id` in the GitHub Sub-Issues API) return a type error if the value arrives as a string. Always use `-F` for numeric fields.
+
+**Bad pattern**: `gh api ... -f sub_issue_id=123` — sends `"123"` (string), API rejects with type error.
+
+**Good pattern**: `gh api ... -F "sub_issue_id=$sub_issue_id"` — sends `123` (integer). Note the quoting: `-F "key=$var"` keeps the entire `key=value` as one shell argument.
+
+> Source: [PR #185](https://github.com/rube-de/cc-skills/pull/185) — `plugins/project-manager/skills/pm/SKILL.md`
