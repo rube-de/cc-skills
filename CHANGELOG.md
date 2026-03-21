@@ -1,3 +1,10 @@
+## [1.50.1](https://github.com/rube-de/cc-skills/compare/v1.50.0...v1.50.1) (2026-03-21)
+
+
+### Bug Fixes
+
+* **project-manager:** link epic sub-issues via GitHub Sub-Issues API ([#185](https://github.com/rube-de/cc-skills/issues/185)) ([364a577](https://github.com/rube-de/cc-skills/commit/364a577d358d18510d45fc42a28590cfac1a9dc7)), closes [#147](https://github.com/rube-de/cc-skills/issues/147)
+
 # [1.50.0](https://github.com/rube-de/cc-skills/compare/v1.49.0...v1.50.0) (2026-03-21)
 
 
