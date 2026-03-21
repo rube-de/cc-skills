@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/rube-de/cc-skills/compare/v1.49.0...v1.50.0) (2026-03-21)
+
+
+### Features
+
+* **dlc:** resolve review threads after Fixed/Answered/Dismissed replies ([#183](https://github.com/rube-de/cc-skills/issues/183)) ([1fdc433](https://github.com/rube-de/cc-skills/commit/1fdc433ffbc801a3d2cb91d84da94c350ccddb8d)), closes [#182](https://github.com/rube-de/cc-skills/issues/182)
+
 # [1.49.0](https://github.com/rube-de/cc-skills/compare/v1.48.0...v1.49.0) (2026-03-20)
 
 
