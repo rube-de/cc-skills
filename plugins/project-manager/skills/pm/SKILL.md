@@ -279,7 +279,20 @@ gh issue create --repo OWNER/REPO \
 **On failure:** Save draft to `/tmp/issue-draft-{timestamp}.md`, report error.
 **On success:** Remove the temp file: `rm -f /tmp/issue-body.md`
 
-For epics: create the parent issue first, then sub-issues with `Part of #EPIC_NUMBER` references. Clean up `/tmp/issue-body.md` only after **all** sub-issues are created successfully.
+For epics and new projects with sub-issues: create the parent issue first, then each sub-issue with `Part of #PARENT_NUMBER` in its body. After creating each sub-issue, formally link it to the parent via GitHub's Sub-Issues API so the parent's sidebar tracks completion progress:
+
+```bash
+# Get the sub-issue's REST ID (integer) and link it to the parent
+sub_issue_id=$(gh api "repos/OWNER/REPO/issues/SUB_NUMBER" --jq .id)
+gh api "repos/OWNER/REPO/issues/PARENT_NUMBER/sub_issues" \
+  --method POST -F "sub_issue_id=$sub_issue_id"
+```
+
+Use `-F` (capital F) for `sub_issue_id` — the API requires an integer, and `-F` sends it as a number while lowercase `-f` would send a string, causing a type error.
+
+If either the `sub_issue_id` lookup or the POST to `/sub_issues` fails for a sub-issue (rate limit, plan doesn't support sub-issues, permissions), log the error and continue to the next sub-issue — don't abort the loop. Skip the POST if the ID lookup failed. The `Part of #N` markdown reference still provides a human-readable cross-reference even if the API link fails.
+
+Clean up `/tmp/issue-body.md` only after **all** sub-issue creation and linking attempts have completed, even if some links failed.
 
 Report all created issue URLs to the user.
 
