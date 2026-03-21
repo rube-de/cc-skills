@@ -99,14 +99,19 @@ printf '%s\n' "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_
   }] |
 
   # Compute resolved status and unblocked flag
-  [ .[] | . + {
-    blockers_resolved: ((
-      [.blocked_by[] | select(. as $b | $open_set | index($b) | not)] | length
-    ) == (.blocked_by | length)),
-    unblocked: ((
-      [.blocked_by[] | select(. as $b | $open_set | index($b))] | length
-    ) == 0)
-  }] as $augmented_issues |
+  # NOTE: Comparisons computed as variables outside {} to avoid jq parser
+  # fragmentation — some builds (Apple jq, older Linux jq) choke on == inside
+  # object constructors. See docs/learnings.md.
+  [ .[] |
+    (([.blocked_by[] | select(. as $b | $open_set | index($b) | not)] | length)
+      == (.blocked_by | length)) as $resolved |
+    (([.blocked_by[] | select(. as $b | $open_set | index($b))] | length)
+      == 0) as $is_unblocked |
+    . + {
+      blockers_resolved: $resolved,
+      unblocked: $is_unblocked
+    }
+  ] as $augmented_issues |
 
   # Count unassigned from full list (before assignment filter)
   ([$augmented_issues[] | select(.assignees | length == 0)] | length) as $unassigned |

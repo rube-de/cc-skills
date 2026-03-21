@@ -630,15 +630,33 @@ If the rerun classification treats all DLC reply prefixes equally as "Resolved,"
 
 > Source: [PR #183](https://github.com/rube-de/cc-skills/pull/183) — Three independent reviewers (Gemini, Codex, Claude) identified these patterns across the `resolveReviewThread` addition.
 
-### jq `==` comparisons inside object constructors require parentheses on Apple jq
+### jq `==` comparisons inside object constructors — compute outside `{}`
 
-Apple ships `jq-1.7.1-apple` which throws `syntax error, unexpected ==` when `==` comparisons appear directly inside a jq object constructor without explicit outer parentheses. Standard jq is more permissive. Always wrap comparisons used as object field values in outer parentheses: `field: ((expr) == other)` instead of `field: (expr) == other`.
+jq's parser handles `==` inside object constructors `{ key: expr == val }` inconsistently across builds. Apple `jq-1.7.1-apple` throws `syntax error, unexpected ==`; some Linux jq builds (standard 1.7.x, older 1.5/1.6) also fail. The double-parenthesization fix `((expr) == val)` from PR #179 resolved Apple jq but still broke on Linux.
 
-**Bad pattern**: `blockers_resolved: (expr) == (.blocked_by | length),` — works on standard jq, fails on Apple jq.
+**Portable fix**: Compute comparison results as jq variables **before** the object constructor, then reference them inside. No jq build has issues with `==` outside `{}`.
 
-**Good pattern**: `blockers_resolved: ((expr) == (.blocked_by | length)),` — works on both.
+**Bad** — comparison inside object constructor (fragile):
+```jq
+[ .[] | . + {
+  blockers_resolved: ((expr) == (.blocked_by | length)),
+  unblocked: ((expr) == 0)
+}]
+```
 
-> Source: [PR #179](https://github.com/rube-de/cc-skills/pull/179), fixes [#177](https://github.com/rube-de/cc-skills/issues/177) — `plugins/project-manager/scripts/open-issues.sh`
+**Good** — comparison as variable binding outside `{}` (portable):
+```jq
+[ .[] |
+  ((expr) == (.blocked_by | length)) as $resolved |
+  ((expr) == 0) as $is_unblocked |
+  . + {
+    blockers_resolved: $resolved,
+    unblocked: $is_unblocked
+  }
+]
+```
+
+> Source: [PR #179](https://github.com/rube-de/cc-skills/pull/179), fixes [#177](https://github.com/rube-de/cc-skills/issues/177); regression reported in [#184](https://github.com/rube-de/cc-skills/issues/184) — `plugins/project-manager/scripts/open-issues.sh`
 
 ### Use `-F` (not `-f`) for integer fields in `gh api` calls
 
