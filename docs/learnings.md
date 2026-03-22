@@ -639,16 +639,16 @@ jq's parser handles `==` inside object constructors `{ key: expr == val }` incon
 **Bad** — comparison inside object constructor (fragile):
 ```jq
 [ .[] | . + {
-  blockers_resolved: ((expr) == (.blocked_by | length)),
-  unblocked: ((expr) == 0)
+  blockers_resolved: ((expr1) == (.blocked_by | length)),
+  unblocked: ((expr2) == 0)
 }]
 ```
 
 **Good** — comparison as variable binding outside `{}` (portable):
 ```jq
 [ .[] |
-  ((expr) == (.blocked_by | length)) as $resolved |
-  ((expr) == 0) as $is_unblocked |
+  ((expr1) == (.blocked_by | length)) as $resolved |
+  ((expr2) == 0) as $is_unblocked |
   . + {
     blockers_resolved: $resolved,
     unblocked: $is_unblocked

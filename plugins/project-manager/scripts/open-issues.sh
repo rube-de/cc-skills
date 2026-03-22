@@ -102,13 +102,13 @@ printf '%s\n' "$RAW" | jq --arg now "$NOW" --argjson include_assigned "$INCLUDE_
   # NOTE: Comparisons computed as variables outside {} to avoid jq parser
   # fragmentation — some builds (Apple jq, older Linux jq) choke on == inside
   # object constructors. See docs/learnings.md.
+  # Both fields are logically equivalent (no open blockers ↔ all blockers resolved),
+  # so we compute once and assign to both.
   [ .[] |
-    (([.blocked_by[] | select(. as $b | $open_set | index($b) | not)] | length)
-      == (.blocked_by | length)) as $resolved |
     (([.blocked_by[] | select(. as $b | $open_set | index($b))] | length)
       == 0) as $is_unblocked |
     . + {
-      blockers_resolved: $resolved,
+      blockers_resolved: $is_unblocked,
       unblocked: $is_unblocked
     }
   ] as $augmented_issues |
