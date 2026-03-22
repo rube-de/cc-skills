@@ -1,3 +1,10 @@
+## [1.50.2](https://github.com/rube-de/cc-skills/compare/v1.50.1...v1.50.2) (2026-03-22)
+
+
+### Bug Fixes
+
+* **project-manager:** portable jq variable bindings for cross-platform compat ([#186](https://github.com/rube-de/cc-skills/issues/186)) ([c8f513c](https://github.com/rube-de/cc-skills/commit/c8f513cc0717ae83a69656d351ac28e6ede28ae3)), closes [#184](https://github.com/rube-de/cc-skills/issues/184)
+
 ## [1.50.1](https://github.com/rube-de/cc-skills/compare/v1.50.0...v1.50.1) (2026-03-21)
 
 
