@@ -29,7 +29,7 @@ digraph review_plan {
 
   locate -> verify -> launch -> synthesize -> present -> decide;
 
-  decide -> execute [label="Ready"];
+  decide -> execute [label="Ready to execute"];
   decide -> revise [label="Needs revision"];
   decide -> discuss [label="Needs discussion"];
 
@@ -61,7 +61,8 @@ Verify every concrete claim in the plan against the actual codebase. Check ALL o
 
 | Claim Type | Verification Method | Failure = |
 |------------|-------------------|-----------|
-| File paths | `Glob` for existence | Critical — plan references nonexistent files |
+| File paths (modify/delete) | `Glob` for existence | Critical — plan references nonexistent files |
+| File paths (create) | Verify parent directory exists | Note — files being created are expected to be absent |
 | Line numbers | `Read` the file, check lines match | Warning — line numbers may have drifted |
 | API signatures | `Grep` for function/method names, verify params | Critical — API has changed |
 | Import paths | `Glob` for referenced module path, then `Read` to confirm expected export | Critical — module doesn't exist or export is missing |
@@ -127,16 +128,25 @@ Review these dimensions:
 5. **Security/performance** — Any red flags the plan doesn't address?
 6. **Scope creep** — Is the plan doing more than necessary? YAGNI violations?
 
-Return your findings as a structured list. For each finding include:
-- Severity (Critical / Warning / Note)
-- Dimension (which of the 6 above)
-- Description (what's wrong)
-- Recommendation (how to fix)
+Return your findings as **JSON** using this structure (compatible with council workflows):
+
+{
+  "consultant": "review-plan-domain-expert",
+  "findings": [
+    {
+      "severity": "Critical",
+      "dimension": "Flawed assumptions",
+      "description": "what is wrong with the plan",
+      "recommendation": "how to fix or improve the plan"
+    }
+  ],
+  "summary": "Short overall assessment including major risks and readiness to execute."
+}
 ```
 
 ### Step 4: Deduplicate and Synthesize
 
-After both consultants respond:
+After both consultants respond, verify each response is valid JSON with a `findings` array. If a response is malformed, discard it and proceed with the remaining consultant's findings only (see Error Handling).
 
 - **Merge duplicates**: If both flag the same issue, combine into one finding with "flagged by both consultants" (higher confidence)
 - **Surface disagreements**: If one flags something the other didn't mention, keep it but note it's single-source
