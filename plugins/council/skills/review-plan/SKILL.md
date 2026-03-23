@@ -44,12 +44,12 @@ digraph review_plan {
 Check these sources in order — use the first match:
 
 - **Explicit argument**: If the user provided a file path, use it
+- **Conversation context**: If a plan was written or pasted earlier in this conversation, use that content
 - **Plan directory discovery**: From the **repository root**, search both plan directories and use the most recently modified `.md` file:
   ```bash
   ls -t .claude/plans/*.md docs/plans/*.md 2>/dev/null | head -1
   ```
   Note: Run this from the repo root, not from the skill directory.
-- **Conversation context**: If a plan was written earlier in this conversation, use that content
 
 If no plan is found, ask the user with AskUserQuestion.
 
@@ -65,7 +65,7 @@ Verify every concrete claim in the plan against the actual codebase. Check ALL o
 | File paths (create) | Verify parent directory exists | Note — files being created are expected to be absent |
 | Line numbers | `Read` the file, check lines match | Warning — line numbers may have drifted |
 | API signatures | `Grep` for function/method names, verify params | Critical — API has changed |
-| Import paths | `Glob` for referenced module path, then `Read` to confirm expected export | Critical — module doesn't exist or export is missing |
+| Import paths (relative only) | `Glob` for referenced module path, then `Read` to confirm expected export — skip package imports (`react`, `lodash`) and alias imports (`@/lib/db`) | Critical — module doesn't exist or export is missing |
 | Duplicate work | `Grep` for existing implementations | Warning — feature may already exist |
 | Test files | `Glob` for existing test files in same area | Note — tests may already cover this |
 
@@ -181,8 +181,8 @@ After both consultants respond, verify each response is valid JSON with a `findi
 Apply these rules in order — use the first match:
 
 - Any **Critical** issues (from codebase verification or consultants) → **Needs revision**
-- Any **Warning** issues where consultants disagree on severity → **Needs discussion**
-- Any **Warning** issues (consultants agree) → **Needs revision**
+- Any **Warning** issues where consultants disagree (different severity or flagged by only one) → **Needs discussion**
+- Any **Warning** issues (both consultants agree) → **Needs revision**
 - Only **Note** issues or no issues → **Ready to execute**
 
 ### Step 6: Route by Verdict
