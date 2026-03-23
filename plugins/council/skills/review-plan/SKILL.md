@@ -5,7 +5,7 @@ description: >-
   the user says "review plan", "check my plan", "sanity check the plan", "validate plan",
   "review before executing". Also use before superpowers:executing-plans if a plan has
   not been reviewed yet.
-allowed-tools: Bash, Read, Grep, Glob, Agent, AskUserQuestion
+allowed-tools: Bash, Read, Grep, Glob, Task, AskUserQuestion
 user-invocable: true
 ---
 
@@ -30,8 +30,8 @@ digraph review_plan {
   locate -> verify -> launch -> synthesize -> present -> decide;
 
   decide -> execute [label="Ready"];
-  decide -> revise [label="Needs Revision"];
-  decide -> discuss [label="Needs Discussion"];
+  decide -> revise [label="Needs revision"];
+  decide -> discuss [label="Needs discussion"];
 
   execute [label="Offer execution handoff" shape=ellipse];
   revise [label="List specific changes\nAsk: revise or proceed?" shape=ellipse];
@@ -44,10 +44,11 @@ digraph review_plan {
 Check these sources in order — use the first match:
 
 1. **Explicit argument**: If the user provided a file path, use it
-2. **`docs/plans/` discovery**: Find the most recently modified `.md` file:
+2. **`docs/plans/` discovery**: From the **repository root**, find the most recently modified `.md` file:
    ```bash
    ls -t docs/plans/*.md 2>/dev/null | head -1
    ```
+   Note: Run this from the repo root, not from the skill directory.
 3. **Conversation context**: If a plan was written earlier in this conversation, use that content
 
 If no plan is found, ask the user with AskUserQuestion.
@@ -63,13 +64,13 @@ Verify every concrete claim in the plan against the actual codebase. Check ALL o
 | File paths | `Glob` for existence | Critical — plan references nonexistent files |
 | Line numbers | `Read` the file, check lines match | Warning — line numbers may have drifted |
 | API signatures | `Grep` for function/method names, verify params | Critical — API has changed |
-| Import paths | `Grep` for module existence | Critical — module doesn't exist |
+| Import paths | `Glob` for referenced module path, then `Read` to confirm expected export | Critical — module doesn't exist or export is missing |
 | Duplicate work | `Grep` for existing implementations | Warning — feature may already exist |
 | Test files | `Glob` for existing test files in same area | Note — tests may already cover this |
 
 Collect all verification results into a structured report:
 
-```
+```markdown
 ## Codebase Verification Results
 
 ### Passed (N items)
@@ -86,13 +87,13 @@ Collect all verification results into a structured report:
 
 ### Step 3: Launch Consultants
 
-Launch `gemini-consultant` and `codex-consultant` in parallel using the Agent tool. Both receive the **same prompt**.
+Launch `council:gemini-consultant` and `council:codex-consultant` in parallel using the Task tool. Both receive the **same prompt**.
 
-**IMPORTANT**: Launch both agents in a **single message** with two Agent tool calls — this runs them in parallel.
+**IMPORTANT**: Launch both consultants in a **single message** with two Task tool calls — this runs them in parallel.
 
 #### Consultant Prompt
 
-```
+```text
 You are reviewing an implementation plan BEFORE execution begins.
 Your job is to FIND PROBLEMS, not validate. Assume the plan author has blind spots.
 
@@ -160,29 +161,30 @@ After both consultants respond:
 ### Consultant Disagreements
 {Issues flagged by only one consultant — presented for user judgment}
 
-### Verdict: {Ready to Execute | Needs Revision | Needs Discussion}
+### Verdict: {Ready to execute | Needs revision | Needs discussion}
 ```
 
 #### Verdict Logic
 
-| Condition | Verdict |
-|-----------|---------|
-| Zero Critical issues AND zero codebase verification failures | **Ready to Execute** |
-| Any Critical issues OR codebase Critical failures | **Needs Revision** |
-| Only Warnings but consultants disagree on severity | **Needs Discussion** |
+Apply these rules in order — use the first match:
+
+1. Any **Critical** issues (from codebase verification or consultants) → **Needs revision**
+2. Any **Warning** issues where consultants disagree on severity → **Needs discussion**
+3. Any **Warning** issues (consultants agree) → **Needs revision**
+4. Only **Note** issues or no issues → **Ready to execute**
 
 ### Step 6: Route by Verdict
 
-**Ready to Execute:**
+**Ready to execute:**
 - Confirm with user
 - Offer execution handoff: "Would you like to execute this plan now? I can use subagent-driven development or you can start a new session."
 
-**Needs Revision:**
+**Needs revision:**
 - List the specific changes needed
 - Ask: "Would you like to revise the plan now, or proceed with these known risks?"
 - If user chooses to proceed, note the accepted risks in the execution context
 
-**Needs Discussion:**
+**Needs discussion:**
 - Present the trade-offs clearly
 - Do NOT make the decision — let the user weigh in
 - After user decides, update verdict accordingly
