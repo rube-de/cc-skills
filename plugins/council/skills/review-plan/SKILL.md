@@ -90,7 +90,24 @@ Collect all verification results into a structured report:
 
 Launch `council:gemini-consultant` and `council:codex-consultant` in parallel using the Task tool. Both receive the **same prompt**.
 
-**IMPORTANT**: Launch both consultants in a **single message** with two Task tool calls — this runs them in parallel.
+#### Secret-Scanning Gate
+
+Before sending plan content to external consultants, check for secrets:
+
+```bash
+# Quick secret scan (if gitleaks available)
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks detect --source . --no-git 2>/dev/null
+  if [ $? -ne 0 ]; then
+    echo "WARNING: Potential secrets detected. Aborting council."
+    exit 1
+  fi
+fi
+```
+
+If secrets detected, abort and warn user — do not send plan content to external consultants.
+
+**IMPORTANT**: After the secret-scanning gate passes, launch both consultants in a **single message** with two Task tool calls — this runs them in parallel.
 
 #### Consultant Prompt
 
@@ -128,10 +145,12 @@ Review these dimensions:
 5. **Security/performance** — Any red flags the plan doesn't address?
 6. **Scope creep** — Is the plan doing more than necessary? YAGNI violations?
 
+Set `consultant` to your own model name (e.g., `gemini` or `codex`).
+
 Return your findings as **JSON** using this structure (compatible with council workflows):
 
 {
-  "consultant": "review-plan-domain-expert",
+  "consultant": "{your consultant name}",
   "findings": [
     {
       "severity": "Critical",
