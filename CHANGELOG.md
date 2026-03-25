@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/rube-de/cc-skills/compare/v1.50.2...v1.51.0) (2026-03-25)
+
+
+### Features
+
+* **council:** add review-plan skill for external plan review ([#187](https://github.com/rube-de/cc-skills/issues/187)) ([bbc28a6](https://github.com/rube-de/cc-skills/commit/bbc28a6a94fb70a07dd85dfba2f92613d3593f51)), closes [#120](https://github.com/rube-de/cc-skills/issues/120)
+
 ## [1.50.2](https://github.com/rube-de/cc-skills/compare/v1.50.1...v1.50.2) (2026-03-22)
 
 
