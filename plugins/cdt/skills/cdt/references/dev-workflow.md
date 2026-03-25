@@ -63,9 +63,9 @@ Teammate tool:
     3. Implement completely — no stubs, no TODOs, match existing patterns
        Implement small fixes you encounter in files you're already editing (typo, missing null check, broken condition) — code is cheap; don't defer them as "out of scope" when you're already there.
     4. Run build/lint if available
-    5. Simplify: review your implementation for unnecessary complexity,
-       redundant code, unclear naming, and logic that could be consolidated.
-       Refine without changing behavior — make it clean, not just correct.
+    5. Simplify: review your implementation for unnecessary complexity or nesting,
+       redundant code or abstractions, unclear naming, and logic that could be consolidated.
+       Refine without changing behavior. Re-run build/lint if you made changes.
     6. Message the code-tester teammate: what changed, what to test
     7. If code-tester reports failures — fix, message them to re-run
     8. If qa-tester teammate reports issues — fix, message them to re-test
