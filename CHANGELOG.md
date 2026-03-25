@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/rube-de/cc-skills/compare/v1.51.0...v1.52.0) (2026-03-25)
+
+
+### Features
+
+* **cdt:** add TDD-style refactor step to developer workflow ([#189](https://github.com/rube-de/cc-skills/issues/189)) ([059dc84](https://github.com/rube-de/cc-skills/commit/059dc84c7ab444579e153cb0b016b733fb5c77b2))
+
 # [1.51.0](https://github.com/rube-de/cc-skills/compare/v1.50.2...v1.51.0) (2026-03-25)
 
 
