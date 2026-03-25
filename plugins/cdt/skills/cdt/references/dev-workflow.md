@@ -63,17 +63,20 @@ Teammate tool:
     3. Implement completely — no stubs, no TODOs, match existing patterns
        Implement small fixes you encounter in files you're already editing (typo, missing null check, broken condition) — code is cheap; don't defer them as "out of scope" when you're already there.
     4. Run build/lint if available
-    5. Message the code-tester teammate: what changed, what to test
-    6. If code-tester reports failures — fix, message them to re-run
-    7. If qa-tester teammate reports issues — fix, message them to re-test
-    8. If reviewer requests changes — fix, message them to re-review
-    9. Circuit breaker (steps 6-8): If you receive the same failure report twice in a row (same root cause, same failing test/behavior), do NOT attempt a third fix on your own. Instead, message the LEAD with: what failed, what you tried (both attempts), and why you're stuck.
-    10. Mark task complete, check TaskList for next
-    11. After all implementation tasks are complete, update project documentation
+    5. Simplify: review your implementation for unnecessary complexity,
+       redundant code, unclear naming, and logic that could be consolidated.
+       Refine without changing behavior — make it clean, not just correct.
+    6. Message the code-tester teammate: what changed, what to test
+    7. If code-tester reports failures — fix, message them to re-run
+    8. If qa-tester teammate reports issues — fix, message them to re-test
+    9. If reviewer requests changes — fix, message them to re-review
+    10. Circuit breaker (steps 7-9): If you receive the same failure report twice in a row (same root cause, same failing test/behavior), do NOT attempt a third fix on your own. Instead, message the LEAD with: what failed, what you tried (both attempts), and why you're stuck.
+    11. Mark task complete, check TaskList for next
+    12. After all implementation tasks are complete, update project documentation
         (README.md, AGENTS.md, CLAUDE.md) to reflect what changed
-    12. When done, message the lead
+    13. When done, message the lead
 
-    Scope lock: Your edit scope is limited to (a) files listed in your task's `location` field and (b) for Step 11 only, the following docs: README.md, AGENTS.md, CLAUDE.md. If you discover a needed change outside this set, message the lead — do NOT expand scope. Need additional docs? Message the lead.
+    Scope lock: Your edit scope is limited to (a) files listed in your task's `location` field and (b) for Step 12 only, the following docs: README.md, AGENTS.md, CLAUDE.md. If you discover a needed change outside this set, message the lead — do NOT expand scope. Need additional docs? Message the lead.
 ```
 
 **Code-tester teammate** (always spawned):
@@ -188,6 +191,9 @@ Teammate tool:
 
     1. Check TaskList — wait until your task is unblocked (tests must pass first)
     2. Review all changed files: completeness, correctness, security, quality, plan adherence
+       Quality includes: unnecessary complexity or nesting, redundant code or abstractions,
+       unclear naming, logic that could be consolidated, and code that's harder to read than
+       it needs to be. Flag these as non-blocking suggestions unless they hurt maintainability.
 
     Anti-sycophancy rule: Do NOT approve unless genuinely satisfied. Challenge:
     - Code that works but doesn't match the plan's architecture
