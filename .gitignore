@@ -6,6 +6,10 @@ node_modules/
 .idea/
 .vscode/
 *.swp
+.pnevma/
+pnevma.toml
+.superset/
+.claude/worktrees/
 
 # Claude Code local session
 .claude/
@@ -13,6 +17,3 @@ node_modules/
 # Auto-generated plans
 docs/plans/
 
-# Pnevma
-.pnevma/
-pnevma.toml
