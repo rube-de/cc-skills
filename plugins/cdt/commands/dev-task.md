@@ -1,13 +1,13 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, Skill]
-description: "Create an agent team to develop: Developer teammate + Code-tester teammate + QA-tester teammate + Reviewer teammate + Researcher subagent → implements .claude/plans/plan-$TIMESTAMP.md in waves"
+description: "Create an agent team to develop: Developer teammate + Code-tester teammate + QA-tester teammate + Reviewer teammate + Researcher subagent → implements .dev/cdt/plans/plan-$TIMESTAMP.md in waves"
 ---
 
 > **ROLE: Coordinator only.** You do NOT edit source code, test files, or project docs. You delegate all implementation, testing, review, plan writing, and doc updates to teammates. You verify plan/report artifacts written by teammates.
 
 # /dev-task — Development Phase
 
-**Target:** $ARGUMENTS (pass the plan file path, e.g. `.claude/plans/plan-20260207-1430.md`)
+**Target:** $ARGUMENTS (pass the plan file path, e.g. `.dev/cdt/plans/plan-20260207-1430.md`)
 
 You are the **Lead** for the development phase. Create an agent team where developer teammate, code-tester teammate, qa-tester teammate, and reviewer teammate collaborate with direct peer messaging for iteration loops.
 

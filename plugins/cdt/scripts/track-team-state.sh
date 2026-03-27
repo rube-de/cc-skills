@@ -1,5 +1,5 @@
 #!/bin/sh
-# Manages branch-scoped CDT state under .claude/<branch-slug>/
+# Manages branch-scoped CDT state under .dev/cdt/<branch-slug>/
 # Called on TeamCreate (create) and TeamDelete (delete)
 ACTION="$1"  # "create" or "delete"
 
@@ -9,7 +9,7 @@ if [ -z "$BRANCH" ]; then
   echo "track-team-state.sh: cannot determine current branch" >&2
   exit 1
 fi
-BRANCH_DIR=".claude/${BRANCH}"
+BRANCH_DIR=".dev/cdt/${BRANCH}"
 
 case "$ACTION" in
   create)
@@ -25,7 +25,7 @@ case "$ACTION" in
     # Store plugin scripts path for prompt-level access
     SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
     echo "$SCRIPT_DIR" > "${BRANCH_DIR}/.cdt-scripts-path"
-    # State files live under .claude/ which should already be gitignored
+    # State files live under .dev/ which should already be gitignored
     # Sync GitHub issue state (assign + move to In Progress)
     if [ -x "$SCRIPT_DIR/sync-github-issue.sh" ]; then
       "$SCRIPT_DIR/sync-github-issue.sh" start >/dev/null 2>&1 &

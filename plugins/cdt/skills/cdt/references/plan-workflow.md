@@ -12,12 +12,12 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 
 ## 0a. Issue Detection
 
-**Branch-scoped state**: CDT state lives in `.claude/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
 
 If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
 
 1. Extract the issue number (digits only) and store it in `$ISSUE_NUM`
-2. Write: `mkdir -p ".claude/$BRANCH" && echo "$ISSUE_NUM" > ".claude/$BRANCH/.cdt-issue"`
+2. Write: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
 3. Fetch issue context: `gh issue view "$ISSUE_NUM" --json title,body,labels,assignees`
 4. Use the issue title and body as additional context for planning
 
@@ -76,7 +76,7 @@ Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prom
 If `$ARGUMENTS` includes `--review-plan`, inject before the `Set \`**Council Review**: true\`` line in the architect prompt below:
 "The Lead has requested council review via `--review-plan` flag — set `**Council Review**: true` in the plan metadata."
 
-**Architect teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
+**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` from Step 1):
 ```
 Teammate tool:
   team_name: "plan-team"
@@ -122,7 +122,7 @@ Teammate tool:
     11. If you created or referenced ADRs in step 10, check whether `docs/adrs/` is referenced in the target project's `AGENTS.md` or `CLAUDE.md` — if not, note a documentation-update task in the plan so the developer teammate can add the reference later
     12. Message your design to the lead AND the product-manager (include links to new and referenced ADRs)
     13. Iterate on PM teammate feedback
-    14. Ensure the plan directory exists (`mkdir -p .claude/plans`), then write the plan to [plan-path] using this template:
+    14. Ensure the plan directory exists (`mkdir -p .dev/cdt/plans`), then write the plan to [plan-path] using this template:
 
         # Plan: [Task Name]
 
@@ -200,7 +200,7 @@ Teammate tool:
     16. Mark task complete
 ```
 
-**PM teammate** (substitute `[plan-path]` → `.claude/plans/plan-$TIMESTAMP.md` from Step 1):
+**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` from Step 1):
 
 If `$ARGUMENTS` includes `--review-plan`, inject after the `Plan path:` line in the PM prompt below:
 "Council review has been requested via `--review-plan` flag."
@@ -266,7 +266,7 @@ Teammate tool:
 
 The architect teammate writes the plan file. Your role is to verify it exists and is complete.
 
-1. Confirm the plan file exists at `.claude/plans/plan-$TIMESTAMP.md`
+1. Confirm the plan file exists at `.dev/cdt/plans/plan-$TIMESTAMP.md`
 2. Read the plan file — verify it follows the template below
 3. Verify the PM verdict is included in the Validation section
 4. If incomplete, message the architect teammate to fix it
@@ -353,11 +353,11 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.claude/$BRANCH/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
+> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.dev/cdt/$BRANCH/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
 
 ## 9. Present
 
-Tell the user the plan path: `.claude/plans/plan-$TIMESTAMP.md`
+Tell the user the plan path: `.dev/cdt/plans/plan-$TIMESTAMP.md`
 
 Summarize: task count, waves, key decisions, risks.
 

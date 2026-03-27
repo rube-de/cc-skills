@@ -48,7 +48,7 @@ Options:
 
 > **Note:** This is a future enhancement. Initial implementations can skip state persistence. When implemented, save state at each phase transition and check for existing state on workflow start.
 
-Save state for session recovery at `.claude/plugin-dev/develop/${ISSUE_NUM}/state.json`:
+Save state for session recovery at `.dev/plugin-dev/develop/${ISSUE_NUM}/state.json`:
 
 ```json
 {

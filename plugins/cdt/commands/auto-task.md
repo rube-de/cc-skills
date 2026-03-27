@@ -98,11 +98,11 @@ Automatically finalize without user interaction:
 1. Stage all changed files
 2. Commit with conventional commit message based on task
 3. Push branch to remote
-4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
-5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
-   `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Ensure handoff directory exists: `mkdir -p .claude/handoffs`
-7. Write session handoff to `.claude/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
+4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
+5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
+   `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
+6. Ensure handoff directory exists: `mkdir -p .dev/cdt/handoffs`
+7. Write session handoff to `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
 
     ```markdown
     # Session Handoff
@@ -123,7 +123,7 @@ Automatically finalize without user interaction:
     - PR: [PR URL from step 4]
     ```
 
-8. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
+8. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".dev/cdt/$BRANCH"`
 9. Print PR URL to user
 
 ## Bridge

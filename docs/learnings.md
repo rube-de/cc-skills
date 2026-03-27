@@ -137,7 +137,7 @@ When a Lead dynamically injects text into a teammate's prompt, the anchor text (
 ```markdown
 If `$ARGUMENTS` includes `--review-plan`, inject after `Plan path: [plan-path]` in the PM prompt below:
 ```
-If `[plan-path]` is substituted first → `Plan path: .claude/plans/plan-20260207-1430.md` — the anchor `Plan path: [plan-path]` no longer exists.
+If `[plan-path]` is substituted first → `Plan path: .dev/cdt/plans/plan-20260207-1430.md` — the anchor `Plan path: [plan-path]` no longer exists.
 
 **Good** — anchor is substitution-independent:
 ```markdown
@@ -343,14 +343,14 @@ Skills that make 3–4 sequential `gh` CLI calls waste context window space on r
 
 Hooks receive only the tool_input JSON (e.g., `team_name`), not the user's original `$ARGUMENTS`. When a workflow needs data from arguments at hook time, the prompt-level workflow must write a state file **before** the hook fires.
 
-**Pattern**: Prompt writes `.claude/<branch-slug>/.cdt-issue` → TeamCreate hook reads it → triggers `sync-github-issue.sh`
+**Pattern**: Prompt writes `.dev/cdt/<branch-slug>/.cdt-issue` → TeamCreate hook reads it → triggers `sync-github-issue.sh`
 
-All CDT state is branch-scoped under `.claude/<branch-slug>/` (where `<branch-slug>` = branch name with `/` → `-`). This prevents cross-branch contamination — running `/cdt:plan-task` on a new branch won't find stale state from a previous issue's branch.
+All CDT state is branch-scoped under `.dev/cdt/<branch-slug>/` (where `<branch-slug>` = branch name with `/` → `-`). This prevents cross-branch contamination — running `/cdt:plan-task` on a new branch won't find stale state from a previous issue's branch.
 
 **Key decisions**:
-- Branch-scoped directory (`.claude/<branch-slug>/`) holds all 3 state files: `.cdt-issue`, `.cdt-team-active`, `.cdt-scripts-path`
+- Branch-scoped directory (`.dev/cdt/<branch-slug>/`) holds all 3 state files: `.cdt-issue`, `.cdt-team-active`, `.cdt-scripts-path`
 - `.cdt-team-active` is cleaned on TeamDelete; `.cdt-issue` and `.cdt-scripts-path` persist for Wrap Up
-- `/full-task` and `/auto-task` Wrap Up cleans up the entire branch directory: `rm -rf ".claude/<branch-slug>"`
+- `/full-task` and `/auto-task` Wrap Up cleans up the entire branch directory: `rm -rf ".dev/cdt/<branch-slug>"`
 - `sync-github-issue.sh` runs in background (`&`) on `start` to avoid blocking team creation
 - All GitHub API calls are best-effort (`|| exit 0`) — never block the main workflow
 
@@ -373,6 +373,7 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 
 | Pitfall | Symptom | Fix |
 |---------|---------|-----|
+| Runtime files in `.claude/` | Permission prompts even with `--dangerously-skip-permissions` | Use `.dev/` for plugin runtime artifacts; `.claude/` is reserved for Claude Code config |
 | Passive reference links | Model ignores reference file, guesses format | Use imperative "Read X now" directives |
 | `@file` in SKILL.md | Reference silently ignored | Use markdown links `[name](path)` instead |
 | Single directive at bottom | Model forgets by the time it reaches the step | Add directive both at top and at the relevant step |

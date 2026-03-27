@@ -10,7 +10,7 @@ BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
 
 if [ -z "$BRANCH" ]; then
   # Detached HEAD: fail-closed if any team is active
-  for f in .claude/*/.cdt-team-active; do
+  for f in .dev/cdt/*/.cdt-team-active; do
     if [ -f "$f" ]; then
       echo "BLOCKED: Detached HEAD during active team session. Checkout a branch before editing." >&2
       exit 2
@@ -19,7 +19,7 @@ if [ -z "$BRANCH" ]; then
   exit 0
 fi
 
-STATE_FILE=".claude/${BRANCH}/.cdt-team-active"
+STATE_FILE=".dev/cdt/${BRANCH}/.cdt-team-active"
 
 # No team active -> allow everything
 if [ ! -f "$STATE_FILE" ]; then
