@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/rube-de/cc-skills/compare/v1.52.0...v1.53.0) (2026-03-27)
+
+
+### Features
+
+* **project-manager:** add direct body editing to review skill with audit trail ([#190](https://github.com/rube-de/cc-skills/issues/190)) ([b1ae069](https://github.com/rube-de/cc-skills/commit/b1ae0695e532f947254af6ef28ee5370feee183b)), closes [#188](https://github.com/rube-de/cc-skills/issues/188)
+
 # [1.52.0](https://github.com/rube-de/cc-skills/compare/v1.51.0...v1.52.0) (2026-03-25)
 
 
