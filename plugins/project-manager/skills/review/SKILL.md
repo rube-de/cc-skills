@@ -232,7 +232,7 @@ Adapt the report to include only sections with findings — omit empty sections.
 
 Based on the verdict, offer appropriate actions via `AskUserQuestion`. For verdicts where the issue body contains stale or incorrect information, **updating the body directly** is the recommended action — implementing agents read the body first, and comments get buried. Every body edit is paired with an audit-trail comment explaining what changed and why.
 
-**Important — Tier 2 guard:** For unstructured issues (Tier 2), only attempt body edits for the Already Implemented and Partially Implemented verdicts (checking off criteria). For the Needs Update verdict on Tier 2 issues, default to comment-only — mechanical corrections to unstructured bodies are unreliable without well-defined sections.
+**Important — Tier 2 guard:** For unstructured issues (Tier 2), only attempt body edits for the Already Implemented and Partially Implemented verdicts (checking off criteria is safe even without structured sections). For the Needs Update, In Progress, and Outdated verdicts on Tier 2 issues, default to comment-only — mechanical corrections and section-level edits are unreliable without well-defined sections. The verdict blocks below show tier-specific options where they differ.
 
 **Already Implemented:**
 ```text
@@ -246,7 +246,7 @@ Options:
 
 Body modifications: In the Acceptance Criteria section, change `- [ ] VERIFY:` to `- [x] VERIFY:` for each implemented criterion. Append a brief evidence note inline (e.g., `— found in src/auth/login.ts:45`).
 
-**Needs Update:**
+**Needs Update (Tier 1 — structured issues):**
 ```text
 Question: "This issue has stale references. What would you like to do?"
 Options:
@@ -256,6 +256,16 @@ Options:
 ```
 
 Body modifications: Fix stale line numbers and file paths in the Implementation Guide and Approach sections. Remove or strike through resolved blocker references in Dependencies. Update any scope references that no longer match the codebase.
+
+**Needs Update (Tier 2 — unstructured issues):**
+```text
+Question: "This issue has stale references. What would you like to do?"
+Options:
+  - Add comment listing what needs updating (Recommended)
+  - Skip — no action
+```
+
+Body edits are omitted for Tier 2 because mechanical corrections to unstructured bodies are unreliable without well-defined sections.
 
 **Partially Implemented:**
 ```text
@@ -268,7 +278,7 @@ Options:
 
 Body modifications: In the Acceptance Criteria section, change `- [ ] VERIFY:` to `- [x] VERIFY:` only for criteria confirmed as implemented. Leave unimplemented criteria unchecked.
 
-**In Progress:**
+**In Progress (Tier 1 — structured issues):**
 ```text
 Question: "This issue is partially done with active PR(s). What would you like to do?"
 Options:
@@ -282,7 +292,15 @@ Body modifications: Add a status note at the top of the issue body linking to th
 > **Status:** In progress — see #PR_NUMBER
 ```
 
-**Outdated:**
+**In Progress (Tier 2 — unstructured issues):**
+```text
+Question: "This issue is partially done with active PR(s). What would you like to do?"
+Options:
+  - Add status comment with progress summary (Recommended)
+  - Skip — no action
+```
+
+**Outdated (Tier 1 — structured issues):**
 ```text
 Question: "This issue appears outdated. What would you like to do?"
 Options:
@@ -293,6 +311,15 @@ Options:
 ```
 
 Body modifications: Add a deprecation note at the top of the body and mark affected sections with `~~strikethrough~~` or inline notes identifying what is no longer valid.
+
+**Outdated (Tier 2 — unstructured issues):**
+```text
+Question: "This issue appears outdated. What would you like to do?"
+Options:
+  - Close as outdated with explanation (Recommended)
+  - Add comment noting staleness
+  - Skip — no action
+```
 
 **Still Needed:**
 
@@ -321,7 +348,7 @@ ISSUE_BODY_END
 Immediately after every body edit, post an audit-trail comment:
 
 ```bash
-gh issue comment ISSUE_NUMBER --body "$(cat <<'EOF'
+gh issue comment ISSUE_NUMBER --body-file - <<'EOF'
 ## /pm:review — Issue Body Updated
 
 **Changes made:**
@@ -332,7 +359,6 @@ gh issue comment ISSUE_NUMBER --body "$(cat <<'EOF'
 
 *Updated by `/pm:review` on YYYY-MM-DD*
 EOF
-)"
 ```
 
 **Close issues:**
