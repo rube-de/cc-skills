@@ -255,7 +255,7 @@ Options:
   - Skip — no action
 ```
 
-Body modifications: Fix stale line numbers and file paths in the Implementation Guide and Approach sections. Remove or strike through resolved blocker references in Dependencies. Update any scope references that no longer match the codebase.
+Body modifications: Fix stale line numbers and file paths in the Implementation Guide and Approach sections. Remove resolved blocker references in Dependencies, or rewrite them to a non-parsed form such as "Resolved blocker: #123 (closed)" — do not use strikethrough, which preserves the literal `Blocked by:` pattern and confuses dependency parsers. Update any scope references that no longer match the codebase.
 
 **Needs Update (Tier 2 — unstructured issues):**
 ```text
