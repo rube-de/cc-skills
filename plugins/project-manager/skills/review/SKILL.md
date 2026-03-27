@@ -69,7 +69,7 @@ Detect `/pm` sections by their headers: `## Context`, `## Acceptance Criteria`, 
 
 Extract:
 - **File paths** from `## Implementation Guide` and `## Scope` sections
-- **Acceptance criteria** — lines starting with `VERIFY:` or `- [ ]` checkboxes
+- **Acceptance criteria** — lines matching `VERIFY:` or checkbox patterns (`- [ ]` unchecked and `- [x]` checked). Include both so re-reviews after body edits still see previously checked-off criteria.
 - **Function/component names** — backtick-wrapped identifiers in implementation sections
 - **Dependencies** — `Blocked by: #N` and `Blocks: #N` patterns
 - **Epic reference** — `Part of #N` pattern
