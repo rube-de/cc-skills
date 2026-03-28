@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/rube-de/cc-skills/compare/v1.53.1...v1.54.0) (2026-03-28)
+
+
+### Features
+
+* **council:** add silent failure and data integrity anti-patterns to deep-review ([#193](https://github.com/rube-de/cc-skills/issues/193)) ([1a67247](https://github.com/rube-de/cc-skills/commit/1a672478b5451a41f1e3ddd3822c06a251363311)), closes [#150](https://github.com/rube-de/cc-skills/issues/150)
+
 ## [1.53.1](https://github.com/rube-de/cc-skills/compare/v1.53.0...v1.53.1) (2026-03-28)
 
 # [1.53.0](https://github.com/rube-de/cc-skills/compare/v1.52.0...v1.53.0) (2026-03-27)
