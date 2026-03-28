@@ -31,6 +31,15 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 - **Input validation**: Unsanitized input at trust boundaries, missing validation
 - **SSRF/CSRF/path traversal**: Request forgery, file access outside intended scope
 
+#### Trust Boundary / Ownership Verification
+
+- **Resource ownership**: Does the endpoint accept a resource ID from the client (e.g., `podcastIndexId`, `userId`, `repoId`) and modify shared/global state without verifying the authenticated user owns that resource? Any authenticated user sending a valid ID should not be able to modify another user's data
+- **Sticky first-write**: Does client-provided data on first creation become permanent metadata that's never updated by an authoritative source (background job, admin)? If so, an attacker can set malicious initial values (e.g., `audioUrl` pointing to a malicious source)
+- **Safe vs unsafe upsert modes**: On conflict/upsert paths, does "safe mode" still include protected fields (`rssFeedUrl`, `source`, `audioUrl`) in the insert values? Protected fields should be omitted from client-facing write paths entirely, not just excluded from the update-on-conflict set
+- **Client data → global state**: Does a client-facing action (subscribe, save, bookmark) write client-provided metadata to a shared table that other users read from? If so, any user can deface shared content
+- **SSRF via unvalidated URLs**: Does the endpoint accept a URL from the client and later fetch it server-side (RSS feeds, webhooks, image URLs, callbacks) without validating against an allowlist or calling `isSafeUrl()`?
+- **Fork PR secret exposure**: For GitHub Actions workflows, does `pull_request` event unconditionally pass secrets? GitHub doesn't provide secrets for fork PRs — the job will fail silently or expose the token path
+
 ### Bugs
 
 - **Logic errors**: Incorrect conditionals, wrong boolean operators, inverted checks
@@ -96,6 +105,11 @@ Don't just review the diff in isolation. Use your native access:
    b. Look for unbounded queries missing LIMIT/pagination
    c. Trace hot paths for unnecessary allocations or blocking calls
    d. Check algorithmic complexity of new loops over collections
+7. For endpoints that accept resource IDs from clients:
+   a. Read the handler to check if it verifies the authenticated user owns the resource
+   b. Grep for other endpoints modifying the same table — do they have ownership checks?
+   c. Check if the resource table has a userId/ownerId column that should be checked
+   d. Follow the data flow: does client-provided metadata end up in shared/global state?
 ```
 
 ## What NOT to Review
