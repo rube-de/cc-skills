@@ -50,12 +50,12 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 - **Transient errors cached as permanent failures**: Is an HTTP 429, network timeout, or temporary API error being cached (negative caching) such that retry is never attempted? Does the cache key distinguish transient from permanent failures?
 - **Error handling outside the try block**: Is there code after the `try` block that assumes the `try` succeeded, but isn't protected by it? For example, does `result["key"]` appear after the try/except when `result` may not have been assigned?
 - **Error paths leaving inconsistent state**: Does the error handler release locks, invalidate caches, and clean up partial state? Or does it leave the system half-modified — e.g., a database row inserted but the corresponding cache not rolled back?
-- **Exception logging without details**: Does the `except` or `catch` clause log `logger.warning("failed")` without the exception object? Without the traceback or error message, diagnosis becomes impossible in production.
+- **Exception logging without details**: Does the `except` or `catch` clause log `logger.warning("failed")` without the exception object? Without the traceback or error message, how would anyone diagnose the root cause in production?
 
 #### Data Integrity
 
 - **`INSERT OR REPLACE` resetting preserved fields**: Does `INSERT OR REPLACE` or `REPLACE INTO` silently reset columns (timestamps, counters, metadata) that should survive updates? Should it use `ON CONFLICT DO UPDATE` with an explicit column list instead?
-- **`onConflictDoNothing()` with separate SELECT**: Does a two-query pattern (`onConflictDoNothing()` + separate SELECT) leave stale rows that never get updated? The lookup only helps first-time inserts — existing rows silently keep old values.
+- **`onConflictDoNothing()` with separate SELECT**: Does a two-query pattern (`onConflictDoNothing()` + separate SELECT) leave stale rows that never get updated? If the lookup only helps first-time inserts, are existing rows silently retaining old values?
 - **Duplicate entries on reconfigure/re-add**: Does an "add" or "register" operation check for existing entries before appending? Does `append()` or `push()` without deduplication create duplicates when the user reconfigures or re-adds?
 - **Shallow copies sharing mutable references**: Does `copy()`, spread `{...obj}`, or `Object.assign` share nested objects or arrays with the original? Would a mutation in one context leak to another through the shared reference?
 - **Empty collections overwriting existing data**: Does `Object.values({})` return `[]` which then overwrites stored categories? Does `categories: []` pass null/empty filters and clobber data authored by background jobs or other processes?
