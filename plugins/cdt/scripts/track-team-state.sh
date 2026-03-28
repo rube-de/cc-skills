@@ -33,8 +33,6 @@ case "$ACTION" in
     ;;
   delete)
     rm -f "${BRANCH_DIR}/.cdt-team-active"
-    # Clean up legacy path from pre-.dev/ migration if present
-    rm -f ".claude/${BRANCH}/.cdt-team-active"
     ;;
   *)
     echo "track-team-state.sh: unexpected or missing action '$ACTION'; expected 'create' or 'delete'" >&2
