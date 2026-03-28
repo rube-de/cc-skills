@@ -61,22 +61,22 @@ Planning Phase                    Development Phase
 
 | Command | Purpose | Approval Gate | Output |
 |---------|---------|---------------|--------|
-| `/cdt:plan-task` | Planning only | N/A | `.claude/plans/plan-YYYYMMDD-HHMM.md` |
-| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:plan-task` | Planning only | N/A | `.dev/cdt/plans/plan-YYYYMMDD-HHMM.md` |
+| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
 
 ### `/cdt:plan-task` — Design Phase
 
 Spawns Architect + PM + Researcher. The Architect designs the solution, the PM validates requirements and challenges the architecture, and the Researcher looks up library docs and patterns.
 
-**Output**: `.claude/plans/plan-YYYYMMDD-HHMM.md` with architecture, file changes, task breakdown with dependency ordering, execution waves, testing strategy, and risk assessment.
+**Output**: `.dev/cdt/plans/plan-YYYYMMDD-HHMM.md` with architecture, file changes, task breakdown with dependency ordering, execution waves, testing strategy, and risk assessment.
 
 ### `/cdt:dev-task` — Implementation Phase
 
 Spawns Developer + Code-Tester + Reviewer + Researcher + QA-Tester. Executes tasks wave-by-wave from the plan, with parallel tasks within each wave and sequential ordering between waves.
 
-**Output**: Updated plan + `.claude/handoffs/handoff-YYYYMMDD-HHMM.md` with session context, open questions, and notes for future sessions.
+**Output**: Updated plan + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` with session context, open questions, and notes for future sessions.
 
 ### `/cdt:full-task` — Plan + Approve + Dev
 
@@ -137,7 +137,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 /cdt:plan-task Add rate limiting to the API endpoints
 
 # Develop from an existing plan
-/cdt:dev-task .claude/plans/plan-20260207-1430.md
+/cdt:dev-task .dev/cdt/plans/plan-20260207-1430.md
 
 # Full workflow with approval gate
 /cdt:full-task Implement user authentication with JWT

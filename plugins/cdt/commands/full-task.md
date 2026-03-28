@@ -105,7 +105,7 @@ If any role was created but never used: **WARN** "Role {name} was created but ne
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Session handoff written to .claude/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
+  "Development complete. Session handoff written to .dev/cdt/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 
@@ -113,10 +113,10 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".claude/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".claude/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
-5. After PR creation, if `".claude/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
-   `"$(cat ".claude/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".claude/$BRANCH"`
+4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
+5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
+   `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
+6. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".dev/cdt/$BRANCH"`
 
 ## Bridge
 

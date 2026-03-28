@@ -10,7 +10,7 @@ ACTION="${1:-start}"
 # Derive branch-scoped issue file
 BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-')
 [ -z "$BRANCH" ] && exit 0
-ISSUE_FILE=".claude/${BRANCH}/.cdt-issue"
+ISSUE_FILE=".dev/cdt/${BRANCH}/.cdt-issue"
 
 # No issue file → nothing to sync
 [ ! -f "$ISSUE_FILE" ] && exit 0

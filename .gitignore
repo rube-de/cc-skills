@@ -14,6 +14,9 @@ pnevma.toml
 # Claude Code local session
 .claude/
 
+# Plugin runtime artifacts
+.dev/
+
 # Auto-generated plans
 docs/plans/
 

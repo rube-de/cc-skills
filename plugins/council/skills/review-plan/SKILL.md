@@ -47,7 +47,7 @@ Check these sources in order — use the first match:
 - **Conversation context**: If a plan was written or pasted earlier in this conversation, use that content
 - **Plan directory discovery**: From the **repository root**, search both plan directories and use the most recently modified `.md` file:
   ```bash
-  ls -t .claude/plans/*.md docs/plans/*.md 2>/dev/null | head -1
+  ls -t .dev/cdt/plans/*.md docs/plans/*.md 2>/dev/null | head -1
   ```
   Note: Run this from the repo root, not from the skill directory.
 
