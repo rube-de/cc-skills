@@ -1,3 +1,10 @@
+# [1.56.0](https://github.com/rube-de/cc-skills/compare/v1.55.0...v1.56.0) (2026-03-29)
+
+
+### Features
+
+* **cdt:** add TDD-driven bugfix workflow ([#195](https://github.com/rube-de/cc-skills/issues/195)) ([463842c](https://github.com/rube-de/cc-skills/commit/463842c232b578e2b1d431acc5509c0bea2d2749))
+
 # [1.55.0](https://github.com/rube-de/cc-skills/compare/v1.54.0...v1.55.0) (2026-03-29)
 
 
