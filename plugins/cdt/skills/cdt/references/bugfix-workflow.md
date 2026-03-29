@@ -5,10 +5,11 @@ Detailed execution steps for the TDD-driven bugfix workflow. The Lead reads this
 ## 0. Git Check
 
 1. Run `git fetch origin`
-2. Ensure you are on `main` or `master` — if not, run `git checkout main` (or `master`, whichever exists)
-3. Run `git pull --ff-only` to ensure the local default branch is up-to-date
-4. Derive a branch name from the bug summary (e.g. `bugfix/fix-null-return-getuser`)
-5. Run `git checkout -b <branch>` to create the bugfix branch from the updated local default branch
+2. Detect the default branch: `DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)`
+3. Ensure you are on the default branch — if not, run `git checkout $DEFAULT_BRANCH`
+4. Run `git pull --ff-only` to ensure the local default branch is up-to-date
+5. Derive a branch name from the bug summary (e.g. `bugfix/fix-null-return-getuser`)
+6. Run `git checkout -b <branch>` to create the bugfix branch from the updated local default branch
 
 ## 0a. Issue Detection
 
@@ -289,7 +290,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 ## 11. Wrap Up
 
 **Default (no `--no-pr` flag):**
-1. Stage any remaining unstaged changes
+1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Push branch: `git push -u origin <branch>`
 4. Create PR:
@@ -303,7 +304,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 7. Print PR URL
 
 **`--no-pr` flag:**
-1. Stage any remaining unstaged changes
+1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Do NOT push. Do NOT create PR.
 4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
