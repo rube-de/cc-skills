@@ -29,7 +29,16 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 - **Access control**: Privilege escalation, missing authorization on endpoints, IDOR
 - **Cryptographic issues**: Weak algorithms, improper key management, missing encryption
 - **Input validation**: Unsanitized input at trust boundaries, missing validation
-- **SSRF/CSRF/path traversal**: Request forgery, file access outside intended scope
+- **CSRF/path traversal**: Request forgery, file access outside intended scope
+
+#### Trust Boundary / Ownership Verification
+
+- **Resource ownership**: Does the endpoint accept a resource ID from the client (e.g., `orderId`, `accountId`, `resourceId`) and modify shared/global state without verifying the authenticated user owns that resource?
+- **Sticky first-write**: Does client-provided data on first creation become permanent metadata that's never updated by an authoritative source (background job, admin)? If so, an attacker can set malicious initial values (e.g., attacker-controlled URLs or metadata). In multi-tenant systems, whichever user triggers creation first permanently controls shared metadata
+- **Safe vs unsafe upsert modes**: On conflict/upsert paths, does "safe mode" still include protected fields (e.g., `sourceUrl`, `webhookUrl`, ownership fields) in the insert values? Protected fields should be omitted from client-facing write paths entirely, not just from the ON CONFLICT clause
+- **Client data → global state**: Does a client-facing action (subscribe, save, bookmark) write client-provided metadata to a shared table that other users read from? If so, any user can deface shared content
+- **SSRF via unvalidated URLs**: Does the endpoint accept a URL from the client and later fetch it server-side (RSS feeds, webhooks, image URLs, callbacks) without validating against an allowlist or equivalent safe-URL validator (e.g., blocking private/loopback IP ranges)?
+- **Fork PR secret exposure**: For GitHub Actions workflows, does `pull_request_target` pass secrets or checkout fork code? Unlike `pull_request` (which withholds secrets from forks), `pull_request_target` runs with full secret access in the base repo context — if it checks out the PR head ref, a fork can exfiltrate secrets. Also check whether `pull_request` workflows assume secrets are present and fail ungracefully when they are empty strings
 
 ### Bugs
 
@@ -96,6 +105,10 @@ Don't just review the diff in isolation. Use your native access:
    b. Look for unbounded queries missing LIMIT/pagination
    c. Trace hot paths for unnecessary allocations or blocking calls
    d. Check algorithmic complexity of new loops over collections
+7. For endpoints that accept resource IDs from clients:
+   a. Read the handler: does it verify the authenticated user owns the resource (e.g., checking a userId/ownerId column)?
+   b. Grep for other endpoints modifying the same table — do they have ownership checks?
+   c. Follow the data flow: does client-provided metadata end up in shared/global state?
 ```
 
 ## What NOT to Review
