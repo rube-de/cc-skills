@@ -1,6 +1,6 @@
 ---
 name: cdt
-description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
+description: "Multi-agent development workflow using Agent Teams. Supports five modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), auto (plan → dev, no gate), and bugfix (tester + developer + reviewer TDD triad → fix + PR). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
 compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
 allowed-tools: Read Grep Glob Bash Task Teammate TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch Skill
@@ -11,7 +11,7 @@ metadata:
 
 # Claude Dev Team
 
-Multi-agent development workflow with four modes. Pick one based on the user's needs:
+Multi-agent development workflow with five modes. Pick one based on the user's needs:
 
 | Mode | When to use |
 |------|-------------|
@@ -19,18 +19,21 @@ Multi-agent development workflow with four modes. Pick one based on the user's n
 | **dev** | Have an approved plan, ready to implement |
 | **full** | End-to-end with user approval gate between plan and dev |
 | **auto** | End-to-end without approval gate |
+| **bugfix** | Well-specified bug with known root cause — TDD fix cycle |
 
-Before executing any mode, read [references/plan-workflow.md](references/plan-workflow.md) and [references/dev-workflow.md](references/dev-workflow.md) for detailed step-by-step instructions, spawn prompts, and output templates.
+Before executing any mode, read the relevant workflow file:
+- Feature modes (plan/dev/full/auto): [references/plan-workflow.md](references/plan-workflow.md) and [references/dev-workflow.md](references/dev-workflow.md)
+- Bugfix mode: [references/bugfix-workflow.md](references/bugfix-workflow.md)
 
 ## Architecture
 
 ```
-Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
-  Lead (You)                      Lead (You)
-  ├── architect  [teammate]       ├── developer    [teammate]
-  ├── prod-mgr   [teammate]      ├── code-tester  [teammate]
-  └── researcher [subagent]       ├── qa-tester    [teammate]
-                                  ├── reviewer     [teammate]
+Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)       Bugfix Phase (bugfix)
+  Lead (You)                      Lead (You)                      Lead (You)
+  ├── architect  [teammate]       ├── developer    [teammate]     ├── tester     [teammate]
+  ├── prod-mgr   [teammate]      ├── code-tester  [teammate]     ├── developer  [teammate]
+  └── researcher [subagent]       ├── qa-tester    [teammate]     ├── reviewer   [teammate]
+                                  ├── reviewer     [teammate]     └── researcher [subagent]
                                   └── researcher   [subagent]
          │                                │
          └──── plan.md (handoff) ─────────┘
@@ -44,6 +47,10 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
 ### Researcher (subagent — spawn via Task without team_name)
 
 Research specialist for doc lookups. Queries Context7 for library docs, searches web for best practices, returns structured findings with code examples. Bundled as `agents/researcher.md` in this plugin — Context7 MCP is auto-configured via `.mcp.json`.
+
+### Tester (teammate — spawn via Teammate tool, bugfix phase)
+
+Writes the failing regression test BEFORE the developer touches the code (TDD red phase). Verifies the fix passes and re-verifies after refactoring. Iterates directly with developer on failures (max 3 cycles for fix, max 2 for refactor).
 
 ### Architect (teammate — spawn via Teammate tool, plan phase)
 
