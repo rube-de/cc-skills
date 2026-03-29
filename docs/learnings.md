@@ -668,3 +668,21 @@ jq's parser handles `==` inside object constructors `{ key: expr == val }` incon
 **Good pattern**: `gh api ... -F "sub_issue_id=$sub_issue_id"` — sends `123` (integer). Note the quoting: `-F "key=$var"` keeps the entire `key=value` as one shell argument.
 
 > Source: [PR #185](https://github.com/rube-de/cc-skills/pull/185) — `plugins/project-manager/skills/pm/SKILL.md`
+
+### Coordinator-only workflows must not run tests directly
+
+When a workflow enforces a coordinator-only role (Lead delegates, never implements), the Final Verification step must also delegate test execution to the tester teammate rather than having the Lead run tests. This is easy to miss because final verification feels like an orchestration step, but running `npm test` or `pytest` is implementation work.
+
+**Bad pattern**: Lead runs `npm test` in Final Verification while the Anti-Patterns section says "Running tests directly instead of waiting for tester reports."
+
+**Good pattern**: Lead messages tester: "Final verification — run the full test suite one last time" and waits for tester confirmation. Lead may still run non-test checks (stub scans via `rg`) since those are code inspection, not test execution.
+
+> Source: [PR #195](https://github.com/rube-de/cc-skills/pull/195) — `plugins/cdt/skills/cdt/references/bugfix-workflow.md`
+
+### Multi-mode skills must update all role descriptions
+
+When adding a new mode to a skill that defines roles in SKILL.md, update every role description that participates in the new mode — not just the new role. Headers like `(teammate — spawn via Teammate tool, dev phase)` must include the new phase, and descriptions like "Implements tasks from plan" must account for the new mode's input (e.g., bug spec instead of plan).
+
+Also update: teammate pairs list, marketplace.json description, and mode count in the skill's description frontmatter.
+
+> Source: [PR #195](https://github.com/rube-de/cc-skills/pull/195) — `plugins/cdt/skills/cdt/SKILL.md`, `.claude-plugin/marketplace.json`

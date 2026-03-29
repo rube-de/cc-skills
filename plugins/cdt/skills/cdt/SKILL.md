@@ -1,6 +1,6 @@
 ---
 name: cdt
-description: "Multi-agent development workflow using Agent Teams. Supports four modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), and auto (plan → dev, no gate). Use when tasks benefit from collaborative agent teammates with peer messaging."
+description: "Multi-agent development workflow using Agent Teams. Supports five modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), auto (plan → dev, no gate), and bugfix (tester + developer + reviewer TDD triad → fix + PR). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
 compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
 allowed-tools: Read Grep Glob Bash Task Teammate TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch Skill
@@ -11,7 +11,7 @@ metadata:
 
 # Claude Dev Team
 
-Multi-agent development workflow with four modes. Pick one based on the user's needs:
+Multi-agent development workflow with five modes. Pick one based on the user's needs:
 
 | Mode | When to use |
 |------|-------------|
@@ -19,24 +19,27 @@ Multi-agent development workflow with four modes. Pick one based on the user's n
 | **dev** | Have an approved plan, ready to implement |
 | **full** | End-to-end with user approval gate between plan and dev |
 | **auto** | End-to-end without approval gate |
+| **bugfix** | Well-specified, reproducible bug (root cause may be unknown) — TDD fix cycle |
 
-Before executing any mode, read [references/plan-workflow.md](references/plan-workflow.md) and [references/dev-workflow.md](references/dev-workflow.md) for detailed step-by-step instructions, spawn prompts, and output templates.
+Before executing any mode, read the relevant workflow file:
+- Feature modes (plan/dev/full/auto): [references/plan-workflow.md](references/plan-workflow.md) and [references/dev-workflow.md](references/dev-workflow.md)
+- Bugfix mode: [references/bugfix-workflow.md](references/bugfix-workflow.md)
 
 ## Architecture
 
-```
-Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
-  Lead (You)                      Lead (You)
-  ├── architect  [teammate]       ├── developer    [teammate]
-  ├── prod-mgr   [teammate]      ├── code-tester  [teammate]
-  └── researcher [subagent]       ├── qa-tester    [teammate]
-                                  ├── reviewer     [teammate]
+```text
+Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)       Bugfix Phase (bugfix)
+  Lead (You)                      Lead (You)                      Lead (You)
+  ├── architect  [teammate]       ├── developer    [teammate]     ├── tester     [teammate]
+  ├── product-manager [teammate]      ├── code-tester  [teammate]     ├── developer  [teammate]
+  └── researcher [subagent]       ├── qa-tester    [teammate]     ├── reviewer   [teammate]
+                                  ├── reviewer     [teammate]     └── researcher [subagent]
                                   └── researcher   [subagent]
          │                                │
          └──── plan.md (handoff) ─────────┘
 ```
 
-**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate).
+**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate). In bugfix mode: Tester teammate↔Developer teammate, Reviewer teammate↔Developer teammate.
 **Researcher** is a subagent — Lead relays results.
 
 ## Roles
@@ -44,6 +47,10 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)
 ### Researcher (subagent — spawn via Task without team_name)
 
 Research specialist for doc lookups. Queries Context7 for library docs, searches web for best practices, returns structured findings with code examples. Bundled as `agents/researcher.md` in this plugin — Context7 MCP is auto-configured via `.mcp.json`.
+
+### Tester (teammate — spawn via Teammate tool, bugfix phase)
+
+Writes the failing regression test BEFORE the developer touches the code (TDD red phase). Verifies the fix passes and re-verifies after refactoring. Iterates directly with developer on failures (max 3 cycles for fix, max 2 for refactor).
 
 ### Architect (teammate — spawn via Teammate tool, plan phase)
 
@@ -53,9 +60,9 @@ Discovers codebase structure using the Explore agent (preferred) or repomix-expl
 
 Validates architecture against requirements. Challenges design with concerns. Produces verdict: APPROVED or NEEDS_REVISION with specifics.
 
-### Developer (teammate — spawn via Teammate tool, dev phase)
+### Developer (teammate — spawn via Teammate tool, dev phase and bugfix phase)
 
-Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
+Implements tasks from plan (dev) or minimal fix from bug spec (bugfix). No stubs, no TODOs. Matches existing patterns. In dev mode: iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. In bugfix mode: iterates with tester teammate on failures and reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
 
 ### Code-Tester (teammate — spawn via Teammate tool, dev phase, always)
 
@@ -65,9 +72,9 @@ Unit/integration tests. Messages developer teammate with failures + root cause. 
 
 Always spawned. Adapts testing approach based on task type: for UI tasks, writes Storybook stories and tests user flows via `npx agent-browser`; for non-UI tasks, runs integration/smoke tests, verifies regression safety, and tests API contracts. Messages developer teammate with issues + evidence. Max 3 cycles.
 
-### Reviewer (teammate — spawn via Teammate tool, dev phase)
+### Reviewer (teammate — spawn via Teammate tool, dev phase and bugfix phase)
 
-Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Messages lead with verdict, review cycles, issues found/fixed, and known limitations after approval.
+Reviews changed files for completeness, correctness, security, quality, and plan adherence (dev) or bug spec adherence (bugfix). Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Messages lead with verdict, review cycles, issues found/fixed, and known limitations after approval.
 
 ## Rules
 
@@ -90,7 +97,7 @@ You are a **coordinator**, not an implementer. During active team phases:
 
 ### NEVER do these — always delegate instead
 - Edit or write source code files (`*.ts`, `*.js`, `*.py`, `*.go`, `*.rs`, `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.css`, `*.scss`, `*.html`)
-- Edit or write test files (`*.test.*`, `*.spec.*`, `__tests__/*`) — delegate to code-tester teammate
+- Edit or write test files (`*.test.*`, `*.spec.*`, `__tests__/*`) — delegate to code-tester teammate (or tester teammate in bugfix mode)
 - Edit or write project doc files (`*.md`) — delegate to the teammate with context (architect for plans/ADRs, reviewer for reports, developer for project docs)
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate

@@ -31,7 +31,7 @@
     },
     {
       "name": "cdt",
-      "description": "Multi-agent development workflow with four modes: plan, dev, full, and auto. Uses Agent Teams for collaborative roles (Architect, PM, Developer, Tester, Reviewer) and a Researcher subagent for documentation lookups via Context7.",
+      "description": "Multi-agent development workflow with five modes: plan, dev, full, auto, and bugfix. Uses Agent Teams for collaborative roles (Architect, PM, Developer, Tester, Reviewer) and a Researcher subagent for documentation lookups via Context7.",
       "version": "1.55.0",
       "source": "./plugins/cdt",
       "category": "development",
