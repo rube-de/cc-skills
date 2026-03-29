@@ -39,7 +39,7 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)       Bugfix Phase (bu
          └──── plan.md (handoff) ─────────┘
 ```
 
-**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate).
+**Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate). In bugfix mode: Tester teammate↔Developer teammate, Reviewer teammate↔Developer teammate.
 **Researcher** is a subagent — Lead relays results.
 
 ## Roles
@@ -60,9 +60,9 @@ Discovers codebase structure using the Explore agent (preferred) or repomix-expl
 
 Validates architecture against requirements. Challenges design with concerns. Produces verdict: APPROVED or NEEDS_REVISION with specifics.
 
-### Developer (teammate — spawn via Teammate tool, dev phase)
+### Developer (teammate — spawn via Teammate tool, dev phase and bugfix phase)
 
-Implements tasks from plan. No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
+Implements tasks from plan (dev) or minimal fix from bug spec (bugfix). No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
 
 ### Code-Tester (teammate — spawn via Teammate tool, dev phase, always)
 
@@ -72,9 +72,9 @@ Unit/integration tests. Messages developer teammate with failures + root cause. 
 
 Always spawned. Adapts testing approach based on task type: for UI tasks, writes Storybook stories and tests user flows via `npx agent-browser`; for non-UI tasks, runs integration/smoke tests, verifies regression safety, and tests API contracts. Messages developer teammate with issues + evidence. Max 3 cycles.
 
-### Reviewer (teammate — spawn via Teammate tool, dev phase)
+### Reviewer (teammate — spawn via Teammate tool, dev phase and bugfix phase)
 
-Reviews changed files for completeness, correctness, security, quality, plan adherence. Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Messages lead with verdict, review cycles, issues found/fixed, and known limitations after approval.
+Reviews changed files for completeness, correctness, security, quality, and plan adherence (dev) or bug spec adherence (bugfix). Validates review with `/council` (`quick quality` for routine, `review security` or `review architecture` for critical concerns). Scans for stubs. Messages developer teammate with file:line + fix suggestions. Max 3 cycles. Messages lead with verdict, review cycles, issues found/fixed, and known limitations after approval.
 
 ## Rules
 
@@ -97,7 +97,7 @@ You are a **coordinator**, not an implementer. During active team phases:
 
 ### NEVER do these — always delegate instead
 - Edit or write source code files (`*.ts`, `*.js`, `*.py`, `*.go`, `*.rs`, `*.tsx`, `*.jsx`, `*.vue`, `*.svelte`, `*.css`, `*.scss`, `*.html`)
-- Edit or write test files (`*.test.*`, `*.spec.*`, `__tests__/*`) — delegate to code-tester teammate
+- Edit or write test files (`*.test.*`, `*.spec.*`, `__tests__/*`) — delegate to code-tester teammate (or tester teammate in bugfix mode)
 - Edit or write project doc files (`*.md`) — delegate to the teammate with context (architect for plans/ADRs, reviewer for reports, developer for project docs)
 - Run implementation commands (npm run build, cargo build, etc.) — teammates do this
 - Fix code bugs directly — send bug details to the developer teammate

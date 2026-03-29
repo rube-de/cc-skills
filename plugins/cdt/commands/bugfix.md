@@ -45,22 +45,7 @@ Workflow: bugfix
 
 ## Execution
 
-Follow the bugfix workflow defined in @bugfix-workflow.md. It covers all steps:
-
-0. Git Check (creates `bugfix/<slug>` branch)
-0a. Issue Detection (reads/stores issue number)
-1. Parse Arguments & Assemble Bug Spec
-2. Generate Timestamp
-3. Create Team (`bugfix-team`)
-4. Create Tasks (T1-T6 with dependencies)
-5. Spawn Teammates (tester, developer, reviewer)
-6. RED — Tester writes failing test
-7. GREEN — Developer implements fix
-8. REFACTOR — Developer cleans up
-9. REVIEW — Reviewer validates
-10. Final Verification
-11. Cleanup (shutdown teammates, TeamDelete)
-12. Wrap Up (commit, push, PR — or commit only with `--no-pr`)
+Follow the bugfix workflow defined in @bugfix-workflow.md.
 
 ## Completion Audit
 

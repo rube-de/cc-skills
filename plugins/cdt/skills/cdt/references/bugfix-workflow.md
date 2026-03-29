@@ -15,7 +15,7 @@ Detailed execution steps for the TDD-driven bugfix workflow. The Lead reads this
 **Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
 
 1. Check `$ARGUMENTS` for GitHub issue references (`#N`, URL).
-2. If found, extract the number into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
+2. If found, extract the bare integer (no `#` prefix) into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
 3. Otherwise, if `".dev/cdt/$BRANCH/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
 4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for context: `gh issue view "$ISSUE_NUM" --json title,body,labels`
 
@@ -46,17 +46,13 @@ If the issue lacks structured fields (no expected/actual behavior sections), not
 
 Store the assembled spec as `$BUG_SPEC` for use in teammate messages.
 
-## 2. Generate Timestamp
-
-Generate a timestamp in `YYYYMMDD-HHMM` format. Store as `$TIMESTAMP`.
-
-## 3. Create Team
+## 2. Create Team
 
 ```
 TeamCreate: team_name "bugfix-team"
 ```
 
-## 4. Create Tasks
+## 3. Create Tasks
 
 ```
 TaskCreate: "Write failing regression test"        → T1 (Tester)
@@ -69,7 +65,7 @@ TaskCreate: "Review fix"                           → T6 (Reviewer, blocked by 
 
 Use `addBlockedBy` to enforce sequencing.
 
-## 5. Spawn Teammates
+## 4. Spawn Teammates
 
 **Tester teammate**:
 ```
@@ -84,49 +80,39 @@ Teammate tool:
     Bug spec:
     $BUG_SPEC
 
-    Communication rules:
-    - Failing test written → message LEAD with test file path
-    - Test unexpectedly passes → message LEAD: "Test passes — bug may already be fixed or test does not reproduce the reported behavior"
-    - Post-fix verification failures → message DEVELOPER with failure details + root cause (max 3 cycles, then escalate to LEAD)
-    - Post-fix verification passes → message LEAD: "Tests green"
-    - Post-refactor verification failures → message DEVELOPER (max 2 cycles, then escalate to LEAD)
-    - Post-refactor verification passes → message LEAD: "Still green after refactor"
-    - Circuit breaker: If you report the same failure twice and the developer's fix didn't change the failing behavior, escalate to LEAD immediately.
-
     Phase 1 — RED (write failing test):
-    1. Check TaskList, claim task "Write failing regression test"
-    2. Explore codebase: find test framework, testing patterns, existing test files near the affected code
-    3. Write a MINIMAL failing test that reproduces the bug's described behavior
+    1.1. Check TaskList, claim task "Write failing regression test"
+    1.2. Explore codebase: find test framework, testing patterns, existing test files near the affected code
+    1.3. Write a MINIMAL failing test that reproduces the bug's described behavior
        - Test the expected behavior described in the bug spec
        - Follow existing test patterns and conventions
        - One test is enough — test the specific bug, not the world
-    4. Run the test — confirm it FAILS
+    1.4. Run the test — confirm it FAILS
        - If it PASSES: the bug may already be fixed or your test doesn't reproduce it
          Message LEAD immediately with this finding
          If LEAD says test is wrong: rewrite (max 2 attempts, then escalate)
-    5. Message LEAD: "Failing test ready at [path/to/test]"
-    6. Mark task complete, wait for further instructions
+    1.5. Message LEAD: "Failing test ready at [path/to/test]"
+    1.6. Mark task complete, wait for further instructions
 
     Phase 2 — VERIFY (after developer fixes):
-    1. Developer will message you: "Fix ready, changed files: [list]"
-    2. Run the regression test — confirm it PASSES
-    3. Run the full test suite — confirm no regressions
-    4. If failures: message DEVELOPER with specific failure details + root cause
+    2.1. Developer will message you: "Fix ready, changed files: [list]"
+    2.2. Run the regression test — confirm it PASSES
+    2.3. Run the full test suite — confirm no regressions
+    2.4. If failures: message DEVELOPER with specific failure details + root cause
        Wait for fix, re-run (max 3 cycles, then escalate to LEAD)
-    5. If all pass: message LEAD: "Tests green"
-    6. Mark task complete
+    2.5. If all pass: message LEAD: "Tests green"
+    2.6. Mark task complete
 
     Phase 3 — POST-REFACTOR VERIFY:
-    1. Developer will message you: "Refactor complete, verify tests still pass"
-    2. Re-run the full test suite
-    3. If failures: message DEVELOPER (max 2 cycles, then escalate to LEAD)
-    4. If pass: message LEAD: "Still green after refactor"
-    5. Mark task complete
+    3.1. Developer will message you: "Refactor complete, verify tests still pass"
+    3.2. Re-run the full test suite
+    3.3. If failures: message DEVELOPER (max 2 cycles, then escalate to LEAD)
+    3.4. If pass: message LEAD: "Still green after refactor"
+    3.5. Mark task complete
+    3.6. If LEAD messages you for additional verification after review, re-run the full test suite and report results to LEAD
 
-    Phase 4 — POST-REVIEW VERIFY (if needed):
-    1. If reviewer requested code changes and developer made them, LEAD will message you to re-verify
-    2. Re-run the full test suite
-    3. Report results to LEAD
+    Circuit breaker: If you report the same failure twice and the developer's fix
+    didn't change the failing behavior, escalate to LEAD immediately.
 ```
 
 **Developer teammate**:
@@ -143,46 +129,40 @@ Teammate tool:
     Bug spec:
     $BUG_SPEC
 
-    Communication rules:
-    - Fix ready → message TESTER: "Fix ready, changed files: [list]"
-    - Refactor complete → message TESTER: "Refactor complete, verify tests still pass"
-    - If tester reports failures → fix, re-message tester (max 3 cycles)
-    - If reviewer requests changes → fix, re-message reviewer (max 3 cycles)
-    - Circuit breaker: If you receive the same failure report twice in a row (same root cause), do NOT attempt a third fix. Instead, message LEAD with: what failed, what you tried (both attempts), and why you're stuck.
-
     Phase 1 — GREEN (implement minimal fix):
-    1. Check TaskList, claim task "Implement fix"
-    2. LEAD will message you with the failing test location
-    3. Read the failing test — understand the exact expected behavior
-    4. Explore the affected code, trace the root cause
-    5. Implement the MINIMAL fix that makes the test pass
+    1.1. Check TaskList, claim task "Implement fix"
+    1.2. LEAD will message you with the failing test location
+    1.3. Read the failing test — understand the exact expected behavior
+    1.4. Explore the affected code, trace the root cause
+    1.5. Implement the MINIMAL fix that makes the test pass
        - Change as few lines as possible
        - Don't refactor yet — that's Phase 2
        - Don't fix unrelated issues — stay focused on this bug
-    6. Run the test locally to confirm it passes
-    7. Message TESTER: "Fix ready, changed files: [list]"
-    8. Wait for tester verification
+    1.6. Run the test locally to confirm it passes
+    1.7. Message TESTER: "Fix ready, changed files: [list]"
+    1.8. Wait for tester verification
 
     Phase 2 — REFACTOR (after tester confirms green):
-    1. LEAD will tell you tests are green and to start refactoring
-    2. Review your fix for:
+    2.1. LEAD will tell you tests are green and to start refactoring
+    2.2. Review your fix for:
        - Unnecessary complexity or nesting
        - Code duplication introduced by the fix
        - Unclear variable/function naming
        - Logic that could be simplified or consolidated
-    3. Refactor without changing behavior — the tests must still pass
-    4. If no meaningful refactoring is needed, message TESTER: "No refactoring needed, tests should still pass — please verify"
-    5. If you refactored, message TESTER: "Refactor complete, verify tests still pass"
-    6. Mark task complete
-
-    Iteration with reviewer:
-    1. Reviewer may message you with change requests (file:line + suggestion)
-    2. Implement the requested changes
-    3. Message REVIEWER that changes are made
-    4. Max 3 cycles, then escalate to LEAD
+    2.3. Refactor without changing behavior — the tests must still pass
+    2.4. If no meaningful refactoring is needed, message TESTER: "No refactoring needed, tests should still pass — please verify"
+    2.5. If you refactored, message TESTER: "Refactor complete, verify tests still pass"
+    2.6. Mark task complete
 
     Scope lock: Edit only files necessary for the bugfix. If you discover a needed
     change outside the bug's scope, message LEAD — do NOT expand scope.
+
+    Iteration limits: If tester reports failures, fix and re-message (max 3 cycles).
+    If reviewer requests changes, implement and re-message reviewer (max 3 cycles).
+
+    Circuit breaker: If you receive the same failure report twice in a row (same
+    root cause), do NOT attempt a third fix. Instead, message LEAD with: what
+    failed, what you tried (both attempts), and why you're stuck.
 ```
 
 **Reviewer teammate**:
@@ -198,12 +178,6 @@ Teammate tool:
 
     Bug spec:
     $BUG_SPEC
-
-    Communication rules:
-    - Blocking issues → message DEVELOPER with file:line + fix suggestion
-    - Review approved → message LEAD with verdict, issues found/fixed, summary
-    - Escalation (after 3 failed cycles) → message LEAD with summary
-    - Circuit breaker: If the same issue persists after 2 fix attempts, escalate to LEAD.
 
     1. Check TaskList — wait until your task is unblocked (tester must confirm post-refactor green first)
     2. LEAD will message you with: bug spec, changed files list, test file path
@@ -222,7 +196,7 @@ Teammate tool:
        If you see the same pattern elsewhere that isn't fixed, flag it as a
        non-blocking note (not a blocker for this PR).
 
-    4. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub" on changed files
+    4. Scan for stubs using Grep tool with pattern: TODO|FIXME|HACK|XXX|stub on changed files
     5. If blocking issues found:
        - Message DEVELOPER with file:line + specific fix suggestion
        - Wait for fix, re-review (max 3 cycles, then escalate to LEAD)
@@ -234,9 +208,11 @@ Teammate tool:
     Anti-sycophancy: Do NOT rubber-stamp. A passing test suite is necessary but
     not sufficient — the fix must be correct, minimal, and address root cause.
     If everything is genuinely clean, approve. But scrutinize first.
+
+    Circuit breaker: If the same issue persists after 2 fix attempts, escalate to LEAD.
 ```
 
-## 6. RED — Tester Writes Failing Test
+## 5. RED — Tester Writes Failing Test
 
 1. Assign T1 to tester (TaskUpdate `owner: "tester"`)
 2. Message tester teammate: "Bug spec is above in your prompt. Write a minimal failing test that reproduces this bug. Explore the codebase to find the right test location and patterns. Confirm the test fails before reporting back."
@@ -252,7 +228,7 @@ Teammate tool:
    ```
 6. Mark T1 complete
 
-## 7. GREEN — Developer Implements Fix
+## 6. GREEN — Developer Implements Fix
 
 1. Assign T2 to developer (TaskUpdate `owner: "developer"`)
 2. Message developer teammate: "Failing test at [path]. Read it, trace the root cause, and implement the minimal fix to make it pass."
@@ -267,7 +243,7 @@ Teammate tool:
    ```
 7. Mark T2, T3 complete
 
-## 8. REFACTOR — Developer Cleans Up
+## 7. REFACTOR — Developer Cleans Up
 
 1. Assign T4 to developer (TaskUpdate `owner: "developer"`)
 2. Message developer teammate: "Tests green. Start the refactor pass — review your fix for unnecessary complexity, duplication, unclear naming. Simplify without changing behavior. Message tester when done."
@@ -281,7 +257,7 @@ Teammate tool:
    ```
 7. Mark T4, T5 complete
 
-## 9. REVIEW — Reviewer Validates
+## 8. REVIEW — Reviewer Validates
 
 1. Assign T6 to reviewer (TaskUpdate `owner: "reviewer"`)
 2. Message reviewer teammate: "Fix complete and tests passing. Changed files: [list]. Test file: [path]. Review for correctness, blast radius, and root cause. Send change requests directly to the developer teammate."
@@ -291,21 +267,21 @@ Teammate tool:
 5. If developer changed code during review: message tester to re-verify one final time, wait for confirmation
 6. Mark T6 complete
 
-## 10. Final Verification
+## 9. Final Verification
 
-1. Run full test suite one last time (use the project's test command)
-2. `rg "TODO|FIXME|HACK|XXX|stub" --type-not md` on changed files only
-3. Verify the original failing regression test passes
+1. Message tester teammate: "Final verification — run the full test suite one last time and confirm the original regression test passes."
+2. Wait for tester to confirm all tests pass
+3. Scan for stubs via Bash: `rg "TODO|FIXME|HACK|XXX|stub" --type-not md` on changed files only
 
-If any check fails: message developer with details, re-run after fix, re-verify.
+If tester reports failures or stub scan finds issues: message developer with details, wait for fix, then ask tester to re-verify (max 2 cycles, then abort).
 
-## 11. Cleanup
+## 10. Cleanup
 
 1. Send each teammate a shutdown request via SendMessage
 2. Wait for all teammates to confirm shutdown (if rejected, resolve first)
 3. Run TeamDelete to clean up the team
 
-## 12. Wrap Up
+## 11. Wrap Up
 
 **Branch verification** (before any commit/push):
 - Assert `git branch --show-current` matches the expected `bugfix/<slug>` branch
@@ -322,13 +298,15 @@ If any check fails: message developer with details, re-run after fix, re-verify.
    - `gh pr create --title "fix: <bug summary>" --body "$PR_BODY"`
 5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move issue to "In Review":
    `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Print PR URL
+6. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH"`
+7. Print PR URL
 
 **`--no-pr` flag:**
 1. Stage any remaining unstaged changes
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Do NOT push. Do NOT create PR.
-4. Print: "Bugfix committed locally on branch [name]. Use `git push` when ready."
+4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH"`
+5. Print: "Bugfix committed locally on branch [name]. Use `git push` when ready."
 
 ## Anti-Patterns (Lead MUST avoid)
 
