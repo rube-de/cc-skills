@@ -19,7 +19,7 @@ Multi-agent development workflow with five modes. Pick one based on the user's n
 | **dev** | Have an approved plan, ready to implement |
 | **full** | End-to-end with user approval gate between plan and dev |
 | **auto** | End-to-end without approval gate |
-| **bugfix** | Well-specified bug with known root cause — TDD fix cycle |
+| **bugfix** | Well-specified, reproducible bug (root cause may be unknown) — TDD fix cycle |
 
 Before executing any mode, read the relevant workflow file:
 - Feature modes (plan/dev/full/auto): [references/plan-workflow.md](references/plan-workflow.md) and [references/dev-workflow.md](references/dev-workflow.md)
@@ -62,7 +62,7 @@ Validates architecture against requirements. Challenges design with concerns. Pr
 
 ### Developer (teammate — spawn via Teammate tool, dev phase and bugfix phase)
 
-Implements tasks from plan (dev) or minimal fix from bug spec (bugfix). No stubs, no TODOs. Matches existing patterns. Iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
+Implements tasks from plan (dev) or minimal fix from bug spec (bugfix). No stubs, no TODOs. Matches existing patterns. In dev mode: iterates with code-tester teammate on failures, qa-tester teammate on QA issues, reviewer teammate on code quality. In bugfix mode: iterates with tester teammate on failures and reviewer teammate on code quality. Updates project documentation (README.md, AGENTS.md, CLAUDE.md) to reflect implementation changes.
 
 ### Code-Tester (teammate — spawn via Teammate tool, dev phase, always)
 

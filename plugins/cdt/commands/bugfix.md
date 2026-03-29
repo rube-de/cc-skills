@@ -1,5 +1,5 @@
 ---
-allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, Write, Edit, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, Skill]
+allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, Skill]
 description: "TDD-driven bugfix workflow: tester writes failing test (RED) → developer fixes (GREEN) → developer refactors (REFACTOR) → reviewer validates. Accepts issue number, description, or both. Auto-creates PR unless --no-pr flag is passed."
 ---
 

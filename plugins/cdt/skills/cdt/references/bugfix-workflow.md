@@ -12,11 +12,11 @@ Detailed execution steps for the TDD-driven bugfix workflow. The Lead reads this
 
 ## 0a. Issue Detection
 
-**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
 
 1. Check `$ARGUMENTS` for GitHub issue references (`#N`, URL).
-2. If found, extract the bare integer (no `#` prefix) into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
-3. Otherwise, if `".dev/cdt/$BRANCH/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
+2. If found, extract the bare integer (no `#` prefix) into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".dev/cdt/$BRANCH_SLUG" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH_SLUG/.cdt-issue"`
+3. Otherwise, if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
 4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for context: `gh issue view "$ISSUE_NUM" --json title,body,labels`
 
 The team creation hook will attempt to assign and move to "In Progress" (best-effort — may no-op if no project item exists).
@@ -218,8 +218,10 @@ Teammate tool:
 2. Message tester teammate: "Bug spec is above in your prompt. Write a minimal failing test that reproduces this bug. Explore the codebase to find the right test location and patterns. Confirm the test fails before reporting back."
 3. Wait for tester to message back with test path
 4. If tester reports "test passes":
-   - Verify: check if the described bug behavior is actually absent (run reproduction steps if available, or inspect the code path)
-   - If bug appears genuinely fixed: abort workflow, report "Bug appears already resolved", clean up branch state (`rm -rf ".dev/cdt/$BRANCH"`), cleanup team, and ask user whether to close the linked issue
+   - Verify via coordination only (Lead must not run tests or reproduction commands):
+     - Ask the tester to re-run the reproduction steps (if available) and report evidence that the described bug behavior is absent
+     - Optionally inspect the relevant code paths to sanity-check consistency with the bug spec
+   - If bug appears genuinely fixed based on tester evidence: abort workflow, report "Bug appears already resolved", clean up branch state (`rm -rf ".dev/cdt/$BRANCH_SLUG"`), cleanup team, and ask user whether to close the linked issue
    - If test is wrong: message tester to rewrite (max 2 attempts, then abort with explanation)
 5. **Branch verification** (before first commit — guards all subsequent commits):
    - Assert `git branch --show-current` matches the expected `bugfix/<slug>` branch
@@ -291,20 +293,20 @@ If tester reports failures or stub scan finds issues: message developer with det
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Push branch: `git push -u origin <branch>`
 4. Create PR:
-   - Derive `BRANCH=$(git branch --show-current | tr '/' '-')`
+   - Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`
    - Build PR body with: bug summary, root cause (from spec or discovered), what was fixed, regression test added
-   - If `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty: read `ISSUE_NO`, validate numeric, include `Closes #$ISSUE_NO` in PR body
+   - If `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty: read `ISSUE_NO`, validate numeric, include `Closes #$ISSUE_NO` in PR body
    - `gh pr create --title "fix: <bug summary>" --body "$PR_BODY"`
-5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move issue to "In Review":
-   `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH"`
+5. After PR creation, if `".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path"` exists, move issue to "In Review":
+   `"$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path")/sync-github-issue.sh" review`
+6. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
 7. Print PR URL
 
 **`--no-pr` flag:**
 1. Stage any remaining unstaged changes
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Do NOT push. Do NOT create PR.
-4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH"`
+4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
 5. Print: "Bugfix committed locally on branch [name]. Use `git push` when ready."
 
 ## Anti-Patterns (Lead MUST avoid)
