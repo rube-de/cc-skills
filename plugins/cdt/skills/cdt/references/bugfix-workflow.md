@@ -25,7 +25,7 @@ The team creation hook will attempt to assign and move to "In Progress" (best-ef
 
 Parse `$ARGUMENTS`:
 1. Extract `--no-pr` flag if present → store as `$SKIP_PR` (boolean)
-2. Extract `#<number>` if present → `$ISSUE_NO` (already handled in 0a, use `$ISSUE_NUM`)
+2. Extract `#<number>` if present → `$ISSUE_NUM` (already handled in 0a)
 3. Remaining text → `$DESCRIPTION`
 4. If neither issue nor description provided: error — at least one is required
 
@@ -306,6 +306,10 @@ If any check fails: message developer with details, re-run after fix, re-verify.
 3. Run TeamDelete to clean up the team
 
 ## 12. Wrap Up
+
+**Branch verification** (before any commit/push):
+- Assert `git branch --show-current` matches the expected `bugfix/<slug>` branch
+- If it doesn't match: STOP, report the mismatch, do NOT commit or push
 
 **Default (no `--no-pr` flag):**
 1. Stage any remaining unstaged changes
