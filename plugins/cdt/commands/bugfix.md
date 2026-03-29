@@ -35,7 +35,7 @@ Flow: Tester → Developer → Tester → Developer → Tester → Reviewer
 
 Print to the user before proceeding:
 
-```
+```text
 Workflow: bugfix
  Roles: tester [tm], developer [tm], reviewer [tm], researcher [sa]
  Pipeline: RED → GREEN → REFACTOR → REVIEW
@@ -51,7 +51,7 @@ Follow the bugfix workflow defined in @bugfix-workflow.md.
 
 Before wrap-up, log which roles were actually used:
 
-```
+```text
 Bugfix complete:
  - tester     [tm]: [used / NOT USED]
  - developer  [tm]: [used / NOT USED]

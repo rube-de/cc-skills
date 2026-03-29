@@ -27,7 +27,7 @@ Before executing any mode, read the relevant workflow file:
 
 ## Architecture
 
-```
+```text
 Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)       Bugfix Phase (bugfix)
   Lead (You)                      Lead (You)                      Lead (You)
   ├── architect  [teammate]       ├── developer    [teammate]     ├── tester     [teammate]

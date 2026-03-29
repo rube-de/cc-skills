@@ -6,9 +6,9 @@ Detailed execution steps for the TDD-driven bugfix workflow. The Lead reads this
 
 1. Run `git fetch origin`
 2. Ensure you are on `main` or `master` — if not, run `git checkout main` (or `master`, whichever exists)
-3. Derive a branch name from the bug summary (e.g. `bugfix/fix-null-return-getuser`)
-4. Run `git checkout -b <branch> origin/<default-branch>` to create the bugfix branch from the latest remote default branch
-5. Run `git pull` to ensure up-to-date
+3. Run `git pull --ff-only` to ensure the local default branch is up-to-date
+4. Derive a branch name from the bug summary (e.g. `bugfix/fix-null-return-getuser`)
+5. Run `git checkout -b <branch>` to create the bugfix branch from the updated local default branch
 
 ## 0a. Issue Detection
 
@@ -48,13 +48,13 @@ Store the assembled spec as `$BUG_SPEC` for use in teammate messages.
 
 ## 2. Create Team
 
-```
+```text
 TeamCreate: team_name "bugfix-team"
 ```
 
 ## 3. Create Tasks
 
-```
+```text
 TaskCreate: "Write failing regression test"        → T1 (Tester)
 TaskCreate: "Implement fix"                        → T2 (Developer, blocked by T1)
 TaskCreate: "Verify fix passes"                    → T3 (Tester, blocked by T2)
@@ -68,7 +68,7 @@ Use `addBlockedBy` to enforce sequencing.
 ## 4. Spawn Teammates
 
 **Tester teammate**:
-```
+```yaml
 Teammate tool:
   team_name: "bugfix-team"
   name: "tester"
@@ -116,7 +116,7 @@ Teammate tool:
 ```
 
 **Developer teammate**:
-```
+```yaml
 Teammate tool:
   team_name: "bugfix-team"
   name: "developer"
@@ -166,7 +166,7 @@ Teammate tool:
 ```
 
 **Reviewer teammate**:
-```
+```yaml
 Teammate tool:
   team_name: "bugfix-team"
   name: "reviewer"
@@ -219,14 +219,17 @@ Teammate tool:
 3. Wait for tester to message back with test path
 4. If tester reports "test passes":
    - Verify: check if the described bug behavior is actually absent (run reproduction steps if available, or inspect the code path)
-   - If bug is genuinely fixed: abort workflow, report "Bug already resolved", close issue if linked (`gh issue close $ISSUE_NUM`), cleanup team, exit
+   - If bug appears genuinely fixed: abort workflow, report "Bug appears already resolved", clean up branch state (`rm -rf ".dev/cdt/$BRANCH"`), cleanup team, and ask user whether to close the linked issue
    - If test is wrong: message tester to rewrite (max 2 attempts, then abort with explanation)
-5. Commit the failing test:
+5. **Branch verification** (before first commit — guards all subsequent commits):
+   - Assert `git branch --show-current` matches the expected `bugfix/<slug>` branch
+   - If it doesn't match: STOP, report the mismatch, do NOT commit or push
+6. Commit the failing test:
    ```bash
    git add <test-file>
    git commit -m "test: add failing test for <bug summary>"
    ```
-6. Mark T1 complete
+7. Confirm T1 is marked complete by the tester
 
 ## 6. GREEN — Developer Implements Fix
 
@@ -241,7 +244,7 @@ Teammate tool:
    git add <changed-files>
    git commit -m "fix: <bug summary>"
    ```
-7. Mark T2, T3 complete
+7. Confirm T2 and T3 are marked complete by their owners (developer/tester)
 
 ## 7. REFACTOR — Developer Cleans Up
 
@@ -255,7 +258,7 @@ Teammate tool:
    git add <changed-files>
    git commit -m "refactor: clean up <bug summary> fix"
    ```
-7. Mark T4, T5 complete
+7. Confirm T4 and T5 are marked complete by their owners (developer/tester)
 
 ## 8. REVIEW — Reviewer Validates
 
@@ -265,15 +268,15 @@ Teammate tool:
    - Lead does NOT receive change requests — only "Approved" or escalation
 4. Wait for reviewer to message: "Approved" + verdict
 5. If developer changed code during review: message tester to re-verify one final time, wait for confirmation
-6. Mark T6 complete
+6. Confirm T6 is marked complete by the reviewer
 
 ## 9. Final Verification
 
 1. Message tester teammate: "Final verification — run the full test suite one last time and confirm the original regression test passes."
 2. Wait for tester to confirm all tests pass
-3. Scan for stubs via Bash: `rg "TODO|FIXME|HACK|XXX|stub" --type-not md` on changed files only
+3. Scan for stubs via Bash: `rg "TODO|FIXME|HACK|XXX|stub" --type-not md <changed-files>` (pass the actual changed file paths to scope the scan)
 
-If tester reports failures or stub scan finds issues: message developer with details, wait for fix, then ask tester to re-verify (max 2 cycles, then abort).
+If tester reports failures or stub scan finds issues: message developer with details, wait for fix, then ask tester to re-verify. If developer changed code, also message reviewer to re-review the new changes before proceeding (max 2 cycles, then abort).
 
 ## 10. Cleanup
 
@@ -282,10 +285,6 @@ If tester reports failures or stub scan finds issues: message developer with det
 3. Run TeamDelete to clean up the team
 
 ## 11. Wrap Up
-
-**Branch verification** (before any commit/push):
-- Assert `git branch --show-current` matches the expected `bugfix/<slug>` branch
-- If it doesn't match: STOP, report the mismatch, do NOT commit or push
 
 **Default (no `--no-pr` flag):**
 1. Stage any remaining unstaged changes
