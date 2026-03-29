@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/rube-de/cc-skills/compare/v1.54.0...v1.55.0) (2026-03-29)
+
+
+### Features
+
+* **council:** add trust boundary / IDOR heuristics to deep-review ([#194](https://github.com/rube-de/cc-skills/issues/194)) ([cb9b00e](https://github.com/rube-de/cc-skills/commit/cb9b00e37b9a7986fe8cd7de59b2f78c82554710)), closes [#151](https://github.com/rube-de/cc-skills/issues/151)
+
 # [1.54.0](https://github.com/rube-de/cc-skills/compare/v1.53.1...v1.54.0) (2026-03-28)
 
 
