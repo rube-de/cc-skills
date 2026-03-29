@@ -5,7 +5,7 @@ Detailed execution steps for the TDD-driven bugfix workflow. The Lead reads this
 ## 0. Git Check
 
 1. Run `git fetch origin`
-2. Detect the default branch: `DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name)`
+2. Detect the default branch: `DEFAULT_BRANCH=$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||')` — if both fail, abort with an error
 3. Ensure you are on the default branch — if not, run `git checkout $DEFAULT_BRANCH`
 4. Run `git pull --ff-only` to ensure the local default branch is up-to-date
 5. Derive a branch name from the bug summary (e.g. `bugfix/fix-null-return-getuser`)
@@ -290,7 +290,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 ## 11. Wrap Up
 
 **Default (no `--no-pr` flag):**
-1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --name-only` that only workflow-related files are staged)
+1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --cached --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Push branch: `git push -u origin <branch>`
 4. Create PR:
@@ -304,7 +304,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 7. Print PR URL
 
 **`--no-pr` flag:**
-1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --name-only` that only workflow-related files are staged)
+1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --cached --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Do NOT push. Do NOT create PR.
 4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
