@@ -33,7 +33,13 @@ Create `.dev/dlc/` if it does not exist. Delete the state file when self-cancell
 
 ## Step 0: Detect PR
 
-If `$ARGUMENTS` contains a number, use it as PR_NUMBER. Otherwise auto-detect from the current branch:
+If `$ARGUMENTS` contains a number, use it as PR_NUMBER and fetch that PR explicitly:
+
+```bash
+gh pr view $PR_NUMBER --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable
+```
+
+If no number is provided, auto-detect from the current branch:
 
 ```bash
 gh pr view --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable
@@ -55,6 +61,23 @@ Split into OWNER and REPO.
 - Notify: `PR #<number> is <state>. Babysit cancelled.`
 - Self-cancel (see Cancellation Pattern below) and stop.
 
+### Verify and checkout PR branch
+
+Before any git operations, verify you are on PR_BRANCH:
+
+```bash
+CURRENT=$(git branch --show-current)
+if [ "$CURRENT" != "$PR_BRANCH" ]; then
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "ERROR: Not on PR branch ($PR_BRANCH) and worktree is dirty. Stash or commit first."
+    exit 1
+  fi
+  gh pr checkout $PR_NUMBER
+fi
+```
+
+If checkout fails, stop. Do not proceed with git operations on the wrong branch.
+
 ## Step 1: Check CI Status
 
 ```bash
@@ -67,8 +90,7 @@ Categorize each check:
 - **Passed**: conclusion is SUCCESS, SKIPPED, or NEUTRAL
 
 **If any checks are still running:**
-Print: `CI running (<count> of <total>) — waiting for next cycle.`
-Stop. Do NOT notify — this is the normal waiting state.
+Stop without printing anything. This is the normal waiting state.
 
 **If any checks failed:** Continue to Step 1b (attempt auto-fix).
 
@@ -80,17 +102,19 @@ Do not just notify and stop when CI fails. Attempt to diagnose and fix the failu
 
 ### Read CI logs
 
-Get the failing run ID and download the failed logs:
+Get ALL failing run IDs for the current HEAD and download their logs:
 
 ```bash
-gh run list --branch $PR_BRANCH --status failure --limit 1 --json databaseId --jq '.[0].databaseId'
+gh run list --branch $PR_BRANCH --status failure --json databaseId --jq '.[].databaseId'
 ```
 
-Then read the failed job logs:
+For each failing run, read its logs:
 
 ```bash
 gh run view <RUN_ID> --log-failed 2>&1 | tail -200
 ```
+
+Collect and combine log output from all failing runs before classifying.
 
 ### Classify and fix
 
@@ -131,7 +155,7 @@ Do not notify after a successful fix attempt — this is routine automation. Sto
 Check if the branch is behind the base branch:
 
 ```bash
-git fetch origin $BASE_BRANCH --quiet
+git fetch origin $BASE_BRANCH > /dev/null
 BEHIND=$(git rev-list --count HEAD..origin/$BASE_BRANCH)
 ```
 
@@ -209,16 +233,21 @@ gh api graphql -f query='
     repository(owner:$owner,name:$repo) {
       pullRequest(number:$pr) {
         reviewThreads(first:100) {
+          totalCount
           nodes { isResolved isOutdated }
         }
       }
     }
-  }' -f owner="$OWNER" -f repo="$REPO" -F pr=$PR_NUMBER \
-  --jq '[.data.repository.pullRequest.reviewThreads.nodes[]
-         | select(.isResolved==false and .isOutdated==false)] | length'
+  }' -f "owner=$OWNER" -f "repo=$REPO" -F "pr=$PR_NUMBER" \
+  --jq '.data.repository.pullRequest.reviewThreads as $rt
+        | ($rt.nodes | map(select(.isResolved==false)) | length) as $unresolved
+        | if $rt.totalCount > 100 and $unresolved == 0
+          then 1
+          else $unresolved
+          end'
 ```
 
-Store as UNRESOLVED.
+Store as UNRESOLVED. Note: outdated threads are NOT filtered out — they may still contain valid feedback that `dlc:pr-check` needs to re-check. If totalCount > 100 and the fetched page shows 0 unresolved, treat as 1 (safety net for truncation).
 
 Re-fetch current state:
 
@@ -228,7 +257,13 @@ gh pr view $PR_NUMBER --json reviewDecision,mergeable --jq '{reviewDecision,merg
 
 ### No reviews submitted yet
 
-If reviewDecision is `REVIEW_REQUIRED` and UNRESOLVED is 0 (no threads at all — nobody has reviewed):
+Check whether any reviews exist:
+
+```bash
+REVIEW_COUNT=$(gh pr view $PR_NUMBER --json reviews --jq '.reviews | length')
+```
+
+If reviewDecision is `REVIEW_REQUIRED` and REVIEW_COUNT is 0 (no reviews submitted at all):
 - Notify: `👀 PR #<number> is waiting for review. No reviewers have submitted yet. <url>`
 - Stop. Do NOT run pr-check — there are no comments to process. Next cycle will re-check.
 
@@ -265,20 +300,32 @@ After pr-check pushes fixes, re-request review from reviewers who requested chan
 Get the list of reviewers who submitted reviews:
 
 ```bash
-gh pr view $PR_NUMBER --json reviews --jq '[.reviews[].author.login] | unique | join(",")'
+REVIEWERS=$(gh pr view $PR_NUMBER --json reviews --jq '[.reviews[].author.login] | unique | join(",")')
 ```
 
-Re-request review:
+Re-request review only if the list is non-empty:
 
 ```bash
-gh pr edit $PR_NUMBER --add-reviewer <REVIEWER_CSV>
+if [ -n "$REVIEWERS" ]; then
+  gh pr edit $PR_NUMBER --add-reviewer "$REVIEWERS"
+fi
 ```
 
 Do not notify about re-request — this is routine automation.
 
 ## Step 6: Final Assessment
 
-After pr-check and re-review request, re-check the PR state. Re-run the unresolved threads query and reviewDecision check from Step 3.
+After pr-check and re-review request, re-check the PR state.
+
+First, check if pr-check pushed new commits. If so, CI will be re-running — stop silently and let the next cycle pick up the results:
+
+```bash
+gh pr checks $PR_NUMBER --json state --jq '[.[] | select(.state != "COMPLETED")] | length'
+```
+
+If any checks are not completed, stop silently — CI needs to finish before declaring readiness.
+
+If all CI is still green, re-run the unresolved threads query and reviewDecision check from Step 3.
 
 **Ready to merge** (same criteria as Step 3):
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
