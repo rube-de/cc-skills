@@ -21,17 +21,15 @@ When the skill says "Notify" — print the message to stdout. The user sees it v
 
 ### Deduplication
 
-Track the last notification state to avoid printing the same message every cycle:
+Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>.state`. Same state across cycles produces no output. Details are in the notification steps below.
 
-```
-.dev/dlc/babysit-<PR_NUMBER>.state
-```
+## Step 0: Setup
 
-Before printing a notification, read the state file. If it contains the same status key (e.g., `ci_failing:check1,check2`, `needs_review`, `ready`), skip — only notify when the state changes. Write the new status key after notifying.
+### Initialize state tracking
 
-Create `.dev/dlc/` if it does not exist. Delete the state file when self-cancelling.
+Create `.dev/dlc/` if it does not exist. Read the state file `.dev/dlc/babysit-<PR_NUMBER>.state` if it exists — it contains the status key from the last notification. Before sending any notification, compare the current status key against this file. If identical, skip the notification. After sending, write the new key. Delete the state file when self-cancelling.
 
-## Step 0: Detect PR
+### Detect PR
 
 If `$ARGUMENTS` contains a number, use it as PR_NUMBER and fetch that PR explicitly:
 
@@ -94,7 +92,9 @@ Stop without printing anything. This is the normal waiting state.
 
 **If any checks failed:** Continue to Step 1b (attempt auto-fix).
 
-**If ALL checks passed or NO checks exist:** Continue to Step 2.
+**If NO checks exist:** Stop without printing. Checks may be delayed or not configured. Wait for the next cycle.
+
+**If ALL checks passed:** Continue to Step 2.
 
 ## Step 1b: Attempt CI Auto-Fix
 
@@ -287,7 +287,7 @@ Continue to Step 4.
 
 Invoke the pr-check skill to handle review comments:
 
-```
+```text
 Skill("dlc:pr-check", "<PR_NUMBER>")
 ```
 
