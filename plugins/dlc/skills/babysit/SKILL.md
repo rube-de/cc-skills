@@ -23,7 +23,7 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 
 - `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
 - `ci_unfixable:<sorted_check_names>`
-- `rebase_conflict:<file_list>`
+- `rebase_conflict:<sorted_file_list>`
 - `needs_review`
 - `unresolved:<count>`
 - `ready`
@@ -84,7 +84,7 @@ gh pr checks $PR_NUMBER --json name,state,conclusion
 
 Categorize each check:
 - **Running**: state is IN_PROGRESS, QUEUED, or PENDING, or conclusion is empty/null
-- **Failed**: conclusion is FAILURE, ERROR, TIMED_OUT, or CANCELLED
+- **Failed**: conclusion is FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED, STALE, or any other non-success value
 - **Passed**: conclusion is SUCCESS, SKIPPED, or NEUTRAL
 
 **If any checks are still running:**
@@ -231,17 +231,19 @@ Skill("dlc:pr-check", "<PR_NUMBER>")
 ```
 
 After pr-check completes, parse its output summary to extract these values:
-- Total unresolved items remaining (Fixed + Answered + Resolved = done; anything else = remaining)
-- Whether pr-check pushed any commits
+- Total unresolved items remaining: items marked Fixed, Answered, Resolved, or Dismissed are **done**. Remaining = Total - (Fixed + Answered + Resolved + Dismissed).
+- Whether pr-check pushed any commits (look for "Pushed" in the summary or a non-empty git diff from before)
 
-If pr-check pushed commits, re-request review from all prior reviewers:
+If pr-check pushed commits, re-request review from all prior reviewers. Filter out bot accounts (logins ending in `[bot]`):
 
 ```bash
-REVIEWERS=$(gh pr view $PR_NUMBER --json reviews --jq '[.reviews[].author.login] | unique | join(",")')
+REVIEWERS=$(gh pr view $PR_NUMBER --json reviews --jq '[.reviews[].author.login | select(endswith("[bot]") | not)] | unique | join(",")')
 if [ -n "$REVIEWERS" ]; then
   gh pr edit $PR_NUMBER --add-reviewer "$REVIEWERS"
 fi
 ```
+
+If pr-check did NOT push commits, skip the re-request — there's nothing new to review.
 
 ## Step 4: Assess and Notify
 
@@ -275,7 +277,7 @@ Stop silently. Re-review was already requested in Step 3. Next cycle will re-che
 To self-cancel the babysit loop:
 
 1. Call `CronList` to list all scheduled tasks.
-2. Find the task whose prompt contains "babysit" AND the current PR_NUMBER (to avoid cancelling babysit loops for other PRs).
+2. Find the task whose prompt contains "babysit". If multiple babysit tasks exist, prefer the one containing the current PR_NUMBER. If none contain a PR number (auto-detect mode), cancel the one matching `dlc:babysit` without a number argument.
 3. Call `CronDelete` with that task's ID.
 4. Delete the state file: `.dev/dlc/babysit-<PR_NUMBER>.state`
 5. If no matching task is found, this was a manual invocation — skip cancellation.
