@@ -27,7 +27,18 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 
 ### Initialize state tracking
 
-Create `.dev/dlc/` if it does not exist. Read the state file `.dev/dlc/babysit-<PR_NUMBER>.state` if it exists — it contains the status key from the last notification. Before sending any notification, compare the current status key against this file. If identical, skip the notification. After sending, write the new key. Delete the state file when self-cancelling.
+Create `.dev/dlc/` if it does not exist. Read the state file `.dev/dlc/babysit-<PR_NUMBER>.state` if it exists — it contains a single-line **status key** from the last notification.
+
+**Status key format** — one of these stable strings:
+- `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
+- `ci_unfixable:<sorted_check_names>`
+- `rebase_conflict:<file_list>`
+- `needs_review`
+- `unresolved:<count>`
+- `ready`
+- `closed:<state>`
+
+Before sending any notification, compare the current status key against the file. If identical, skip. After sending, write the new key. Delete the state file when self-cancelling.
 
 ### Detect PR
 
@@ -43,7 +54,7 @@ If no number is provided, auto-detect from the current branch:
 gh pr view --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable
 ```
 
-If no PR exists for the current branch, print "No PR found for current branch." and stop. Do NOT notify — the user may not have pushed yet.
+If no PR exists for the current branch, stop silently. The user may not have pushed yet.
 
 Extract and store: PR_NUMBER, PR_TITLE, PR_BRANCH, BASE_BRANCH, PR_STATE, PR_URL, REVIEW_DECISION, MERGEABLE.
 
@@ -92,7 +103,7 @@ Stop without printing anything. This is the normal waiting state.
 
 **If any checks failed:** Continue to Step 1b (attempt auto-fix).
 
-**If NO checks exist:** Stop without printing. Checks may be delayed or not configured. Wait for the next cycle.
+**If NO checks exist:** Continue to Step 2. The repo may not have CI configured — do not stall indefinitely.
 
 **If ALL checks passed:** Continue to Step 2.
 
@@ -270,11 +281,25 @@ If reviewDecision is `REVIEW_REQUIRED` and REVIEW_COUNT is 0 (no reviews submitt
 
 ### Check for unresolved review bodies and issue comments
 
-In addition to threads, check for actionable review bodies and issue comments that `pr-check` would process. Use the pr-comments.sh script output (or `gh api`) to count:
-- Unresolved review bodies: state is COMMENTED or CHANGES_REQUESTED with actionable content, and no DLC sentinel reply exists
-- Unresolved issue comments: actionable reviewer comments with no DLC sentinel reply
+Run the pr-comments.sh script to get structured data on all feedback types:
 
-Store as UNRESOLVED_BODIES and UNRESOLVED_ISSUE_COMMENTS.
+```bash
+PR_DATA=$(sh ../../scripts/pr-comments.sh $PR_NUMBER 2>/dev/null)
+```
+
+Count unresolved review bodies (state is COMMENTED or CHANGES_REQUESTED, body has actionable content, no DLC sentinel reply in issue comments):
+
+```bash
+UNRESOLVED_BODIES=$(echo "$PR_DATA" | jq '[.review_bodies[] | select(.state == "COMMENTED" or .state == "CHANGES_REQUESTED")] | length')
+```
+
+Count unresolved issue comments (actionable reviewer comments without a DLC sentinel reply):
+
+```bash
+UNRESOLVED_ISSUE_COMMENTS=$(echo "$PR_DATA" | jq '[.reviewer_issue_comments[] | select(.body | test("^<h3>|^<!-- |^> \\[!NOTE\\]") | not)] | length')
+```
+
+Note: The jq filters above are approximations — informational comments (HTML summaries, status notes, auto-generated content) are excluded. Err on the side of inclusion: if uncertain whether a comment is actionable, count it as unresolved and let pr-check handle classification.
 
 ### Ready to merge
 
@@ -360,7 +385,7 @@ Only proceed if ALL checks are completed with passing conclusions (SUCCESS, SKIP
 To self-cancel the babysit loop:
 
 1. Call `CronList` to list all scheduled tasks.
-2. Find the task whose prompt contains "babysit" or "dlc:babysit".
+2. Find the task whose prompt contains "babysit" AND the current PR_NUMBER (to avoid cancelling babysit loops for other PRs).
 3. Call `CronDelete` with that task's ID.
 4. Delete the state file: `.dev/dlc/babysit-<PR_NUMBER>.state`
 5. If no matching task is found, this was a manual invocation — skip cancellation.
