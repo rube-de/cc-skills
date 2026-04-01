@@ -102,10 +102,11 @@ Do not just notify and stop when CI fails. Attempt to diagnose and fix the failu
 
 ### Read CI logs
 
-Get ALL failing run IDs for the current HEAD and download their logs:
+Get the HEAD SHA, then fetch ALL failing runs scoped to that specific commit:
 
 ```bash
-gh run list --branch $PR_BRANCH --status failure --json databaseId --jq '.[].databaseId'
+HEAD_SHA=$(git rev-parse HEAD)
+gh run list --commit $HEAD_SHA --status failure --json databaseId --jq '.[].databaseId'
 ```
 
 For each failing run, read its logs:
@@ -317,15 +318,17 @@ Do not notify about re-request — this is routine automation.
 
 After pr-check and re-review request, re-check the PR state.
 
-First, check if pr-check pushed new commits. If so, CI will be re-running — stop silently and let the next cycle pick up the results:
+First, re-check CI status — pr-check may have pushed new commits:
 
 ```bash
-gh pr checks $PR_NUMBER --json state --jq '[.[] | select(.state != "COMPLETED")] | length'
+gh pr checks $PR_NUMBER --json name,state,conclusion
 ```
 
-If any checks are not completed, stop silently — CI needs to finish before declaring readiness.
+If any checks are not completed (state != COMPLETED), stop silently — CI needs to finish.
 
-If all CI is still green, re-run the unresolved threads query and reviewDecision check from Step 3.
+If any checks completed with a failing conclusion (FAILURE, ERROR, TIMED_OUT, CANCELLED), stop silently — the next cycle will pick these up in Step 1.
+
+Only proceed if ALL checks are completed with passing conclusions (SUCCESS, SKIPPED, NEUTRAL). Re-run the unresolved threads query and reviewDecision check from Step 3.
 
 **Ready to merge** (same criteria as Step 3):
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
