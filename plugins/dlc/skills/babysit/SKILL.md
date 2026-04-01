@@ -2,14 +2,14 @@
 name: babysit
 description: >-
   PR babysitter: monitors CI status, auto-rebases when behind, auto-fixes CI
-  where possible, runs pr-check for review comments, and re-requests review
-  after fixes. Designed for /loop usage with Remote Control.
+  where possible, delegates review comment handling to dlc:pr-check, and
+  re-requests review after fixes. Designed for /loop usage with Remote Control.
 allowed-tools: [Bash, Read, Edit, Write, Grep, Glob, Skill, CronList, CronDelete]
 ---
 
 # DLC: PR Babysitter
 
-Monitor a PR on a loop: check CI, auto-rebase, auto-fix CI failures, run pr-check for review comments, and re-request review after pushing fixes. Use with Remote Control to monitor from your phone.
+Monitor a PR on a loop: check CI, auto-rebase, auto-fix CI failures, and delegate review comment handling to `dlc:pr-check`. Use with Remote Control to monitor from your phone.
 
 **Usage:** `/loop 10m /dlc:babysit` (auto-detect PR) or `/loop 10m /dlc:babysit 253`
 
@@ -17,19 +17,10 @@ Monitor a PR on a loop: check CI, auto-rebase, auto-fix CI failures, run pr-chec
 
 Only print status messages for **errors that need human attention** and **completion** (PR ready to merge). Routine actions (rebase, lint fix, CI retry, re-request review) are silent.
 
-When the skill says "Notify" — print the message to stdout. The user sees it via Remote Control or the terminal.
-
 ### Deduplication
 
-Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>.state`. Same state across cycles produces no output. Details are in the notification steps below.
+Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>.state`. The file contains a single-line **status key**:
 
-## Step 0: Setup
-
-### Initialize state tracking
-
-Create `.dev/dlc/` if it does not exist. Read the state file `.dev/dlc/babysit-<PR_NUMBER>.state` if it exists — it contains a single-line **status key** from the last notification.
-
-**Status key format** — one of these stable strings:
 - `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
 - `ci_unfixable:<sorted_check_names>`
 - `rebase_conflict:<file_list>`
@@ -38,7 +29,13 @@ Create `.dev/dlc/` if it does not exist. Read the state file `.dev/dlc/babysit-<
 - `ready`
 - `closed:<state>`
 
-Before sending any notification, compare the current status key against the file. If identical, skip. After sending, write the new key. Delete the state file when self-cancelling.
+Same key across cycles = no output. Write the new key after notifying. Delete the state file when self-cancelling.
+
+## Step 0: Setup
+
+### Initialize state tracking
+
+Create `.dev/dlc/` if it does not exist. Read the state file if it exists.
 
 ### Detect PR
 
@@ -54,17 +51,9 @@ If no number is provided, auto-detect from the current branch:
 gh pr view --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable
 ```
 
-If no PR exists for the current branch, stop silently. The user may not have pushed yet.
+If no PR exists for the current branch, stop silently.
 
 Extract and store: PR_NUMBER, PR_TITLE, PR_BRANCH, BASE_BRANCH, PR_STATE, PR_URL, REVIEW_DECISION, MERGEABLE.
-
-Also extract owner/repo for the GraphQL query in Step 3:
-
-```bash
-gh repo view --json nameWithOwner --jq '.nameWithOwner'
-```
-
-Split into OWNER and REPO.
 
 **State gate:** If PR_STATE is not `OPEN`:
 - Notify: `PR #<number> is <state>. Babysit cancelled.`
@@ -103,7 +92,7 @@ Stop without printing anything. This is the normal waiting state.
 
 **If any checks failed:** Continue to Step 1b (attempt auto-fix).
 
-**If NO checks exist:** Continue to Step 2. The repo may not have CI configured — do not stall indefinitely.
+**If NO checks exist:** Continue to Step 2. The repo may not have CI configured.
 
 **If ALL checks passed:** Continue to Step 2.
 
@@ -233,150 +222,51 @@ git rebase --abort
 Notify: `⚠️ Rebase conflict on PR #<number> — could not auto-resolve. File(s): <conflicting_files>. <url>`
 Stop.
 
-## Step 3: Quick Readiness Check
+## Step 3: Run PR Review Check
 
-Before running the heavyweight pr-check, check if the PR is already ready — or if there's nothing pr-check can do.
-
-Count unresolved review threads:
-
-```bash
-gh api graphql -f query='
-  query($owner:String!,$repo:String!,$pr:Int!) {
-    repository(owner:$owner,name:$repo) {
-      pullRequest(number:$pr) {
-        reviewThreads(first:100) {
-          totalCount
-          nodes { isResolved isOutdated }
-        }
-      }
-    }
-  }' -f "owner=$OWNER" -f "repo=$REPO" -F "pr=$PR_NUMBER" \
-  --jq '.data.repository.pullRequest.reviewThreads as $rt
-        | ($rt.nodes | map(select(.isResolved==false)) | length) as $unresolved
-        | if $rt.totalCount > 100 and $unresolved == 0
-          then 1
-          else $unresolved
-          end'
-```
-
-Store as UNRESOLVED. Note: outdated threads are NOT filtered out — they may still contain valid feedback that `dlc:pr-check` needs to re-check. If totalCount > 100 and the fetched page shows 0 unresolved, treat as 1 (safety net for truncation).
-
-Re-fetch current state:
-
-```bash
-gh pr view $PR_NUMBER --json reviewDecision,mergeable --jq '{reviewDecision,mergeable}'
-```
-
-### No reviews submitted yet
-
-Check whether any reviews exist:
-
-```bash
-REVIEW_COUNT=$(gh pr view $PR_NUMBER --json reviews --jq '.reviews | length')
-```
-
-If reviewDecision is `REVIEW_REQUIRED` and REVIEW_COUNT is 0 (no reviews submitted at all):
-- Notify: `👀 PR #<number> is waiting for review. No reviewers have submitted yet. <url>`
-- Stop. Do NOT run pr-check — there are no comments to process. Next cycle will re-check.
-
-### Check for unresolved review bodies and issue comments
-
-Run the pr-comments.sh script to get structured data on all feedback types:
-
-```bash
-PR_DATA=$(sh ../../scripts/pr-comments.sh $PR_NUMBER 2>/dev/null)
-```
-
-Count unresolved review bodies (state is COMMENTED or CHANGES_REQUESTED, body has actionable content, no DLC sentinel reply in issue comments):
-
-```bash
-UNRESOLVED_BODIES=$(echo "$PR_DATA" | jq '[.review_bodies[] | select(.state == "COMMENTED" or .state == "CHANGES_REQUESTED")] | length')
-```
-
-Count unresolved issue comments (actionable reviewer comments without a DLC sentinel reply):
-
-```bash
-UNRESOLVED_ISSUE_COMMENTS=$(echo "$PR_DATA" | jq '[.reviewer_issue_comments[] | select(.body | test("^<h3>|^<!-- |^> \\[!NOTE\\]") | not)] | length')
-```
-
-Note: The jq filters above are approximations — informational comments (HTML summaries, status notes, auto-generated content) are excluded. Err on the side of inclusion: if uncertain whether a comment is actionable, count it as unresolved and let pr-check handle classification.
-
-### Ready to merge
-
-ALL of these are true:
-1. All CI passed (confirmed in Step 1)
-2. UNRESOLVED is 0 (no unresolved threads)
-3. UNRESOLVED_BODIES is 0 (no unresolved review bodies)
-4. UNRESOLVED_ISSUE_COMMENTS is 0 (no unresolved issue comments)
-5. reviewDecision is APPROVED or empty (no review policy)
-6. mergeable is MERGEABLE
-
-If ready:
-- Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
-- Self-cancel and stop. The user merges when they choose to.
-
-### Has unresolved feedback
-
-Continue to Step 4.
-
-## Step 4: Run PR Review Check
-
-Invoke the pr-check skill to handle review comments:
+Delegate all review comment handling to `dlc:pr-check`. It handles: fetching comments, categorizing, fixing what it can, replying inline, committing, and pushing.
 
 ```text
 Skill("dlc:pr-check", "<PR_NUMBER>")
 ```
 
-Let pr-check run its full cycle: fetch comments, categorize, fix what it can, reply inline, commit, push.
+After pr-check completes, parse its output summary to extract these values:
+- Total unresolved items remaining (Fixed + Answered + Resolved = done; anything else = remaining)
+- Whether pr-check pushed any commits
 
-## Step 5: Re-Request Review
-
-After pr-check pushes fixes, re-request review from all prior reviewers. This signals that feedback has been addressed and prompts a fresh look.
-
-Get the list of reviewers who submitted reviews:
+If pr-check pushed commits, re-request review from all prior reviewers:
 
 ```bash
 REVIEWERS=$(gh pr view $PR_NUMBER --json reviews --jq '[.reviews[].author.login] | unique | join(",")')
-```
-
-Re-request review only if the list is non-empty:
-
-```bash
 if [ -n "$REVIEWERS" ]; then
   gh pr edit $PR_NUMBER --add-reviewer "$REVIEWERS"
 fi
 ```
 
-Do not notify about re-request — this is routine automation.
+## Step 4: Assess and Notify
 
-## Step 6: Final Assessment
-
-After pr-check and re-review request, re-check the PR state.
-
-First, re-check CI status — pr-check may have pushed new commits:
+After pr-check completes, re-check the PR state:
 
 ```bash
 gh pr checks $PR_NUMBER --json name,state,conclusion
+gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
-If any checks are not completed (state != COMPLETED), stop silently — CI needs to finish.
+**If CI is not fully passing** (any check running or failed):
+Stop silently — next cycle will handle it in Step 1.
 
-If any checks completed with a failing conclusion (FAILURE, ERROR, TIMED_OUT, CANCELLED), stop silently — the next cycle will pick these up in Step 1.
-
-Only proceed if ALL checks are completed with passing conclusions (SUCCESS, SKIPPED, NEUTRAL). Re-run the unresolved threads query, review bodies/issue comments check, and reviewDecision check from Step 3.
-
-**Ready to merge** (same criteria as Step 3):
+**If pr-check reported 0 remaining unresolved items AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
 - Self-cancel and stop.
 
-**Unresolved feedback remains:**
-- Notify: `💬 PR #<number> has unresolved feedback after auto-fix (<threads> threads, <bodies> review bodies, <comments> issue comments). Review needed. <url>`
+**If pr-check reported remaining unresolved items:**
+- Notify: `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`
 - Stop. Next cycle will re-check.
 
-**Changes requested, awaiting re-review (reviewDecision is CHANGES_REQUESTED):**
-- Stop silently. Re-review was already requested in Step 5. Next cycle will re-check.
+**If reviewDecision is CHANGES_REQUESTED:**
+Stop silently. Re-review was already requested in Step 3. Next cycle will re-check.
 
-**Not mergeable (mergeable is CONFLICTING):**
+**If mergeable is CONFLICTING:**
 - Notify: `⚠️ PR #<number> has merge conflicts. <url>`
 - Stop. Next cycle will attempt rebase in Step 2.
 
