@@ -102,11 +102,11 @@ Do not just notify and stop when CI fails. Attempt to diagnose and fix the failu
 
 ### Read CI logs
 
-Get the HEAD SHA, then fetch ALL failing runs scoped to that specific commit:
+Get the HEAD SHA, then fetch ALL non-success runs scoped to that specific commit:
 
 ```bash
 HEAD_SHA=$(git rev-parse HEAD)
-gh run list --commit $HEAD_SHA --status failure --json databaseId --jq '.[].databaseId'
+gh run list --commit $HEAD_SHA --json databaseId,conclusion --jq '[.[] | select(.conclusion != "success" and .conclusion != "skipped" and .conclusion != "neutral" and .conclusion != "")] | .[].databaseId'
 ```
 
 For each failing run, read its logs:
@@ -188,8 +188,8 @@ Do NOT abort immediately. For each conflicting commit in the rebase sequence:
    ```
 
 2. For each conflicting file, read the full file content and examine the conflict markers (`<<<<<<<`, `=======`, `>>>>>>>`). Understand both sides:
-   - **Ours** (above `=======`): the PR branch's changes
-   - **Theirs** (below `=======`): the base branch's incoming changes
+   - **HEAD** (above `=======`): the base branch you are rebasing onto
+   - **Incoming** (below `=======`): the PR commit being replayed
 
 3. Resolve the conflict by editing the file to integrate both sides correctly. Preserve the intent of both changes. Remove all conflict markers.
 
@@ -296,7 +296,7 @@ Let pr-check run its full cycle: fetch comments, categorize, fix what it can, re
 
 ## Step 5: Re-Request Review
 
-After pr-check pushes fixes, re-request review from reviewers who requested changes. This signals that their feedback has been addressed.
+After pr-check pushes fixes, re-request review from all prior reviewers. This signals that feedback has been addressed and prompts a fresh look.
 
 Get the list of reviewers who submitted reviews:
 
