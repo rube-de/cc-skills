@@ -268,19 +268,29 @@ If reviewDecision is `REVIEW_REQUIRED` and REVIEW_COUNT is 0 (no reviews submitt
 - Notify: `👀 PR #<number> is waiting for review. No reviewers have submitted yet. <url>`
 - Stop. Do NOT run pr-check — there are no comments to process. Next cycle will re-check.
 
+### Check for unresolved review bodies and issue comments
+
+In addition to threads, check for actionable review bodies and issue comments that `pr-check` would process. Use the pr-comments.sh script output (or `gh api`) to count:
+- Unresolved review bodies: state is COMMENTED or CHANGES_REQUESTED with actionable content, and no DLC sentinel reply exists
+- Unresolved issue comments: actionable reviewer comments with no DLC sentinel reply
+
+Store as UNRESOLVED_BODIES and UNRESOLVED_ISSUE_COMMENTS.
+
 ### Ready to merge
 
 ALL of these are true:
 1. All CI passed (confirmed in Step 1)
-2. UNRESOLVED is 0
-3. reviewDecision is APPROVED or empty (no review policy)
-4. mergeable is MERGEABLE
+2. UNRESOLVED is 0 (no unresolved threads)
+3. UNRESOLVED_BODIES is 0 (no unresolved review bodies)
+4. UNRESOLVED_ISSUE_COMMENTS is 0 (no unresolved issue comments)
+5. reviewDecision is APPROVED or empty (no review policy)
+6. mergeable is MERGEABLE
 
 If ready:
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
 - Self-cancel and stop. The user merges when they choose to.
 
-### Has unresolved threads
+### Has unresolved feedback
 
 Continue to Step 4.
 
@@ -328,14 +338,14 @@ If any checks are not completed (state != COMPLETED), stop silently — CI needs
 
 If any checks completed with a failing conclusion (FAILURE, ERROR, TIMED_OUT, CANCELLED), stop silently — the next cycle will pick these up in Step 1.
 
-Only proceed if ALL checks are completed with passing conclusions (SUCCESS, SKIPPED, NEUTRAL). Re-run the unresolved threads query and reviewDecision check from Step 3.
+Only proceed if ALL checks are completed with passing conclusions (SUCCESS, SKIPPED, NEUTRAL). Re-run the unresolved threads query, review bodies/issue comments check, and reviewDecision check from Step 3.
 
 **Ready to merge** (same criteria as Step 3):
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
 - Self-cancel and stop.
 
-**Unresolved comments remain (UNRESOLVED > 0):**
-- Notify: `💬 PR #<number> has <count> unresolved threads after auto-fix. Review needed. <url>`
+**Unresolved feedback remains:**
+- Notify: `💬 PR #<number> has unresolved feedback after auto-fix (<threads> threads, <bodies> review bodies, <comments> issue comments). Review needed. <url>`
 - Stop. Next cycle will re-check.
 
 **Changes requested, awaiting re-review (reviewDecision is CHANGES_REQUESTED):**
