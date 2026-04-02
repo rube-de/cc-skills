@@ -141,6 +141,32 @@ git blame -L <changed-range> <file>
 - **Stale docs/ content**: Changes that invalidate existing documentation — guides referencing removed features, architecture diagrams that no longer match, setup instructions with outdated steps (if `docs/` exists)
 - **Missing migration guides**: Breaking changes (removed/renamed APIs, changed config formats, dropped support) without a migration guide or upgrade notes (if `docs/` exists)
 
+#### Documentation Accuracy Verification
+
+Don't just check if documentation exists — verify it matches the code:
+
+```
+1. For each new config key or field in the diff:
+   a. Grep README.md and docs/ for references to the field name
+   b. If documented: read the documentation claim, then read the code to verify the claim is true
+   c. If the code doesn't implement the documented behavior, flag as "documentation describes unimplemented behavior"
+2. For each field referenced in docstrings/JSDoc:
+   a. Read the type definition the docstring describes
+   b. Verify every @param, @returns, and referenced field actually exists in the type
+   c. Flag phantom fields (referenced in docs but absent from types)
+3. For config examples in README or docs:
+   a. Trace the config value through the code — does the code handle the example value correctly?
+   b. Common trap: tilde paths (~/.local/...) documented but code uses Path() without expanduser()
+   c. Common trap: config key documented but code accesses a differently-named key
+4. For changelog/release notes entries in the diff:
+   a. Compare each bullet to the actual code changes in the same PR
+   b. Flag entries that describe the opposite of what the code does
+   c. Flag entries that describe features the code doesn't implement
+5. For ADRs (Architecture Decision Records):
+   a. Verify the ADR's stated constraints don't conflict with existing repo policies
+   b. Verify the ADR's listed mitigations are actually implemented in the code
+```
+
 #### docs/ Directory Audit
 
 ```
