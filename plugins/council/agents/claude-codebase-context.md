@@ -143,17 +143,17 @@ git blame -L <changed-range> <file>
 
 #### Documentation Accuracy Verification
 
-Don't just check if documentation exists — verify it matches the code:
+Use the following checks to validate that documentation matches implementation:
 
-```
+```text
 1. For each new config key or field in the diff:
-   a. Grep README.md and docs/ for references to the field name
+   a. Grep **/README.md and docs/ for references to the field name
    b. If documented: read the documentation claim, then read the code to verify the claim is true
    c. If the code doesn't implement the documented behavior, flag as "documentation describes unimplemented behavior"
-2. For each field referenced in docstrings/JSDoc:
-   a. Read the type definition the docstring describes
-   b. Verify every @param, @returns, and referenced field actually exists in the type
-   c. Flag phantom fields (referenced in docs but absent from types)
+2. For each field referenced in docstrings (JSDoc, Python docstrings, etc.):
+   a. Read the type definition or code signature the docstring describes
+   b. Verify every documented parameter, return value, and referenced field actually exists in the code
+   c. Flag phantom fields (referenced in docs but absent from code)
 3. For config examples in README or docs:
    a. Trace the config value through the code — does the code handle the example value correctly?
    b. Common trap: tilde paths (~/.local/...) documented but code uses Path() without expanduser()
