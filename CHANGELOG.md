@@ -1,3 +1,10 @@
+# [1.57.0](https://github.com/rube-de/cc-skills/compare/v1.56.0...v1.57.0) (2026-04-02)
+
+
+### Features
+
+* **dlc:** add PR babysitter skill ([#197](https://github.com/rube-de/cc-skills/issues/197)) ([c8f39be](https://github.com/rube-de/cc-skills/commit/c8f39bed0ffb88bff9dda095a279de083de85ce5))
+
 # [1.56.0](https://github.com/rube-de/cc-skills/compare/v1.55.0...v1.56.0) (2026-03-29)
 
 
