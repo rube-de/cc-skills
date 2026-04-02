@@ -686,3 +686,9 @@ When adding a new mode to a skill that defines roles in SKILL.md, update every r
 Also update: teammate pairs list, marketplace.json description, and mode count in the skill's description frontmatter.
 
 > Source: [PR #195](https://github.com/rube-de/cc-skills/pull/195) — `plugins/cdt/skills/cdt/SKILL.md`, `.claude-plugin/marketplace.json`
+
+### Loop/babysit swallows Discussion-Deferred items
+
+When `dlc:pr-check` runs inside `dlc:babysit` (via `/loop`), no human is at the terminal to answer `AskUserQuestion`. Discussion items auto-defer and get an "Acknowledged — will be addressed by the author" reply on the PR, but the human is never notified. The fix has two parts: (1) babysit must surface Discussion-Deferred items as a dedicated notification (`needs_decision` state key), and (2) pr-check's auto-implementation gate should be wider — if you'd confidently mark one option "(Recommended)", you already know the answer, so just implement it. `AskUserQuestion` is for genuine ambiguity, not a rubber stamp.
+
+> Source: `plugins/dlc/skills/babysit/SKILL.md`, `plugins/dlc/skills/pr-check/SKILL.md`

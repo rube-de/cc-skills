@@ -25,6 +25,7 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 - `ci_unfixable:<sorted_check_names>`
 - `rebase_conflict:<sorted_file_list>`
 - `needs_review`
+- `needs_decision:<count>` (e.g., `needs_decision:2`)
 - `unresolved:<count>`
 - `ready`
 - `closed:<state>`
@@ -226,12 +227,15 @@ Stop.
 
 Delegate all review comment handling to `dlc:pr-check`. It handles: fetching comments, categorizing, fixing what it can, replying inline, committing, and pushing.
 
+**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing pr-check, do NOT use `AskUserQuestion` for Discussion items — auto-defer all items that would normally require human input (Design Decisions, medium/low-confidence Implementable Fixes, etc.). The babysitter will surface these to the human as a notification instead of silently posting "Acknowledged" replies.
+
 ```text
 Skill("dlc:pr-check", "<PR_NUMBER>")
 ```
 
 After pr-check completes, parse its output summary to extract these values:
 - Total unresolved items remaining: items marked Fixed, Answered, Resolved, or Dismissed are **done**. Remaining = Total - (Fixed + Answered + Resolved + Dismissed).
+- **Discussion-Deferred count**: items where pr-check deferred to the author (these need human judgment). Extract from the `Discussion: {n} ({deferred} deferred, {tracked} tracked)` line in the summary.
 - Whether pr-check pushed any commits (look for "Pushed" in the summary or a non-empty git diff from before)
 
 If pr-check pushed commits, re-request review from all prior reviewers. Filter out bot accounts (logins ending in `[bot]`):
@@ -257,7 +261,14 @@ gh pr view $PR_NUMBER --json reviewDecision,mergeable
 **If CI is not fully passing** (any check running or failed):
 Stop silently — next cycle will handle it in Step 1.
 
-**If pr-check reported 0 remaining unresolved items AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
+**If pr-check reported Discussion-Deferred items (count > 0):**
+These are design decisions, architectural trade-offs, or ambiguous suggestions that need human judgment. The babysitter cannot resolve them — surface them so the human knows their input is needed.
+- Notify: `🧑‍⚖️ PR #<number> has <count> design decisions needing your input. <url>`
+- Write state key `needs_decision:<count>`.
+- Do NOT self-cancel — the PR may still need further cycles after the human decides.
+- Stop. Next cycle will re-check (if the human resolved them, pr-check will see the replies).
+
+**If pr-check reported 0 remaining unresolved items AND 0 Discussion-Deferred AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
 - Self-cancel and stop.
 

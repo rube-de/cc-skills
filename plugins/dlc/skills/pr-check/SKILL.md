@@ -232,7 +232,14 @@ Assess the effort and nature of each discussion item:
 
 ### 3.5c. Present to User, Auto-Implement, or Auto-Reply
 
-**High-confidence Implementable Fix** items (all four criteria from Step 3b (Critically Evaluate) pass, single clear implementation approach) follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
+**High-confidence Implementable Fix** items follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
+
+An Implementable Fix is high-confidence when any of these hold:
+- All four criteria from Step 3b pass and there is a single clear approach
+- There are multiple approaches but one is clearly better (you would mark it "(Recommended)") — implement the recommended one
+- The confidence is medium but the recommended action is obvious and low-risk (rename, add check, fix typo, adjust formatting, add missing validation)
+
+The test: if you would present this to the user and confidently mark one option "(Recommended)", you already know the answer — just do it. `AskUserQuestion` exists for genuine ambiguity where reasonable engineers would disagree, not as a rubber stamp for decisions you've already made.
 
 Skip `AskUserQuestion` and auto-reply **high-confidence Clarification Answer** items when the agent can draft a factual answer entirely from codebase evidence. A Clarification Answer is high-confidence when all four of these criteria pass:
 
@@ -260,7 +267,7 @@ When all four pass → auto-draft the reply without asking. Print: `Auto-replyin
 >
 > In these cases, fall through to `AskUserQuestion` instead (or reclassify per the defect-revealing rule above).
 
-**All other items** — Medium/Low-confidence Implementable Fix, Medium/Low-confidence Clarification Answer, Design Decision, Out-of-PR-Scope, or Implementable Fix with multiple approaches — use `AskUserQuestion`:
+**Genuinely ambiguous items only** — Low-confidence Implementable Fix, low-confidence Clarification Answer, true Design Decisions (architectural trade-offs where reasonable engineers would disagree), or Out-of-PR-Scope — use `AskUserQuestion`:
 
 ```text
 Discussion item {n}/{total}: @{reviewer} at {location}
