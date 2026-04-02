@@ -1,3 +1,10 @@
+# [1.58.0](https://github.com/rube-de/cc-skills/compare/v1.57.0...v1.58.0) (2026-04-02)
+
+
+### Features
+
+* **council:** add documentation drift verification to codebase-context ([#198](https://github.com/rube-de/cc-skills/issues/198)) ([3c125cb](https://github.com/rube-de/cc-skills/commit/3c125cb0999ade131ad1fcd470f30683d3a2738d)), closes [#153](https://github.com/rube-de/cc-skills/issues/153)
+
 # [1.57.0](https://github.com/rube-de/cc-skills/compare/v1.56.0...v1.57.0) (2026-04-02)
 
 
