@@ -80,13 +80,13 @@ If checkout fails, stop. Do not proceed with git operations on the wrong branch.
 ## Step 1: Check CI Status
 
 ```bash
-gh pr checks $PR_NUMBER --json name,state,conclusion
+gh pr checks $PR_NUMBER --json name,state,bucket
 ```
 
-Categorize each check:
-- **Running**: state is IN_PROGRESS, QUEUED, or PENDING, or conclusion is empty/null
-- **Failed**: conclusion is FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED, STALE, or any other non-success value
-- **Passed**: conclusion is SUCCESS, SKIPPED, or NEUTRAL
+Categorize each check by its `bucket` field:
+- **Running**: `bucket` is `pending`
+- **Failed**: `bucket` is `fail`
+- **Passed**: `bucket` is `pass`
 
 **If any checks are still running:**
 Stop without printing anything. This is the normal waiting state.
@@ -254,7 +254,7 @@ If pr-check did NOT push commits, skip the re-request — there's nothing new to
 After pr-check completes, re-check the PR state:
 
 ```bash
-gh pr checks $PR_NUMBER --json name,state,conclusion
+gh pr checks $PR_NUMBER --json name,state,bucket
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
