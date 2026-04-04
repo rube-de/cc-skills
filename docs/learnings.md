@@ -692,3 +692,9 @@ Also update: teammate pairs list, marketplace.json description, and mode count i
 When `dlc:pr-check` runs inside `dlc:babysit` (via `/loop`), no human is at the terminal to answer `AskUserQuestion`. Discussion items auto-defer and get an "Acknowledged — will be addressed by the author" reply on the PR, but the human is never notified. The fix has two parts: (1) babysit must surface Discussion-Deferred items as a dedicated notification (`needs_decision` state key), and (2) pr-check's auto-implementation gate should be wider — if you'd confidently mark one option "(Recommended)", you already know the answer, so just implement it. `AskUserQuestion` is for genuine ambiguity, not a rubber stamp.
 
 > Source: [`plugins/dlc/skills/babysit/SKILL.md`](../plugins/dlc/skills/babysit/SKILL.md), [`plugins/dlc/skills/pr-check/SKILL.md`](../plugins/dlc/skills/pr-check/SKILL.md)
+
+### Conditional-sounding steps get skipped by loop agents
+
+When a babysit/loop agent has context from a prior cycle ("I resolved all 3 threads"), it will rationalize skipping a step if the wording reads as conditional — e.g., "Delegate all review comment handling to X" implies "if there's review work." But bot reviewers (Copilot, CodeRabbit, Gemini) post new comments after every push, so prior-cycle state is always stale. Fix: add an explicit "always run, never skip" directive with the rationale, so the agent understands *why* it can't rely on its memory of the previous cycle.
+
+> Source: [Issue #200](https://github.com/rube-de/cc-skills/issues/200) — `plugins/dlc/skills/babysit/SKILL.md` Step 3

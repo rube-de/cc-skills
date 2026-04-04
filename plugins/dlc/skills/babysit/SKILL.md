@@ -226,6 +226,8 @@ Stop.
 
 ## Step 3: Run PR Review Check
 
+**Always run `dlc:pr-check` — never skip this step.** Every push triggers new bot reviews (Copilot, CodeRabbit, Gemini), so prior-cycle state is unreliable. Even if all threads were resolved in a previous cycle, new unresolved comments may have appeared since.
+
 Delegate all review comment handling to `dlc:pr-check`. It handles: fetching comments, categorizing, fixing what it can, replying inline, committing, and pushing.
 
 **Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing pr-check, do NOT use `AskUserQuestion` — auto-defer only genuinely ambiguous human-judgment items (Design Decisions, items with no clear recommended approach). Auto-implementable fixes per pr-check's Step 3.5c criteria should still be implemented, not deferred. The babysitter will surface deferred items to the human as a notification instead of silently posting "Acknowledged" replies.
