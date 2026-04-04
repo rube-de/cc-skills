@@ -1,3 +1,10 @@
+## [1.58.1](https://github.com/rube-de/cc-skills/compare/v1.58.0...v1.58.1) (2026-04-04)
+
+
+### Bug Fixes
+
+* **dlc:** surface design decisions in babysit loop instead of swallowing them ([#199](https://github.com/rube-de/cc-skills/issues/199)) ([4ef50f9](https://github.com/rube-de/cc-skills/commit/4ef50f9f06d415854664e9dd2ee14fcbda368d31))
+
 # [1.58.0](https://github.com/rube-de/cc-skills/compare/v1.57.0...v1.58.0) (2026-04-02)
 
 
