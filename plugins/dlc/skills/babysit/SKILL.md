@@ -26,6 +26,7 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 - `rebase_conflict:<sorted_file_list>`
 - `needs_review`
 - `needs_decision:<count>` (e.g., `needs_decision:2`)
+- `needs_decision:<count>,unresolved:<count>` (e.g., `needs_decision:2,unresolved:3`)
 - `unresolved:<count>`
 - `ready`
 - `closed:<state>`
