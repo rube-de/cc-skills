@@ -25,6 +25,8 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 - `ci_unfixable:<sorted_check_names>`
 - `rebase_conflict:<sorted_file_list>`
 - `needs_review`
+- `needs_decision:<count>` (e.g., `needs_decision:2`)
+- `needs_decision:<count>,unresolved:<count>` (e.g., `needs_decision:2,unresolved:3`)
 - `unresolved:<count>`
 - `ready`
 - `closed:<state>`
@@ -79,13 +81,13 @@ If checkout fails, stop. Do not proceed with git operations on the wrong branch.
 ## Step 1: Check CI Status
 
 ```bash
-gh pr checks $PR_NUMBER --json name,state,conclusion
+gh pr checks $PR_NUMBER --json name,state,bucket
 ```
 
-Categorize each check:
-- **Running**: state is IN_PROGRESS, QUEUED, or PENDING, or conclusion is empty/null
-- **Failed**: conclusion is FAILURE, ERROR, TIMED_OUT, CANCELLED, ACTION_REQUIRED, STALE, or any other non-success value
-- **Passed**: conclusion is SUCCESS, SKIPPED, or NEUTRAL
+Categorize each check by its `bucket` field:
+- **Running**: `bucket` is `pending`
+- **Failed**: `bucket` is `fail`
+- **Passed**: `bucket` is `pass`
 
 **If any checks are still running:**
 Stop without printing anything. This is the normal waiting state.
@@ -226,12 +228,15 @@ Stop.
 
 Delegate all review comment handling to `dlc:pr-check`. It handles: fetching comments, categorizing, fixing what it can, replying inline, committing, and pushing.
 
+**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing pr-check, do NOT use `AskUserQuestion` — auto-defer only genuinely ambiguous human-judgment items (Design Decisions, items with no clear recommended approach). Auto-implementable fixes per pr-check's Step 3.5c criteria should still be implemented, not deferred. The babysitter will surface deferred items to the human as a notification instead of silently posting "Acknowledged" replies.
+
 ```text
 Skill("dlc:pr-check", "<PR_NUMBER>")
 ```
 
 After pr-check completes, parse its output summary to extract these values:
 - Total unresolved items remaining: items marked Fixed, Answered, Resolved, or Dismissed are **done**. Remaining = Total - (Fixed + Answered + Resolved + Dismissed).
+- **Discussion-Deferred count**: items where pr-check deferred to the author (these need human judgment). Extract the `{deferred}` value from the `Discussion: {n} ({deferred} deferred, {tracked} tracked)` line in the summary.
 - Whether pr-check pushed any commits (look for "Pushed" in the summary or a non-empty git diff from before)
 
 If pr-check pushed commits, re-request review from all prior reviewers. Filter out bot accounts (logins ending in `[bot]`):
@@ -250,18 +255,31 @@ If pr-check did NOT push commits, skip the re-request — there's nothing new to
 After pr-check completes, re-check the PR state:
 
 ```bash
-gh pr checks $PR_NUMBER --json name,state,conclusion
+gh pr checks $PR_NUMBER --json name,state,bucket
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
 **If CI is not fully passing** (any check running or failed):
 Stop silently — next cycle will handle it in Step 1.
 
-**If pr-check reported 0 remaining unresolved items AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
+**If pr-check reported Discussion-Deferred items (count > 0) AND remaining unresolved items:**
+Both need human attention — combine into a single notification so nothing is suppressed.
+- Notify: `🧑‍⚖️ PR #<number> has <deferred_count> discussion items needing your input + <unresolved_count> unresolved. <url>`
+- Write state key `needs_decision:<deferred_count>,unresolved:<unresolved_count>`.
+- Stop. Next cycle will re-check.
+
+**If pr-check reported Discussion-Deferred items (count > 0) AND 0 remaining unresolved:**
+These are discussion items that need human judgment — design decisions, architectural trade-offs, or ambiguous suggestions. The babysitter cannot resolve them.
+- Notify: `🧑‍⚖️ PR #<number> has <deferred_count> discussion items needing your input. <url>`
+- Write state key `needs_decision:<deferred_count>`.
+- Do NOT self-cancel — the PR may still need further cycles after the human decides.
+- Stop. Next cycle will re-check (if the human resolved them, pr-check will see the replies).
+
+**If pr-check reported 0 remaining unresolved items AND 0 Discussion-Deferred AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
 - Self-cancel and stop.
 
-**If pr-check reported remaining unresolved items:**
+**If pr-check reported remaining unresolved items (and 0 Discussion-Deferred):**
 - Notify: `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`
 - Stop. Next cycle will re-check.
 
