@@ -1,3 +1,10 @@
+## [1.58.2](https://github.com/rube-de/cc-skills/compare/v1.58.1...v1.58.2) (2026-04-04)
+
+
+### Bug Fixes
+
+* **dlc:** prevent babysit from skipping pr-check on resolved threads ([#201](https://github.com/rube-de/cc-skills/issues/201)) ([044d2f6](https://github.com/rube-de/cc-skills/commit/044d2f6e95a51de951a38ae38e3bc872391873ec)), closes [#200](https://github.com/rube-de/cc-skills/issues/200)
+
 ## [1.58.1](https://github.com/rube-de/cc-skills/compare/v1.58.0...v1.58.1) (2026-04-04)
 
 
