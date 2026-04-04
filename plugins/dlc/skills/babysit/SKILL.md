@@ -228,7 +228,7 @@ Stop.
 
 Delegate all review comment handling to `dlc:pr-check`. It handles: fetching comments, categorizing, fixing what it can, replying inline, committing, and pushing.
 
-**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing pr-check, do NOT use `AskUserQuestion` for Discussion items — auto-defer all items that would normally require human input (Design Decisions, medium/low-confidence Implementable Fixes, etc.). The babysitter will surface these to the human as a notification instead of silently posting "Acknowledged" replies.
+**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing pr-check, do NOT use `AskUserQuestion` — auto-defer only genuinely ambiguous human-judgment items (Design Decisions, items with no clear recommended approach). Auto-implementable fixes per pr-check's Step 3.5c criteria should still be implemented, not deferred. The babysitter will surface deferred items to the human as a notification instead of silently posting "Acknowledged" replies.
 
 ```text
 Skill("dlc:pr-check", "<PR_NUMBER>")
@@ -270,8 +270,8 @@ Both need human attention — combine into a single notification so nothing is s
 
 **If pr-check reported Discussion-Deferred items (count > 0) AND 0 remaining unresolved:**
 These are discussion items that need human judgment — design decisions, architectural trade-offs, or ambiguous suggestions. The babysitter cannot resolve them.
-- Notify: `🧑‍⚖️ PR #<number> has <count> discussion items needing your input. <url>`
-- Write state key `needs_decision:<count>`.
+- Notify: `🧑‍⚖️ PR #<number> has <deferred_count> discussion items needing your input. <url>`
+- Write state key `needs_decision:<deferred_count>`.
 - Do NOT self-cancel — the PR may still need further cycles after the human decides.
 - Stop. Next cycle will re-check (if the human resolved them, pr-check will see the replies).
 
