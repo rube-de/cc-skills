@@ -67,7 +67,39 @@ Parse the first argument:
 | `-quick [desc]` | Create Issue Workflow (quick mode) below |
 | anything else / empty | Create Issue Workflow below |
 
-If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. Otherwise, continue with the Create Issue Workflow below.
+If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. Otherwise, continue with the Ambiguity Check below.
+
+---
+
+## Ambiguity Check
+
+Before starting the Create Issue Workflow, assess whether the request is ready for issue creation
+or would benefit from brainstorming first. Check for these ambiguity signals:
+
+| Signal | Examples |
+|--------|----------|
+| Multiple valid approaches | "we need better caching", "rethink the auth flow" |
+| Unclear scope | "improve the plugin system", "make it faster" |
+| No obvious issue type | request doesn't map clearly to bug/feature/refactor/chore |
+| Architecture decision needed | "should we use X or Y", "how should we structure this" |
+| Exploration language | "I'm thinking about...", "what if we...", "I'm not sure how to..." |
+
+If **two or more** signals are present, suggest brainstorming before issue creation:
+
+```text
+Question: "This sounds like it could benefit from brainstorming before creating issues —
+there are multiple approaches and the scope isn't fully defined yet. Want to explore first?"
+Options:
+  - Yes, brainstorm first (/pm:brainstorm) — explore approaches and produce a spec
+  - No, create the issue directly — I know what I want
+```
+
+If the user chooses brainstorming, invoke `/pm:brainstorm` with the original request as arguments.
+If the user chooses to proceed directly, or if fewer than two signals are present, continue with
+the Create Issue Workflow below.
+
+Do NOT block on this check — it is a recommendation, not a gate. Clear requests like "fix the
+login crash" or "add a health check label" should flow straight through without asking.
 
 ---
 
