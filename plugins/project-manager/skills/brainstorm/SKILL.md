@@ -80,6 +80,12 @@ in Step 2.
 1. Context → 2. Clarify → 3. Propose → 4. Converge → 5. Write Spec → 6. Self-Review → 7. User Review → 8. Transition
 ```
 
+**Visual workflow overview.** After completing Step 1 (context gathering), if the
+`visual-explainer:generate-web-diagram` skill is available, invoke it to show the user an
+interactive workflow diagram — the 8 steps as a flowchart with the current step highlighted and
+the review loop (Step 7 → Step 5) shown as a feedback edge. This gives the user a visual map
+of the process they're about to go through. Skip this if visual-explainer is not installed.
+
 ### Step 1: Explore Context
 
 Before asking any questions, gather context silently:
@@ -139,9 +145,10 @@ position. The user can override, but fence-sitting wastes everyone's time.
 speculative complexity. Propose the simplest approach that solves the stated problem. If the user
 wants extensibility, they'll ask.
 
-**Visual comparison (optional).** If the approaches involve architectural differences (data flow,
-component structure, system boundaries), use `Skill` to invoke `visual-explainer:generate-web-diagram`
-to render a side-by-side comparison diagram. This is especially valuable for:
+**Visual comparison (optional, requires visual-explainer plugin).** If the approaches involve
+architectural differences (data flow, component structure, system boundaries) and the
+`visual-explainer:generate-web-diagram` skill is available, invoke it to render a side-by-side
+comparison diagram. This is especially valuable for:
 - Pipeline/workflow designs with different topologies
 - Component architectures with different boundaries
 - Data flow alternatives (push vs. pull, sync vs. async)
@@ -199,9 +206,10 @@ If the topic is about a different project (see Step 1 cross-project note), ask t
 relevant file paths or architecture details instead of exploring. Mark all paths in the spec as
 `[unverified — user-provided]` so downstream consumers know to check them.
 
-**Visual architecture diagram.** For medium and complex work, generate an architecture diagram using
-`Skill` to invoke `visual-explainer:generate-web-diagram`. Show component boundaries, data flow, and
-the decomposition into work units. Present the diagram alongside the architecture overview section.
+**Visual architecture diagram (requires visual-explainer plugin).** For medium and complex work, if
+`visual-explainer:generate-web-diagram` is available, generate an architecture diagram showing
+component boundaries, data flow, and the decomposition into work units. Present the diagram
+alongside the architecture overview section. Skip if visual-explainer is not installed.
 
 For medium and complex work, present each section and wait for the user to confirm before moving
 to the next. For simple features, present the full design at once.
