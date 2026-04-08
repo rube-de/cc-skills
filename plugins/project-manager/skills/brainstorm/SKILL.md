@@ -1,22 +1,20 @@
 ---
 name: brainstorm
 description: >-
-  Explore problem space, requirements, and design approaches before creating
-  issues. Use before /pm when the work is ambiguous, the scope is unclear, or
-  multiple approaches exist. Walks through structured discovery, proposes 2-3
-  approaches with trade-offs, and produces an approved spec document that feeds
-  into both issue creation (/pm) and implementation planning (/cdt). Triggers:
-  brainstorm, explore idea, think through, design approach, what should we build,
-  explore options, /pm brainstorm.
+  You MUST use this skill before /pm when work is ambiguous, scope is unclear,
+  or multiple approaches exist. Explores problem space, proposes 2-3 approaches
+  with trade-offs, and produces an approved spec document that feeds into both
+  issue creation (/pm) and implementation planning (/cdt). Use this whenever the
+  user says brainstorm, explore idea, think through, design approach, what should
+  we build, explore options, weigh approaches, compare solutions, or needs help
+  deciding between alternatives — even if they don't explicitly say "brainstorm."
 user-invocable: true
 argument-hint: "[topic or problem description]"
 allowed-tools:
   - Read
   - Grep
   - Glob
-  - Bash(gh:*)
-  - Bash(mkdir:*)
-  - Bash(git:*)
+  - Bash
   - AskUserQuestion
   - WebSearch
   - WebFetch
@@ -67,6 +65,13 @@ No. Every brainstorming session produces a spec. The spec scales with complexity
 
 The cost of a 30-second review of a short spec is negligible. The cost of a poorly scoped issue
 that an agent executes in the wrong direction is significant.
+
+## Arguments
+
+If the user provides arguments (e.g., `/pm:brainstorm caching layer for API`), treat the entire
+argument string as the **initial topic**. Use it to focus Step 1 context gathering and to skip
+obvious clarifications in Step 2. If no arguments are provided, start with an open-ended discovery
+in Step 2.
 
 ## Workflow
 
@@ -197,6 +202,16 @@ With the chosen approach, flesh out the design. Present it in sections scaled to
 - Risks and mitigations
 - Open questions
 
+**Codebase exploration.** Before presenting the design, explore the codebase for the chosen approach:
+
+1. Use `Glob` and `Grep` to find files that will need modification
+2. Use `Read` to understand existing patterns, interfaces, and conventions in the affected areas
+3. Check for related work: existing TODOs, tests, similar implementations
+4. Record concrete file paths — these feed directly into the spec's "Files Affected" section
+
+Do NOT present the design without grounding it in the actual codebase. An ungrounded design produces
+an ungrounded spec, which produces vague issues, which agents execute poorly.
+
 **Visual architecture diagram.** For medium and complex work, generate an architecture diagram using
 `Skill` to invoke `visual-explainer:generate-web-diagram`. Show component boundaries, data flow, and
 the decomposition into work units. Present the diagram alongside the architecture overview section.
@@ -287,12 +302,7 @@ mkdir -p .dev/pm/specs
 - **Medium** (2-3 issues): Include all sections but keep each concise
 - **Complex** (epic): Full spec — all sections fleshed out, architecture diagram referenced
 
-Commit the spec to git:
-
-```bash
-git add .dev/pm/specs/YYYY-MM-DD-<topic-slug>.md
-git -c commit.gpgsign=false commit -m "docs(brainstorm): <topic-slug> spec"
-```
+Do NOT commit yet — the self-review and user review may require changes.
 
 ### Step 6: Self-Review
 
@@ -321,6 +331,13 @@ Ask explicitly: **"Spec looks good — approve to proceed, or want changes?"**
 
 If the user requests changes, revise the spec (go back to Step 5) and re-present. Loop until
 approved.
+
+Once approved, commit the spec to git:
+
+```bash
+git add .dev/pm/specs/YYYY-MM-DD-<topic-slug>.md
+git -c commit.gpgsign=false commit -m "docs(brainstorm): <topic-slug> spec"
+```
 
 ### Step 8: Transition
 
@@ -353,12 +370,15 @@ committed to git — they can come back to it in a future session.
 
 ## Principles
 
-- **Depth over breadth** — one good question beats five shallow ones
-- **Take positions** — recommend an approach, don't just list options
-- **YAGNI** — remove speculative features from every design. If they say "might need X later,"
-  acknowledge it and leave it out unless there's a concrete use case now
-- **Scale the process** — a simple feature gets a 10-line spec, not a 2-page design doc
-- **The spec is the contract** — once approved, downstream workflows follow the spec. No
-  re-litigating decisions that were already made
-- **Visuals earn their keep** — generate diagrams only when they clarify something text cannot.
-  A bullet list of 3 components does not need an architecture diagram
+- Ask one focused question rather than multiple shallow ones — depth produces better answers
+  because users give more thought to a single question than to a wall of five
+- Recommend a specific approach rather than listing neutral options — fence-sitting wastes the
+  user's decision energy and signals you don't have an opinion
+- Remove speculative features from every design. If the user says "might need X later,"
+  acknowledge it and leave it out unless there is a concrete use case now
+- Scale the spec to match the work — a simple feature gets a 10-line spec, not a 2-page design
+  doc. Oversized specs for small work signal cargo-culting, not rigor
+- Treat the approved spec as the contract for downstream workflows. Do not re-litigate decisions
+  that were already made during brainstorming
+- Generate diagrams only when they clarify something text cannot — a bullet list of 3 components
+  does not need an architecture diagram
