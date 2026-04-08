@@ -12,6 +12,7 @@ user-invocable: true
 argument-hint: "[topic or problem description]"
 allowed-tools:
   - Read
+  - Edit
   - Grep
   - Glob
   - Bash
@@ -77,31 +78,6 @@ in Step 2.
 
 ```text
 1. Context → 2. Clarify → 3. Propose → 4. Converge → 5. Write Spec → 6. Self-Review → 7. User Review → 8. Transition
-```
-
-```dot
-digraph brainstorm {
-  rankdir=TB;
-  node [shape=box];
-
-  context [label="1. Explore Context"];
-  clarify [label="2. Clarify Intent"];
-  propose [label="3. Propose Approaches"];
-  converge [label="4. Converge on Design"];
-  write [label="5. Write Spec"];
-  review [label="6. Self-Review"];
-  user_review [label="7. User Review", shape=diamond];
-  transition [label="8. Transition"];
-
-  context -> clarify;
-  clarify -> propose;
-  propose -> converge;
-  converge -> write;
-  write -> review;
-  review -> user_review;
-  user_review -> write [label="changes requested"];
-  user_review -> transition [label="approved"];
-}
 ```
 
 ### Step 1: Explore Context
@@ -227,8 +203,8 @@ relevant file paths or architecture details instead of exploring. Mark all paths
 `Skill` to invoke `visual-explainer:generate-web-diagram`. Show component boundaries, data flow, and
 the decomposition into work units. Present the diagram alongside the architecture overview section.
 
-Present each section and wait for the user to confirm before moving to the next. Do NOT present
-the entire design at once for medium or complex work.
+For medium and complex work, present each section and wait for the user to confirm before moving
+to the next. For simple features, present the full design at once.
 
 ### Step 5: Write Spec Document
 
@@ -285,6 +261,7 @@ was filled in mechanically without thinking about what the reader needs.
 - <Decision 2>: <chosen option> — <rationale>
 
 ### Trade-offs Accepted
+<!-- MEDIUM and COMPLEX only — omit for SIMPLE -->
 
 - <What we're giving up and why that's acceptable>
 

@@ -1,13 +1,14 @@
 ---
 name: pm
 description: >-
-  Project manager for GitHub issues: create structured issues optimized for LLM
-  agent teams, triage and recommend what to work on next, audit and clean up
-  stale issues, or deep-validate a single issue against the codebase. Triggers:
-  create issue, plan work, new task, project manager, write ticket, draft issue,
-  plan feature, plan project, start project, create ticket, review issue, pm.
+  Project manager for GitHub issues: brainstorm design approaches, create
+  structured issues optimized for LLM agent teams, triage and recommend what to
+  work on next, audit and clean up stale issues, or deep-validate a single issue
+  against the codebase. Triggers: create issue, plan work, new task, project
+  manager, write ticket, draft issue, plan feature, plan project, start project,
+  create ticket, review issue, brainstorm, explore idea, think through, pm.
 user-invocable: true
-argument-hint: "[next | update | review ISSUE_NUMBER | -quick <description>]"
+argument-hint: "[brainstorm | next | update | review ISSUE_NUMBER | -quick <description>]"
 allowed-tools:
   - Task
   - Skill
