@@ -80,7 +80,8 @@ Otherwise, continue with the Ambiguity Check below.
 Before starting the Create Issue Workflow, check for existing specs and assess readiness.
 
 **Check for existing specs.** Use `Glob` to find specs in `.dev/pm/specs/*.md`, then `Read` the
-most recent candidates to check topic relevance and status. If a spec exists that matches the
+most recent candidates to check topic relevance and status. If multiple specs match, prefer the
+most recent by date prefix in the filename. If a spec exists that matches the
 user's topic **and its status is `Approved`**, use it as primary context for the Create Issue
 Workflow — the brainstorming was already completed. Skip the ambiguity check and proceed directly.
 If the matching spec's status is `Draft` (or missing), do not bypass ambiguity handling — the

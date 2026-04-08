@@ -80,12 +80,6 @@ in Step 2.
 1. Context → 2. Clarify → 3. Propose → 4. Converge → 5. Write Spec → 6. Self-Review → 7. User Review → 8. Transition
 ```
 
-**Visual workflow overview.** After completing Step 1 (context gathering), if the
-`visual-explainer:generate-web-diagram` skill is available, invoke it to show the user an
-interactive workflow diagram — the 8 steps as a flowchart with the current step highlighted and
-the review loop (Step 7 → Step 5) shown as a feedback edge. This gives the user a visual map
-of the process they're about to go through. Skip this if visual-explainer is not installed.
-
 ### Step 1: Explore Context
 
 Before asking any questions, gather context silently:
@@ -94,6 +88,7 @@ Before asking any questions, gather context silently:
 2. **Recent work**: Run `git log --oneline -20` to see recent direction
 3. **Relevant code**: If the user mentioned a specific area, use `Glob` and `Grep` to survey it
 4. **Existing issues**: Check if `gh` is available and authenticated, then run `gh issue list --limit 10 --state open` to check for related work. If `gh` is not available or not authenticated, skip this step silently — it's informational, not blocking.
+5. **Visual workflow overview**: If the `visual-explainer:generate-web-diagram` skill is available, invoke it to show the user an interactive workflow diagram — the 8 steps as a flowchart with the current step highlighted and the review loop (Step 7 → Step 5) shown as a feedback edge. This gives the user a visual map of the process they're about to go through. Skip this if visual-explainer is not installed.
 
 **Cross-project topics.** If the user's topic is about a different project than the current working
 directory (e.g., they ask about their Express API while you're in a skills marketplace repo),
@@ -347,8 +342,9 @@ designed to feed into two downstream workflows:
 > Create structured GitHub issues from the spec. The work breakdown maps directly to issues.
 
 **Path B: Implementation planning (`/cdt:plan-task`)**
-> Skip issue creation and go straight to an implementation plan. CDT's architect teammate will
-> use the spec as input.
+> Skip issue creation and go straight to an implementation plan. Invoke with the spec path as
+> context (e.g., `/cdt:plan-task implement the spec at .dev/pm/specs/YYYY-MM-DD-topic.md`).
+> CDT's architect teammate will use the spec as input.
 
 **Path C: Both**
 > Create issues first (`/pm`), then plan implementation for the top-priority issue (`/cdt`).
