@@ -7,7 +7,7 @@ description: >-
   issue creation (/pm) and implementation planning (/cdt). Use this whenever the
   user says brainstorm, explore idea, think through, design approach, what should
   we build, explore options, weigh approaches, compare solutions, or needs help
-  deciding between alternatives — even if they don't explicitly say "brainstorm."
+  deciding between alternatives — even if they don't explicitly say "brainstorm".
 user-invocable: true
 argument-hint: "[topic or problem description]"
 allowed-tools:
@@ -334,8 +334,9 @@ Present the final spec to the user. Show:
 
 Ask explicitly: **"Spec looks good — approve to proceed, or want changes?"**
 
-If the user requests changes, revise the spec (go back to Step 5) and re-present. Loop until
-approved. Once approved, update the spec's `**Status:**` from `Draft` to `Approved`.
+If the user requests changes, revise the spec (go back to Step 5), run Step 6 self-review again,
+and re-present. Loop until approved. Once approved, update the spec's `**Status:**` from `Draft`
+to `Approved`.
 
 ### Step 8: Transition
 

@@ -79,16 +79,14 @@ Otherwise, continue with the Ambiguity Check below.
 
 Before starting the Create Issue Workflow, check for existing specs and assess readiness.
 
-**Check for existing specs.** Look for relevant specs in `.dev/pm/specs/`:
+**Check for existing specs.** Use `Glob` to find specs in `.dev/pm/specs/*.md`, then `Read` the
+most recent candidates to check topic relevance and status. If a spec exists that matches the
+user's topic **and its status is `Approved`**, use it as primary context for the Create Issue
+Workflow — the brainstorming was already completed. Skip the ambiguity check and proceed directly.
+If the matching spec's status is `Draft` (or missing), do not bypass ambiguity handling — the
+brainstorm hasn't been approved yet. Continue with the assessment below.
 
-```bash
-ls -t .dev/pm/specs/*.md 2>/dev/null | head -5
-```
-
-If a spec exists that matches the user's topic, use it as primary context for the Create Issue
-Workflow — the brainstorming was already done. Skip the ambiguity check and proceed directly.
-
-**Assess ambiguity.** If no matching spec exists, check for these ambiguity signals:
+**Assess ambiguity.** If no matching Approved spec exists, check for these ambiguity signals:
 
 | Signal | Examples |
 |--------|----------|
@@ -108,9 +106,9 @@ Options:
   - No, create the issue directly — I know what I want
 ```
 
-If the user chooses brainstorming, invoke `/pm:brainstorm` with the original request as arguments.
-If the user chooses to proceed directly, or if fewer than two signals are present, continue with
-the Create Issue Workflow below.
+If the user chooses brainstorming, invoke `/pm:brainstorm` with the original request as arguments;
+otherwise (user chose to proceed directly, or fewer than two signals present), continue with the
+Create Issue Workflow below.
 
 Do NOT block on this check — it is a recommendation, not a gate. Clear requests like "fix the
 login crash" or "add a health check label" should flow straight through without asking.
