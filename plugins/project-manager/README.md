@@ -1,11 +1,11 @@
 # project-manager
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-3-blue.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-4-blue.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-GitHub issue lifecycle for LLM agent teams: **create** structured issues, **triage** what to work on next, and **audit** stale/orphaned issues. Produces machine-parseable issues that AI coding agents can execute autonomously.
+GitHub issue lifecycle for LLM agent teams: **brainstorm** design approaches, **create** structured issues, **triage** what to work on next, and **audit** stale/orphaned issues. Produces machine-parseable issues that AI coding agents can execute autonomously.
 
 > [!NOTE]
 > **Agent-First Design**: Every template section is a contract that agents parse. Acceptance criteria use `VERIFY:` prefixes for testable assertions, and scope boundaries are always explicit to prevent over-engineering.
@@ -53,6 +53,7 @@ Before drafting, the plugin explores the repo to ensure:
 | Skill | Command | Purpose | Triggers |
 |-------|---------|---------|----------|
 | **pm** | `/pm` | Create structured issues | `create issue`, `write ticket`, `plan work`, `/pm` |
+| **brainstorm** | `/pm:brainstorm` | Explore approaches before creating issues | `brainstorm`, `explore idea`, `think through`, `compare solutions` |
 | **next** | `/pm:next` | Triage & recommend next issue | `what should I work on next`, `triage backlog` |
 | **update** | `/pm:update` | Audit & clean up issues | `audit issues`, `clean up issues`, `backlog cleanup` |
 
@@ -61,9 +62,43 @@ Before drafting, the plugin explores the repo to ensure:
 ```bash
 /pm                       # Create a new issue (interactive flow)
 /pm -quick fix the login  # Create issue with smart defaults
+/pm:brainstorm caching    # Explore approaches before creating issues
 /pm:next                  # Triage: recommend next issue to work on
 /pm:update                # Audit: find stale/orphaned issues
 ```
+
+## Brainstorm Workflow
+
+```
+┌─────────────────────────────────────────────────────┐
+│            /pm:brainstorm [topic]                    │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  1. Context — silently gather project awareness     │
+│                                                     │
+│  2. Clarify — one question at a time, multiple      │
+│     choice preferred over open-ended                │
+│                                                     │
+│  3. Propose — 2-3 approaches with trade-offs        │
+│     and a recommendation (not neutral)              │
+│                                                     │
+│  4. Converge — flesh out chosen approach with       │
+│     codebase exploration for real file paths        │
+│                                                     │
+│  5. Write Spec — save to .dev/pm/specs/             │
+│     (tier-scaled: simple/medium/complex)            │
+│                                                     │
+│  6. Self-Review — check for placeholders,           │
+│     contradictions, scope creep                     │
+│                                                     │
+│  7. User Review — approve or request changes        │
+│                                                     │
+│  8. Transition — hand off to /pm or /cdt            │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+> **Proactive triggering**: `/pm` detects ambiguous requests (unclear scope, multiple approaches, exploration language) and suggests brainstorming before issue creation.
 
 ## Create Workflow
 
@@ -134,6 +169,11 @@ npx skills add rube-de/cc-skills --skill project-manager
 ## Usage Examples
 
 ```bash
+# Brainstorm (before issue creation)
+/pm:brainstorm                 # Explore approaches for ambiguous work
+/pm:brainstorm plugin discovery  # Start with a topic
+"I'm not sure how to approach this"  # Natural language trigger
+
 # Issue creation
 /pm                            # Interactive flow
 /pm -quick fix login redirect  # Quick mode with smart defaults
@@ -167,6 +207,7 @@ npx skills add rube-de/cc-skills --skill project-manager
 ## References
 
 - [pm/SKILL.md](skills/pm/SKILL.md) — Router + create workflow
+- [brainstorm/SKILL.md](skills/brainstorm/SKILL.md) — Pre-creation design exploration
 - [next/SKILL.md](skills/next/SKILL.md) — Triage & recommendation workflow
 - [update/SKILL.md](skills/update/SKILL.md) — Audit & cleanup workflow
 - [TEMPLATES.md](skills/pm/references/TEMPLATES.md) — All 8 issue templates
