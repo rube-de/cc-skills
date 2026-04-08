@@ -1,7 +1,7 @@
 # project-manager
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-5-blue.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-5-blue.svg)](skills/)
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
@@ -55,7 +55,7 @@ Before drafting, the plugin explores the repo to ensure:
 | **pm** | `/pm` | Create structured issues | `create issue`, `write ticket`, `plan work`, `/pm` |
 | **brainstorm** | `/pm:brainstorm` | Explore approaches before creating issues | `brainstorm`, `explore idea`, `think through`, `design approach`, `what should we build`, `explore options`, `weigh approaches`, `compare solutions` |
 | **next** | `/pm:next` | Triage & recommend next issue | `what should I work on next`, `triage backlog` |
-| **review** | `/pm:review` | Deep-validate a single issue against codebase | `review issue`, `validate issue`, `is this still needed` |
+| **review** | `/pm:review ISSUE_NUMBER` | Deep-validate a single issue against codebase | `review issue`, `validate issue`, `is this still needed` |
 | **update** | `/pm:update` | Audit & clean up issues | `audit issues`, `clean up issues`, `backlog cleanup` |
 
 ## Usage
@@ -70,7 +70,7 @@ Before drafting, the plugin explores the repo to ensure:
 
 ## Brainstorm Workflow
 
-```
+```text
 ┌─────────────────────────────────────────────────────┐
 │            /pm:brainstorm [topic]                    │
 ├─────────────────────────────────────────────────────┤

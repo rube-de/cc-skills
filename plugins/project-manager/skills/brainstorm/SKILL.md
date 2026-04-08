@@ -93,7 +93,7 @@ Before asking any questions, gather context silently:
 1. **Project awareness**: Read the project's README, CLAUDE.md, or similar docs to understand what this project does
 2. **Recent work**: Run `git log --oneline -20` to see recent direction
 3. **Relevant code**: If the user mentioned a specific area, use `Glob` and `Grep` to survey it
-4. **Existing issues**: Run `gh issue list --limit 10 --state open` to check for related work
+4. **Existing issues**: Check if `gh` is available and authenticated, then run `gh issue list --limit 10 --state open` to check for related work. If `gh` is not available or not authenticated, skip this step silently — it's informational, not blocking.
 
 **Cross-project topics.** If the user's topic is about a different project than the current working
 directory (e.g., they ask about their Express API while you're in a skills marketplace repo),
@@ -223,7 +223,9 @@ Save the approved design to a file:
 mkdir -p .dev/pm/specs
 ```
 
-**File path:** `.dev/pm/specs/YYYY-MM-DD-<topic-slug>.md`
+**File path:** `.dev/pm/specs/$(date +%Y-%m-%d)-<topic-slug>.md`
+
+Use the `date` command to resolve the date — do not hardcode or guess the current date.
 
 **Before writing, determine the complexity tier.** This controls which sections to include:
 
@@ -243,7 +245,7 @@ was filled in mechanically without thinking about what the reader needs.
 # Spec: <Topic>
 
 **Date:** YYYY-MM-DD
-**Status:** Approved
+**Status:** Draft
 
 ## Problem
 
@@ -317,7 +319,8 @@ Before presenting the spec to the user, review it yourself. Check for:
 - **Scope creep**: Does the work breakdown include items the user didn't ask for? Remove them
 - **Feasibility gaps**: Does the approach assume something about the codebase that you haven't
   verified? Use `Grep`/`Read` to confirm
-- **File path accuracy**: Do the files listed in "Files Affected" actually exist? Verify with `Glob`
+- **File path accuracy**: Do the files listed in "Files Affected" actually exist? Verify with `Glob`.
+  Skip this check for cross-project paths marked `[unverified — user-provided]`
 
 Fix any issues found inline before proceeding.
 
@@ -332,7 +335,7 @@ Present the final spec to the user. Show:
 Ask explicitly: **"Spec looks good — approve to proceed, or want changes?"**
 
 If the user requests changes, revise the spec (go back to Step 5) and re-present. Loop until
-approved.
+approved. Once approved, update the spec's `**Status:**` from `Draft` to `Approved`.
 
 ### Step 8: Transition
 

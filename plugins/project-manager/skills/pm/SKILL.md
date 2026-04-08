@@ -28,7 +28,7 @@ metadata:
 
 # Project Manager
 
-GitHub issue lifecycle: **create**, **triage**, **audit**, and **review**.
+GitHub issue lifecycle: **brainstorm**, **create**, **triage**, **audit**, and **review**.
 
 ## Sub-Skills
 
@@ -68,14 +68,27 @@ Parse the first argument:
 | `-quick [desc]` | Create Issue Workflow (quick mode) below |
 | anything else / empty | Create Issue Workflow below |
 
-If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. Otherwise, continue with the Ambiguity Check below.
+If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. If the first
+argument is `-quick`, skip the Ambiguity Check and go directly to the Create Issue Workflow
+(quick mode is an explicit signal that the user wants fast issue creation, not brainstorming).
+Otherwise, continue with the Ambiguity Check below.
 
 ---
 
 ## Ambiguity Check
 
-Before starting the Create Issue Workflow, assess whether the request is ready for issue creation
-or would benefit from brainstorming first. Check for these ambiguity signals:
+Before starting the Create Issue Workflow, check for existing specs and assess readiness.
+
+**Check for existing specs.** Look for relevant specs in `.dev/pm/specs/`:
+
+```bash
+ls -t .dev/pm/specs/*.md 2>/dev/null | head -5
+```
+
+If a spec exists that matches the user's topic, use it as primary context for the Create Issue
+Workflow — the brainstorming was already done. Skip the ambiguity check and proceed directly.
+
+**Assess ambiguity.** If no matching spec exists, check for these ambiguity signals:
 
 | Signal | Examples |
 |--------|----------|
