@@ -113,6 +113,13 @@ Before asking any questions, gather context silently:
 3. **Relevant code**: If the user mentioned a specific area, use `Glob` and `Grep` to survey it
 4. **Existing issues**: Run `gh issue list --limit 10 --state open` to check for related work
 
+**Cross-project topics.** If the user's topic is about a different project than the current working
+directory (e.g., they ask about their Express API while you're in a skills marketplace repo),
+acknowledge this in Step 2. You can still brainstorm effectively — use `WebSearch` to research
+the domain, ask the user for relevant file paths or architecture details, and note in the spec's
+"Files Affected" section that paths are assumed and should be verified. Do not fabricate file
+paths you cannot confirm.
+
 Do NOT dump this research back at the user. Use it to ask smarter questions in Step 2.
 
 ### Step 2: Clarify Intent
@@ -212,6 +219,10 @@ With the chosen approach, flesh out the design. Present it in sections scaled to
 Do NOT present the design without grounding it in the actual codebase. An ungrounded design produces
 an ungrounded spec, which produces vague issues, which agents execute poorly.
 
+If the topic is about a different project (see Step 1 cross-project note), ask the user for
+relevant file paths or architecture details instead of exploring. Mark all paths in the spec as
+`[unverified — user-provided]` so downstream consumers know to check them.
+
 **Visual architecture diagram.** For medium and complex work, generate an architecture diagram using
 `Skill` to invoke `visual-explainer:generate-web-diagram`. Show component boundaries, data flow, and
 the decomposition into work units. Present the diagram alongside the architecture overview section.
@@ -230,7 +241,19 @@ mkdir -p .dev/pm/specs
 
 **File path:** `.dev/pm/specs/YYYY-MM-DD-<topic-slug>.md`
 
-**Spec format:**
+**Before writing, determine the complexity tier.** This controls which sections to include:
+
+| Tier | Criteria | Sections to include |
+|------|----------|-------------------|
+| **Simple** (1 issue) | Single component, no structural changes | Problem, Chosen Approach (no Alternatives table), Key Decisions, Scope, Technical Design (2-3 sentences), Files Affected, Open Questions |
+| **Medium** (2-3 issues) | Multiple components or interfaces | All sections, each concise |
+| **Complex** (epic) | 3+ work units, cross-cutting concerns | All sections fully fleshed out, architecture diagram referenced |
+
+Omit sections that don't apply to the tier. A simple spec with an Alternatives Considered table
+and Work Breakdown is over-engineered — it signals the tier was misclassified or the template
+was filled in mechanically without thinking about what the reader needs.
+
+**Spec template** (include only the sections appropriate for the tier):
 
 ```markdown
 # Spec: <Topic>
@@ -249,6 +272,7 @@ mkdir -p .dev/pm/specs
 <2-3 paragraph description of the approach, how it works, and why it was chosen over alternatives>
 
 ### Alternatives Considered
+<!-- MEDIUM and COMPLEX only — omit for SIMPLE -->
 
 | Approach | Pros | Cons | Why not |
 |----------|------|------|---------|
@@ -274,9 +298,9 @@ mkdir -p .dev/pm/specs
 
 ## Technical Design
 
-<For simple: 2-3 sentences on the approach>
-<For medium: component breakdown with interfaces>
-<For complex: architecture overview, data flow, key interfaces>
+<SIMPLE: 2-3 sentences on the approach>
+<MEDIUM: component breakdown with interfaces>
+<COMPLEX: architecture overview, data flow, key interfaces>
 
 ### Files Affected
 
@@ -285,9 +309,7 @@ mkdir -p .dev/pm/specs
 - `src/path/to/file.ts` — <what changes>
 
 ## Work Breakdown
-
-<For simple: skip this section>
-<For medium/complex: numbered list of work units with dependencies>
+<!-- MEDIUM and COMPLEX only — omit for SIMPLE -->
 
 1. <Unit 1> — <what it does, rough size> [no dependencies]
 2. <Unit 2> — <what it does, rough size> [depends on: 1]
@@ -296,11 +318,6 @@ mkdir -p .dev/pm/specs
 
 <Any unresolved items — or "None" if fully resolved>
 ```
-
-**Scaling the format:**
-- **Simple** (1 issue): Skip "Alternatives Considered" table, "Work Breakdown", and keep "Technical Design" to 2-3 sentences
-- **Medium** (2-3 issues): Include all sections but keep each concise
-- **Complex** (epic): Full spec — all sections fleshed out, architecture diagram referenced
 
 Do NOT commit yet — the self-review and user review may require changes.
 
@@ -359,7 +376,7 @@ Options:
 ```
 
 Do NOT automatically invoke any downstream skill. Let the user choose their path. The spec is
-committed to git — they can come back to it in a future session.
+saved to `.dev/pm/specs/` — they can come back to it in a future session.
 
 ## Principles
 
