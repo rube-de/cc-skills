@@ -332,13 +332,6 @@ Ask explicitly: **"Spec looks good — approve to proceed, or want changes?"**
 If the user requests changes, revise the spec (go back to Step 5) and re-present. Loop until
 approved.
 
-Once approved, commit the spec to git:
-
-```bash
-git add .dev/pm/specs/YYYY-MM-DD-<topic-slug>.md
-git -c commit.gpgsign=false commit -m "docs(brainstorm): <topic-slug> spec"
-```
-
 ### Step 8: Transition
 
 Once approved, present the next steps. The spec at `.dev/pm/specs/YYYY-MM-DD-<topic-slug>.md` is
