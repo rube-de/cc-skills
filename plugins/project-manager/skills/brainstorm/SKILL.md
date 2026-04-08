@@ -4,10 +4,10 @@ description: >-
   You MUST use this skill before /pm when work is ambiguous, scope is unclear,
   or multiple approaches exist. Explores problem space, proposes 2-3 approaches
   with trade-offs, and produces an approved spec document that feeds into both
-  issue creation (/pm) and implementation planning (/cdt). Use this whenever the
-  user says brainstorm, explore idea, think through, design approach, what should
-  we build, explore options, weigh approaches, compare solutions, or needs help
-  deciding between alternatives — even if they don't explicitly say "brainstorm".
+  issue creation (/pm) and implementation planning (/cdt). Triggers: brainstorm,
+  explore idea, think through, design approach, what should we build, explore
+  options, weigh approaches, compare solutions, needs help deciding between
+  alternatives.
 user-invocable: true
 argument-hint: "[topic or problem description]"
 allowed-tools:
@@ -85,7 +85,7 @@ in Step 2.
 Before asking any questions, gather context silently:
 
 1. **Project awareness**: Read the project's README, CLAUDE.md, or similar docs to understand what this project does
-2. **Recent work**: Run `git log --oneline -20` to see recent direction
+2. **Recent work**: If the current directory is inside a Git work tree, run `git log --oneline -20` to see recent direction. If not, skip this step silently.
 3. **Relevant code**: If the user mentioned a specific area, use `Glob` and `Grep` to survey it
 4. **Existing issues**: Check if `gh` is available and authenticated, then run `gh issue list --limit 10 --state open` to check for related work. If `gh` is not available or not authenticated, skip this step silently — it's informational, not blocking.
 5. **Visual workflow overview**: If the `visual-explainer:generate-web-diagram` skill is available, invoke it to show the user an interactive workflow diagram — the 8 steps as a flowchart with the current step highlighted and the review loop (Step 7 → Step 5) shown as a feedback edge. This gives the user a visual map of the process they're about to go through. Skip this if visual-explainer is not installed.
