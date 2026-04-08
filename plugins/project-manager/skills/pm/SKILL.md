@@ -34,6 +34,7 @@ GitHub issue lifecycle: **create**, **triage**, **audit**, and **review**.
 | Skill | Command | Description |
 |-------|---------|-------------|
 | Create | `/pm` or `/pm -quick <desc>` | Create structured issues optimized for agent execution |
+| Brainstorm | `/pm:brainstorm` | Explore problem space and design approaches before creating issues |
 | Next | `/pm:next` | Triage open issues — recommend what to work on next |
 | Update | `/pm:update` | Audit open issues — find stale, orphaned, and drift |
 | Review | `/pm:review ISSUE_NUMBER` | Deep-validate a single issue against the codebase |
@@ -43,6 +44,8 @@ GitHub issue lifecycle: **create**, **triage**, **audit**, and **review**.
 ```text
 /pm                       → Create a new issue (interactive flow)
 /pm -quick fix the login  → Create issue with smart defaults
+/pm brainstorm caching    → Explore approaches before creating issues
+/pm:brainstorm            → Same (alternate syntax)
 /pm next                  → Triage: recommend next issue to work on
 /pm:next                  → Same (alternate syntax)
 /pm update                → Audit: find stale/orphaned issues
@@ -57,6 +60,7 @@ Parse the first argument:
 
 | Argument | Route to |
 |----------|----------|
+| `brainstorm` | `/pm:brainstorm` sub-skill |
 | `next` | `/pm:next` sub-skill |
 | `update` | `/pm:update` sub-skill |
 | `review` | `/pm:review` sub-skill |
