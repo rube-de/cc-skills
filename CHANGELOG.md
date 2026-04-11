@@ -1,3 +1,10 @@
+## [1.59.1](https://github.com/rube-de/cc-skills/compare/v1.59.0...v1.59.1) (2026-04-11)
+
+
+### Bug Fixes
+
+* **dlc:** remove CI early-exit gate that blocks pr-check and rebase ([#203](https://github.com/rube-de/cc-skills/issues/203)) ([2b55c0d](https://github.com/rube-de/cc-skills/commit/2b55c0d504e27975193f3ded04ade33da663759b))
+
 # [1.59.0](https://github.com/rube-de/cc-skills/compare/v1.58.2...v1.59.0) (2026-04-11)
 
 
