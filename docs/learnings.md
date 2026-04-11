@@ -748,13 +748,13 @@ External review tools (Codacy, CodeRabbit, Qodo) report findings via the GitHub 
 **Rule:** CI failures gate only the final "ready to merge" decision — never intermediate steps like pr-check or rebase.
 
 **Bad** — CI gates the entire pipeline:
-```
+```text
 Step 1: CI fails → Stop (pr-check never runs → review-tool check never clears → deadlock)
 Step 2: Only reached if CI passes (rebase blocked for no reason)
 ```
 
 **Good** — CI tracked as a flag, decision deferred:
-```
+```text
 Step 1: CI fails → set CI_STATUS=failing, continue
 Step 2: Rebase always (branch freshness ≠ CI health)
 Step 3: pr-check always (may resolve review-tool CI failures)

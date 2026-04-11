@@ -27,6 +27,7 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 - `needs_decision:<count>` (e.g., `needs_decision:2`)
 - `needs_decision:<count>,unresolved:<count>` (e.g., `needs_decision:2,unresolved:3`)
 - `unresolved:<count>`
+- `unresolved:<count>,ci_failing:<sorted_check_names>`
 - `ready`
 - `closed:<state>`
 
@@ -285,7 +286,13 @@ These are discussion items that need human judgment — design decisions, archit
 - Do NOT self-cancel — the PR may still need further cycles after the human decides.
 - Stop. Next cycle will re-check (if the human resolved them, pr-check will see the replies).
 
-**If pr-check reported remaining unresolved items (and 0 Discussion-Deferred):**
+**If pr-check reported remaining unresolved items (and 0 Discussion-Deferred) AND CI_STATUS is `failing`:**
+Both need attention — surface both in a single notification so CI failure isn't hidden behind unresolved items.
+- Notify: `💬 PR #<number> has <count> unresolved items after auto-fix + CI failing: <check_names>. <url>`
+- Write state key `unresolved:<count>,ci_failing:<sorted_check_names>`.
+- Stop. Next cycle will re-check.
+
+**If pr-check reported remaining unresolved items (and 0 Discussion-Deferred) AND CI_STATUS is `passing`:**
 - Notify: `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`
 - Write state key `unresolved:<count>`.
 - Stop. Next cycle will re-check.
