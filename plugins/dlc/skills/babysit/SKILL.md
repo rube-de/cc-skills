@@ -87,6 +87,7 @@ Categorize each check by its `bucket` field:
 - **Running**: `bucket` is `pending`
 - **Failed**: `bucket` is `fail`
 - **Passed**: `bucket` is `pass`
+- **Neutral**: `bucket` is `skipping` or `cancel` — treat as non-blocking (not a failure)
 
 **If any checks are still running:**
 Stop without printing anything. This is the normal waiting state — no point acting on incomplete results.
@@ -266,9 +267,9 @@ gh pr checks $PR_NUMBER --json name,state,bucket
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
-Categorize the fresh check results by `bucket` field (same logic as Step 1):
+Categorize the fresh check results by `bucket` field (same logic as Step 1 — `pending`, `fail`, `pass`, `skipping`, `cancel`):
 - **If any checks are still running** (`bucket` is `pending`): Stop silently — CI is incomplete on the new HEAD. Next cycle will re-evaluate.
-- **If ALL checks passed or NO checks exist:** Set `CI_STATUS=passing`.
+- **If ALL checks passed (or neutral/no checks exist):** Set `CI_STATUS=passing`.
 - **If any checks failed:** Set `CI_STATUS=failing` and record the fresh failing check names (replacing any stale values from Step 1).
 
 Evaluate the following conditions **in order**. The first matching condition wins:

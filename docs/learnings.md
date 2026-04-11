@@ -743,6 +743,22 @@ When a babysit/loop agent has context from a prior cycle ("I resolved all 3 thre
 
 ### CI early-exit blocks pr-check for review-tool checks
 
-External review tools (Codacy, CodeRabbit, Qodo) report findings via the GitHub Checks API — their check appears as "failed" even though the failure is unresolved review comments, not broken code. If a babysit/loop workflow gates all subsequent steps behind "CI must pass," it creates a deadlock: pr-check never runs to address the review comments, so the review-tool check never clears, so pr-check never runs. Fix: (1) CI failures should not block pr-check or rebase — only the final "ready to merge" assessment should require passing CI. (2) When `gh run list` returns no matching runs for a failing check, the check is from an external tool with no logs — skip auto-fix classification and continue the workflow. (3) Rebase is a branch-freshness operation unrelated to CI health and should never be gated behind CI status.
+External review tools (Codacy, CodeRabbit, Qodo) report findings via the GitHub Checks API — their check appears as "failed" even though the failure is unresolved review comments, not broken code. If a babysit/loop workflow gates all subsequent steps behind "CI must pass," it creates a deadlock: pr-check never runs to address the review comments, so the review-tool check never clears, so pr-check never runs.
+
+**Rule:** CI failures gate only the final "ready to merge" decision — never intermediate steps like pr-check or rebase.
+
+**Bad** — CI gates the entire pipeline:
+```
+Step 1: CI fails → Stop (pr-check never runs → review-tool check never clears → deadlock)
+Step 2: Only reached if CI passes (rebase blocked for no reason)
+```
+
+**Good** — CI tracked as a flag, decision deferred:
+```
+Step 1: CI fails → set CI_STATUS=failing, continue
+Step 2: Rebase always (branch freshness ≠ CI health)
+Step 3: pr-check always (may resolve review-tool CI failures)
+Step 4: Only declare "ready to merge" if CI_STATUS=passing
+```
 
 > Source: [PR #203](https://github.com/rube-de/cc-skills/pull/203) — `plugins/dlc/skills/babysit/SKILL.md` Steps 1, 1b, 2, 4
