@@ -22,7 +22,6 @@ Only print status messages for **errors that need human attention** and **comple
 Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>.state`. The file contains a single-line **status key**:
 
 - `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
-- `ci_unfixable:<sorted_check_names>`
 - `rebase_conflict:<sorted_file_list>`
 - `needs_review`
 - `needs_decision:<count>` (e.g., `needs_decision:2`)
@@ -90,13 +89,13 @@ Categorize each check by its `bucket` field:
 - **Passed**: `bucket` is `pass`
 
 **If any checks are still running:**
-Stop without printing anything. This is the normal waiting state.
+Stop without printing anything. This is the normal waiting state — no point acting on incomplete results.
 
-**If any checks failed:** Continue to Step 1b (attempt auto-fix).
+**If ALL checks passed:** Set `CI_STATUS=passing`. Continue to Step 2.
 
-**If NO checks exist:** Continue to Step 2. The repo may not have CI configured.
+**If NO checks exist:** Set `CI_STATUS=passing`. Continue to Step 2. The repo may not have CI configured.
 
-**If ALL checks passed:** Continue to Step 2.
+**If any checks failed:** Set `CI_STATUS=failing` and record the failing check names. Continue to Step 1b (attempt auto-fix).
 
 ## Step 1b: Attempt CI Auto-Fix
 
@@ -119,6 +118,9 @@ gh run view <RUN_ID> --log-failed 2>&1 | tail -200
 
 Collect and combine log output from all failing runs before classifying.
 
+**If no failing runs are found** (e.g., the check is from an external review tool like Codacy, CodeRabbit, or Qodo that reports status via the Checks API but has no GitHub Actions run logs):
+Skip classification — there is nothing to auto-fix. Continue to Step 2 with `CI_STATUS=failing`.
+
 ### Classify and fix
 
 Analyze the log output and classify the failure:
@@ -126,7 +128,7 @@ Analyze the log output and classify the failure:
 **Lint / format errors** (eslint, prettier, ruff, clippy, etc.):
 1. Run the project's lint-fix command (look for it in `package.json` scripts, `Makefile`, `justfile`, or CI config)
 2. Stage, commit with message: `fix: auto-fix lint errors`, and push
-3. Stop — CI will re-run. Next cycle checks the result.
+3. Stop — CI will re-run on the new HEAD. Next cycle checks the result.
 
 **Type errors** (tsc, mypy, pyright, etc.):
 1. Read the erroring files and fix the type issues
@@ -148,12 +150,15 @@ Analyze the log output and classify the failure:
 2. Stop — next cycle checks the result.
 
 **Unknown / cannot diagnose:**
-Notify: `🔴 CI failing on PR #<number>: <title> — Failed: <check_names> — could not auto-fix. <url>/checks`
-Stop.
+Cannot auto-fix, but do NOT stop here. Continue to Step 2 with `CI_STATUS=failing`. The failing checks may be resolved by pr-check (e.g., review-tool checks that clear once their comments are addressed).
 
 Do not notify after a successful fix attempt — this is routine automation. Stop silently and let the next cycle check the result.
 
+**Stop vs. continue rule for Step 1b:** Only stop if you **pushed commits** (fix or re-run) — CI needs to re-run on the new HEAD and continuing would reason about stale state. If no commits were pushed (unknown failure, no logs found), continue to Step 2.
+
 ## Step 2: Auto-Rebase
+
+Rebase is about branch freshness, not CI health. Always attempt it regardless of `CI_STATUS`.
 
 Check if the branch is behind the base branch:
 
@@ -178,7 +183,7 @@ git rebase origin/$BASE_BRANCH
 git push --force-with-lease
 ```
 
-Stop silently — CI needs to re-run. Next cycle will check the results.
+Stop silently — CI needs to re-run on the new HEAD. Next cycle will check the results.
 
 **If rebase hits conflicts — resolve them:**
 
@@ -254,15 +259,16 @@ If pr-check did NOT push commits, skip the re-request — there's nothing new to
 
 ## Step 4: Assess and Notify
 
-After pr-check completes, re-check the PR state:
+After pr-check completes, re-fetch the PR state (pr-check may have pushed commits that changed things):
 
 ```bash
 gh pr checks $PR_NUMBER --json name,state,bucket
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
-**If CI is not fully passing** (any check running or failed):
-Stop silently — next cycle will handle it in Step 1.
+Update `CI_STATUS` based on the fresh check results — pr-check's fixes may have cleared previously failing review-tool checks.
+
+Evaluate the following conditions **in order**. The first matching condition wins:
 
 **If pr-check reported Discussion-Deferred items (count > 0) AND remaining unresolved items:**
 Both need human attention — combine into a single notification so nothing is suppressed.
@@ -277,13 +283,13 @@ These are discussion items that need human judgment — design decisions, archit
 - Do NOT self-cancel — the PR may still need further cycles after the human decides.
 - Stop. Next cycle will re-check (if the human resolved them, pr-check will see the replies).
 
-**If pr-check reported 0 remaining unresolved items AND 0 Discussion-Deferred AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
-- Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
-- Self-cancel and stop.
-
 **If pr-check reported remaining unresolved items (and 0 Discussion-Deferred):**
 - Notify: `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`
 - Stop. Next cycle will re-check.
+
+**If CI_STATUS is `failing`:**
+- Notify: `🔴 CI failing on PR #<number>: <title> — Failed: <check_names>. <url>/checks`
+- Stop. Next cycle will re-check in Step 1.
 
 **If reviewDecision is CHANGES_REQUESTED:**
 Stop silently. Re-review was already requested in Step 3. Next cycle will re-check.
@@ -291,6 +297,10 @@ Stop silently. Re-review was already requested in Step 3. Next cycle will re-che
 **If mergeable is CONFLICTING:**
 - Notify: `⚠️ PR #<number> has merge conflicts. <url>`
 - Stop. Next cycle will attempt rebase in Step 2.
+
+**If pr-check reported 0 remaining unresolved items AND 0 Discussion-Deferred AND CI_STATUS is `passing` AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
+- Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
+- Self-cancel and stop.
 
 ## Cancellation Pattern
 

@@ -740,3 +740,9 @@ When `dlc:pr-check` runs inside `dlc:babysit` (via `/loop`), no human is at the 
 When a babysit/loop agent has context from a prior cycle ("I resolved all 3 threads"), it will rationalize skipping a step if the wording reads as conditional — e.g., "Delegate all review comment handling to X" implies "if there's review work." But bot reviewers (Copilot, CodeRabbit, Gemini) post new comments after every push, so prior-cycle state is always stale. Fix: add an explicit "always run, never skip" directive with the rationale, so the agent understands *why* it can't rely on its memory of the previous cycle.
 
 > Source: [Issue #200](https://github.com/rube-de/cc-skills/issues/200) — `plugins/dlc/skills/babysit/SKILL.md` Step 3
+
+### CI early-exit blocks pr-check for review-tool checks
+
+External review tools (Codacy, CodeRabbit, Qodo) report findings via the GitHub Checks API — their check appears as "failed" even though the failure is unresolved review comments, not broken code. If a babysit/loop workflow gates all subsequent steps behind "CI must pass," it creates a deadlock: pr-check never runs to address the review comments, so the review-tool check never clears, so pr-check never runs. Fix: (1) CI failures should not block pr-check or rebase — only the final "ready to merge" assessment should require passing CI. (2) When `gh run list` returns no matching runs for a failing check, the check is from an external tool with no logs — skip auto-fix classification and continue the workflow. (3) Rebase is a branch-freshness operation unrelated to CI health and should never be gated behind CI status.
+
+> Source: `plugins/dlc/skills/babysit/SKILL.md` Steps 1, 1b, 2, 4
