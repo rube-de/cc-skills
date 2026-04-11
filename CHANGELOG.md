@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/rube-de/cc-skills/compare/v1.58.2...v1.59.0) (2026-04-11)
+
+
+### Features
+
+* **pm:** add brainstorm skill for pre-creation design exploration ([#202](https://github.com/rube-de/cc-skills/issues/202)) ([15b944a](https://github.com/rube-de/cc-skills/commit/15b944a1323d69dbf20db76a15958e32e7a8bcbb))
+
 ## [1.58.2](https://github.com/rube-de/cc-skills/compare/v1.58.1...v1.58.2) (2026-04-04)
 
 
