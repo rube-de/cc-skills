@@ -154,7 +154,7 @@ Cannot auto-fix, but do NOT stop here. Continue to Step 2 with `CI_STATUS=failin
 
 Do not notify after a successful fix attempt — this is routine automation. Stop silently and let the next cycle check the result.
 
-**Stop vs. continue rule for Step 1b:** Only stop if you **pushed commits** (fix or re-run) — CI needs to re-run on the new HEAD and continuing would reason about stale state. If no commits were pushed (unknown failure, no logs found), continue to Step 2.
+**Stop vs. continue rule for Step 1b:** Only stop if you **pushed commits** (after applying a fix) **or re-ran jobs** with `gh run rerun` — either action makes the current CI state stale, and the next cycle should evaluate the fresh result. If neither commits were pushed nor jobs were re-run (unknown failure, no logs found), continue to Step 2.
 
 ## Step 2: Auto-Rebase
 
@@ -266,7 +266,10 @@ gh pr checks $PR_NUMBER --json name,state,bucket
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
-Update `CI_STATUS` based on the fresh check results — pr-check's fixes may have cleared previously failing review-tool checks.
+Categorize the fresh check results by `bucket` field (same logic as Step 1):
+- **If any checks are still running** (`bucket` is `pending`): Stop silently — CI is incomplete on the new HEAD. Next cycle will re-evaluate.
+- **If ALL checks passed or NO checks exist:** Set `CI_STATUS=passing`.
+- **If any checks failed:** Set `CI_STATUS=failing` and record the fresh failing check names (replacing any stale values from Step 1).
 
 Evaluate the following conditions **in order**. The first matching condition wins:
 
@@ -289,6 +292,7 @@ These are discussion items that need human judgment — design decisions, archit
 
 **If CI_STATUS is `failing`:**
 - Notify: `🔴 CI failing on PR #<number>: <title> — Failed: <check_names>. <url>/checks`
+- Write state key `ci_failing:<sorted_check_names>`.
 - Stop. Next cycle will re-check in Step 1.
 
 **If reviewDecision is CHANGES_REQUESTED:**
@@ -299,6 +303,7 @@ Stop silently. Re-review was already requested in Step 3. Next cycle will re-che
 - Stop. Next cycle will attempt rebase in Step 2.
 
 **If pr-check reported 0 remaining unresolved items AND 0 Discussion-Deferred AND CI_STATUS is `passing` AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
+- Write state key `ready`.
 - Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
 - Self-cancel and stop.
 
