@@ -111,6 +111,48 @@ The fix is always the same: add the consumed value as an explicit column/field i
 
 > Source: [Issue #124](https://github.com/rube-de/cc-skills/issues/124), [PR #171](https://github.com/rube-de/cc-skills/pull/171) — Three independent reviewers across two review rounds flagged the same gap: Epic sub-issue sizing consumed "structural changes" but the decomposition table had no column for it.
 
+### Template section ordering controls which sections get filled
+
+When a SKILL.md contains a template with optional sections (e.g., "Alternatives Considered" and "Work Breakdown" that should be skipped for simple features), the model fills sections top-to-bottom as it encounters them. If the scaling instructions ("skip these for simple work") come *after* the template, the model has already filled everything before seeing the skip rule.
+
+**Bad** — scaling note after template:
+```markdown
+## Template
+# Spec: <Topic>
+## Problem
+## Chosen Approach
+### Alternatives Considered   ← model fills this
+## Work Breakdown             ← model fills this too
+
+**Scaling:** Simple features should skip Alternatives and Work Breakdown.
+```
+
+**Good** — tier classification before template, inline comments inside:
+```markdown
+**Determine the complexity tier first:**
+| Simple | Skip Alternatives, Work Breakdown |
+| Medium | Include all sections |
+
+## Template
+### Alternatives Considered
+<!-- MEDIUM and COMPLEX only — omit for SIMPLE -->
+```
+
+The model reads SKILL.md top-to-bottom. Put conditional instructions *before* the content they gate, and add inline `<!-- -->` comments as defense-in-depth reminders inside the template itself.
+
+> Source: Brainstorm skill eval — Eval 3 (deceptive-health-check) produced a 75-line spec for a simple feature because the model filled Alternatives Considered and Work Breakdown before encountering the scaling instructions.
+
+### Cross-project topics need explicit handling in exploration steps
+
+Skills with codebase exploration steps (e.g., "use Glob/Grep to find affected files") implicitly assume the brainstorm topic is about the current working directory. When users brainstorm about a different project (e.g., "add rate limiting to my Express API" while in a skills marketplace repo), the exploration step silently fails or produces irrelevant results.
+
+Add explicit cross-project handling:
+1. Detect the mismatch in the context-gathering step
+2. Use `WebSearch` or ask the user for relevant file paths
+3. Mark paths in the output as `[unverified — user-provided]` so downstream consumers know to check them
+
+> Source: Brainstorm skill eval — Eval 1 (simple-rate-limiting) asked about an Express API while running in cc-skills. The agent improvised successfully but was unguided, making the behavior fragile.
+
 ---
 
 ## Agent Teams

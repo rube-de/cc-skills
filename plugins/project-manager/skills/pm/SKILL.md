@@ -1,13 +1,14 @@
 ---
 name: pm
 description: >-
-  Project manager for GitHub issues: create structured issues optimized for LLM
-  agent teams, triage and recommend what to work on next, audit and clean up
-  stale issues, or deep-validate a single issue against the codebase. Triggers:
-  create issue, plan work, new task, project manager, write ticket, draft issue,
-  plan feature, plan project, start project, create ticket, review issue, pm.
+  Project manager for GitHub issues: brainstorm design approaches, create
+  structured issues optimized for LLM agent teams, triage and recommend what to
+  work on next, audit and clean up stale issues, or deep-validate a single issue
+  against the codebase. Triggers: create issue, plan work, new task, project
+  manager, write ticket, draft issue, plan feature, plan project, start project,
+  create ticket, review issue, brainstorm, explore idea, think through, pm.
 user-invocable: true
-argument-hint: "[next | update | review ISSUE_NUMBER | -quick <description>]"
+argument-hint: "[brainstorm | next | update | review ISSUE_NUMBER | -quick <description>]"
 allowed-tools:
   - Task
   - Skill
@@ -27,13 +28,14 @@ metadata:
 
 # Project Manager
 
-GitHub issue lifecycle: **create**, **triage**, **audit**, and **review**.
+GitHub issue lifecycle: **brainstorm**, **create**, **triage**, **audit**, and **review**.
 
 ## Sub-Skills
 
 | Skill | Command | Description |
 |-------|---------|-------------|
 | Create | `/pm` or `/pm -quick <desc>` | Create structured issues optimized for agent execution |
+| Brainstorm | `/pm:brainstorm` | Explore problem space and design approaches before creating issues |
 | Next | `/pm:next` | Triage open issues — recommend what to work on next |
 | Update | `/pm:update` | Audit open issues — find stale, orphaned, and drift |
 | Review | `/pm:review ISSUE_NUMBER` | Deep-validate a single issue against the codebase |
@@ -43,6 +45,8 @@ GitHub issue lifecycle: **create**, **triage**, **audit**, and **review**.
 ```text
 /pm                       → Create a new issue (interactive flow)
 /pm -quick fix the login  → Create issue with smart defaults
+/pm brainstorm caching    → Explore approaches before creating issues
+/pm:brainstorm            → Same (alternate syntax)
 /pm next                  → Triage: recommend next issue to work on
 /pm:next                  → Same (alternate syntax)
 /pm update                → Audit: find stale/orphaned issues
@@ -57,13 +61,58 @@ Parse the first argument:
 
 | Argument | Route to |
 |----------|----------|
+| `brainstorm` | `/pm:brainstorm` sub-skill |
 | `next` | `/pm:next` sub-skill |
 | `update` | `/pm:update` sub-skill |
 | `review` | `/pm:review` sub-skill |
 | `-quick [desc]` | Create Issue Workflow (quick mode) below |
 | anything else / empty | Create Issue Workflow below |
 
-If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. Otherwise, continue with the Create Issue Workflow below.
+If routed to a sub-skill, invoke it with `Skill` and pass remaining arguments. If the first
+argument is `-quick`, skip the Ambiguity Check and go directly to the Create Issue Workflow
+(quick mode is an explicit signal that the user wants fast issue creation, not brainstorming).
+Otherwise, continue with the Ambiguity Check below.
+
+---
+
+## Ambiguity Check
+
+Before starting the Create Issue Workflow, check for existing specs and assess readiness.
+
+**Check for existing specs.** Use `Glob` to find specs in `.dev/pm/specs/*.md`, then `Read` the
+most recent candidates to check topic relevance and status. If multiple specs match, prefer the
+most recent by date prefix in the filename. If a spec exists that matches the
+user's topic **and its status is `Approved`**, use it as primary context for the Create Issue
+Workflow — the brainstorming was already completed. Skip the ambiguity check and proceed directly.
+If the matching spec's status is `Draft` (or missing), do not bypass ambiguity handling — the
+brainstorm hasn't been approved yet. Continue with the assessment below.
+
+**Assess ambiguity.** If no matching Approved spec exists, check for these ambiguity signals:
+
+| Signal | Examples |
+|--------|----------|
+| Multiple valid approaches | "we need better caching", "rethink the auth flow" |
+| Unclear scope | "improve the plugin system", "make it faster" |
+| No obvious issue type | request doesn't map clearly to bug/feature/refactor/chore |
+| Architecture decision needed | "should we use X or Y", "how should we structure this" |
+| Exploration language | "I'm thinking about...", "what if we...", "I'm not sure how to..." |
+
+If **two or more** signals are present, suggest brainstorming before issue creation:
+
+```text
+Question: "This sounds like it could benefit from brainstorming before creating issues —
+there are multiple approaches and the scope isn't fully defined yet. Want to explore first?"
+Options:
+  - Yes, brainstorm first (/pm:brainstorm) — explore approaches and produce a spec
+  - No, create the issue directly — I know what I want
+```
+
+If the user chooses brainstorming, invoke `/pm:brainstorm` with the original request as arguments;
+otherwise (user chose to proceed directly, or fewer than two signals present), continue with the
+Create Issue Workflow below.
+
+Do NOT block on this check — it is a recommendation, not a gate. Clear requests like "fix the
+login crash" or "add a health check label" should flow straight through without asking.
 
 ---
 
