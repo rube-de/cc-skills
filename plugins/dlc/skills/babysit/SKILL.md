@@ -85,16 +85,14 @@ gh pr checks $PR_NUMBER --json name,state,bucket
 
 Categorize each check by its `bucket` field:
 - **Running**: `bucket` is `pending`
-- **Failed**: `bucket` is `fail`
+- **Failed**: `bucket` is `fail` or `cancel` — cancelled checks are not passing per GitHub required-check semantics
 - **Passed**: `bucket` is `pass`
-- **Neutral**: `bucket` is `skipping` or `cancel` — treat as non-blocking (not a failure)
+- **Neutral**: `bucket` is `skipping` — treat as non-blocking (not a failure)
 
 **If any checks are still running:**
 Stop without printing anything. This is the normal waiting state — no point acting on incomplete results.
 
-**If ALL checks passed:** Set `CI_STATUS=passing`. Continue to Step 2.
-
-**If NO checks exist:** Set `CI_STATUS=passing`. Continue to Step 2. The repo may not have CI configured.
+**If ALL checks passed or neutral (no pending/fail/cancel), or NO checks exist:** Set `CI_STATUS=passing`. Continue to Step 2.
 
 **If any checks failed:** Set `CI_STATUS=failing` and record the failing check names. Continue to Step 1b (attempt auto-fix).
 
@@ -267,10 +265,10 @@ gh pr checks $PR_NUMBER --json name,state,bucket
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
-Categorize the fresh check results by `bucket` field (same logic as Step 1 — `pending`, `fail`, `pass`, `skipping`, `cancel`):
+Categorize the fresh check results by `bucket` field (same logic as Step 1 — `fail`/`cancel` = failed, `pass` = passed, `skipping` = neutral, `pending` = running):
 - **If any checks are still running** (`bucket` is `pending`): Stop silently — CI is incomplete on the new HEAD. Next cycle will re-evaluate.
-- **If ALL checks passed (or neutral/no checks exist):** Set `CI_STATUS=passing`.
-- **If any checks failed:** Set `CI_STATUS=failing` and record the fresh failing check names (replacing any stale values from Step 1).
+- **If ALL checks passed or neutral (no pending/fail/cancel), or NO checks exist:** Set `CI_STATUS=passing`.
+- **If any checks failed** (`bucket` is `fail` or `cancel`): Set `CI_STATUS=failing` and record the fresh failing check names (replacing any stale values from Step 1).
 
 Evaluate the following conditions **in order**. The first matching condition wins:
 
@@ -289,6 +287,7 @@ These are discussion items that need human judgment — design decisions, archit
 
 **If pr-check reported remaining unresolved items (and 0 Discussion-Deferred):**
 - Notify: `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`
+- Write state key `unresolved:<count>`.
 - Stop. Next cycle will re-check.
 
 **If CI_STATUS is `failing`:**
