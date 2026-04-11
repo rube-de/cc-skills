@@ -23,7 +23,6 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 
 - `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
 - `rebase_conflict:<sorted_file_list>`
-- `needs_review`
 - `needs_decision:<count>` (e.g., `needs_decision:2`)
 - `needs_decision:<count>,unresolved:<count>` (e.g., `needs_decision:2,unresolved:3`)
 - `unresolved:<count>`
@@ -58,6 +57,7 @@ If no PR exists for the current branch, stop silently.
 Extract and store: PR_NUMBER, PR_TITLE, PR_BRANCH, BASE_BRANCH, PR_STATE, PR_URL, REVIEW_DECISION, MERGEABLE.
 
 **State gate:** If PR_STATE is not `OPEN`:
+- Write state key `closed:<state>`.
 - Notify: `PR #<number> is <state>. Babysit cancelled.`
 - Self-cancel (see Cancellation Pattern below) and stop.
 
@@ -227,6 +227,7 @@ git rebase --abort
 ```
 
 Notify: `⚠️ Rebase conflict on PR #<number> — could not auto-resolve. File(s): <conflicting_files>. <url>`
+Write state key `rebase_conflict:<sorted_file_list>`.
 Stop.
 
 ## Step 3: Run PR Review Check
