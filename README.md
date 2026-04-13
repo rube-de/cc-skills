@@ -218,7 +218,7 @@ cd ~/.claude/plugins/marketplaces/rube-cc-skills && git pull
 claude plugin install council@rube-cc-skills
 
 # Or reinstall all plugins
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev jules-review dlc; do
+for p in council cdt project-manager plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
   claude plugin install "$p@rube-cc-skills"
 done
 
