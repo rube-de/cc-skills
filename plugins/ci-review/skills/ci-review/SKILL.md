@@ -189,7 +189,7 @@ Wait for all scorers to complete. Collect their scores.
 2. **Near match**: same file and lines within 5 of each other, describing the same root cause → keep the higher-scored one, note the other agent in the `Found by:` tag (e.g., `Found by: bug-detector, security-reviewer`)
 3. **Semantic overlap**: different files or lines but describing the same conceptual issue (e.g., "missing null check on user input" flagged independently by bug-detector and security-reviewer at two call sites) → these are NOT duplicates — keep both, they're separate instances of the same pattern
 
-**If no findings survive filtering:** Skip to Step 7 and post a "no issues found" review.
+**If no findings survive filtering:** Build a no-findings review body using the template from REVIEW-POSTING.md section 3 ("No Findings"), then skip to Step 7 to post it.
 
 ### Step 6: Build Review Payload
 
