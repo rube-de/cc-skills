@@ -5,12 +5,14 @@ description: >-
   and atomic GitHub PR review posting. Runs 5 (lean) or 8 (full) specialized
   review agents, scores findings for confidence, filters false positives, and
   submits a single atomic GitHub PR review with inline comments via gh api.
+  Supports --agent profile for AI-authored PRs (surfaces more findings since
+  fixes are cheap). Use --min-severity to control finding threshold.
   Use when reviewing PRs in CI pipelines, GitHub Actions workflows, or locally.
   Triggers: /ci-review, review PR, CI code review, automated PR review.
-  Use: /ci-review <PR#> [focus text] [--full|--lean]
+  Use: /ci-review <PR#> [focus text] [--full|--lean] [--agent] [--min-severity <level>]
 user-invocable: true
 allowed-tools: [Bash, Read, Grep, Glob, Agent, AskUserQuestion]
-argument-hint: "<PR#> [focus text] [--full|--lean]"
+argument-hint: "<PR#> [focus text] [--full|--lean] [--agent] [--min-severity low|medium|high|critical]"
 ---
 
 # CI Review
@@ -25,6 +27,28 @@ Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.
 |---------|--------|----------|
 | **lean** (default) | code-reviewer, bug-detector, security-reviewer, silent-failure-hunter, code-simplifier | Every PR — fast, cost-effective |
 | **full** | All lean agents + test-analyzer, comment-analyzer, type-analyzer | Critical PRs, large changes, pre-release |
+| **agent** | Same agents as full | PR authored by an AI agent — surfaces more findings since fixes are cheap |
+
+### Agent Profile
+
+The `--agent` flag activates the agent profile, designed for reviewing AI-authored code. It uses the full agent set but with different thresholds and additional prompt context:
+
+- Uses the **full** agent set (all 8 review agents)
+- Lowers the default `--min-severity` to `low` (surface everything actionable)
+- Injects context into each agent prompt: *"This PR was authored by an AI agent. Surface all valid findings including minor ones — the cost of fixing is negligible. Pay attention to AI-specific patterns: over-engineering, hallucinated API usage, unnecessary abstractions, verbose boilerplate, and cargo-culted patterns."*
+
+### Severity Filter
+
+Use `--min-severity <level>` to control which findings appear in the review:
+
+| Level | Includes | Default For |
+|-------|----------|-------------|
+| `low` | All findings (low, medium, high, critical) | `--agent` profile |
+| `medium` | medium + high + critical | — |
+| `high` | high + critical | — |
+| `critical` | critical only | — |
+
+If not specified, `--min-severity` defaults to `low` (show all real findings). The severity filter is applied AFTER confidence scoring — it removes real but low-priority findings, not false positives.
 
 ## Review Posting Rules (Inlined for Reliability)
 
@@ -52,24 +76,23 @@ If not authenticated, abort with: "gh is not authenticated. Run: gh auth login"
 ### Step 1: Parse Arguments
 
 Extract from the argument string:
-- **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number. Store as `PR_NUMBER`.
+- **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number and store as `PR_NUMBER`. If the URL points to a different repository than the current one, abort with: "Cross-repo URLs are not supported. Run this skill from the target repo, or pass just the PR number."
 - **Focus text** (optional): free text describing what to focus the review on (e.g., "auth flow", "error handling")
-- **Profile flag** (optional): `--full` or `--lean`. Default: `--lean`
+- **Profile flag** (optional): `--full`, `--lean`, or `--agent`. Default: `--lean`. `--agent` implies `--full` agent set.
+- **Severity filter** (optional): `--min-severity low|medium|high|critical`. Default: `low`.
 
-If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [--full|--lean]"
+If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [--full|--lean|--agent] [--min-severity <level>]"
 
 ### Step 2: Eligibility Check
 
 Run via Bash:
 ```bash
-gh pr view <PR#> --json state,isDraft,number,title,url
+gh pr view <PR#> --json state,number,title,url
 ```
 
 - If PR state is not `OPEN`, abort: "PR #N is {state}. Only open PRs can be reviewed."
-- If PR `isDraft` is true, abort: "PR #N is a draft. Publish it first or use --full to review anyway."
-  - Exception: if `--full` is passed, allow draft review.
 
-Print: "Reviewing PR #N: {title} ({url}) — profile: {lean|full}"
+Print: "Reviewing PR #N: {title} ({url}) — profile: {lean|full|agent}"
 
 ### Step 3: Gather Context (Parallel)
 
@@ -86,14 +109,7 @@ gh pr view <PR#> --json title,body,headRefName,baseRefName,files,additions,delet
 ```
 
 **3c. Discover CLAUDE.md files:**
-Search for CLAUDE.md files in the repo root and in directories containing changed files:
-```bash
-# Root CLAUDE.md
-cat CLAUDE.md 2>/dev/null || true
-
-# Directory-specific CLAUDE.md files — check parent dirs of changed files
-```
-Use `Glob` to find `**/CLAUDE.md` and `Read` to load ones relevant to the changed files.
+Search for CLAUDE.md files in the repo root and in directories containing changed files. Use `Glob` to find `**/CLAUDE.md` and `Read` to load the root CLAUDE.md and any others relevant to the changed files.
 
 Compile the context bundle:
 - `PR_DIFF`: the full diff text

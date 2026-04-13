@@ -42,7 +42,7 @@ jobs:
           prompt: |
             /ci-review ${{ github.event.pull_request.number }}
           claude_args: |
-            --allowedTools "Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr comment:*),Bash(gh pr checkout:*),Bash(gh repo view:*),Bash(gh auth status:*),Bash(git blame:*)"
+            --allowedTools "Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
 ```
 
 For full reviews (8 agents instead of 5):
@@ -58,7 +58,7 @@ For full reviews (8 agents instead of 5):
 |-------|---------|
 | `plugin_marketplaces` | Git URL of the cc-skills marketplace |
 | `plugins` | Plugin name `@` marketplace name (from `marketplace.json`) |
-| `claude_args` | Allowlist `gh api`, `gh pr`, `gh repo`, `gh auth`, and `git blame` |
+| `claude_args` | Allowlist `gh`, `git`, `jq`, `echo`, and `cat` commands |
 | `permissions.pull-requests: write` | Required for posting PR reviews |
 | `permissions.id-token: write` | Required for Claude Code OAuth |
 
