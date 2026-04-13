@@ -219,6 +219,8 @@ For each surviving finding:
 Resolve the repository owner and repo:
 ```bash
 OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
+OWNER="${OWNER_REPO%%/*}"
+REPO="${OWNER_REPO#*/}"
 ```
 
 Build the JSON payload using `jq` and post via `gh api`:

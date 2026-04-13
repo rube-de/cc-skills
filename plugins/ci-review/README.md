@@ -141,7 +141,7 @@ claude plugin install ci-review@rube-cc-skills
 │  2. Eligibility — PR is open, not draft                 │
 │                                                         │
 │  3. Gather Context (parallel)                           │
-│     ├── gh pr diff (truncated to 5K lines if needed)    │
+│     ├── gh pr diff (full diff, warns if >10K lines)     │
 │     ├── gh pr view --json (metadata)                    │
 │     └── Discover CLAUDE.md files                        │
 │                                                         │

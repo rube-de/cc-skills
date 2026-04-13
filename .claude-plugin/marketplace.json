@@ -170,7 +170,7 @@
     {
       "name": "ci-review",
       "description": "CI-optimized code review: multi-agent parallel review (lean/full profiles) with confidence scoring and atomic GitHub PR review posting via gh api",
-      "version": "1.59.0",
+      "version": "1.59.1",
       "source": "./plugins/ci-review",
       "category": "code-review",
       "author": {
