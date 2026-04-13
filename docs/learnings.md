@@ -762,3 +762,92 @@ Step 4: Only declare "ready to merge" if CI_STATUS=passing
 ```
 
 > Source: [PR #203](https://github.com/rube-de/cc-skills/pull/203) — `plugins/dlc/skills/babysit/SKILL.md` Steps 1, 1b, 2, 4
+
+---
+
+### CI review agents need consistent output format across all specialists
+
+When multiple review agents produce findings that must be aggregated (scored, filtered, mapped to inline comments), enforce a single output format across all agent definitions.
+
+**Bad** — each agent uses its own format:
+```text
+Agent A: "Found issue at line 42 in api.ts — high severity"
+Agent B: "## HIGH: api.ts:42 — injection risk"
+Agent C: "- [H] api.ts L42: user input not sanitized"
+```
+
+**Good** — uniform format parseable by the orchestrator:
+```markdown
+## Findings
+
+1. **[high]** `api.ts:42`
+   User input not sanitized.
+   **Recommendation:** Use parameterized queries.
+```
+
+The orchestrator (SKILL.md) parses findings to extract severity, file, line, message, and recommendation. Inconsistent formats cause findings to be silently dropped during aggregation.
+
+> Source: `plugins/ci-review/agents/*.md` — all 8 review agents + `plugins/ci-review/skills/ci-review/SKILL.md` Step 5
+
+### GitHub PR reviews vs PR comments — use the right API
+
+`gh pr comment` posts a standalone comment. `gh api repos/OWNER/REPO/pulls/N/reviews` posts a proper review with inline annotations. For CI reviewers, always use the review API — inline comments appear next to the code, not buried in the comment thread.
+
+**Key rules for the review API:**
+- Use `event: "COMMENT"` for CI bots (never `APPROVE` or `REQUEST_CHANGES` — that gates merges)
+- Use `jq -n` to build JSON payloads (robust for dynamic construction)
+- Handle inline comment failures gracefully: retry without invalid comments → body-only → fall back to `gh pr comment`
+- `line` refers to the NEW file version. Always use `side: "RIGHT"`
+
+> Source: `plugins/ci-review/skills/ci-review/references/REVIEW-POSTING.md`, adapted from `plugins/jules-review/skills/jules-review/references/WORKFLOW.md`
+
+### Scorer agents need the same context they're asked to verify
+
+If a scoring/validation agent is told to check a criterion (e.g., "is this finding in the PR diff?"), it must receive the data needed to verify it. Unverifiable criteria are worse than no criteria — the agent either ignores them or hallucinates an assessment.
+
+**Bad** — scorer is told to check diff membership but doesn't receive the diff:
+```markdown
+## Evaluation Criteria
+1. Is the file:line in the diff? If not, score 0.
+```
+
+**Good** — scorer receives the diff in its prompt:
+```markdown
+## Finding
+{finding text}
+
+## PR Diff
+{diff text}
+```
+
+Haiku is cheap enough that passing the diff to each per-finding scorer is a negligible cost increase for a significant quality improvement.
+
+> Source: `plugins/ci-review/agents/confidence-scorer.md` + `plugins/ci-review/skills/ci-review/SKILL.md` Step 5
+
+### Don't prescribe actions agents can't perform
+
+Agent instructions should only ask for things the agent can actually do with its available tools and model capabilities. "Compile and run @example blocks" in a review agent prompt is unrealistic — the agent will either ignore it or waste turns. "Check if examples look correct given the function signature" is achievable.
+
+Similarly, avoid opinionated design philosophy (e.g., "avoid anemic models") unless the project's CLAUDE.md explicitly endorses it. Universal best practices (illegal states, immutability) are fine; school-of-thought preferences (DDD vs functional) produce false positives.
+
+> Source: `plugins/ci-review/agents/comment-analyzer.md`, `plugins/ci-review/agents/type-analyzer.md`
+
+### Detect before act — don't blindly run state-changing commands
+
+When a skill needs a prerequisite state (e.g., correct branch checked out), check first and only act if needed. Blindly running `gh pr checkout` is disruptive locally and redundant in CI where `actions/checkout` already did it.
+
+**Bad** — always run:
+```markdown
+### Step 3.5: Checkout PR Branch
+gh pr checkout <PR#>
+```
+
+**Good** — detect, then act only if needed:
+```markdown
+### Step 3.5: Ensure PR Branch
+CURRENT=$(git branch --show-current)
+PR_HEAD=$(gh pr view <PR#> --json headRefName --jq '.headRefName')
+# If already on correct branch → skip. If not → checkout.
+```
+
+> Source: `plugins/ci-review/skills/ci-review/SKILL.md` Step 3.5

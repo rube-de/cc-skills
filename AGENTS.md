@@ -1,6 +1,6 @@
 # AGENTS.md
 
-Claude Code skills marketplace — plugins for multi-agent development, AI council reviews, project management, plugin development, quality gates, and platform-specific tooling. See `.claude-plugin/marketplace.json` for the full plugin registry.
+Claude Code skills marketplace — plugins for multi-agent development, AI council reviews, CI code review, project management, plugin development, quality gates, and platform-specific tooling. See `.claude-plugin/marketplace.json` for the full plugin registry.
 
 ## Plugin Architecture
 
