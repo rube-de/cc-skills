@@ -52,7 +52,7 @@ If not authenticated, abort with: "gh is not authenticated. Run: gh auth login"
 ### Step 1: Parse Arguments
 
 Extract from the argument string:
-- **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number.
+- **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number. Store as `PR_NUMBER`.
 - **Focus text** (optional): free text describing what to focus the review on (e.g., "auth flow", "error handling")
 - **Profile flag** (optional): `--full` or `--lean`. Default: `--lean`
 
