@@ -94,6 +94,7 @@ Run via Bash:
 gh pr view <PR#> --json state,number,title,url
 ```
 
+- If `gh pr view` fails (non-zero exit), abort: "PR #N not found or insufficient permissions."
 - If PR state is not `OPEN`, abort: "PR #N is {state}. Only open PRs can be reviewed."
 
 Print: "Reviewing PR #N: {title} ({url}) — profile: {lean|full|agent}"
@@ -128,14 +129,11 @@ Compile the context bundle:
 Review agents use `Read`, `Grep`, and `git blame` to examine the actual code — not just the diff. Verify the correct branch is active:
 
 ```bash
-# Check current branch or commit vs PR head
-CURRENT=$(git branch --show-current 2>/dev/null || true)
-PR_HEAD=$(gh pr view <PR#> --json headRefName --jq '.headRefName')
 PR_HEAD_SHA=$(gh pr view <PR#> --json headRefOid --jq '.headRefOid')
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-- If `HEAD_SHA` matches `PR_HEAD_SHA` → already on the right commit, do nothing. (Branch name alone is insufficient — the local branch may have diverged after a force-push.)
+- If `HEAD_SHA` matches `PR_HEAD_SHA` → already on the right commit, do nothing.
 - Otherwise → run `gh pr checkout <PR#>`.
 - If checkout fails → warn but continue. Pass a note to agents: "File access unavailable — review from diff only." This lets agents skip `Read`/`git blame` rather than wasting turns on failing tool calls.
 
