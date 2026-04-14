@@ -1,7 +1,7 @@
 # ci-review
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Agents](https://img.shields.io/badge/Agents-9-green.svg)]()
+[![Agents](https://img.shields.io/badge/Agents-11-green.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 
 CI-optimized multi-agent code review with confidence scoring and atomic GitHub PR review posting. Runs specialized review agents in parallel, scores each finding independently, filters false positives, and submits a single GitHub PR review with inline comments.

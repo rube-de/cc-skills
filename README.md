@@ -189,7 +189,7 @@ cc-skills/
 │   ├── oasis-dev/           # Oasis Network development
 │   │   └── skills/          # oasis-dev + references
 │   ├── ci-review/           # CI multi-agent code review
-│   │   ├── agents/          # 8 review agents + scorer
+│   │   ├── agents/          # 10 review agents + scorer
 │   │   └── skills/          # ci-review + references
 │   ├── jules-review/        # Jules PR review via council
 │   │   └── skills/          # jules-review + references

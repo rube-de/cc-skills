@@ -787,7 +787,7 @@ Agent C: "- [H] api.ts L42: user input not sanitized"
 
 The orchestrator (SKILL.md) parses findings to extract severity, file, line, message, and recommendation. Inconsistent formats cause findings to be silently dropped during aggregation.
 
-> Source: `plugins/ci-review/agents/*.md` — all 8 review agents + `plugins/ci-review/skills/ci-review/SKILL.md` Step 5
+> Source: `plugins/ci-review/agents/*.md` — all review agents + `plugins/ci-review/skills/ci-review/SKILL.md` Step 5
 
 ### GitHub PR reviews vs PR comments — use the right API
 
