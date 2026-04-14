@@ -214,7 +214,7 @@ Wait for all scorers to complete. Collect their scores.
 
 **Confidence filter:** Remove all findings with confidence score below **65**. A score of 65 means "more likely real than not" — a reasonable bar that avoids discarding real findings that happen to be minor.
 
-**Severity filter:** If `--min-severity` was specified, remove findings whose severity is below the threshold. Severity order: critical > high > medium > low.
+**Severity filter:** Remove findings whose severity is below the resolved `--min-severity` threshold (default: `medium`, or `low` when `--agent`). Severity order: critical > high > medium > low.
 
 **Deduplicate:** Multiple agents often flag the same underlying issue. Before building the review, scan all surviving findings and merge duplicates:
 
