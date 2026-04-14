@@ -10,10 +10,11 @@ description: >-
   fixes are cheap). Use --min-severity to control finding threshold.
   Use when reviewing PRs in CI pipelines, GitHub Actions workflows, or locally.
   Triggers: /ci-review, review PR, CI code review, automated PR review.
-  Use: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--min-severity <level>]
+  Use --model to override the reviewer model (e.g., --model opus for deeper analysis).
+  Use: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--model sonnet|opus] [--min-severity <level>]
 user-invocable: true
 allowed-tools: [Bash, Read, Grep, Glob, Agent, AskUserQuestion]
-argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--min-severity low|medium|high|critical]"
+argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--model sonnet|opus] [--min-severity low|medium|high|critical]"
 ---
 
 # CI Review
@@ -81,9 +82,10 @@ Extract from the argument string:
 - **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number and store as `PR_NUMBER`. If the URL points to a different repository than the current one, abort with: "Cross-repo URLs are not supported. Run this skill from the target repo, or pass just the PR number."
 - **Focus text** (optional): free text describing what to focus the review on (e.g., "auth flow", "error handling")
 - **Profile flag** (optional): `--single`, `--lean`, `--full`, or `--agent`. Default: `--lean`. `--agent` implies `--full` agent set. `--single` uses one comprehensive agent instead of the specialist fan-out.
+- **Model override** (optional): `--model sonnet|opus`. Default: use each agent's built-in model (Sonnet for reviewers, Haiku for scorers). When set, overrides the model for review agents only — confidence scorers always use Haiku.
 - **Severity filter** (optional): `--min-severity low|medium|high|critical`. Default: `low`.
 
-If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [--full|--lean|--agent] [--min-severity <level>]"
+If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--model sonnet|opus] [--min-severity <level>]"
 
 ### Step 2: Eligibility Check
 
@@ -155,7 +157,7 @@ Select agents based on profile:
 8. `ci-review:comment-analyzer`
 9. `ci-review:type-analyzer`
 
-Launch ALL selected agents **in parallel** using the Agent tool. Each agent receives the same prompt:
+Launch ALL selected agents **in parallel** using the Agent tool. If `--model` was specified, pass it as the `model` parameter on each Agent tool call to override the agent definition's default. Each agent receives the same prompt:
 
 ```
 Review this pull request. Report findings in your defined output format:

@@ -67,6 +67,10 @@ For a single review profile on all events:
           prompt: |
             /ci-review ${{ github.event.pull_request.number }} --full
 
+          # Use Opus for deeper analysis (works with any profile)
+          prompt: |
+            /ci-review ${{ github.event.pull_request.number }} --model opus
+
           # AI-authored PRs (full agents + surfaces more findings)
           prompt: |
             /ci-review ${{ github.event.pull_request.number }} --agent
