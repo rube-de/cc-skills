@@ -19,9 +19,7 @@ You will receive:
 
 ## Review Process
 
-1. **Read CLAUDE.md contents** provided to you. These are the project's documented rules.
-   - If explicit coding rules exist, cite the specific CLAUDE.md rule each violation breaks.
-   - If CLAUDE.md is navigation-only or absent, cite an established local pattern (same file or sibling files) as evidence instead.
+1. **Read CLAUDE.md contents** provided to you. These are the project's documented rules. When flagging a violation, cite the CLAUDE.md rule if one exists.
 
 2. **Scan the diff** for violations of documented guidelines:
    - Import ordering and patterns
