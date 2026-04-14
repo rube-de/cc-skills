@@ -114,12 +114,12 @@ gh pr view <PR#> --json title,body,headRefName,baseRefName,files,additions,delet
 ```
 
 **3c. Discover CLAUDE.md files:**
-Search for CLAUDE.md files in the repo root and in directories containing changed files. Use `Glob` to find `**/CLAUDE.md` and `Read` to load the root CLAUDE.md and any others relevant to the changed files.
+Search for CLAUDE.md files in the repo root and in directories containing changed files. Use `Glob` to find `**/CLAUDE.md` and `Read` to load the root CLAUDE.md and any others relevant to the changed files. **Preserve scope:** prefix each file's contents with its path (e.g., `### /CLAUDE.md`, `### /packages/api/CLAUDE.md`) so agents know which rules apply to which directories.
 
 Compile the context bundle:
 - `PR_DIFF`: the full diff text
 - `PR_META`: title, body, branch names, file list, stats
-- `CLAUDE_MD`: concatenated CLAUDE.md contents (or "No CLAUDE.md found")
+- `CLAUDE_MD`: path-prefixed CLAUDE.md contents (or "No CLAUDE.md found")
 - `FOCUS`: the focus text (or empty)
 
 **Large diffs:** If the diff exceeds 10,000 lines, warn: "Large diff ({N} lines) — review quality may degrade for files not near the top of the diff." Do not truncate — let agents handle context naturally. They can always `Read` individual files for deeper investigation.
