@@ -46,7 +46,7 @@ jobs:
           prompt: |
             /ci-review ${{ github.event.pull_request.number }} ${{ github.event.action == 'opened' && '--lean' || '--single' }}
           claude_args: |
-            --allowedTools "Read,Grep,Glob,Agent,Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
+            --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
 ```
 
 This gives you the best cost/coverage tradeoff: full multi-agent review once on open (~6 agents), then cheap single-agent reviews on each push (~1 agent + confidence scoring).
@@ -82,7 +82,7 @@ For a single review profile on all events:
 |-------|---------|
 | `plugin_marketplaces` | Git URL of the cc-skills marketplace |
 | `plugins` | Plugin name `@` marketplace name (from `marketplace.json`) |
-| `claude_args` | Allowlist `Read`, `Grep`, `Glob`, `Agent`, and scoped `Bash` commands |
+| `claude_args` | Allowlist `Read`, `Grep`, `Glob`, `Agent`, and scoped `Bash` (`gh pr`, `gh api`, `git blame`, `jq`, etc.) |
 | `permissions.pull-requests: write` | Required for posting PR reviews |
 | `permissions.id-token: write` | Required for Claude Code OAuth |
 
