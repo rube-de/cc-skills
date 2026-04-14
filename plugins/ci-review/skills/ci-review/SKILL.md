@@ -298,7 +298,7 @@ PAYLOAD=$(jq -n \
 **Error handling chain** (follow in order):
 1. If `gh api` fails due to invalid inline comments → remove the invalid comment, rebuild payload, retry (up to 3 times)
 2. If still failing → drop all inline comments, move all findings to review body, retry
-3. If review API fails entirely (403/401) → fall back to `gh pr comment <PR#> --body "$BODY"`
+3. If review API fails entirely (403/401) → fall back to `gh pr comment <PR#> --body "$REVIEW_BODY_WITH_ALL_FINDINGS"`
 4. If everything fails → print the review body to stdout so the user can post manually
 
 Print the review URL on success.
