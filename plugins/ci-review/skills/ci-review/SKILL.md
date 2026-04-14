@@ -335,6 +335,6 @@ All review agents output findings in this format (enforced by their agent defini
    ...
 ```
 
-Parse each finding to extract: severity, file, line, message (description + recommendation), source agent name.
+Parse each finding to extract: severity, file, line, message (description + recommendation + any extra fields like `**Rule:**` or `**Evidence:**`), source agent name.
 
 If an agent outputs "No findings." — record zero findings from that agent.

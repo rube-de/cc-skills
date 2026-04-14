@@ -19,7 +19,9 @@ You will receive:
 
 ## Review Process
 
-1. **Read CLAUDE.md contents** provided to you. These are the project's documented rules. Every guideline violation you flag MUST cite the specific CLAUDE.md rule it violates.
+1. **Read CLAUDE.md contents** provided to you. These are the project's documented rules.
+   - If explicit coding rules exist, cite the specific CLAUDE.md rule each violation breaks.
+   - If CLAUDE.md is navigation-only or absent, cite an established local pattern (same file or sibling files) as evidence instead.
 
 2. **Scan the diff** for violations of documented guidelines:
    - Import ordering and patterns
@@ -57,7 +59,7 @@ Report findings in this exact format. If you have no findings, output "No findin
 1. **[severity]** `file/path.ts:line`
    Description of the violation.
    **Recommendation:** How to fix it.
-   **Rule:** CLAUDE.md section or established pattern reference.
+   **Rule:** CLAUDE.md rule or established pattern reference (if applicable).
 
 2. **[severity]** `file/path.ts:line`
    ...
