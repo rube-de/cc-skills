@@ -125,7 +125,10 @@ If the error mentions a specific invalid comment (line not in diff), remove it a
 
 ```bash
 # Remove the invalid comment
-COMMENTS_JSON=$(echo "$COMMENTS_JSON" | jq 'del(.[] | select(.path == "'"$INVALID_PATH"'" and .line == '"$INVALID_LINE"'))')
+COMMENTS_JSON=$(echo "$COMMENTS_JSON" | jq \
+  --arg invalid_path "$INVALID_PATH" \
+  --argjson invalid_line "$INVALID_LINE" \
+  'del(.[] | select(.path == $invalid_path and .line == $invalid_line))')
 
 # Rebuild and retry
 PAYLOAD=$(jq -n \

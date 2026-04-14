@@ -128,13 +128,15 @@ Compile the context bundle:
 Review agents use `Read`, `Grep`, and `git blame` to examine the actual code — not just the diff. Verify the correct branch is active:
 
 ```bash
-# Check current branch vs PR head branch
-CURRENT=$(git branch --show-current)
+# Check current branch or commit vs PR head
+CURRENT=$(git branch --show-current 2>/dev/null || true)
 PR_HEAD=$(gh pr view <PR#> --json headRefName --jq '.headRefName')
+PR_HEAD_SHA=$(gh pr view <PR#> --json headRefOid --jq '.headRefOid')
+HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-- If already on the PR branch (or in CI where `actions/checkout` already checked it out) → do nothing.
-- If on a different branch → run `gh pr checkout <PR#>`.
+- If `CURRENT` matches `PR_HEAD`, or `HEAD_SHA` matches `PR_HEAD_SHA` (detached HEAD in CI) → already on the right code, do nothing.
+- Otherwise → run `gh pr checkout <PR#>`.
 - If checkout fails → warn but continue. Pass a note to agents: "File access unavailable — review from diff only." This lets agents skip `Read`/`git blame` rather than wasting turns on failing tool calls.
 
 ### Step 4: Launch Review Agents
