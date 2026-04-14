@@ -135,7 +135,7 @@ PR_HEAD_SHA=$(gh pr view <PR#> --json headRefOid --jq '.headRefOid')
 HEAD_SHA=$(git rev-parse HEAD)
 ```
 
-- If `CURRENT` matches `PR_HEAD`, or `HEAD_SHA` matches `PR_HEAD_SHA` (detached HEAD in CI) → already on the right code, do nothing.
+- If `HEAD_SHA` matches `PR_HEAD_SHA` → already on the right commit, do nothing. (Branch name alone is insufficient — the local branch may have diverged after a force-push.)
 - Otherwise → run `gh pr checkout <PR#>`.
 - If checkout fails → warn but continue. Pass a note to agents: "File access unavailable — review from diff only." This lets agents skip `Read`/`git blame` rather than wasting turns on failing tool calls.
 
