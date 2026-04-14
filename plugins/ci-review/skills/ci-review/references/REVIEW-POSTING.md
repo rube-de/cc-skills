@@ -35,7 +35,7 @@ For each finding that has a valid `file:line` in the PR diff, create an inline c
 
 Where:
 - `severity` = critical, high, medium, low
-- `type` = guidelines, bug, security, error-handling, quality, test-coverage, comment-accuracy, type-design
+- `type` = guidelines, bug, security, error-handling, quality, review (single-reviewer), test-coverage, comment-accuracy, type-design
 - `agent-name` = which review agent found this
 
 ### Rules for Inline Comments
@@ -54,7 +54,7 @@ The review body is the summary posted at the top of the review.
 ```markdown
 ## CI Review
 
-**Profile**: <lean|full> | **Findings**: <total> (<N> critical, <N> high, <N> medium, <N> low)
+**Profile**: <single|lean|full> | **Findings**: <total> (<N> critical, <N> high, <N> medium, <N> low)
 
 ### Summary
 
@@ -76,7 +76,7 @@ The review body is the summary posted at the top of the review.
 
 No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-**Profile**: <lean|full>
+**Profile**: <single|lean|full>
 ```
 
 ## 4. Construct the JSON Payload
@@ -86,8 +86,8 @@ Use `jq` to build the payload. This is robust for dynamic construction:
 ```bash
 # Resolve repo
 OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-OWNER=$(echo "$OWNER_REPO" | cut -d/ -f1)
-REPO=$(echo "$OWNER_REPO" | cut -d/ -f2)
+OWNER="${OWNER_REPO%%/*}"
+REPO="${OWNER_REPO#*/}"
 
 # Build payload (COMMENTS_JSON is a JSON array of comment objects)
 PAYLOAD=$(jq -n \
@@ -119,9 +119,9 @@ PAYLOAD=$(jq -n \
 
 If the `gh api` call fails, follow this retry chain:
 
-### Retry 1: Remove Invalid Comments
+### Retry 1: Remove Invalid Comments (up to 3 attempts)
 
-If the error mentions a specific invalid comment (line not in diff), remove it and retry:
+If the error mentions a specific invalid comment (line not in diff), remove it and retry. Repeat up to 3 times. If still failing after 3 retries, proceed to Retry 2.
 
 ```bash
 # Remove the invalid comment

@@ -49,14 +49,11 @@ You will receive:
 
 6. **If focus text is provided**, weight your review toward that area.
 
-## What NOT to Flag
+## Scope
 
-- Pre-existing type design issues on unchanged types
-- Simple data types with no meaningful invariants (e.g., `{ name: string; value: number }`)
-- Type aliases that are just renaming primitives for clarity
-- Types in test files (test helpers are often intentionally loose)
-- Missing validation on internal types only used within a single module
-- Functional programming vs OOP style preferences
+Your primary focus is **type design quality** for types introduced or modified by the diff. Deprioritize simple data types with no meaningful invariants, test helper types, and style preferences (FP vs OOP).
+
+Only flag type design issues introduced by the diff — not pre-existing issues on unchanged types.
 
 ## Output Format
 

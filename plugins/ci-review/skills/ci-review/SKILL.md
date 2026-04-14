@@ -2,17 +2,18 @@
 name: ci-review
 description: >-
   CI-optimized code review: multi-agent parallel review with confidence scoring
-  and atomic GitHub PR review posting. Runs 5 (lean) or 8 (full) specialized
-  review agents, scores findings for confidence, filters false positives, and
+  and atomic GitHub PR review posting. Runs 6 (lean) or 9 (full) specialized
+  review agents including one unconstrained deep-reviewer, scores findings for confidence, filters false positives, and
   submits a single atomic GitHub PR review with inline comments via gh api.
-  Supports --agent profile for AI-authored PRs (surfaces more findings since
+  Supports --single for cost-effective single-agent reviews with confidence scoring,
+  --agent profile for AI-authored PRs (surfaces more findings since
   fixes are cheap). Use --min-severity to control finding threshold.
   Use when reviewing PRs in CI pipelines, GitHub Actions workflows, or locally.
   Triggers: /ci-review, review PR, CI code review, automated PR review.
-  Use: /ci-review <PR#> [focus text] [--full|--lean] [--agent] [--min-severity <level>]
+  Use: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--min-severity <level>]
 user-invocable: true
 allowed-tools: [Bash, Read, Grep, Glob, Agent, AskUserQuestion]
-argument-hint: "<PR#> [focus text] [--full|--lean] [--agent] [--min-severity low|medium|high|critical]"
+argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--min-severity low|medium|high|critical]"
 ---
 
 # CI Review
@@ -25,7 +26,8 @@ Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.
 
 | Profile | Agents | Use When |
 |---------|--------|----------|
-| **lean** (default) | code-reviewer, bug-detector, security-reviewer, silent-failure-hunter, code-simplifier | Every PR — fast, cost-effective |
+| **single** | single-reviewer (one comprehensive agent) | Routine PRs, CI budgets, small diffs — ~6x cheaper than lean |
+| **lean** (default) | deep-reviewer, guidelines-checker, bug-detector, security-reviewer, silent-failure-hunter, code-simplifier | Every PR — balanced cost and coverage |
 | **full** | All lean agents + test-analyzer, comment-analyzer, type-analyzer | Critical PRs, large changes, pre-release |
 | **agent** | Same agents as full | PR authored by an AI agent — surfaces more findings since fixes are cheap |
 
@@ -33,7 +35,7 @@ Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.
 
 The `--agent` flag activates the agent profile, designed for reviewing AI-authored code. It uses the full agent set but with different thresholds and additional prompt context:
 
-- Uses the **full** agent set (all 8 review agents)
+- Uses the **full** agent set (all 9 review agents)
 - Lowers the default `--min-severity` to `low` (surface everything actionable)
 - Injects context into each agent prompt: *"This PR was authored by an AI agent. Surface all valid findings including minor ones — the cost of fixing is negligible. Pay attention to AI-specific patterns: over-engineering, hallucinated API usage, unnecessary abstractions, verbose boilerplate, and cargo-culted patterns."*
 
@@ -78,7 +80,7 @@ If not authenticated, abort with: "gh is not authenticated. Run: gh auth login"
 Extract from the argument string:
 - **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number and store as `PR_NUMBER`. If the URL points to a different repository than the current one, abort with: "Cross-repo URLs are not supported. Run this skill from the target repo, or pass just the PR number."
 - **Focus text** (optional): free text describing what to focus the review on (e.g., "auth flow", "error handling")
-- **Profile flag** (optional): `--full`, `--lean`, or `--agent`. Default: `--lean`. `--agent` implies `--full` agent set.
+- **Profile flag** (optional): `--single`, `--lean`, `--full`, or `--agent`. Default: `--lean`. `--agent` implies `--full` agent set. `--single` uses one comprehensive agent instead of the specialist fan-out.
 - **Severity filter** (optional): `--min-severity low|medium|high|critical`. Default: `low`.
 
 If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [--full|--lean|--agent] [--min-severity <level>]"
@@ -131,23 +133,27 @@ PR_HEAD=$(gh pr view <PR#> --json headRefName --jq '.headRefName')
 
 - If already on the PR branch (or in CI where `actions/checkout` already checked it out) → do nothing.
 - If on a different branch → run `gh pr checkout <PR#>`.
-- If checkout fails → warn but continue. Agents can still review the diff, they just cannot read files for additional context.
+- If checkout fails → warn but continue. Pass a note to agents: "File access unavailable — review from diff only." This lets agents skip `Read`/`git blame` rather than wasting turns on failing tool calls.
 
-### Step 4: Launch Review Agents (Parallel)
+### Step 4: Launch Review Agents
 
 Select agents based on profile:
 
-**Lean agents** (always launched):
-1. `ci-review:code-reviewer`
-2. `ci-review:bug-detector`
-3. `ci-review:security-reviewer`
-4. `ci-review:silent-failure-hunter`
-5. `ci-review:code-simplifier`
+**Single agent** (when `--single`):
+1. `ci-review:single-reviewer` — one comprehensive agent covering all domains
 
-**Full-only agents** (added when `--full`):
-6. `ci-review:test-analyzer`
-7. `ci-review:comment-analyzer`
-8. `ci-review:type-analyzer`
+**Lean agents** (default, when `--lean` or no flag):
+1. `ci-review:deep-reviewer`
+2. `ci-review:guidelines-checker`
+3. `ci-review:bug-detector`
+4. `ci-review:security-reviewer`
+5. `ci-review:silent-failure-hunter`
+6. `ci-review:code-simplifier`
+
+**Full and agent profile agents** (added when `--full` or `--agent`):
+7. `ci-review:test-analyzer`
+8. `ci-review:comment-analyzer`
+9. `ci-review:type-analyzer`
 
 Launch ALL selected agents **in parallel** using the Agent tool. Each agent receives the same prompt:
 
@@ -168,11 +174,15 @@ Changed files: {count} ({additions}+ / {deletions}-)
 ## Focus
 {FOCUS text, or "No specific focus — review broadly."}
 
+## Agent Context
+{If --agent: "This PR was authored by an AI agent. Surface all valid findings including minor ones — the cost of fixing is negligible. Pay attention to AI-specific patterns: over-engineering, hallucinated API usage, unnecessary abstractions, verbose boilerplate, and cargo-culted patterns."}
+{If not --agent: omit this section entirely}
+
 ## PR Diff
 {PR_DIFF}
 ```
 
-Wait for all agents to complete. Collect their outputs.
+**Agent failure handling:** If an agent fails, times out, or returns unparseable output, log the failure and continue with findings from the remaining agents. Do not abort the review because one agent failed. Record the failure in the Step 8 summary (e.g., "Agents: 8 launched, 7 completed, 1 failed").
 
 ### Step 5: Confidence Scoring
 
@@ -184,8 +194,9 @@ Launch **one `ci-review:confidence-scorer` agent per finding**, all in parallel.
 
 Each scorer receives:
 ```
-Score this review finding from 0-100 for confidence.
+Score this review finding from 0-100 for confidence (how certain are you that this finding is factually correct?).
 Check the diff to verify the finding is on a changed line, then read the actual code to verify it's real.
+Confidence is about accuracy, not importance — a minor but real style issue should score high.
 
 ## Finding
 Source agent: {agent-name}
@@ -197,7 +208,11 @@ Source agent: {agent-name}
 
 Wait for all scorers to complete. Collect their scores.
 
-**Filter:** Remove all findings with confidence score below **80**.
+**Scorer failure handling:** If a scorer fails or times out, default to confidence score 50 (uncertain). This drops the finding from the confidence filter, erring on the side of excluding unverifiable findings rather than including them.
+
+**Confidence filter:** Remove all findings with confidence score below **65**. A score of 65 means "more likely real than not" — a reasonable bar that avoids discarding real findings that happen to be minor.
+
+**Severity filter:** If `--min-severity` was specified, remove findings whose severity is below the threshold. Severity order: critical > high > medium > low.
 
 **Deduplicate:** Multiple agents often flag the same underlying issue. Before building the review, scan all surviving findings and merge duplicates:
 
@@ -264,7 +279,7 @@ PAYLOAD=$(jq -n \
 ```
 
 **Error handling chain** (follow in order):
-1. If `gh api` fails due to invalid inline comments → remove invalid comments, rebuild payload, retry
+1. If `gh api` fails due to invalid inline comments → remove the invalid comment, rebuild payload, retry (up to 3 times)
 2. If still failing → drop all inline comments, move all findings to review body, retry
 3. If review API fails entirely (403/401) → fall back to `gh pr comment <PR#> --body "$BODY"`
 4. If everything fails → print the review body to stdout so the user can post manually
@@ -277,10 +292,11 @@ Print a brief summary for the CI log:
 
 ```
 CI Review complete for PR #N
-Profile: lean|full
-Agents: N launched, N completed
+Profile: single|lean|full|agent
+Agents: N launched, N completed [, N failed]
 Raw findings: N collected
-After scoring (≥80): N survived
+After confidence scoring (≥65): N survived
+After severity filter (≥{min-severity}): N survived
 Posted: N inline comments + review body
 Review: <URL>
 ```

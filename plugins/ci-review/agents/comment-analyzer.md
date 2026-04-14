@@ -45,14 +45,11 @@ You will receive:
 
 5. **If focus text is provided**, weight your review toward that area.
 
-## What NOT to Flag
+## Scope
 
-- Missing comments on self-explanatory code (simple getters, obvious helpers)
-- Pre-existing comment issues on unchanged lines
-- Comment style preferences (JSDoc vs inline, markdown vs plain text)
-- Missing comments on internal/private functions with clear names
-- Test file comments — test descriptions serve as documentation
-- License headers or auto-generated documentation
+Your primary focus is **comment accuracy and documentation quality** for changes in the diff. Deprioritize self-explanatory code, comment style preferences, and license headers.
+
+Only flag comment issues introduced by the diff — not pre-existing issues on unchanged lines.
 
 ## Output Format
 

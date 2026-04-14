@@ -27,12 +27,10 @@ You will receive:
    - Changed business logic or validation rules
    - New data transformations or parsing logic
 
-2. **Check if tests exist** for the changes:
-   ```bash
-   # Find test files related to changed source files
-   # Example: src/auth/login.ts → look for test/auth/login.test.ts, __tests__/auth/login.test.ts
-   find . -name "*.test.*" -o -name "*.spec.*" | grep -i "<module_name>"
-   ```
+2. **Check if tests exist** for the changes — use `Glob` and `Grep`:
+   - Use `Glob` with patterns like `**/*.test.*` or `**/*.spec.*` to find test files
+   - Use `Grep` to search for test descriptions matching the changed module names
+   - Example: for `src/auth/login.ts`, look for `**/login.test.*`, `**/login.spec.*`, `**/__tests__/login.*`
 
 3. **Evaluate test quality** for any new or modified tests in the diff:
    - Do tests cover the happy path AND error paths?
@@ -49,14 +47,11 @@ You will receive:
 
 5. **If focus text is provided**, weight your review toward that area.
 
-## What NOT to Flag
+## Scope
 
-- Missing tests for trivial changes (renaming, formatting, comment updates)
-- Missing tests for configuration files or static data
-- Pre-existing test gaps on unchanged code
-- Missing 100% coverage — focus on critical paths, not metrics
-- Test style preferences (describe/it vs test, assertion library choice)
-- Internal/private functions that are exercised through public API tests
+Your primary focus is **missing test coverage and test quality** for changes in the diff. Deprioritize trivial changes (renames, formatting), config/static data, test style preferences, and 100% coverage metrics. Focus on critical behavioral paths over line metrics.
+
+Only flag coverage gaps introduced by the diff — not pre-existing gaps on unchanged code.
 
 ## Output Format
 

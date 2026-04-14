@@ -851,3 +851,50 @@ PR_HEAD=$(gh pr view <PR#> --json headRefName --jq '.headRefName')
 ```
 
 > Source: `plugins/ci-review/skills/ci-review/SKILL.md` Step 3.5
+
+### Multi-agent "What NOT to Flag" exclusions create dead zones
+
+When specialized review agents have hard exclusion lists ("Do NOT flag error handling — the silent-failure-hunter handles that"), cross-cutting bugs fall into gaps between agents. Both agents think the other one covers it; neither catches it.
+
+**Bad** — hard handoffs create dead zones:
+```markdown
+## What NOT to Flag
+- Missing error handling (empty catches) — the silent-failure-hunter handles that
+- Security vulnerabilities — the security-reviewer handles that
+```
+
+**Good** — soft scoping with an escape hatch:
+```markdown
+## Scope
+Your primary focus is **logic errors**. Deprioritize style and pure code simplification.
+However, if you find a severe error handling gap, report it regardless of category.
+Only flag issues introduced or exposed by the diff.
+```
+
+The polling race condition in `use-deposit.ts` (reset() can't cancel in-flight async, causing stale callbacks) was caught by both baselines but missed by both multi-agent skill runs. The bug-detector thought it was "error handling territory" and the silent-failure-hunter saw it as "logic territory."
+
+**Fix**: (A) Add an unconstrained deep-reviewer agent as a safety net, (B) replace hard exclusions with soft weighting across all agents.
+
+> Source: ci-review skill eval iteration-1, PR oasisprotocol/flexvaults-sdk#43
+
+### Name agents by their actual function, not aspirational titles
+
+The `code-reviewer` agent was named like a generalist but was actually a CLAUDE.md conventions enforcer — the narrowest agent in the set. The misleading name obscured the fact that no agent was doing a broad, unconstrained review. Renamed to `guidelines-checker` to match its actual scope.
+
+> Source: ci-review skill eval iteration-1
+
+### Multi-agent specialization creates systematic blind spots that single-agent reviews don't have
+
+When 6 specialized agents each review within their defined scope, findings that span multiple domains — or that fall between scopes — get missed. In a 4-configuration eval (Sonnet/Opus × baseline/skill) against PR oasisprotocol/flexvaults-sdk#43, single-agent baselines found 8 real issues that neither skill run caught. They cluster into 4 gaps:
+
+**Gap 1 — Error message quality**: The silent-failure-hunter checks *whether* errors are surfaced, but not *whether the message is accurate*. A misleading error message after an on-chain transfer ("status check failing") makes users think their funds are lost. **Fix**: Added error message accuracy and non-cancellable state audit to the deep-reviewer's priorities.
+
+**Gap 2 — Fallback value semantic correctness**: `?? chains[0]` doesn't crash, but silently sends the wrong `chain_id` to the API — a data integrity bug hiding behind defensive code. No agent checked whether fallback values are semantically correct for the domain. **Fix**: Added fallback value analysis to the bug-detector.
+
+**Gap 3 — Cross-SDK parity**: When a diff touches both TS and Python, each agent reviews them independently but never compares implementations. A single-agent baseline naturally scans the whole diff and notices mismatches (optional vs required fields, `str(float)` edge cases, runtime type enforcement). **Fix**: Added cross-SDK parity checking to the guidelines-checker.
+
+**Gap 4 — Unused validation constraints**: When an API response includes `min_deposit` thresholds but the code never validates against them, it's a business logic gap. No agent checked "does the code use all available validation data?" **Fix**: Added unused validation constraint checking to the bug-detector.
+
+These are small prompt additions (2-4 lines each) but address systematic coverage gaps that repeat across PRs.
+
+> Source: ci-review skill eval iteration-2, PR oasisprotocol/flexvaults-sdk#43, files: `plugins/ci-review/agents/{deep-reviewer,bug-detector,guidelines-checker}.md`

@@ -53,13 +53,13 @@ You will receive:
 
 6. **If focus text is provided**, weight your review toward that area.
 
-## What NOT to Flag
+## Scope
 
-- Intentionally empty catches with an explanatory comment (e.g., `// Best-effort cleanup, failure is acceptable`)
-- Error handling in test files (test error assertions are expected)
-- Pre-existing error handling issues on unchanged lines
-- Missing error handling in internal pure functions that cannot fail
-- Logging-only handlers in non-critical background tasks where the comment explains why
+Your primary focus is **silent failures and error handling gaps**. Deprioritize style, naming, and pure logic errors without an error-handling dimension.
+
+However, if you find a cross-cutting issue where state timing causes error callbacks to fire at the wrong time (e.g., cleanup runs but an in-flight response still mutates state), report it — even if it looks like a "logic bug." Error-path timing bugs are squarely in your domain.
+
+Respect intentionally empty catches with explanatory comments. Only flag error handling introduced or exposed by the diff — not pre-existing issues on unchanged lines.
 
 ## Output Format
 

@@ -44,22 +44,18 @@ You will receive:
    - Unclear variable names (`data`, `temp`, `x`, `result`) in non-trivial scopes
    - Missing type annotations on public APIs (if the project uses TypeScript/typed language)
 
-5. **Search for existing utilities** before flagging duplication:
-   ```bash
-   # Example: check if a similar helper already exists
-   grep -r "function.*sanitize\|sanitize.*=\|export.*sanitize" src/
-   ```
+5. **Search for existing utilities** before flagging duplication — use `Grep` to search the codebase:
+   - Search for similar function names: pattern `sanitize|validate|normalize` in `src/`
+   - Search for similar exports: pattern `export.*functionName`
+   - Use `Glob` to find related files by name pattern
 
 6. **If focus text is provided**, weight your review toward that area.
 
-## What NOT to Flag
+## Scope
 
-- Pre-existing complexity on unchanged lines
-- Complexity justified by performance requirements (hot paths, tight loops)
-- "Duplicate" code that is intentionally similar but semantically different (e.g., request vs response handling)
-- Style preferences not documented in CLAUDE.md
-- Three similar lines that would require a premature abstraction to consolidate
-- Test code — test files often have intentional duplication for clarity
+Your primary focus is **simplicity, readability, and duplication**. Deprioritize complexity justified by performance (hot paths, tight loops) and intentional duplication for clarity in test files.
+
+Only flag issues introduced or exposed by the diff — not pre-existing complexity on unchanged lines. Three similar lines that would require a premature abstraction to consolidate are not worth flagging.
 
 ## Output Format
 

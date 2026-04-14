@@ -28,9 +28,9 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0  # Full history — required for git blame in bug-detector agent
 
       - name: Run CI Review
         uses: anthropics/claude-code-action@v1
@@ -50,6 +50,13 @@ For full reviews (8 agents instead of 5):
 ```yaml
           prompt: |
             /ci-review ${{ github.event.pull_request.number }} --full
+```
+
+For AI-authored PRs (full agents + surfaces more findings):
+
+```yaml
+          prompt: |
+            /ci-review ${{ github.event.pull_request.number }} --agent
 ```
 
 ### Action Configuration
@@ -84,11 +91,17 @@ claude plugin install ci-review@rube-cc-skills
 # Full review (8 agents — adds test, comment, and type analysis)
 /ci-review 123 --full
 
+# Review AI-authored PR (full agents + surfaces all findings)
+/ci-review 123 --agent
+
 # Focus the review on a specific area
 /ci-review 123 auth flow --lean
 
 # Review with focus and full profile
 /ci-review 123 error handling in the payment module --full
+
+# Filter by minimum severity
+/ci-review 123 --min-severity medium
 
 # Pass a GitHub URL instead of PR number
 /ci-review https://github.com/owner/repo/pull/123
@@ -100,6 +113,7 @@ claude plugin install ci-review@rube-cc-skills
 |---------|--------|------|----------|
 | **lean** (default) | 5 reviewers + scorer | Lower | Every PR, CI pipelines |
 | **full** | 8 reviewers + scorer | Higher | Critical PRs, pre-release, large changes |
+| **agent** | 8 reviewers + scorer | Higher | AI-authored PRs — surfaces more findings since fixes are cheap |
 
 ## Review Agents
 
@@ -107,7 +121,8 @@ claude plugin install ci-review@rube-cc-skills
 
 | Agent | Model | Focus |
 |-------|-------|-------|
-| **code-reviewer** | Sonnet | Project guidelines (CLAUDE.md), style, patterns, naming |
+| **deep-reviewer** | Sonnet | Unconstrained deep review — traces control flow across boundaries, catches cross-cutting bugs |
+| **guidelines-checker** | Sonnet | Project guidelines (CLAUDE.md), style, patterns, naming |
 | **bug-detector** | Sonnet | Logic errors, null handling, race conditions, git blame context |
 | **security-reviewer** | Sonnet | OWASP top 10, injection, auth flaws, exposed secrets |
 | **silent-failure-hunter** | Sonnet | Empty catches, swallowed errors, missing user feedback |
@@ -125,7 +140,7 @@ claude plugin install ci-review@rube-cc-skills
 
 | Agent | Model | Role |
 |-------|-------|------|
-| **confidence-scorer** | Haiku | One per finding. Reads actual code at file:line, scores 0-100, filters below 80 |
+| **confidence-scorer** | Haiku | One per finding. Reads actual code at file:line, scores 0-100 for factual accuracy, filters below 65 |
 
 ## How It Works
 
@@ -136,9 +151,9 @@ claude plugin install ci-review@rube-cc-skills
 │                                                         │
 │  0. Prerequisites — verify gh CLI + auth                │
 │                                                         │
-│  1. Parse Arguments — PR#, focus text, --lean/--full    │
+│  1. Parse Arguments — PR#, focus, profile, min-severity  │
 │                                                         │
-│  2. Eligibility — PR is open, not draft                 │
+│  2. Eligibility — PR is open                            │
 │                                                         │
 │  3. Gather Context (parallel)                           │
 │     ├── gh pr diff (full diff, warns if >10K lines)     │
@@ -149,12 +164,14 @@ claude plugin install ci-review@rube-cc-skills
 │                                                         │
 │  4. Launch Review Agents (parallel)                     │
 │     ├── lean: 5 agents                                  │
-│     └── full: 8 agents                                  │
+│     ├── full/agent: 8 agents                            │
+│     └── agent: + AI-specific prompt context             │
 │                                                         │
 │  5. Confidence Scoring (parallel, one Haiku per finding)│
 │     ├── Read actual code to verify each finding         │
-│     ├── Score 0-100                                     │
-│     ├── Filter: drop findings < 80                      │
+│     ├── Score 0-100 (is this factually correct?)        │
+│     ├── Confidence filter: drop findings < 65           │
+│     ├── Severity filter: drop below --min-severity      │
 │     └── Deduplicate: exact match + near match (±5 lines)│
 │                                                         │
 │  6. Build Review Payload                                │
