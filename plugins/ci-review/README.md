@@ -8,7 +8,11 @@ CI-optimized multi-agent code review with confidence scoring and atomic GitHub P
 
 ## GitHub Actions Setup
 
-Use [`claude-code-action`](https://github.com/anthropics/claude-code-action) with the plugin marketplace:
+Use [`claude-code-action`](https://github.com/anthropics/claude-code-action) with the plugin marketplace.
+
+### Multi-stage review (recommended)
+
+Run a thorough multi-agent review on PR open, then a fast single-agent review on subsequent pushes:
 
 ```yaml
 name: CI Code Review
@@ -30,7 +34,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history — required for git blame in bug-detector agent
+          fetch-depth: 0  # Full history — required for git blame
 
       - name: Run CI Review
         uses: anthropics/claude-code-action@v1
@@ -40,21 +44,30 @@ jobs:
           plugins: |
             ci-review@rube-cc-skills
           prompt: |
-            /ci-review ${{ github.event.pull_request.number }}
+            /ci-review ${{ github.event.pull_request.number }} ${{ github.event.action == 'opened' && '--lean' || '--single' }}
           claude_args: |
             --allowedTools "Bash(gh:*),Bash(git:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
 ```
 
-For full reviews (8 agents instead of 5):
+This gives you the best cost/coverage tradeoff: full multi-agent review once on open (~6 agents), then cheap single-agent reviews on each push (~1 agent + confidence scoring).
+
+### Single profile (simplest)
+
+For a single review profile on all events:
 
 ```yaml
           prompt: |
-            /ci-review ${{ github.event.pull_request.number }} --full
+            /ci-review ${{ github.event.pull_request.number }}
 ```
 
-For AI-authored PRs (full agents + surfaces more findings):
+### Other profiles
 
 ```yaml
+          # Full review (9 agents — adds test, comment, and type analysis)
+          prompt: |
+            /ci-review ${{ github.event.pull_request.number }} --full
+
+          # AI-authored PRs (full agents + surfaces more findings)
           prompt: |
             /ci-review ${{ github.event.pull_request.number }} --agent
 ```
@@ -85,10 +98,13 @@ claude plugin install ci-review@rube-cc-skills
 ## Local Usage
 
 ```bash
-# Review an open PR (lean profile — 5 agents)
+# Review an open PR (lean profile — 6 agents, default)
 /ci-review 123
 
-# Full review (8 agents — adds test, comment, and type analysis)
+# Single-agent review (cost-effective, with confidence scoring)
+/ci-review 123 --single
+
+# Full review (9 agents — adds test, comment, and type analysis)
 /ci-review 123 --full
 
 # Review AI-authored PR (full agents + surfaces all findings)
@@ -96,9 +112,6 @@ claude plugin install ci-review@rube-cc-skills
 
 # Focus the review on a specific area
 /ci-review 123 auth flow --lean
-
-# Review with focus and full profile
-/ci-review 123 error handling in the payment module --full
 
 # Filter by minimum severity
 /ci-review 123 --min-severity medium
@@ -111,13 +124,20 @@ claude plugin install ci-review@rube-cc-skills
 
 | Profile | Agents | Cost | Use When |
 |---------|--------|------|----------|
-| **lean** (default) | 5 reviewers + scorer | Lower | Every PR, CI pipelines |
-| **full** | 8 reviewers + scorer | Higher | Critical PRs, pre-release, large changes |
-| **agent** | 8 reviewers + scorer | Higher | AI-authored PRs — surfaces more findings since fixes are cheap |
+| **single** | 1 reviewer + scorer | Lowest | PR updates, CI budgets, small diffs |
+| **lean** (default) | 6 reviewers + scorer | Moderate | Every PR on open, balanced cost/coverage |
+| **full** | 9 reviewers + scorer | Higher | Critical PRs, pre-release, large changes |
+| **agent** | 9 reviewers + scorer | Higher | AI-authored PRs — surfaces more findings since fixes are cheap |
 
 ## Review Agents
 
-### Lean Profile (always active)
+### Single Profile (`--single`)
+
+| Agent | Model | Focus |
+|-------|-------|-------|
+| **single-reviewer** | Sonnet | Comprehensive single-pass: bugs, security, error handling, conventions, SDK parity |
+
+### Lean Profile (default)
 
 | Agent | Model | Focus |
 |-------|-------|-------|
@@ -163,8 +183,9 @@ claude plugin install ci-review@rube-cc-skills
 │  3.5. Checkout PR branch — agents need file access      │
 │                                                         │
 │  4. Launch Review Agents (parallel)                     │
-│     ├── lean: 5 agents                                  │
-│     ├── full/agent: 8 agents                            │
+│     ├── single: 1 comprehensive agent                   │
+│     ├── lean: 6 specialist agents                       │
+│     ├── full/agent: 9 specialist agents                 │
 │     └── agent: + AI-specific prompt context             │
 │                                                         │
 │  5. Confidence Scoring (parallel, one Haiku per finding)│
