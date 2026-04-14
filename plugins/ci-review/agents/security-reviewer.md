@@ -1,7 +1,7 @@
 ---
 name: security-reviewer
 description: "Security-focused review agent for CI: scans PR diffs for OWASP top 10 vulnerabilities, injection flaws, authentication/authorization issues, exposed secrets, and unsafe data handling."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: yellow

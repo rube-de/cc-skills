@@ -1,7 +1,7 @@
 ---
 name: confidence-scorer
 description: "Confidence scoring agent for CI review: independently evaluates each review finding with a 0-100 confidence score. Filters false positives, pre-existing issues, and low-signal noise."
-tools: [Read, Grep, Glob]
+tools: Read, Grep, Glob
 model: haiku
 maxTurns: 10
 color: gray

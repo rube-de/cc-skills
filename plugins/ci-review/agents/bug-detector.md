@@ -1,7 +1,7 @@
 ---
 name: bug-detector
 description: "Bug detection agent for CI: analyzes PR diffs for logic errors, null/undefined handling, race conditions, off-by-one errors, and edge cases. Uses git blame for historical context."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: red

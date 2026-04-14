@@ -1,7 +1,7 @@
 ---
 name: guidelines-checker
 description: "Guidelines compliance agent for CI: checks CLAUDE.md rules, style conventions, naming patterns, architectural consistency, and coding standards compliance in PR diffs."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: green

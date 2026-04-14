@@ -1,7 +1,7 @@
 ---
 name: test-analyzer
 description: "Test coverage agent for CI: reviews PR diffs for missing test coverage, untested edge cases, inadequate error path testing, and test quality issues. Focuses on behavioral coverage over line metrics."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: cyan

@@ -1,7 +1,7 @@
 ---
 name: silent-failure-hunter
 description: "Error handling review agent for CI: identifies silent failures, empty catch blocks, swallowed errors, overly broad exception handling, and missing user feedback in PR diffs."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: orange

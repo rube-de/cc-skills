@@ -1,7 +1,7 @@
 ---
 name: single-reviewer
 description: "All-in-one review agent for CI: performs a thorough code review covering bugs, security, error handling, guidelines compliance, and code quality. Used by --single mode for cost-effective reviews."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 20
 color: cyan

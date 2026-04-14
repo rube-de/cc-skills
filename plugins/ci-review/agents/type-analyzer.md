@@ -1,7 +1,7 @@
 ---
 name: type-analyzer
 description: "Type design agent for CI: analyzes new or modified type definitions in PR diffs for invariant strength, encapsulation quality, illegal state prevention, and proper validation at construction boundaries."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: pink

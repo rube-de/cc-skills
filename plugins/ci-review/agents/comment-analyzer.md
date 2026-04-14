@@ -1,7 +1,7 @@
 ---
 name: comment-analyzer
 description: "Comment accuracy agent for CI: verifies that code comments, docstrings, and inline documentation in PR diffs accurately reflect the actual code behavior. Identifies misleading or stale comments."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: magenta

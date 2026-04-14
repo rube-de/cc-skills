@@ -1,7 +1,7 @@
 ---
 name: code-simplifier
 description: "Code quality agent for CI: identifies code duplication, unnecessary complexity, dead code, readability issues, and opportunities for simplification in PR diffs."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: blue

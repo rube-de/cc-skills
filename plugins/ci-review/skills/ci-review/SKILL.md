@@ -230,6 +230,21 @@ Wait for all scorers to complete. Collect their scores.
 
 **Read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the detailed format specification.
 
+**Derive `<type>` from the source agent.** The inline comment format uses `**[<severity>] <type>**`. Map the agent name to its type:
+
+| Agent | Type |
+|-------|------|
+| guidelines-checker | guidelines |
+| bug-detector | bug |
+| security-reviewer | security |
+| silent-failure-hunter | error-handling |
+| code-simplifier | quality |
+| deep-reviewer | review |
+| single-reviewer | review |
+| test-analyzer | test-coverage |
+| comment-analyzer | comment-accuracy |
+| type-analyzer | type-design |
+
 For each surviving finding:
 
 1. **Determine if it's inline-eligible**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.

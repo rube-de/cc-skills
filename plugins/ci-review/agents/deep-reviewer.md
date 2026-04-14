@@ -1,7 +1,7 @@
 ---
 name: deep-reviewer
 description: "Deep review agent for CI: unconstrained code review that traces control flow across function and file boundaries, follows call sites, and catches cross-cutting bugs that specialist agents miss."
-tools: [Read, Grep, Glob, Bash]
+tools: Read, Grep, Glob, Bash
 model: sonnet
 maxTurns: 15
 color: purple
