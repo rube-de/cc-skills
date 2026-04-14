@@ -47,11 +47,11 @@ Use `--min-severity <level>` to control which findings appear in the review:
 | Level | Includes | Default For |
 |-------|----------|-------------|
 | `low` | All findings (low, medium, high, critical) | `--agent` profile |
-| `medium` | medium + high + critical | — |
+| `medium` | medium + high + critical | Default for `--single`, `--lean`, `--full` |
 | `high` | high + critical | — |
 | `critical` | critical only | — |
 
-If not specified, `--min-severity` defaults to `low` (show all real findings). The severity filter is applied AFTER confidence scoring — it removes real but low-priority findings, not false positives.
+If not specified, `--min-severity` defaults to `medium` for normal runs and to `low` when `--agent` is used. The severity filter is applied AFTER confidence scoring — it removes real but low-priority findings, not false positives.
 
 ## Review Posting Rules (Inlined for Reliability)
 
@@ -83,7 +83,7 @@ Extract from the argument string:
 - **Focus text** (optional): free text describing what to focus the review on (e.g., "auth flow", "error handling")
 - **Profile flag** (optional): `--single`, `--lean`, `--full`, or `--agent`. Default: `--lean`. `--agent` implies `--full` agent set. `--single` uses one comprehensive agent instead of the specialist fan-out.
 - **Model override** (optional): `--model sonnet|opus`. Default: use each agent's built-in model (Sonnet for reviewers, Haiku for scorers). When set, overrides the model for review agents only — confidence scorers always use Haiku.
-- **Severity filter** (optional): `--min-severity low|medium|high|critical`. Default: `low`.
+- **Severity filter** (optional): `--min-severity low|medium|high|critical`. Default: `medium` (or `low` when `--agent`).
 
 If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--model sonnet|opus] [--min-severity <level>]"
 
@@ -97,7 +97,7 @@ gh pr view <PR#> --json state,number,title,url
 - If `gh pr view` fails (non-zero exit), abort: "PR #N not found or insufficient permissions."
 - If PR state is not `OPEN`, abort: "PR #N is {state}. Only open PRs can be reviewed."
 
-Print: "Reviewing PR #N: {title} ({url}) — profile: {lean|full|agent}"
+Print: "Reviewing PR #N: {title} ({url}) — profile: {single|lean|full|agent}"
 
 ### Step 3: Gather Context (Parallel)
 

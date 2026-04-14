@@ -35,7 +35,7 @@ For each finding that has a valid `file:line` in the PR diff, create an inline c
 
 Where:
 - `severity` = critical, high, medium, low
-- `type` = guidelines, bug, security, error-handling, quality, review (single-reviewer), test-coverage, comment-accuracy, type-design
+- `type` = guidelines, bug, security, error-handling, quality, review, test-coverage, comment-accuracy, type-design
 - `agent-name` = which review agent found this
 
 ### Rules for Inline Comments
@@ -54,7 +54,7 @@ The review body is the summary posted at the top of the review.
 ```markdown
 ## CI Review
 
-**Profile**: <single|lean|full> | **Findings**: <total> (<N> critical, <N> high, <N> medium, <N> low)
+**Profile**: <single|lean|full|agent> | **Findings**: <total> (<N> critical, <N> high, <N> medium, <N> low)
 
 ### Summary
 
@@ -76,7 +76,7 @@ The review body is the summary posted at the top of the review.
 
 No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-**Profile**: <single|lean|full>
+**Profile**: <single|lean|full|agent>
 ```
 
 ## 4. Construct the JSON Payload

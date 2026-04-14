@@ -44,7 +44,7 @@ jobs:
           plugins: |
             ci-review@rube-cc-skills
           prompt: |
-            /ci-review ${{ github.event.pull_request.number }} ${{ github.event.action == 'opened' && '--lean' || '--single' }}
+            /ci-review ${{ github.event.pull_request.number }} ${{ contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) && '--lean' || '--single' }}
           claude_args: |
             --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
 ```
