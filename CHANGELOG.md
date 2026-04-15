@@ -1,3 +1,10 @@
+# [1.60.0](https://github.com/rube-de/cc-skills/compare/v1.59.1...v1.60.0) (2026-04-15)
+
+
+### Features
+
+* **ci-review:** add CI-optimized multi-agent code review plugin ([#204](https://github.com/rube-de/cc-skills/issues/204)) ([a13ef31](https://github.com/rube-de/cc-skills/commit/a13ef318c0427234396426697d8b15ff212e293b))
+
 ## [1.59.1](https://github.com/rube-de/cc-skills/compare/v1.59.0...v1.59.1) (2026-04-11)
 
 
