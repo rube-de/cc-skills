@@ -762,3 +762,139 @@ Step 4: Only declare "ready to merge" if CI_STATUS=passing
 ```
 
 > Source: [PR #203](https://github.com/rube-de/cc-skills/pull/203) — `plugins/dlc/skills/babysit/SKILL.md` Steps 1, 1b, 2, 4
+
+---
+
+### CI review agents need consistent output format across all specialists
+
+When multiple review agents produce findings that must be aggregated (scored, filtered, mapped to inline comments), enforce a single output format across all agent definitions.
+
+**Bad** — each agent uses its own format:
+```text
+Agent A: "Found issue at line 42 in api.ts — high severity"
+Agent B: "## HIGH: api.ts:42 — injection risk"
+Agent C: "- [H] api.ts L42: user input not sanitized"
+```
+
+**Good** — uniform format parseable by the orchestrator:
+```markdown
+## Findings
+
+1. **[high]** `api.ts:42`
+   User input not sanitized.
+   **Recommendation:** Use parameterized queries.
+```
+
+The orchestrator (SKILL.md) parses findings to extract severity, file, line, message, and recommendation. Inconsistent formats cause findings to be silently dropped during aggregation.
+
+> Source: `plugins/ci-review/agents/*.md` — all review agents + `plugins/ci-review/skills/ci-review/SKILL.md` Step 5
+
+### GitHub PR reviews vs PR comments — use the right API
+
+`gh pr comment` posts a standalone comment. `gh api repos/OWNER/REPO/pulls/N/reviews` posts a proper review with inline annotations. For CI reviewers, always use the review API — inline comments appear next to the code, not buried in the comment thread.
+
+**Key rules for the review API:**
+- Use `event: "COMMENT"` for CI bots (never `APPROVE` or `REQUEST_CHANGES` — that gates merges)
+- Use `jq -n` to build JSON payloads (robust for dynamic construction)
+- Handle inline comment failures gracefully: retry without invalid comments → body-only → fall back to `gh pr comment`
+- `line` refers to the NEW file version. Always use `side: "RIGHT"`
+
+> Source: `plugins/ci-review/skills/ci-review/references/REVIEW-POSTING.md`, adapted from `plugins/jules-review/skills/jules-review/references/WORKFLOW.md`
+
+### Scorer agents need the same context they're asked to verify
+
+If a scoring/validation agent is told to check a criterion (e.g., "is this finding in the PR diff?"), it must receive the data needed to verify it. Unverifiable criteria are worse than no criteria — the agent either ignores them or hallucinates an assessment.
+
+**Bad** — scorer is told to check diff membership but doesn't receive the diff:
+```markdown
+## Evaluation Criteria
+1. Is the file:line in the diff? If not, score 0.
+```
+
+**Good** — scorer receives the diff in its prompt:
+```markdown
+## Finding
+{finding text}
+
+## PR Diff
+{diff text}
+```
+
+Haiku is cheap enough that passing the diff to each per-finding scorer is a negligible cost increase for a significant quality improvement.
+
+> Source: `plugins/ci-review/agents/confidence-scorer.md` + `plugins/ci-review/skills/ci-review/SKILL.md` Step 5
+
+### Don't prescribe actions agents can't perform
+
+Agent instructions should only ask for things the agent can actually do with its available tools and model capabilities. "Compile and run @example blocks" in a review agent prompt is unrealistic — the agent will either ignore it or waste turns. "Check if examples look correct given the function signature" is achievable.
+
+Similarly, avoid opinionated design philosophy (e.g., "avoid anemic models") unless the project's CLAUDE.md explicitly endorses it. Universal best practices (illegal states, immutability) are fine; school-of-thought preferences (DDD vs functional) produce false positives.
+
+> Source: `plugins/ci-review/agents/comment-analyzer.md`, `plugins/ci-review/agents/type-analyzer.md`
+
+### Detect before act — don't blindly run state-changing commands
+
+When a skill needs a prerequisite state (e.g., correct branch checked out), check first and only act if needed. Blindly running `gh pr checkout` is disruptive locally and redundant in CI where `actions/checkout` already did it.
+
+**Bad** — always run:
+```markdown
+### Step 3.5: Checkout PR Branch
+gh pr checkout <PR#>
+```
+
+**Good** — detect, then act only if needed:
+```markdown
+### Step 3.5: Ensure PR Branch
+CURRENT=$(git branch --show-current)
+PR_HEAD=$(gh pr view <PR#> --json headRefName --jq '.headRefName')
+# If already on correct branch → skip. If not → checkout.
+```
+
+> Source: `plugins/ci-review/skills/ci-review/SKILL.md` Step 3.5
+
+### Multi-agent "What NOT to Flag" exclusions create dead zones
+
+When specialized review agents have hard exclusion lists ("Do NOT flag error handling — the silent-failure-hunter handles that"), cross-cutting bugs fall into gaps between agents. Both agents think the other one covers it; neither catches it.
+
+**Bad** — hard handoffs create dead zones:
+```markdown
+## What NOT to Flag
+- Missing error handling (empty catches) — the silent-failure-hunter handles that
+- Security vulnerabilities — the security-reviewer handles that
+```
+
+**Good** — soft scoping with an escape hatch:
+```markdown
+## Scope
+Your primary focus is **logic errors**. Deprioritize style and pure code simplification.
+However, if you find a severe error handling gap, report it regardless of category.
+Only flag issues introduced or exposed by the diff.
+```
+
+The polling race condition in `use-deposit.ts` (reset() can't cancel in-flight async, causing stale callbacks) was caught by both baselines but missed by both multi-agent skill runs. The bug-detector thought it was "error handling territory" and the silent-failure-hunter saw it as "logic territory."
+
+**Fix**: (A) Add an unconstrained deep-reviewer agent as a safety net, (B) replace hard exclusions with soft weighting across all agents.
+
+> Source: ci-review skill eval iteration-1, PR oasisprotocol/flexvaults-sdk#43
+
+### Name agents by their actual function, not aspirational titles
+
+The `code-reviewer` agent was named like a generalist but was actually a CLAUDE.md conventions enforcer — the narrowest agent in the set. The misleading name obscured the fact that no agent was doing a broad, unconstrained review. Renamed to `guidelines-checker` to match its actual scope.
+
+> Source: ci-review skill eval iteration-1
+
+### Multi-agent specialization creates systematic blind spots that single-agent reviews don't have
+
+When 6 specialized agents each review within their defined scope, findings that span multiple domains — or that fall between scopes — get missed. In a 4-configuration eval (Sonnet/Opus × baseline/skill) against PR oasisprotocol/flexvaults-sdk#43, single-agent baselines found 8 real issues that neither skill run caught. They cluster into 4 gaps:
+
+**Gap 1 — Error message quality**: The silent-failure-hunter checks *whether* errors are surfaced, but not *whether the message is accurate*. A misleading error message after an on-chain transfer ("status check failing") makes users think their funds are lost. **Fix**: Added error message accuracy and non-cancellable state audit to the deep-reviewer's priorities.
+
+**Gap 2 — Fallback value semantic correctness**: `?? chains[0]` doesn't crash, but silently sends the wrong `chain_id` to the API — a data integrity bug hiding behind defensive code. No agent checked whether fallback values are semantically correct for the domain. **Fix**: Added fallback value analysis to the bug-detector.
+
+**Gap 3 — Cross-SDK parity**: When a diff touches both TS and Python, each agent reviews them independently but never compares implementations. A single-agent baseline naturally scans the whole diff and notices mismatches (optional vs required fields, `str(float)` edge cases, runtime type enforcement). **Fix**: Added cross-SDK parity checking to the guidelines-checker.
+
+**Gap 4 — Unused validation constraints**: When an API response includes `min_deposit` thresholds but the code never validates against them, it's a business logic gap. No agent checked "does the code use all available validation data?" **Fix**: Added unused validation constraint checking to the bug-detector.
+
+These are small prompt additions (2-4 lines each) but address systematic coverage gaps that repeat across PRs.
+
+> Source: ci-review skill eval iteration-2, PR oasisprotocol/flexvaults-sdk#43, files: `plugins/ci-review/agents/{deep-reviewer,bug-detector,guidelines-checker}.md`

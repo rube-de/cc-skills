@@ -1,0 +1,5 @@
+{
+  "name": "ci-review",
+  "version": "1.59.1",
+  "description": "CI-optimized code review: multi-agent parallel review with confidence scoring and atomic GitHub PR review posting via gh api"
+}
