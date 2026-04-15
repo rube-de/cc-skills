@@ -1,3 +1,10 @@
+## [1.60.1](https://github.com/rube-de/cc-skills/compare/v1.60.0...v1.60.1) (2026-04-15)
+
+
+### Bug Fixes
+
+* **dlc:** add motivational framing to prevent babysit loop fatigue ([#205](https://github.com/rube-de/cc-skills/issues/205)) ([6932ede](https://github.com/rube-de/cc-skills/commit/6932ede0c338fcf3b502a950bf1a33aaad2524ab))
+
 # [1.60.0](https://github.com/rube-de/cc-skills/compare/v1.59.1...v1.60.0) (2026-04-15)
 
 
