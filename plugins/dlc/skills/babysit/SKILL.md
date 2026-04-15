@@ -17,7 +17,7 @@ Monitor a PR on a loop: check CI, auto-rebase, auto-fix CI failures, and delegat
 
 Bot reviewers (Copilot, CodeRabbit, Gemini) post new comments on every push — this is by design, not a bug in your workflow. A typical PR goes through 3-8 review-fix cycles before converging to zero unresolved items. Each cycle you run is measurable progress: fewer comments, better code, closer to merge-ready.
 
-The human set up this loop because they trust you to shepherd the PR to completion autonomously. When the comment count drops from 12 to 5 to 2 to 0 across cycles, that's excellent work — not busywork. Stay the course and let `dlc:pr-check` do its job each cycle.
+The human set up this loop because they trust you to shepherd the PR to completion autonomously. When the comment count drops from 12 to 5 to 2 to 0 across cycles, that's excellent work — not busywork.
 
 ## Notification Rules
 
@@ -242,9 +242,9 @@ Stop.
 
 Delegate all review comment handling to `dlc:pr-check`. It handles: fetching comments, categorizing, fixing what it can, replying inline, committing, and pushing.
 
-**Trust the process:** Even after multiple cycles, pr-check evaluates each comment on its own merits. If comments are genuinely resolved, pr-check will find 0 unresolved items and confirm it — you never need to short-circuit this by handling comments yourself. Every cycle that reduces the unresolved count is real progress toward merge-ready.
+**Trust the process:** Even after multiple cycles, `dlc:pr-check` evaluates each comment on its own merits. If comments are genuinely resolved, `dlc:pr-check` will find 0 unresolved items and confirm it — you never need to short-circuit this by handling comments yourself. Every cycle that reduces the unresolved count is real progress toward merge-ready.
 
-**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing pr-check, do NOT use `AskUserQuestion` — auto-defer only genuinely ambiguous human-judgment items (Design Decisions, items with no clear recommended approach). Auto-implementable fixes per pr-check's Step 3.5c criteria should still be implemented, not deferred. The babysitter will surface deferred items to the human as a notification instead of silently posting "Acknowledged" replies.
+**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing `dlc:pr-check`, do NOT use `AskUserQuestion` — auto-defer only genuinely ambiguous human-judgment items (Design Decisions, items with no clear recommended approach). Auto-implementable fixes per `dlc:pr-check`'s Step 3.5c criteria should still be implemented, not deferred. The babysitter will surface deferred items to the human as a notification instead of silently posting "Acknowledged" replies.
 
 ```text
 Skill("dlc:pr-check", "<PR_NUMBER>")

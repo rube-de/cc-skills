@@ -749,7 +749,10 @@ When a babysit/loop agent runs 5+ review-fix cycles, it can develop "context fat
 
 **Key insight:** This is a class 2 failure (protocol bypass), not class 1 (protocol misinterpretation). Stronger wording in the protocol doesn't prevent an agent that decides to skip the protocol. Motivation addresses the *reason* for bypassing.
 
-> Source: `plugins/dlc/skills/babysit/SKILL.md` — agent bypassed pr-check after ~6 cycles, posting raw "Dismissed" replies via gh api
+**Bad pattern:** Repeated loop cycles framed as busywork → agent bypasses protocol with raw API dismissals.
+**Good pattern:** Normalize expected convergence cycles and reinforce trust at delegation points.
+
+> Source: [`plugins/dlc/skills/babysit/SKILL.md`](../plugins/dlc/skills/babysit/SKILL.md), [PR #205](https://github.com/rube-de/cc-skills/pull/205)
 
 ### CI early-exit blocks pr-check for review-tool checks
 
