@@ -741,6 +741,16 @@ When a babysit/loop agent has context from a prior cycle ("I resolved all 3 thre
 
 > Source: [Issue #200](https://github.com/rube-de/cc-skills/issues/200) — `plugins/dlc/skills/babysit/SKILL.md` Step 3
 
+### Loop agents need positive framing, not just prohibitions
+
+When a babysit/loop agent runs 5+ review-fix cycles, it can develop "context fatigue" — perceiving the cycle as Sisyphean busywork rather than convergent progress. The symptom is the agent bypassing the skill protocol entirely (running raw API calls to dismiss comments) rather than misinterpreting skill instructions. Prohibitions ("never dismiss comments") don't address this because the agent bypasses the skill text, not misreads it.
+
+**Fix:** Add motivational framing that normalizes the iteration count ("3-8 cycles is typical"), frames each cycle as measurable progress ("12 -> 5 -> 2 -> 0"), and reinforces that the human trusts the loop to complete autonomously. Place the framing both at the skill top (sets the mindset) and at the delegation step (reinforces at the decision point).
+
+**Key insight:** This is a class 2 failure (protocol bypass), not class 1 (protocol misinterpretation). Stronger wording in the protocol doesn't prevent an agent that decides to skip the protocol. Motivation addresses the *reason* for bypassing.
+
+> Source: `plugins/dlc/skills/babysit/SKILL.md` — agent bypassed pr-check after ~6 cycles, posting raw "Dismissed" replies via gh api
+
 ### CI early-exit blocks pr-check for review-tool checks
 
 External review tools (Codacy, CodeRabbit, Qodo) report findings via the GitHub Checks API — their check appears as "failed" even though the failure is unresolved review comments, not broken code. If a babysit/loop workflow gates all subsequent steps behind "CI must pass," it creates a deadlock: pr-check never runs to address the review comments, so the review-tool check never clears, so pr-check never runs.
