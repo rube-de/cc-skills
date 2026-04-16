@@ -36,7 +36,7 @@ Every council agent MUST return this JSON structure:
 ## Expertise Weight Matrix
 
 ```
-Task         Gemini  Codex   Qwen    GLM-5    Kimi K2.5
+Task         Gemini  Codex   Qwen    GLM-5.1  Kimi K2.5
 Security     0.90    0.80    0.70    0.75     0.70
 PR Review    0.85    0.90    0.80    0.75     0.80
 Architecture 0.85    0.70    0.65    0.80     0.75

@@ -60,7 +60,7 @@ done
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                       CONSULTANT EXPERTISE MATRIX                            │
 ├─────────────┬─────────┬─────────┬─────────┬─────────┬────────────────────────┤
-│ Task        │ Gemini  │ Codex   │ Qwen    │ GLM-5   │ Kimi K2.5              │
+│ Task        │ Gemini  │ Codex   │ Qwen    │ GLM-5.1 │ Kimi K2.5              │
 ├─────────────┼─────────┼─────────┼─────────┼─────────┼────────────────────────┤
 │ Security    │ 0.90    │ 0.80    │ 0.70    │ 0.75    │ 0.70                   │
 │ PR Review   │ 0.85    │ 0.90    │ 0.80    │ 0.75    │ 0.80                   │
@@ -312,8 +312,8 @@ qwen "@src/*.ts analyze these"
 qwen -s "@file test this"  # Sandbox mode
 
 # GLM
-opencode -m zai-coding-plan/glm-5 "prompt"
-opencode -m zai-coding-plan/glm-5 -f file "prompt"
+opencode -m zai-coding-plan/glm-5.1 "prompt"
+opencode -m zai-coding-plan/glm-5.1 -f file "prompt"
 
 # Kimi
 opencode run -m opencode/kimi-k2.5-free "prompt"
