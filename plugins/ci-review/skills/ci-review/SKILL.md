@@ -250,12 +250,17 @@ For each surviving finding that has a `file` and `line`:
    - At least one content signal matches
 
 For findings without a `file` (body-only findings):
-1. Search `EXISTING_COMMENTS.pr_comments` and `EXISTING_COMMENTS.review_bodies` for content signal matches only
+1. Search `EXISTING_COMMENTS.pr_comments` and `EXISTING_COMMENTS.review_bodies` for comments where:
+   - The comment body mentions a **file path** related to the finding's context (or the finding's description references the same area), AND
+   - A **key phrase** match exists (see below)
+   - Both conditions are required — body-only matching without a location anchor is too loose and would suppress unrelated architectural findings
 
-**Content signal matching** — any ONE of these suffices (case-insensitive):
-- **Severity tag**: the comment body contains the finding's severity (e.g., `[high]`, `**[high]**`, `high`)
+**Content signal matching** — to avoid false negatives from overly broad matches, require a **key phrase match** or **two or more** of the following signals (case-insensitive):
+- **Severity tag**: the comment body contains the finding's severity in a tag-like context (e.g., `[high]`, `**[high]**`)
 - **Type keyword**: the comment body contains the finding's type keyword (`bug`, `security`, `error-handling`, `quality`, `review`, `guidelines`, `test-coverage`, `comment-accuracy`, `type-design`)
-- **Key phrases**: extract 2–3 significant noun phrases from the finding description (the core issue — e.g., "SQL injection", "null check", "race condition", "missing validation") and check if any appear in the comment body
+- **Key phrases** (strongest signal): extract 2–3 significant noun phrases from the finding description (the core issue — e.g., "SQL injection", "null check", "race condition", "missing validation") and check if any appear in the comment body. A key phrase match alone is sufficient — it is specific enough to confirm the same issue.
+
+A single generic signal (severity tag alone or type keyword alone) is NOT sufficient — common words like `high`, `bug`, or `review` appear in many unrelated comments and would suppress distinct findings near the same location.
 
 **Matching policy:**
 - Match generously — better to skip a potential duplicate than to re-post noise
