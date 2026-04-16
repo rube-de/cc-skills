@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/rube-de/cc-skills/compare/v1.60.1...v1.61.0) (2026-04-16)
+
+
+### Features
+
+* **ci-review:** add cross-run comment dedup ([#206](https://github.com/rube-de/cc-skills/issues/206)) ([ec59975](https://github.com/rube-de/cc-skills/commit/ec5997568434646ef622df7d71002083239dcdbc))
+
 ## [1.60.1](https://github.com/rube-de/cc-skills/compare/v1.60.0...v1.60.1) (2026-04-15)
 
 
