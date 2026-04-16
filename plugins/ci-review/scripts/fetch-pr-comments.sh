@@ -21,7 +21,7 @@ die_json() {
 
 command -v gh >/dev/null 2>&1  || die_json "gh CLI not found — install from https://cli.github.com" "GH_NOT_FOUND"
 command -v jq >/dev/null 2>&1  || die_json "jq not found — install from https://jqlang.github.io/jq" "JQ_NOT_FOUND"
-gh auth status >/dev/null 2>&1 || die_json "gh not authenticated — run: gh auth login" "GH_AUTH"
+gh auth status >/dev/null || die_json "gh not authenticated — run: gh auth login" "GH_AUTH"
 
 # --- arg parsing -----------------------------------------------------------
 
@@ -41,7 +41,7 @@ if [ -n "$OWNER_REPO" ]; then
   OWNER=$(printf '%s\n' "$OWNER_REPO" | cut -d/ -f1)
   REPO=$(printf '%s\n' "$OWNER_REPO" | cut -d/ -f2)
 else
-  _repo_json=$(gh repo view --json owner,name 2>/dev/null) || die_json "Could not detect repository — pass OWNER/REPO as argument" "REPO_DETECT"
+  _repo_json=$(gh repo view --json owner,name) || die_json "Could not detect repository — pass OWNER/REPO as argument" "REPO_DETECT"
   OWNER=$(printf '%s\n' "$_repo_json" | jq -r '.owner.login')
   REPO=$(printf '%s\n' "$_repo_json" | jq -r '.name')
 fi
@@ -53,7 +53,7 @@ fi
 # --- PR number detection ---------------------------------------------------
 
 if [ -z "$PR_NUMBER" ]; then
-  PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null) || die_json "No PR found for current branch — push and open a PR first" "PR_DETECT"
+  PR_NUMBER=$(gh pr view --json number -q .number) || die_json "No PR found for current branch — push and open a PR first" "PR_DETECT"
 fi
 
 if [ -z "$PR_NUMBER" ] || ! printf '%s\n' "$PR_NUMBER" | grep -qE '^[0-9]+$'; then
@@ -95,12 +95,14 @@ jq -n \
   ($reviews | add // []) as $all_reviews |
 
   # Inline comments: filter empty bodies, extract dedup fields
+  # Truncate bodies to 2000 chars — enough for content-signal matching
+  # without bloating LLM context on comment-heavy PRs
   [ $all_inline[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
     {
       path: .path,
       line: (.line // .original_line // null),
-      body: .body,
+      body: (.body | .[0:2000]),
       author: (.user.login // "ghost"),
       created_at: .created_at
     }
@@ -110,7 +112,7 @@ jq -n \
   [ $all_pr[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
     {
-      body: .body,
+      body: (.body | .[0:2000]),
       author: (.user.login // "ghost"),
       created_at: .created_at
     }
@@ -120,7 +122,7 @@ jq -n \
   [ $all_reviews[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
     {
-      body: .body,
+      body: (.body | .[0:2000]),
       author: (.user.login // "ghost"),
       state: .state,
       created_at: .submitted_at
@@ -137,4 +139,4 @@ jq -n \
       total_review_bodies: ($review_bodies | length)
     }
   }
-'
+' || die_json "Failed to transform fetched comment payloads" "TRANSFORM_FAILED"

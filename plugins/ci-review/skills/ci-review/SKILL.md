@@ -101,7 +101,7 @@ Print: "Reviewing PR #N: {title} ({url}) — profile: {single|lean|full|agent}"
 
 ### Step 3: Gather Context (Parallel)
 
-Launch these four operations in parallel via Bash:
+Launch these four operations in parallel:
 
 **3a. Fetch PR diff:**
 ```bash
@@ -121,7 +121,9 @@ Run the `fetch-pr-comments.sh` script to retrieve all existing comments on this 
 ```bash
 sh ../../scripts/fetch-pr-comments.sh <PR#>
 ```
-Store the JSON output as `EXISTING_COMMENTS`. If the script fails (non-zero exit, or stderr contains `{"error":...}`), log a warning and continue — cross-run dedup is best-effort. On failure, set `EXISTING_COMMENTS` to:
+Store the JSON output as `EXISTING_COMMENTS`. Comment bodies are truncated to 2000 characters by the script to limit context size on comment-heavy PRs — this is sufficient for content-signal matching since actionable content appears early in comments.
+
+If the script fails (non-zero exit, or stderr contains `{"error":...}`), log a warning and continue — cross-run dedup is best-effort. On failure, set `EXISTING_COMMENTS` to:
 ```json
 {"inline_comments":[],"pr_comments":[],"review_bodies":[],"summary":{"total_inline":0,"total_pr_comments":0,"total_review_bodies":0}}
 ```
@@ -238,9 +240,9 @@ Wait for all scorers to complete. Collect their scores.
 **Existing comment dedup:** After within-run dedup, check each surviving finding against `EXISTING_COMMENTS` to skip findings already covered by prior comments on this PR. This prevents duplicate postings across multiple ci-review runs, and avoids piling on when humans or other bots already flagged the same issue.
 
 For each surviving finding that has a `file` and `line`:
-1. Search `EXISTING_COMMENTS.inline_comments` for any comment where:
+1. Search `EXISTING_COMMENTS.inline_comments` for any comment where (skip comments with `line: null`):
    - `path` matches the finding's file, AND
-   - `line` is within ±5 of the finding's line, AND
+   - `line` is numeric and within ±5 of the finding's line, AND
    - At least one **content signal** matches (see below)
    - If all three conditions match → mark the finding as already-commented and exclude it
 2. If no inline match found, search `EXISTING_COMMENTS.pr_comments` and `EXISTING_COMMENTS.review_bodies`:
