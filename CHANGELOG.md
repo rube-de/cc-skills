@@ -1,3 +1,10 @@
+# [1.62.0](https://github.com/rube-de/cc-skills/compare/v1.61.0...v1.62.0) (2026-04-16)
+
+
+### Features
+
+* **council:** upgrade GLM consultant from GLM-5 to GLM-5.1 ([#207](https://github.com/rube-de/cc-skills/issues/207)) ([be5310d](https://github.com/rube-de/cc-skills/commit/be5310d58fce4e4f71ae9757e32af4839b770587))
+
 # [1.61.0](https://github.com/rube-de/cc-skills/compare/v1.60.1...v1.61.0) (2026-04-16)
 
 
