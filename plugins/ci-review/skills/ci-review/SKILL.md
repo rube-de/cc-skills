@@ -101,7 +101,7 @@ Print: "Reviewing PR #N: {title} ({url}) — profile: {single|lean|full|agent}"
 
 ### Step 3: Gather Context (Parallel)
 
-Launch these three operations in parallel via Bash:
+Launch these four operations in parallel:
 
 **3a. Fetch PR diff:**
 ```bash
@@ -116,11 +116,26 @@ gh pr view <PR#> --json title,body,headRefName,baseRefName,files,additions,delet
 **3c. Discover CLAUDE.md files:**
 Search for CLAUDE.md files in the repo root and in directories containing changed files. Use `Glob` to find `**/CLAUDE.md` and `Read` to load the root CLAUDE.md and any others relevant to the changed files. **Preserve scope:** prefix each file's contents with its path (e.g., `### /CLAUDE.md`, `### /packages/api/CLAUDE.md`) so agents know which rules apply to which directories.
 
+**3d. Fetch existing PR comments:**
+Run the `fetch-pr-comments.sh` script to retrieve all existing comments on this PR (inline review comments, PR-level comments, and review bodies from all authors):
+```bash
+sh ../../scripts/fetch-pr-comments.sh <PR#>
+```
+Store the JSON output as `EXISTING_COMMENTS`. Comment bodies are truncated to 2000 characters by the script to limit context size on comment-heavy PRs — this is sufficient for content-signal matching since actionable content appears early in comments.
+
+If the script fails (non-zero exit, or stderr contains `{"error":...}`), log a warning and continue — cross-run dedup is best-effort. On failure, set `EXISTING_COMMENTS` to:
+```json
+{"inline_comments":[],"pr_comments":[],"review_bodies":[],"summary":{"total_inline":0,"total_pr_comments":0,"total_review_bodies":0}}
+```
+
+Print: "Fetched {total_inline} inline comments, {total_pr_comments} PR comments, {total_review_bodies} review bodies for cross-run dedup."
+
 Compile the context bundle:
 - `PR_DIFF`: the full diff text
 - `PR_META`: title, body, branch names, file list, stats
 - `CLAUDE_MD`: path-prefixed CLAUDE.md contents (or "No CLAUDE.md found")
 - `FOCUS`: the focus text (or empty)
+- `EXISTING_COMMENTS`: structured JSON of all existing PR comments (for cross-run dedup in Step 5)
 
 **Large diffs:** If the diff exceeds 10,000 lines, warn: "Large diff ({N} lines) — review quality may degrade for files not near the top of the diff." Do not truncate — let agents handle context naturally. They can always `Read` individual files for deeper investigation.
 
@@ -222,6 +237,39 @@ Wait for all scorers to complete. Collect their scores.
 2. **Near match**: same file and lines within 5 of each other, describing the same root cause → keep the higher-scored one, note the other agent in the `Found by:` tag (e.g., `Found by: bug-detector, security-reviewer`)
 3. **Semantic overlap**: different files or lines but describing the same conceptual issue (e.g., "missing null check on user input" flagged independently by bug-detector and security-reviewer at two call sites) → these are NOT duplicates — keep both, they're separate instances of the same pattern
 
+**Existing comment dedup:** After within-run dedup, check each surviving finding against `EXISTING_COMMENTS` to skip findings already covered by prior comments on this PR. This prevents duplicate postings across multiple ci-review runs, and avoids piling on when humans or other bots already flagged the same issue.
+
+For each surviving finding that has a `file` and `line`:
+1. Search `EXISTING_COMMENTS.inline_comments` for any comment where (skip comments with `line: null`):
+   - `path` matches the finding's file, AND
+   - `line` is numeric and within ±5 of the finding's line, AND
+   - At least one **content signal** matches (see below)
+   - If all three conditions match → mark the finding as already-commented and exclude it
+2. If no inline match found, search `EXISTING_COMMENTS.pr_comments` and `EXISTING_COMMENTS.review_bodies`:
+   - The comment body contains the finding's file path, AND
+   - At least one content signal matches
+
+For findings without a `file` (body-only findings):
+1. Search `EXISTING_COMMENTS.pr_comments` and `EXISTING_COMMENTS.review_bodies` for comments where:
+   - The comment body mentions a **file path** related to the finding's context (or the finding's description references the same area), AND
+   - A **key phrase** match exists (see below)
+   - Both conditions are required — body-only matching without a location anchor is too loose and would suppress unrelated architectural findings
+
+**Content signal matching** — to avoid false negatives from overly broad matches, require a **key phrase match** or **two or more** of the following signals (case-insensitive):
+- **Severity tag**: the comment body contains the finding's severity in a tag-like context (e.g., `[high]`, `**[high]**`)
+- **Type keyword**: the comment body contains the finding's type keyword (`bug`, `security`, `error-handling`, `quality`, `review`, `guidelines`, `test-coverage`, `comment-accuracy`, `type-design`)
+- **Key phrases** (strongest signal): extract 2–3 significant noun phrases from the finding description (the core issue — e.g., "SQL injection", "null check", "race condition", "missing validation") and check if any appear in the comment body. A key phrase match alone is sufficient — it is specific enough to confirm the same issue.
+
+A single generic signal (severity tag alone or type keyword alone) is NOT sufficient — common words like `high`, `bug`, or `review` appear in many unrelated comments and would suppress distinct findings near the same location.
+
+**Matching policy:**
+- Match generously — better to skip a potential duplicate than to re-post noise
+- All existing comments are checked regardless of author (human reviewers, bots, previous ci-review runs)
+- Resolution status is irrelevant — whether resolved or unresolved, the issue was already flagged
+- String matching is case-insensitive
+
+Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
+
 **If no findings survive filtering:** Build a no-findings review body using the template from REVIEW-POSTING.md section 3 ("No Findings"), then skip to Step 7 to post it.
 
 ### Step 6: Build Review Payload
@@ -314,6 +362,7 @@ Agents: N launched, N completed [, N failed]
 Raw findings: N collected
 After confidence scoring (≥65): N survived
 After severity filter (≥{min-severity}): N survived
+Already commented (skipped): N
 Posted: N inline comments + review body
 Review: <URL>
 ```

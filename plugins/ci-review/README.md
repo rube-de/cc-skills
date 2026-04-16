@@ -46,7 +46,7 @@ jobs:
           prompt: |
             /ci-review ${{ github.event.pull_request.number }} ${{ contains(fromJSON('["opened","reopened","ready_for_review"]'), github.event.action) && '--lean' || '--single' }}
           claude_args: |
-            --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
+            --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/reviews:*),Bash(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/comments:*),Bash(gh api repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}/comments:*),Bash(sh *scripts/fetch-pr-comments.sh:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*)"
 ```
 
 This gives you the best cost/coverage tradeoff: full multi-agent review once on open (~6 agents), then cheap single-agent reviews on each push (~1 agent + confidence scoring).
@@ -182,7 +182,8 @@ claude plugin install ci-review@rube-cc-skills
 │  3. Gather Context (parallel)                           │
 │     ├── gh pr diff (full diff, warns if >10K lines)     │
 │     ├── gh pr view --json (metadata)                    │
-│     └── Discover CLAUDE.md files                        │
+│     ├── Discover CLAUDE.md files                        │
+│     └── Fetch existing PR comments (cross-run dedup)    │
 │                                                         │
 │  3.5. Checkout PR branch — agents need file access      │
 │                                                         │
@@ -197,7 +198,8 @@ claude plugin install ci-review@rube-cc-skills
 │     ├── Score 0-100 (is this factually correct?)        │
 │     ├── Confidence filter: drop findings < 65           │
 │     ├── Severity filter: drop below --min-severity      │
-│     └── Deduplicate: exact match + near match (±5 lines)│
+│     ├── Deduplicate: exact match + near match (±5 lines)│
+│     └── Existing comment dedup: skip already-flagged    │
 │                                                         │
 │  6. Build Review Payload                                │
 │     ├── Inline comments (file:line in diff)             │
