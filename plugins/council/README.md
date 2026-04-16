@@ -7,7 +7,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
+Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.1, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
 > [!NOTE]
 > **Dual-Layer Architecture**: External consultants provide model diversity across 5 different AI providers, while internal Claude subagents provide deep, tool-assisted analysis — one for security/bugs/performance, one for quality/compliance/history/docs.
@@ -22,7 +22,7 @@ Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5, Kimi K2.5) and 
 | Gemini | `gemini` | Architecture, security, fast analysis |
 | Codex | `codex` | PR review, bug detection, security |
 | Qwen | `qwen` | Code quality, brainstorming, explanations |
-| GLM-5 | `opencode -m zai-coding-plan/glm-5` | Alternative perspectives, algorithms |
+| GLM-5.1 | `opencode -m zai-coding-plan/glm-5.1` | Alternative perspectives, algorithms |
 | Kimi K2.5 | `opencode run -m opencode/kimi-k2.5-free` | Long-context reasoning, creative solutions |
 
 **Layer 2 — Claude Subagents** (concern depth, tool access):
@@ -93,7 +93,7 @@ Built-in taxonomy auto-rejects:
 │     ├── gemini -p "review ..." -f changed_files          │
 │     ├── codex "review ..."                               │
 │     ├── qwen "review ..."                                │
-│     ├── opencode -m zai-coding-plan/glm-5 "review ..."   │
+│     ├── opencode -m zai-coding-plan/glm-5.1 "review ..."   │
 │     └── opencode run -m kimi-k2.5-free "review ..."      │
 │                                                          │
 │  3. Layer 2: Claude Subagents (parallel)                 │
@@ -159,7 +159,7 @@ command -v gemini && command -v codex && command -v qwen && command -v opencode
 # gemini  — https://github.com/google-gemini/gemini-cli
 # codex   — https://github.com/openai/codex
 # qwen    — https://github.com/QwenLM/qwen-cli
-# opencode — https://github.com/opencode-ai/opencode (GLM-5 + Kimi)
+# opencode — https://github.com/opencode-ai/opencode (GLM-5.1 + Kimi)
 ```
 
 The plugin operates in partial-success mode — it proceeds with whichever consultants are available.
@@ -172,7 +172,7 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | gemini CLI | Recommended | Gemini consultant |
 | codex CLI | Recommended | Codex consultant |
 | qwen CLI | Recommended | Qwen consultant |
-| opencode CLI | Recommended | GLM-5 + Kimi consultants |
+| opencode CLI | Recommended | GLM-5.1 + Kimi consultants |
 
 ## Troubleshooting
 
