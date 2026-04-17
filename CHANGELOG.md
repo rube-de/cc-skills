@@ -1,3 +1,10 @@
+## [1.62.1](https://github.com/rube-de/cc-skills/compare/v1.62.0...v1.62.1) (2026-04-17)
+
+
+### Bug Fixes
+
+* **dlc:** pr-check silent on non-actionable comments + progressive-disclosure split ([#208](https://github.com/rube-de/cc-skills/issues/208)) ([fc1f7be](https://github.com/rube-de/cc-skills/commit/fc1f7bedbb2df22125410b4a08af1ff0cfdc87c3))
+
 # [1.62.0](https://github.com/rube-de/cc-skills/compare/v1.61.0...v1.62.0) (2026-04-16)
 
 
