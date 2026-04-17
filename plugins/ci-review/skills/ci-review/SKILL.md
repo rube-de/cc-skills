@@ -81,10 +81,13 @@ Every Step in the `## Workflow` section emits a phase-start marker at its beginn
 Verify `gh` CLI is available and authenticated. Single Bash invocation using the Timing Logs single-call variant:
 
 ```bash
-echo "::group::[ci-review] Step 0: Prerequisites"START=$(date +%s)
+echo "::group::[ci-review] Step 0: Prerequisites"
+START=$(date +%s)
 gh auth status
 STATUS=$?
-echo "[ci-review] Step 0 done elapsed=$(( $(date +%s) - START ))s"echo "::endgroup::"exit $STATUS
+echo "[ci-review] Step 0 done elapsed=$(( $(date +%s) - START ))s"
+echo "::endgroup::"
+exit $STATUS
 ```
 
 If `gh` is not found (exit 127), abort with: "gh CLI is required. Install: https://cli.github.com/"
@@ -95,9 +98,12 @@ If not authenticated (non-zero exit from `gh auth status`), abort with: "gh is n
 Emit timing markers via a minimal Bash invocation even though argument parsing itself has no other shell work — `s1=<parse>` in the Step 8 summary must be a measured elapsed value, never a placeholder:
 
 ```bash
-echo "::group::[ci-review] Step 1: Parse Arguments"START=$(date +%s)
+echo "::group::[ci-review] Step 1: Parse Arguments"
+START=$(date +%s)
 # Argument parsing is performed by the model from the conversation — no shell work required here.
-echo "[ci-review] Step 1 done elapsed=$(( $(date +%s) - START ))s"echo "::endgroup::"```
+echo "[ci-review] Step 1 done elapsed=$(( $(date +%s) - START ))s"
+echo "::endgroup::"
+```
 
 Extract from the argument string:
 - **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number and store as `PR_NUMBER`. If the URL points to a different repository than the current one, abort with: "Cross-repo URLs are not supported. Run this skill from the target repo, or pass just the PR number."
@@ -113,10 +119,13 @@ If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [
 Single Bash invocation using the Timing Logs single-call variant. Preserves the `gh pr view` exit status so non-zero (PR not found, permissions) propagates for the abort check:
 
 ```bash
-echo "::group::[ci-review] Step 2: Eligibility Check"START=$(date +%s)
+echo "::group::[ci-review] Step 2: Eligibility Check"
+START=$(date +%s)
 gh pr view <PR#> --json state,number,title,url
 STATUS=$?
-echo "[ci-review] Step 2 done elapsed=$(( $(date +%s) - START ))s"echo "::endgroup::"exit $STATUS
+echo "[ci-review] Step 2 done elapsed=$(( $(date +%s) - START ))s"
+echo "::endgroup::"
+exit $STATUS
 ```
 
 - If `gh pr view` fails (non-zero exit), abort: "PR #N not found or insufficient permissions."
@@ -174,7 +183,8 @@ Compile the context bundle:
 Emit the Step-3 phase-end marker in a final Bash call after the context bundle is compiled (substitute the epoch you remembered from the phase-start call):
 
 ```bash
-echo "[ci-review] Step 3 done elapsed=$(( $(date +%s) - <STEP3_START_EPOCH> ))s"echo "::endgroup::"```
+echo "[ci-review] Step 3 done elapsed=$(( $(date +%s) - <STEP3_START_EPOCH> ))s"
+echo "::endgroup::"```
 
 ### Step 3.5: Ensure PR Branch is Checked Out
 
@@ -196,7 +206,8 @@ Review agents use `Read`, `Grep`, and `git blame` to examine the actual code —
 Close Step 3.5 with a phase-end Bash call (required on every branch — already-on-commit, checkout-succeeded, and checkout-failed-but-continuing):
 
 ```bash
-echo "[ci-review] Step 3.5 done elapsed=$(( $(date +%s) - <STEP3_5_START_EPOCH> ))s"echo "::endgroup::"```
+echo "[ci-review] Step 3.5 done elapsed=$(( $(date +%s) - <STEP3_5_START_EPOCH> ))s"
+echo "::endgroup::"```
 
 ### Step 4: Launch Review Agents
 
@@ -257,7 +268,8 @@ Changed files: {count} ({additions}+ / {deletions}-)
 After all agents have returned (or been recorded as failed), emit the Step-4 phase-end marker (substitute the remembered epoch):
 
 ```bash
-echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"echo "::endgroup::"```
+echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
+echo "::endgroup::"```
 
 ### Step 5: Confidence Scoring
 
@@ -340,7 +352,8 @@ Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
 After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
 
 ```bash
-echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"echo "::endgroup::"```
+echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
+echo "::endgroup::"```
 
 ### Step 6: Build Review Payload
 
@@ -390,7 +403,8 @@ For each surviving finding:
 After the payload is built, emit the Step-6 phase-end marker:
 
 ```bash
-echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"echo "::endgroup::"```
+echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+echo "::endgroup::"```
 
 ### Step 7: Post Review
 
@@ -437,7 +451,8 @@ PAYLOAD=$(jq -n \
 Print the review URL on success, then emit the Step-7 phase-end marker. **The same two-line phase-end block must follow every exit path above** (successful post, retry success after invalid-comment cleanup, drop-inline fallback success, `gh pr comment` fallback, and the stdout-print terminal fallback) so the Step-7 group is always closed:
 
 ```bash
-echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - <STEP7_START_EPOCH> ))s"echo "::endgroup::"```
+echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - <STEP7_START_EPOCH> ))s"
+echo "::endgroup::"```
 
 ### Step 8: Summary
 
