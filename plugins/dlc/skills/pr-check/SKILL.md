@@ -107,11 +107,13 @@ Using the `REVIEW_BODIES` array from Step 1, classify each review body:
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | A DLC reply was already posted for this review body (detected by scanning `ISSUE_COMMENTS` for a sentinel `<!-- dlc-reply:{database_id} -->` where `{database_id}` matches this review body's `database_id`), OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
+| **Resolved** | Any of: (a) a DLC reply was already posted for this review body (sentinel `<!-- dlc-reply:{database_id} -->` present in `ISSUE_COMMENTS`); (b) the body is non-actionable **regardless of `state`** — generic approval ("LGTM"), bot/CI summaries ("No actionable issues found", "Reviewed N files — no concerns", "Lint passed"), or any informational content with no specific change request, question, or concern; (c) the body is purely a **summary of the review's own inline comments** — references "see inline comments", enumerates findings already posted as inline threads on this review, or adds no independent content beyond the accompanying threads. |
 | **Dismissed** | `state == "DISMISSED"` |
-| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) |
+| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) that is not already a summary of the review's own inline comments. |
 
-> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
+> **Note:** Every review body requires body inspection, not just `APPROVED` ones. A `COMMENTED` review whose body is "No actionable issues found" is Resolved — the `COMMENTED` state alone does not imply actionable content. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
+
+> **Silent Resolved:** Review bodies classified Resolved via the non-actionable or summary-only criteria produce **no outgoing reply** in Step 4. They are counted toward coverage (Step 4b) as Resolved without any GitHub comment being posted. Do not manufacture an "Answered:" reply for a body that already said nothing needed doing.
 
 ### Issue comment categorization
 
@@ -124,6 +126,13 @@ Using the `REVIEWER_ISSUE_COMMENTS` array from Step 1 (the filtered set that mat
 | **Unresolved** | All other issue comments with actionable items, questions, or concerns that have not been resolved via a DLC reply. Issue comments have no `state` field — treat all non-resolved actionable comments as unresolved. |
 
 > **Note:** Issue comments have no `path`/`line` like threads, no `state` like review bodies, and no parent-child links (they are a flat array). To reliably detect prior DLC replies, check for the `<!-- dlc-reply:{database_id} -->` sentinel in subsequent issue comments. Parse the body for actionable items (specific change requests, code findings, questions). If the body is purely informational (status updates, CI results with no action items) and does not require any follow-up, classify it as **Resolved**, even if no DLC reply was posted.
+>
+> **Examples of non-actionable issue comments that are Resolved without a DLC reply:**
+> - Bot CI summaries: "No actionable issues found", "Lint passed", "All checks green", "Reviewed N files across M changed lines"
+> - Status updates from the PR author or reviewers: "rebased", "resolved conflicts", "pushed fix"
+> - Informational links or context with no ask (e.g., "For reference, see the spec at …")
+>
+> **Silent Resolved:** Issue comments classified Resolved via the non-actionable path produce **no outgoing reply** in Step 4. Do not generate an "Answered: no action needed" message — the original comment already said so.
 
 ### Unresolved sub-categories
 
@@ -329,6 +338,8 @@ The user can always override the recommendation by choosing any option.
 
 For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a reply using the appropriate routing based on `reply_type`.
 
+> **Silent-Resolved gate:** Before routing any reply, confirm the item is not Resolved. Items classified Resolved in Step 2 — including non-actionable bot/CI summaries, generic approvals, summary-only review bodies, and informational issue comments — produce **no outgoing reply**. They are already counted toward coverage (Step 4b) as Resolved. Do not manufacture an "Answered:" message for an item whose original content already said nothing needed doing.
+
 ### Reply routing
 
 Use the `reply_type` field from the comment data to determine the reply mechanism. Note: threads have two ID fields — `rest_id` (integer, used for REST API `in_reply_to`) and `id` (GraphQL node ID like `PRRT_kwDORKvRbs510iY6`, used for `resolveReviewThread`). Use the correct one for each call.
@@ -378,6 +389,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 | Category | Reply prefix | Example |
 |----------|-------------|---------|
+| **Resolved (silent)** | — (no reply posted) | Non-actionable bot summary, summary-only review body, or informational issue comment. Skip entirely. |
 | **Fixed** | `Fixed: {brief description}` | `Fixed: renamed variable to camelCase` |
 | **Dismissed** | `Dismissed: {reason}` | `Dismissed: review formally dismissed via GitHub` |
 | **Discussion-Answered** | `Answered: {explanation}` | `Answered: The function is async because it awaits the database query on line 45. The null check exists in the caller at api.ts:23.` |

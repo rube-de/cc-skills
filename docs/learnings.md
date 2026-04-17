@@ -911,3 +911,27 @@ When 6 specialized agents each review within their defined scope, findings that 
 These are small prompt additions (2-4 lines each) but address systematic coverage gaps that repeat across PRs.
 
 > Source: ci-review skill eval iteration-2, PR oasisprotocol/flexvaults-sdk#43, files: `plugins/ci-review/agents/{deep-reviewer,bug-detector,guidelines-checker}.md`
+
+### LLM agent skills that post replies need an explicit "silence" outcome
+
+`dlc:pr-check` had reply categories for Fixed / Dismissed / Answered but no first-class "no reply needed" outcome. The Step 2 categorization rubric gated "non-actionable → Resolved" on `state == "APPROVED"`, so a bot review posted with `state == "COMMENTED"` and body "No actionable issues found" fell through to Unresolved, got rescued by Step 3.5b as a "Clarification Answer", and received a reply echoing what the original comment already said ("Answered: no action needed — CI Review reported no actionable issues").
+
+The same shape produced a second bug: a review body that summarized its own inline comments had no path to Resolved, so Step 4 posted a redundant top-level "Answered: see inline thread replies — …" comment alongside the inline replies.
+
+**Root pattern:** When an agent is instructed to "reply to each unresolved item", the Unresolved classification becomes a funnel that always exits through a posted comment. If the rubric has no "this exists but nothing needs to be said about it" case, the agent will manufacture content to fit one of the reply slots.
+
+**Fix:** Broaden Resolved to cover non-actionable bodies regardless of review `state`, add a "summary-only review body" sub-case, and add an explicit **Silent-Resolved gate** at the top of the reply step that tells the agent to short-circuit before routing.
+
+**Bad pattern (narrow gate, forced reply):**
+```
+Resolved: state == "APPROVED" AND non-actionable
+Unresolved: everything else → gets a reply
+```
+
+**Good pattern (content-driven gate, silence is an outcome):**
+```
+Resolved: already-replied OR non-actionable (any state) OR summary-only
+Reply categories: Silent (no post) | Fixed | Dismissed | Answered
+```
+
+> Source: branch fix/pr-check-silent-on-non-actionable, file: `plugins/dlc/skills/pr-check/SKILL.md`
