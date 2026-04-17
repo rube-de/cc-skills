@@ -64,9 +64,33 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - Do not repeat correctly addressed items
 - If no inline comments, omit the comments array and just post the body
 
+## Timing Logs
+
+Emit phase-boundary markers at every Step so the GitHub Actions log shows where time is spent. GitHub Actions renders `::group::` / `::endgroup::` as collapsible sections in the run UI; local runs see them as plain text.
+
+**Phase-start** (first Bash call of each Step):
+```bash
+echo "::group::[ci-review] Step N: <name>"
+date -u +"[ci-review] Step N start t=%H:%M:%SZ"
+date +%s   # record epoch — remember this value, pass it to the phase-end call
+```
+
+**Phase-end** (last Bash call of each Step — substitute the remembered start epoch for `<START_EPOCH>`):
+```bash
+echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <START_EPOCH> ))s"
+echo "::endgroup::"
+```
+
+Bash tool state does not persist between calls — **you (the model) must remember each Step's start epoch** from the `date +%s` output and substitute it into the phase-end command. Track elapsed seconds per step and report them in the Step 8 summary as `Phase timings (s): s0=... s1=... ... total=...`.
+
+For Steps whose body is already a single Bash call (Steps 0, 2, 7), fold the start/end markers into that same call to avoid extra tool round-trips. For Steps with agent fan-out (Steps 4, 5), emit the phase-start marker, wait for all agents to return, then emit the phase-end marker — the elapsed value will include agent wall-clock time, which is exactly what we want to measure.
+
 ## Workflow
 
 ### Step 0: Prerequisites
+
+Emit Step-0 phase-start and phase-end markers per the Timing Logs convention (fold into the single Bash call below).
+
 
 Verify `gh` CLI is available and authenticated:
 ```bash
@@ -77,6 +101,8 @@ If `gh` is not found, abort with: "gh CLI is required. Install: https://cli.gith
 If not authenticated, abort with: "gh is not authenticated. Run: gh auth login"
 
 ### Step 1: Parse Arguments
+
+Emit Step-1 phase-start and phase-end markers per the Timing Logs convention (argument parsing is fast — fold into a single Bash call if you need one, or just print the timing lines without actual work).
 
 Extract from the argument string:
 - **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number and store as `PR_NUMBER`. If the URL points to a different repository than the current one, abort with: "Cross-repo URLs are not supported. Run this skill from the target repo, or pass just the PR number."
@@ -89,6 +115,8 @@ If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [
 
 ### Step 2: Eligibility Check
 
+Emit Step-2 phase-start and phase-end markers per the Timing Logs convention (fold into the single Bash call below).
+
 Run via Bash:
 ```bash
 gh pr view <PR#> --json state,number,title,url
@@ -100,6 +128,8 @@ gh pr view <PR#> --json state,number,title,url
 Print: "Reviewing PR #N: {title} ({url}) — profile: {single|lean|full|agent}"
 
 ### Step 3: Gather Context (Parallel)
+
+Emit the Step-3 phase-start marker before launching the parallel operations; emit the phase-end marker after all four have returned and the context bundle is compiled.
 
 Launch these four operations in parallel:
 
@@ -141,6 +171,8 @@ Compile the context bundle:
 
 ### Step 3.5: Ensure PR Branch is Checked Out
 
+Emit Step-3.5 phase-start and phase-end markers per the Timing Logs convention.
+
 Review agents use `Read`, `Grep`, and `git blame` to examine the actual code — not just the diff. Verify the correct branch is active:
 
 ```bash
@@ -153,6 +185,8 @@ HEAD_SHA=$(git rev-parse HEAD)
 - If checkout fails → warn but continue. Pass a note to agents: "File access unavailable — review from diff only." This lets agents skip `Read`/`git blame` rather than wasting turns on failing tool calls.
 
 ### Step 4: Launch Review Agents
+
+Emit the Step-4 phase-start marker before launching agents; emit the phase-end marker after every agent has returned (or been recorded as failed). This is typically the longest phase — the elapsed value tells the user exactly how much time agent reasoning consumed.
 
 Select agents based on profile:
 
@@ -202,6 +236,8 @@ Changed files: {count} ({additions}+ / {deletions}-)
 **Agent failure handling:** If an agent fails, times out, or returns unparseable output, log the failure and continue with findings from the remaining agents. Do not abort the review because one agent failed. Record the failure in the Step 8 summary (e.g., "Agents: 8 launched, 7 completed, 1 failed").
 
 ### Step 5: Confidence Scoring
+
+Emit the Step-5 phase-start marker before launching scorers; emit the phase-end marker after all scorers have returned and filtering/deduplication is complete.
 
 Collect all findings from all agents into a single list. For each finding, record:
 - The finding text (severity, file, line, message, recommendation)
@@ -274,6 +310,8 @@ Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
 
 ### Step 6: Build Review Payload
 
+Emit Step-6 phase-start and phase-end markers per the Timing Logs convention.
+
 **Read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the detailed format specification.
 
 **Derive `<type>` from the source agent.** The inline comment format uses `**[<severity>] <type>**`. Map the agent name to its type:
@@ -311,6 +349,8 @@ For each surviving finding:
    - List any body-only findings (not in diff) under "### Findings Not in Diff"
 
 ### Step 7: Post Review
+
+Emit Step-7 phase-start and phase-end markers per the Timing Logs convention (can be folded into the `gh api` Bash call below).
 
 Resolve the repository owner and repo:
 ```bash
@@ -353,6 +393,8 @@ Print the review URL on success.
 
 ### Step 8: Summary
 
+No `::group::` wrapper for this step — the summary should be visible at the top level of the log. Still include the total elapsed time.
+
 Print a brief summary for the CI log:
 
 ```
@@ -365,7 +407,10 @@ After severity filter (≥{min-severity}): N survived
 Already commented (skipped): N
 Posted: N inline comments + review body
 Review: <URL>
+Phase timings (s): s0=<prereq> s1=<parse> s2=<eligibility> s3=<context> s3_5=<checkout> s4=<agents> s5=<scoring> s6=<payload> s7=<post> total=<sum>
 ```
+
+The `Phase timings` line is the most load-bearing output for post-run analysis — list every step's elapsed seconds (using the values you tracked across the Timing Logs markers) plus a `total=` that is the sum of all phases. Use `0` for any step that was skipped (e.g., `s3_5=0` if checkout was skipped because HEAD already matched).
 
 ## Agent Output Format
 
