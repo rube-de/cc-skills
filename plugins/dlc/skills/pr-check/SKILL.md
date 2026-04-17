@@ -125,10 +125,12 @@ A review body is **Resolved** when any of these apply:
 
 1. **Already replied** — a DLC reply was posted for this review body (sentinel `<!-- dlc-reply:{database_id} -->` is present in `ISSUE_COMMENTS`).
 2. **Non-actionable, regardless of `state`** — generic approval ("LGTM"), bot/CI summaries ("No actionable issues found", "Reviewed N files — no concerns", "Lint passed"), or any informational content with no specific change request, question, or concern.
-3. **Summary-only** — the body is purely a summary of the review's own inline comments: references "see inline comments", enumerates findings already posted as inline threads on this review, or adds no independent content beyond the accompanying threads.
+3. **Summary-only** — the body **explicitly signals** that it is a summary of inline comments (e.g. "see inline comments", "Actionable comments posted: N", a files-changed table that enumerates findings posted as inline threads, a structured walkthrough referencing other comments) **and** adds no independent content beyond that enumeration. **When in doubt, do NOT apply this rule** — classify the body as Unresolved instead. Silencing an independent actionable review body is worse than posting an extra reply.
+
+> **Linkage caveat for Summary-only:** `pr-comments.sh` returns `threads` and `review_bodies` as flat arrays with no review-id link, so Summary-only classification relies on the body's textual self-signal rather than structural linkage to *its own* inline threads. In a PR with multiple review submissions from the same reviewer, a body that *looks* like a summary may actually be an independent review — err toward Unresolved when the body does not explicitly self-label as a summary.
 
 > **Note:** Every review body requires body inspection, not just `APPROVED` ones. A `COMMENTED` review whose body is "No actionable issues found" is Resolved — the `COMMENTED` state alone does not imply actionable content. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
-
+>
 > **Silent Resolved:** Review bodies classified Resolved via the non-actionable or summary-only criteria produce **no outgoing reply** in Step 4. They are counted toward coverage (Step 4b) as Resolved without any GitHub comment being posted. Do not manufacture an "Answered:" reply for a body that already said nothing needed doing.
 
 ### Issue comment categorization

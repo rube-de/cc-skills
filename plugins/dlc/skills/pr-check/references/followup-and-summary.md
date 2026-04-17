@@ -12,7 +12,7 @@ If none of these exist, SKILL.md skips this reference entirely and jumps to the 
 ## Step 5a: User-Gated Issue Creation
 
 > **Skip this sub-step entirely** if there are no issue-creation candidates — i.e. no **Discussion-Tracked**, **Blocked**, or **user-skipped Fixable** items remain. For example, when the only remaining items are Discussion-Deferred, proceed directly to Step 5b below (issue creation has no candidates to consider).
-
+>
 > **Note:** Discussion items resolved in Step 3.5 (implemented as Implementable Fix or answered as Clarification) are already handled in SKILL.md Step 4. Discussion items deferred to the author proceed directly to Step 5b below — they do not appear here.
 
 **Per-item decisions from the Discussion workflow are final:**
