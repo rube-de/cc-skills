@@ -11,6 +11,8 @@ If none of these exist, SKILL.md skips this reference entirely and jumps to the 
 
 ## Step 5a: User-Gated Issue Creation
 
+> **Skip this sub-step entirely** if there are no issue-creation candidates — i.e. no **Discussion-Tracked**, **Blocked**, or **user-skipped Fixable** items remain. For example, when the only remaining items are Discussion-Deferred, proceed directly to Step 5b below (issue creation has no candidates to consider).
+
 > **Note:** Discussion items resolved in Step 3.5 (implemented as Implementable Fix or answered as Clarification) are already handled in SKILL.md Step 4. Discussion items deferred to the author proceed directly to Step 5b below — they do not appear here.
 
 **Per-item decisions from the Discussion workflow are final:**
@@ -72,36 +74,36 @@ If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and prin
 - **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
 - **Branch 3** (both Discussion-Tracked and Blocked/skipped items): create the follow-up issue with only Discussion-Tracked items. The Blocked/skipped items proceed to Step 5b as "will be addressed by the author."
 
-## Step 5b: Decision-Aware Inline Replies
+## Step 5b: Decision-Aware Replies
 
 If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, skip this step.
 
-Post inline replies reflecting each item's outcome. Items arrive here from different decision paths:
+Post replies reflecting each item's outcome. The routing below covers inline threads, review bodies, and issue comments — not only inline threads. Items arrive here from different decision paths:
 
 For each **Discussion-Deferred** item (user chose "Defer to author" in the Discussion workflow), always reply:
 
-| Item Status | Inline Reply Text |
-|-------------|-------------------|
+| Item Status | Reply Text |
+|-------------|------------|
 | Discussion-Deferred | `Acknowledged — will be addressed by the author` |
 
 For each **Discussion-Tracked** item (included in the follow-up issue in Step 5a above), reply based on issue creation outcome:
 
-| Item Status | Inline Reply Text |
-|-------------|-------------------|
+| Item Status | Reply Text |
+|-------------|------------|
 | Discussion-Tracked (issue created) | `Acknowledged — tracked in #ISSUE_NUMBER` |
 | Discussion-Tracked (issue creation failed) | `Acknowledged — tracked in follow-up issue (draft saved to {draft_path})` |
 
 For each **Blocked** comment, map the user's Step 5a decision:
 
-| User Decision (Step 5a) | Inline Reply Text |
-|------------------------|-------------------|
+| User Decision (Step 5a) | Reply Text |
+|------------------------|------------|
 | Included in follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
 | Handle manually | `Acknowledged — will be addressed by the author` |
 
 For each **user-skipped Fixable** comment, always reply:
 
-| Item Status | Inline Reply Text |
-|-------------|-------------------|
+| Item Status | Reply Text |
+|-------------|------------|
 | Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
 
 Use the same reply routing as SKILL.md Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.

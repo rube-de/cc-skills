@@ -57,4 +57,13 @@ Assign a confidence level:
 
 ## Outcome
 
-Items that implement successfully reclassify as **Fixed** — they enter the SKILL.md Step 4 reply queue with the `Fixed:` prefix. Items that fail implementation reclassify as **Blocked** and are handled by the Step 5 follow-up flow (see `followup-and-summary.md`).
+Each Fixable item lands in one of these final states:
+
+| User Choice / Result | Reclassification | Downstream handling |
+|----------------------|------------------|---------------------|
+| Implementation succeeds | **Fixed** | SKILL.md Step 4 reply queue with `Fixed:` prefix |
+| User chose "Skip this comment" | **Skipped (user decision)** | SKILL.md Step 5 follow-up flow — acknowledged in [`followup-and-summary.md`](followup-and-summary.md) Step 5b with `Acknowledged — deferred (out of scope for this PR)` |
+| User chose "Implement with modification" | Proceeds as Fixed once the modified implementation lands | Same as Fixed |
+| Implementation fails (tool error, conflict) | **Blocked** with reason `implementation failed: {error}` | SKILL.md Step 5 follow-up flow (issue creation + acknowledgement) |
+
+Coverage verification (Step 4b) counts each of these final states toward the reviewer's total — no Fixable item is ever silently dropped.

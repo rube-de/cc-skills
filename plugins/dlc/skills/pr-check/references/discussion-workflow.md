@@ -120,8 +120,8 @@ The user can always override the recommendation by choosing any option.
 |-------------|--------|----------------------|
 | **Implement now** | Confidence-gated implementation (see above) | Reclassify as **Fixed** — enters Step 4 reply queue with `Fixed:` prefix |
 | **Reply with explanation** | Draft the explanation reply text | Reclassify as **Discussion-Answered** — enters Step 4 reply queue |
-| **Defer to author** | No immediate action | Reclassify as **Discussion-Deferred** — enters Step 5 follow-up flow for decision-aware reply |
-| **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue |
+| **Defer to author** | No immediate action | Reclassify as **Discussion-Deferred** — enters Step 5 follow-up flow for decision-aware reply (see [`followup-and-summary.md`](followup-and-summary.md)) |
+| **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue (see [`followup-and-summary.md`](followup-and-summary.md)) |
 
 > **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in SKILL.md Step 4.
 > **If an implementation fails** (tool error, file not found, conflict), reclassify as **Blocked** with the reason "implementation failed: {error}" — same guardrail as `fixable-workflow.md` section 3.

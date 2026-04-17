@@ -923,13 +923,13 @@ The same shape produced a second bug: a review body that summarized its own inli
 **Fix:** Broaden Resolved to cover non-actionable bodies regardless of review `state`, add a "summary-only review body" sub-case, and add an explicit **Silent-Resolved gate** at the top of the reply step that tells the agent to short-circuit before routing.
 
 **Bad pattern (narrow gate, forced reply):**
-```
+```text
 Resolved: state == "APPROVED" AND non-actionable
 Unresolved: everything else → gets a reply
 ```
 
 **Good pattern (content-driven gate, silence is an outcome):**
-```
+```text
 Resolved: already-replied OR non-actionable (any state) OR summary-only
 Reply categories: Silent (no post) | Fixed | Dismissed | Answered
 ```

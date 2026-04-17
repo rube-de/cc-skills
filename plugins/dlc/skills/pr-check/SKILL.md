@@ -111,13 +111,15 @@ Using the `.threads` array from Step 1, classify each top-level review thread:
 
 ### Review body categorization
 
-Using the `REVIEW_BODIES` array from Step 1, classify each review body:
+Using the `REVIEW_BODIES` array from Step 1, classify each review body.
+
+> **Precedence:** When multiple rows match, apply them in this order: **Dismissed** first, then **Resolved**, then **Unresolved**. A review with `state == "DISMISSED"` is always Dismissed, even if the body is non-actionable or a summary — this preserves the `Dismissed:` acknowledgement and correct status accounting.
 
 | Category | Criteria |
 |----------|----------|
 | **Resolved** | Any of the three cases listed below the table. |
 | **Dismissed** | `state == "DISMISSED"` |
-| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) that is not already a summary of the review's own inline comments. |
+| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) that is **not Summary-only** (see Resolved criteria below for the Summary-only definition). |
 
 A review body is **Resolved** when any of these apply:
 
@@ -298,12 +300,12 @@ Do **not** retry more than once. A second failure indicates a structural issue t
 
 ## Step 5: Follow-Up Issue, Decision-Aware Replies, and PR Summary
 
-If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Steps 3 and 3.5, skip this step and continue to Step 6.
+If no Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Steps 3 and 3.5, skip this step and continue to Step 6.
 
 Otherwise, read [`references/followup-and-summary.md`](references/followup-and-summary.md) now and follow its three sub-steps:
 
 - **Step 5a** — user-gated follow-up issue creation (auto-create when only Discussion-Tracked items exist; `AskUserQuestion`-gated when Blocked or skipped Fixable items exist).
-- **Step 5b** — decision-aware inline replies for Discussion-Deferred, Discussion-Tracked, Blocked, and skipped Fixable items. These replies do **not** resolve threads — the underlying work is pending.
+- **Step 5b** — decision-aware replies (inline threads, review bodies, and issue comments) for Discussion-Deferred, Discussion-Tracked, Blocked, and skipped Fixable items. These replies do **not** resolve inline threads — the underlying work is pending.
 - **Step 5c** — PR-level summary comment with status table, per-item decisions, and follow-up pointers.
 
 The reference covers the three branching cases for issue creation, the per-item reply text table, and the summary template.
