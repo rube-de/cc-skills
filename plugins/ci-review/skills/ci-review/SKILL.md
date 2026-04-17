@@ -433,7 +433,7 @@ PAYLOAD=$(jq -n \
   '{event: $event, body: $body, comments: $comments}')
 
 REVIEW_URL=$(echo "$PAYLOAD" | gh api \
-  "repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/reviews" \
+  "repos/<OWNER>/<REPO>/pulls/<PR#>/reviews" \
   --method POST \
   --input - \
   --jq '.html_url')
