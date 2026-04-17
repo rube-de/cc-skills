@@ -66,24 +66,13 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 
 ## Timing Logs
 
-Emit phase-boundary markers at every Step so the GitHub Actions log shows where time is spent. GitHub Actions renders `::group::` / `::endgroup::` as collapsible sections in the run UI; local runs see them as plain text.
+This section is reference guidance. **Do not execute anything from it directly** — timing markers are only emitted from within each numbered Step's own Bash invocations below. This section describes the two variants and when to apply each.
 
-**Phase-start** (first Bash call of each Step):
-```bash
-echo "::group::[ci-review] Step N: <name>"
-date -u +"[ci-review] Step N start t=%H:%M:%SZ"
-date +%s   # record epoch — remember this value, pass it to the phase-end call
-```
+Every Step in the `## Workflow` section emits a phase-start marker at its beginning and a phase-end marker at its end so the GitHub Actions log shows where time is spent. GitHub Actions renders `::group::` / `::endgroup::` as collapsible sections in the run UI; local runs see them as plain text. Track each Step's elapsed seconds and report them in the Step 8 summary as `Phase timings (s): s0=... s1=... ... total=...`.
 
-**Phase-end** (last Bash call of each Step — substitute the remembered start epoch for `<START_EPOCH>`):
-```bash
-echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <START_EPOCH> ))s"
-echo "::endgroup::"
-```
+**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. Pattern: `echo "::group::[ci-review] Step N: <name>"; START=$(date +%s); <step commands>; echo "[ci-review] Step N done elapsed=$(( $(date +%s) - START ))s"; echo "::endgroup::"`.
 
-Bash tool state does not persist between calls — **you (the model) must remember each Step's start epoch** from the `date +%s` output and substitute it into the phase-end command. Track elapsed seconds per step and report them in the Step 8 summary as `Phase timings (s): s0=... s1=... ... total=...`.
-
-For Steps whose body is already a single Bash call (Steps 0, 2, 7), fold the start/end markers into that same call to avoid extra tool round-trips. For Steps with agent fan-out (Steps 4, 5), emit the phase-start marker, wait for all agents to return, then emit the phase-end marker — the elapsed value will include agent wall-clock time, which is exactly what we want to measure.
+**Multi-call variant** — use when the Step spans multiple Bash invocations or waits on subagent tool calls (Steps 3, 3.5, 4, 5, 6, 7). In the first Bash call of the Step, print `echo "::group::[ci-review] Step N: <name>"` and `date +%s` — remember the printed epoch in your working state. In the last Bash call of the Step, substitute the remembered epoch into `echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <REMEMBERED_EPOCH> ))s"; echo "::endgroup::"`. For Steps with agent fan-out (Steps 4, 5), place the phase-end marker *after* all agents have returned — the elapsed value will include their wall-clock time, which is exactly what we want to measure.
 
 ## Workflow
 
@@ -102,7 +91,7 @@ If not authenticated, abort with: "gh is not authenticated. Run: gh auth login"
 
 ### Step 1: Parse Arguments
 
-Emit Step-1 phase-start and phase-end markers per the Timing Logs convention (argument parsing is fast — fold into a single Bash call if you need one, or just print the timing lines without actual work).
+Emit Step-1 phase-start and phase-end markers per the Timing Logs **single-call variant** — use one minimal Bash invocation that records start and end epochs via `date +%s` and prints the `::group::` / `::endgroup::` markers, even though argument parsing itself has no other shell work. Never substitute a placeholder for `s1=<parse>` in the Step 8 summary; always use the measured elapsed value.
 
 Extract from the argument string:
 - **PR identifier** (required): a number (e.g., `123`) or GitHub URL. If a URL, extract the PR number and store as `PR_NUMBER`. If the URL points to a different repository than the current one, abort with: "Cross-repo URLs are not supported. Run this skill from the target repo, or pass just the PR number."
@@ -350,7 +339,7 @@ For each surviving finding:
 
 ### Step 7: Post Review
 
-Emit Step-7 phase-start and phase-end markers per the Timing Logs convention (can be folded into the `gh api` Bash call below).
+Emit Step-7 phase-start and phase-end markers per the Timing Logs **multi-call variant** — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Emit the phase-start marker in the first Bash call and the phase-end marker in the last one (after success or after the error-handling chain terminates).
 
 Resolve the repository owner and repo:
 ```bash
