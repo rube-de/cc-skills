@@ -189,13 +189,13 @@ echo "::endgroup::"
 
 ### Step 3.5: Ensure PR Branch is Checked Out
 
-Multi-call timing variant. Emit the phase-start marker in a first Bash call that also captures the PR head SHA:
+Multi-call timing variant. Emit the phase-start marker in a first Bash call that prints everything subsequent calls need — Bash tool state does not persist across calls, so any value you need later must be echoed to stdout here:
 
 ```bash
 echo "::group::[ci-review] Step 3.5: Ensure PR Branch is Checked Out"
-STEP3_5_START=$(date +%s); echo "$STEP3_5_START"   # remember this epoch for the phase-end call
-PR_HEAD_SHA=$(gh pr view <PR#> --json headRefOid --jq '.headRefOid')
-HEAD_SHA=$(git rev-parse HEAD)
+date +%s   # remember this epoch for the phase-end call
+gh pr view <PR#> --json headRefOid --jq '"PR_HEAD_SHA=" + .headRefOid'
+echo "HEAD_SHA=$(git rev-parse HEAD)"
 ```
 
 Review agents use `Read`, `Grep`, and `git blame` to examine the actual code — not just the diff. Decide the checkout action based on the SHAs:
@@ -415,16 +415,15 @@ echo "::endgroup::"
 
 Multi-call timing variant — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Fold the phase-start marker into the first Bash call (OWNER/REPO resolution below), and emit the phase-end marker at the end of **every exit path** of the error-handling chain: successful post, the invalid-comments retry, the drop-all-inline-comments fallback, the `gh pr comment` fallback, and the final stdout-print fallback.
 
-Resolve the repository owner and repo (phase-start marker folded in):
+Resolve the repository owner and repo — Bash tool state does not persist across calls, so print the `owner/repo` string to stdout and remember it; derive `OWNER` and `REPO` in the subsequent Bash call that actually uses them (where they stay in scope for `gh api`):
+
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
 date +%s   # remember this epoch for the phase-end call on every exit path below
-OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-OWNER="${OWNER_REPO%%/*}"
-REPO="${OWNER_REPO#*/}"
+gh repo view --json nameWithOwner --jq '.nameWithOwner'   # prints owner/repo — remember it and substitute OWNER/REPO below
 ```
 
-Build the JSON payload using `jq` and post via `gh api`:
+Build the JSON payload using `jq` and post via `gh api`. Substitute the owner/repo you remembered from the phase-start call into `<OWNER>/<REPO>` below — do **not** rely on `$OWNER`/`$REPO` shell variables from the prior Bash call (they are not in scope here):
 
 ```bash
 PAYLOAD=$(jq -n \
@@ -434,7 +433,7 @@ PAYLOAD=$(jq -n \
   '{event: $event, body: $body, comments: $comments}')
 
 REVIEW_URL=$(echo "$PAYLOAD" | gh api \
-  "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" \
+  "repos/<OWNER>/<REPO>/pulls/<PR_NUMBER>/reviews" \
   --method POST \
   --input - \
   --jq '.html_url')
@@ -480,7 +479,7 @@ Review: <URL>
 Phase timings (s): s0=<prereq> s1=<parse> s2=<eligibility> s3=<context> s3_5=<checkout> s4=<agents> s5=<scoring> s6=<payload> s7=<post> total=<sum>
 ```
 
-The `Phase timings` line is the most load-bearing output for post-run analysis — list every step's elapsed seconds (using the values you tracked across the Timing Logs markers) plus a `total=` that is the sum of all phases. Use `0` for any step that was skipped (e.g., `s3_5=0` if checkout was skipped because HEAD already matched).
+The `Phase timings` line is the most load-bearing output for post-run analysis — list every step's elapsed seconds (using the values you tracked across the Timing Logs markers) plus a `total=` that is the sum of all phases. **Every Step always measures real elapsed time** — even when no branching action occurs (e.g., Step 3.5 when HEAD_SHA already matches PR_HEAD_SHA and no checkout runs, the Step still executed `gh pr view` + `git rev-parse`, so its elapsed time is non-zero and must be reported). Reserve `0` only for steps that are literally not entered (and if that happens, the prompt has a bug — every Step 0–7 runs on every invocation).
 
 ## Agent Output Format
 
