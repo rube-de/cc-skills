@@ -13,6 +13,14 @@ Fetch PR review comments, implement fixes for unresolved items, and report compl
 
 Before running, **read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/ISSUE-TEMPLATE.md) now** for the issue format, and **read [../dlc/references/REPORT-FORMAT.md](../dlc/references/REPORT-FORMAT.md) now** for the findings data structure.
 
+This skill uses progressive disclosure. The orchestration skeleton (fetch, categorize, reply, coverage-verify, commit) lives in SKILL.md. Conditional branches — fixable implementation, discussion handling, and follow-up issue creation — live in `references/` and are read only when their triggering condition fires:
+
+- [`references/fixable-workflow.md`](references/fixable-workflow.md) — context read, confidence-gated evaluation, implementation guardrails (Step 3)
+- [`references/discussion-workflow.md`](references/discussion-workflow.md) — classification, auto-action criteria, `AskUserQuestion` routing (Step 3.5)
+- [`references/followup-and-summary.md`](references/followup-and-summary.md) — follow-up issue creation, decision-aware replies, PR summary (Step 5)
+
+Do **not** preload these references — each Step pointer below names its file and its skip condition.
+
 ## Step 1: Fetch PR Data
 
 Run the `pr-comments.sh` script from the plugin's `scripts/` directory (two levels up from this skill):
@@ -103,15 +111,27 @@ Using the `.threads` array from Step 1, classify each top-level review thread:
 
 ### Review body categorization
 
-Using the `REVIEW_BODIES` array from Step 1, classify each review body:
+Using the `REVIEW_BODIES` array from Step 1, classify each review body.
+
+> **Precedence:** When multiple rows match, apply them in this order: **Dismissed** first, then **Resolved**, then **Unresolved**. A review with `state == "DISMISSED"` is always Dismissed, even if the body is non-actionable or a summary — this preserves the `Dismissed:` acknowledgement and correct status accounting.
 
 | Category | Criteria |
 |----------|----------|
-| **Resolved** | A DLC reply was already posted for this review body (detected by scanning `ISSUE_COMMENTS` for a sentinel `<!-- dlc-reply:{database_id} -->` where `{database_id}` matches this review body's `database_id`), OR `state == "APPROVED"` with a non-actionable body (e.g., "LGTM", general approval without specific action items) |
+| **Resolved** | Any of the three cases listed below the table. |
 | **Dismissed** | `state == "DISMISSED"` |
-| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) |
+| **Unresolved** | `state` is `COMMENTED`, `CHANGES_REQUESTED`, or `APPROVED` with an actionable body (specific change requests, questions, or concerns) that is **not Summary-only** (see Resolved criteria below for the Summary-only definition). |
 
-> **Note:** `APPROVED` reviews require body inspection — if the body is empty or generic praise (e.g., "LGTM"), classify as Resolved. If it contains specific action items despite the approval, classify as Unresolved. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
+A review body is **Resolved** when any of these apply:
+
+1. **Already replied** — a DLC reply was posted for this review body (sentinel `<!-- dlc-reply:{database_id} -->` is present in `ISSUE_COMMENTS`).
+2. **Non-actionable, regardless of `state`** — generic approval ("LGTM"), bot/CI summaries ("No actionable issues found", "Reviewed N files — no concerns", "Lint passed"), or any informational content with no specific change request, question, or concern.
+3. **Summary-only** — the body **explicitly signals** that it is a summary of inline comments (e.g. "see inline comments", "Actionable comments posted: N", a files-changed table that enumerates findings posted as inline threads, a structured walkthrough referencing other comments) **and** adds no independent content beyond that enumeration. **When in doubt, do NOT apply this rule** — classify the body as Unresolved instead. Silencing an independent actionable review body is worse than posting an extra reply.
+
+> **Linkage caveat for Summary-only:** `pr-comments.sh` returns `threads` and `review_bodies` as flat arrays with no review-id link, so Summary-only classification relies on the body's textual self-signal rather than structural linkage to *its own* inline threads. In a PR with multiple review submissions from the same reviewer, a body that *looks* like a summary may actually be an independent review — err toward Unresolved when the body does not explicitly self-label as a summary.
+
+> **Note:** Every review body requires body inspection, not just `APPROVED` ones. A `COMMENTED` review whose body is "No actionable issues found" is Resolved — the `COMMENTED` state alone does not imply actionable content. DLC replies to review bodies are posted as issue comments (via `gh pr comment`), so "already replied" detection must scan `ISSUE_COMMENTS` for the sentinel — not the review body's own data.
+>
+> **Silent Resolved:** Review bodies classified Resolved via the non-actionable or summary-only criteria produce **no outgoing reply** in Step 4. They are counted toward coverage (Step 4b) as Resolved without any GitHub comment being posted. Do not manufacture an "Answered:" reply for a body that already said nothing needed doing.
 
 ### Issue comment categorization
 
@@ -124,6 +144,13 @@ Using the `REVIEWER_ISSUE_COMMENTS` array from Step 1 (the filtered set that mat
 | **Unresolved** | All other issue comments with actionable items, questions, or concerns that have not been resolved via a DLC reply. Issue comments have no `state` field — treat all non-resolved actionable comments as unresolved. |
 
 > **Note:** Issue comments have no `path`/`line` like threads, no `state` like review bodies, and no parent-child links (they are a flat array). To reliably detect prior DLC replies, check for the `<!-- dlc-reply:{database_id} -->` sentinel in subsequent issue comments. Parse the body for actionable items (specific change requests, code findings, questions). If the body is purely informational (status updates, CI results with no action items) and does not require any follow-up, classify it as **Resolved**, even if no DLC reply was posted.
+>
+> **Examples of non-actionable issue comments that are Resolved without a DLC reply:**
+> - Bot CI summaries: "No actionable issues found", "Lint passed", "All checks green", "Reviewed N files across M changed lines"
+> - Status updates from reviewers (PR-author comments are already excluded from `REVIEWER_ISSUE_COMMENTS` in Step 1): "rebased", "resolved conflicts", "pushed fix"
+> - Informational links or context with no ask (e.g., "For reference, see the spec at …")
+>
+> **Silent Resolved:** Issue comments classified Resolved via the non-actionable path produce **no outgoing reply** in Step 4. Do not generate an "Answered: no action needed" message — the original comment already said so.
 
 ### Unresolved sub-categories
 
@@ -135,199 +162,27 @@ For unresolved comments (threads, review bodies, and issue comments), further cl
 | **Discussion** | Comment asks a question or raises a concern that needs human judgment |
 | **Blocked** | Fix requires information or access the agent doesn't have |
 
-## Step 3: Critically Evaluate and Implement Fixable Items
+## Step 3: Handle Fixable Items
 
-For each **fixable unresolved** comment, follow a three-phase workflow:
+If no **Fixable** items exist from Step 2, skip this step.
 
-### 3a. Read Context
+Otherwise, read [`references/fixable-workflow.md`](references/fixable-workflow.md) now and follow its three-phase workflow: context read → critical evaluation → confidence-gated implementation.
 
-**For inline threads** (`reply_type == "inline"`):
-1. Read the file at the referenced `path`
-2. Read at least 20 lines of surrounding context (before and after the target `line`)
-3. Read the full comment thread (including any replies)
+The reference covers the four evaluation criteria (technical correctness, project alignment, regression risk, scope), anti-sycophancy rules, implementation guardrails, and the Blocked-on-error reclassification rule. Items that implement successfully reclassify as **Fixed** and enter the Step 4 reply queue; items whose implementation fails reclassify as **Blocked** and are handled by Step 5.
 
-**For review bodies** (`reply_type == "pr_comment"`):
-1. Review bodies have no `path`/`line` — parse the body for file paths, function names, or code snippets
-2. If the body references specific files, read those files for context
-3. If no specific files are mentioned, use the PR diff to understand the scope of the review
+## Step 3.5: Handle Discussion Items
 
-**For issue comments** (`reply_type == "issue_comment"`):
-1. Issue comments have no `path`/`line` — parse the body for file paths, function names, or code snippets
-2. If the body references specific files, read those files for context
-3. If no specific files are mentioned, use the PR diff to understand the scope of the comment
+If no **Discussion** items exist from Step 2, skip this step.
 
-### 3b. Critically Evaluate
+Otherwise, read [`references/discussion-workflow.md`](references/discussion-workflow.md) now and follow its four-phase workflow: context read → classification → user routing or auto-action → execution.
 
-Assess the suggestion against these criteria:
-
-| Criterion | Question |
-|-----------|----------|
-| Technical correctness | Is the suggestion factually correct? |
-| Project alignment | Does it match existing patterns in this codebase? |
-| Regression risk | Could implementing it break other functionality? |
-| Scope appropriateness | Is the change proportional to the problem? |
-
-Assign a confidence level:
-- **High**: All four criteria pass — the suggestion is clearly correct and safe
-- **Medium**: One or two criteria are uncertain — the suggestion is plausible but not obvious
-- **Low**: Multiple criteria fail or the suggestion appears technically incorrect
-
-> **Anti-sycophancy rule**: Your confidence score is your honest technical assessment, not a politeness signal. If a suggestion is factually incorrect — wrong about the language, inconsistent with the codebase pattern, or introduces a regression — rate it **Low** and say so with specifics. Do NOT implement Low-confidence items without explicit user approval even if the reviewer is insistent. Prioritize technical correctness over politeness — being wrong politely is worse than being correct bluntly.
-
-### 3c. Confidence-Gated Implementation
-
-- **High confidence** → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
-- **Medium or Low confidence** → Use `AskUserQuestion` to present:
-  - The quoted reviewer comment
-  - Your assessment (which criteria passed/failed and why)
-  - Options: "Implement as suggested" / "Skip this comment" / "Implement with modification"
-  - If "Implement with modification" is chosen, ask for guidance before proceeding
-
-> **Bias toward implementation**: Default to **High confidence** and implement fixes directly when a change is technically correct and straightforward (rename, add a check, fix a typo, adjust formatting, add missing validation) — code is cheap; generating a fix costs less than deliberating about whether to. Do not inflate uncertainty to avoid work or defer small fixes as "out of scope." The confidence gate exists for genuinely ambiguous suggestions where reasonable engineers would disagree — not as an escape hatch for effort avoidance.
-
-**Guardrails:**
-- Only modify files that are part of the PR's diff
-- Do not make changes the reviewer didn't request
-- If unsure about intent, classify as **Discussion** instead of guessing
-- Never implement a suggestion assessed as technically incorrect without explicit user approval
-- If an `Edit` or `Write` call fails (tool error, file not found, conflict), reclassify the item as **Blocked** with the reason "implementation failed: {error}" — do not leave it in the Fixable state
-
-## Step 3.5: Evaluate Discussion Items
-
-If no **Discussion** items exist, **skip this step**.
-
-For each **Discussion** unresolved comment, follow a four-phase workflow:
-
-### 3.5a. Read Context
-
-Use the same context-reading approach as Step 3a:
-
-**For inline threads** (`reply_type == "inline"`):
-1. Read the file at the referenced `path`
-2. Read at least 20 lines of surrounding context (before and after the target `line`)
-3. Read the full comment thread (including any replies)
-
-**For review bodies** (`reply_type == "pr_comment"`):
-1. Parse the body for file paths, function names, or code snippets
-2. If the body references specific files, read those files for context
-3. If no specific files are mentioned, use the PR diff to understand the scope
-
-**For issue comments** (`reply_type == "issue_comment"`):
-1. Parse the body for file paths, function names, or code snippets
-2. If the body references specific files, read those files for context
-3. If no specific files are mentioned, use the PR diff to understand the scope
-
-### 3.5b. Classify Discussion Item
-
-Assess the effort and nature of each discussion item:
-
-| Classification | Criteria | Default Recommendation |
-|---------------|----------|------------------------|
-| **Implementable Fix** | Technically straightforward code change directly related to the PR feedback — rename, add/edit comment, tweak condition, fix typo, add validation, refactor a block. Size doesn't matter; complexity does. | **Implement now** (code is free) |
-| **Clarification Answer** | Reviewer asked a question the agent can answer from codebase context (e.g., "why is this async?", "does this handle nulls?") | **Reply with explanation** |
-| **Design Decision** | Requires architectural judgment, product scope decision, or trade-off the PR author must make | **Defer to author** |
-| **Out-of-PR-Scope** | Valid concern but belongs in a separate PR/issue (large refactor, cross-cutting change) | **Create follow-up issue** |
-
-> **Bias toward action**: Default to **Implementable Fix** or **Clarification Answer** when the change is technically straightforward. Do not inflate complexity to avoid work — if the change doesn't require architectural judgment and is directly related to the reviewer's feedback, recommend implementing it regardless of size. The classification gate exists for genuinely complex items where the PR author must decide, not as an escape hatch for effort avoidance.
-
-### 3.5c. Present to User, Auto-Implement, or Auto-Reply
-
-**Auto-implementable Implementable Fix** items follow the same auto-implementation path as Step 3c — implement directly, no `AskUserQuestion` needed. Print a brief note: `Auto-implementing Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Fixed** — it enters the Step 4 reply queue with the `Fixed:` prefix, identical to user-chosen "Implement now" items.
-
-Treat an Implementable Fix as auto-implementable when any of these hold:
-- All four criteria from Step 3b pass and there is a single clear approach
-- There are multiple approaches but one is clearly better (you would mark it "(Recommended)") — implement the recommended one
-- The confidence is medium, but the recommended action is obvious and low-risk (rename, add check, fix typo, adjust formatting, add missing validation), so it is safe to upgrade for execution purposes
-
-Apply this test: if you would present this to the user and confidently mark one option "(Recommended)", you already know the answer — just do it. `AskUserQuestion` exists for genuine ambiguity where reasonable engineers would disagree, not as a rubber stamp for decisions you've already made.
-
-Implementable Fix items that are not auto-implementable — for example, when there are multiple substantially different approaches with no clear winner, the change is behavior-changing or risky, or the trade-offs are non-obvious — route to `AskUserQuestion` in attended runs, or classify as **Discussion-Deferred** in unattended runs.
-
-Skip `AskUserQuestion` and auto-reply **high-confidence Clarification Answer** items when the agent can draft a factual answer entirely from codebase evidence. A Clarification Answer is high-confidence when all four of these criteria pass:
-
-| Criterion | Question |
-|-----------|----------|
-| **Evidence-backed** | Does the answer cite specific code (`file:line`), commits, or documented decisions — not speculation? |
-| **Factually verifiable** | Can the claims be confirmed by reading the referenced code? |
-| **Non-controversial** | Does the answer explain what IS (factual state), not argue what SHOULD BE (design opinion/trade-off)? |
-| **Complete** | Does the answer fully address the reviewer's concern with no open threads? |
-
-> **Defect-revealing answers**: If the truthful answer reveals a gap, missing check, or unhandled edge case (e.g., "does this handle nulls?" → "no"), reclassify the item as **Implementable Fix** — the reviewer's question implies a code change, not just an explanation. An answer that exposes an action item is NOT complete even if it literally answers the question.
->
-> **Boundary cases**: If the answer reveals partial handling or upstream mitigation, apply this test: does the reviewer's concern require a code change in *this* PR? Examples:
-> - "Does this handle nulls?" → "No, nulls are not checked" → **Reclassify as Implementable Fix** (clear gap)
-> - "Does this handle empty strings?" → "No, but empty strings are filtered upstream at `caller.ts:23`" → **Auto-reply** (upstream responsibility is clear, no local change needed)
-> - "Does this handle edge case X?" → "Partially — X1 is handled on line 45, but X2 is not" → **Reclassify as Implementable Fix** (incomplete handling requires a code change)
-
-When all four pass → auto-draft the reply without asking. Print: `Auto-replying to Discussion item {n}/{total}: {brief description}`. Reclassify the item as **Discussion-Answered** — it enters the Step 4 reply queue with the `Answered:` prefix.
-
-> **Bias toward action for Clarification Answers**: When in doubt between high and medium confidence, default to high for factual explanations backed by code evidence. If the agent can point to a specific `file:line` that resolves the reviewer's question, that's high-confidence — don't manufacture uncertainty to justify an interruption. The anti-sycophancy rule still applies; do NOT auto-reply if the answer would:
-> - Be speculative (violating **Evidence-backed**)
-> - Argue a design opinion (violating **Non-controversial**)
-> - Be incomplete (violating **Complete**)
-> - Reveal a bug or missing functionality (reclassify as **Implementable Fix**)
->
-> In these cases, fall through to `AskUserQuestion` instead (or reclassify per the defect-revealing rule above).
-
-**Genuinely ambiguous items only** — Medium/Low-confidence Implementable Fix that does not meet the auto-implement criteria above, medium/low-confidence Clarification Answer, true Design Decisions (architectural trade-offs where reasonable engineers would disagree), Out-of-PR-Scope, or Implementable Fix with multiple approaches (none clearly recommended) — use `AskUserQuestion`:
-
-```text
-Discussion item {n}/{total}: @{reviewer} at {location}
-> "{first 100 chars of comment}..."
-
-Classification: {Implementable Fix | Clarification Answer | Design Decision | Out-of-PR-Scope}
-Assessment: {your analysis of what the reviewer is asking/concerned about and why you classified it this way}
-
-Options:
-  1. Implement now
-  2. Defer to author
-  3. Create follow-up issue
-  4. Reply with explanation
-```
-
-Where `{location}` is `{path}:{line}` for inline items, or `{reply_type}:{database_id}` for review bodies and issue comments.
-
-Mark the option matching the classification as "(Recommended)":
-- **Implementable Fix** → option 1 (Recommended)
-- **Clarification Answer** → option 4 (Recommended)
-- **Design Decision** → option 2 (Recommended)
-- **Out-of-PR-Scope** → option 3 (Recommended)
-
-**Multiple implementation approaches:** When an Implementable Fix has more than one reasonable way to address the reviewer's feedback, split option 1 into sub-options with your recommendation marked:
-
-```text
-Options:
-  1a. Implement: add null check in the caller (Recommended)
-  1b. Implement: use Optional<T> return type instead
-  2. Defer to author
-  3. Create follow-up issue
-  4. Reply with explanation
-```
-
-Include a brief rationale for why you recommend one approach over the others. The user picks a sub-option; execution proceeds as normal for "Implement now."
-
-The user can always override the recommendation by choosing any option.
-
-### 3.5d. Execute Chosen Action
-
-**For "Implement now"**: Apply the same confidence-gated implementation as Step 3c:
-
-- **High confidence** (all four criteria from Step 3b (Critically Evaluate) pass) → Implement directly using `Edit` or `Write`, then stage: `git add <file>`
-- **Medium or Low confidence** → Present your assessment (which criteria passed/failed) alongside the implementation. The user already chose "Implement now" so proceed unless they intervene — but surface any technical concerns so they can course-correct.
-
-| User Choice | Action | Item Reclassification |
-|-------------|--------|----------------------|
-| **Implement now** | Confidence-gated implementation (see above) | Reclassify as **Fixed** — enters Step 4 reply queue with `Fixed:` prefix |
-| **Reply with explanation** | Draft the explanation reply text | Reclassify as **Discussion-Answered** — enters Step 4 reply queue |
-| **Defer to author** | No immediate action | Reclassify as **Discussion-Deferred** — enters Step 5b for decision-aware reply |
-| **Create follow-up issue** | No immediate action | Reclassify as **Discussion-Tracked** — auto-included in Step 5 follow-up issue |
-
-> **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in Step 4.
-> **If an implementation fails** (tool error, file not found, conflict), reclassify as **Blocked** with the reason "implementation failed: {error}" — same guardrail as Step 3c.
+The reference covers the four classifications (Implementable Fix / Clarification Answer / Design Decision / Out-of-PR-Scope), the auto-implement and auto-reply criteria that let the agent skip `AskUserQuestion` on unambiguous items, the `AskUserQuestion` format for genuinely ambiguous items, and the reclassification map into **Fixed** / **Discussion-Answered** / **Discussion-Deferred** / **Discussion-Tracked** for downstream handling in Steps 4 and 5.
 
 ## Step 4: Reply to Fixed, Dismissed, and Answered Comments
 
 For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a reply using the appropriate routing based on `reply_type`.
+
+> **Silent-Resolved gate:** Before routing any reply, confirm the item is not Resolved. Items classified Resolved in Step 2 — including non-actionable bot/CI summaries, generic approvals, summary-only review bodies, and informational issue comments — produce **no outgoing reply**. They are already counted toward coverage (Step 4b) as Resolved. Do not manufacture an "Answered:" message for an item whose original content already said nothing needed doing.
 
 ### Reply routing
 
@@ -378,6 +233,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 | Category | Reply prefix | Example |
 |----------|-------------|---------|
+| **Resolved (silent)** | — (no reply posted) | Non-actionable bot summary, summary-only review body, or informational issue comment. Skip entirely. |
 | **Fixed** | `Fixed: {brief description}` | `Fixed: renamed variable to camelCase` |
 | **Dismissed** | `Dismissed: {reason}` | `Dismissed: review formally dismissed via GitHub` |
 | **Discussion-Answered** | `Answered: {explanation}` | `Answered: The function is async because it awaits the database query on line 45. The null check exists in the caller at api.ts:23.` |
@@ -444,181 +300,17 @@ Do **not** retry more than once. A second failure indicates a structural issue t
 
 > **Why this step exists:** Without explicit coverage verification, silently dropped comments are undetectable. This step closes the gap between "comments fetched" (Step 1) and "comments addressed" — ensuring that every reviewer's feedback (inline threads, review bodies, and issue comments) is categorized before fixes are committed and replies are posted.
 
-## Step 5: User-Gated Issue Creation
+## Step 5: Follow-Up Issue, Decision-Aware Replies, and PR Summary
 
-If no Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Steps 3 and 3.5, **skip this step entirely**.
+If no Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Steps 3 and 3.5, skip this step and continue to Step 6.
 
-> **Note:** Discussion items resolved in Step 3.5 (implemented as Implementable Fix or answered as Clarification) are already handled. Discussion items deferred to the author proceed directly to Step 5b — they do not appear here.
+Otherwise, read [`references/followup-and-summary.md`](references/followup-and-summary.md) now and follow its three sub-steps:
 
-**Per-item decisions from Step 3.5 are final:**
-- **Discussion-Tracked** items are automatically included in the follow-up issue — the user already approved per-item in Step 3.5. Do not re-ask.
-- **Discussion-Deferred** items go directly to Step 5b ("will be addressed by the author"). They are not candidates for issue creation.
+- **Step 5a** — user-gated follow-up issue creation (auto-create when only Discussion-Tracked items exist; `AskUserQuestion`-gated when Blocked or skipped Fixable items exist).
+- **Step 5b** — decision-aware replies (inline threads, review bodies, and issue comments) for Discussion-Deferred, Discussion-Tracked, Blocked, and skipped Fixable items. These replies do **not** resolve inline threads — the underlying work is pending.
+- **Step 5c** — PR-level summary comment with status table, per-item decisions, and follow-up pointers.
 
-**Branch 1:** If only Discussion-Tracked items exist (no Blocked or skipped Fixable), create the follow-up issue directly — no `AskUserQuestion` needed.
-
-**Branch 2:** If only Blocked or user-skipped Fixable items exist (no Discussion-Tracked), use `AskUserQuestion` to ask whether to create a follow-up issue for these items:
-
-- Present the count and brief summary of the undecided items (Blocked + skipped Fixable)
-- Options: "Yes, create follow-up issue" / "No, I'll handle those manually" / "Show me details first"
-
-**Branch 3:** If both Discussion-Tracked and Blocked or user-skipped Fixable items exist, use `AskUserQuestion` to ask whether to include the undecided items in the same follow-up issue:
-
-- Present the count and brief summary of the undecided items (Blocked + skipped Fixable), noting that {n} Discussion-Tracked items will be included in the issue
-- Options: "Yes, include in follow-up issue" / "No, I'll handle those manually" / "Show me details first"
-
-If the user selects "Show me details first", display each undecided item with your assessment, then re-ask with the first two options.
-
-**Outcome based on user choice (Branch 3 only):**
-- "Yes" → create issue including Discussion-Tracked + Blocked/skipped items
-- "No" → create issue with only Discussion-Tracked items (Blocked/skipped items are handled manually by the author)
-
-**If issue creation proceeds** (either auto or approved):
-
-**Read [../dlc/references/ISSUE-TEMPLATE.md](../dlc/references/ISSUE-TEMPLATE.md) now** and format the issue body exactly as specified.
-
-**Critical format rules** (reinforced here):
-- Title: `[DLC] PR Review: {n} unresolved comments on PR #{number}`
-- Label: `dlc-pr-check`
-- Body must contain: Scan Metadata table, Findings Summary table (severity x count), Findings Detail grouped by severity, Recommended Actions
-
-**Severity mapping** (reinforced here for defense-in-depth):
-
-| Comment Category | Severity |
-|-----------------|----------|
-| Unresolved — Blocked | **High** |
-| Unresolved — Discussion-Tracked | **Medium** |
-| Unresolved — Fixable (unfixed due to error) | **Medium** |
-| Dismissed | **Info** |
-
-```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# Write the formatted issue body to BODY_FILE following ISSUE-TEMPLATE.md structure
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] PR Review: {n} unresolved comments on PR #{number}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-pr-check"
-```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
-
-**If the user chooses "No, I'll handle manually":**
-- **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
-- **Branch 3** (both Discussion-Tracked and Blocked/skipped items): create the follow-up issue with only Discussion-Tracked items. The Blocked/skipped items proceed to Step 5b as "will be addressed by the author."
-
-## Step 5b: Decision-Aware Inline Replies
-
-If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
-
-Post inline replies reflecting each item's outcome. Items arrive here from different decision paths:
-
-For each **Discussion-Deferred** item (user chose "Defer to author" in Step 3.5), always reply:
-
-| Item Status | Inline Reply Text |
-|-------------|-------------------|
-| Discussion-Deferred | `Acknowledged — will be addressed by the author` |
-
-For each **Discussion-Tracked** item (included in follow-up issue in Step 5), reply based on issue creation outcome:
-
-| Item Status | Inline Reply Text |
-|-------------|-------------------|
-| Discussion-Tracked (issue created) | `Acknowledged — tracked in #ISSUE_NUMBER` |
-| Discussion-Tracked (issue creation failed) | `Acknowledged — tracked in follow-up issue (draft saved to {draft_path})` |
-
-For each **Blocked** comment, map the user's Step 5 decision:
-
-| User Decision (Step 5) | Inline Reply Text |
-|------------------------|-------------------|
-| Included in follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
-| Handle manually | `Acknowledged — will be addressed by the author` |
-
-For each **user-skipped Fixable** comment, always reply:
-
-| Item Status | Inline Reply Text |
-|-------------|-------------------|
-| Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
-
-Use the same reply routing as Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.
-
-- **Inline** (`reply_type == "inline"`):
-```bash
-# Post the reply only — do NOT resolve the thread (work is pending)
-gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
-  --method POST \
-  -f body="{decision-aware reply text}" \
-  -F in_reply_to={rest_id}
-```
-
-- **Review body** (`reply_type == "pr_comment"`):
-```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
-
-{decision-aware reply text}
-<!-- dlc-reply:{database_id} -->"
-```
-
-- **Issue comment** (`reply_type == "issue_comment"`):
-```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
-
-{decision-aware reply text}
-<!-- dlc-reply:{database_id} -->"
-```
-
-## Step 5c: PR Summary Comment
-
-If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, **skip this step**.
-
-Post a PR-level summary comment containing the overall status and decisions.
-
-Build the summary with these sections:
-
-```markdown
-## PR Comment Status
-
-| Status | Threads | Review Bodies | Issue Comments | Total |
-|--------|---------|---------------|----------------|-------|
-| Resolved | {n} | {n} | {n} | {n} |
-| Fixed by DLC | {n} | {n} | {n} | {n} |
-| Answered by DLC | {n} | {n} | {n} | {n} |
-| Skipped (user decision) | {n} | {n} | {n} | {n} |
-| Discussion-Deferred | {n} | {n} | {n} | {n} |
-| Discussion-Tracked | {n} | {n} | {n} | {n} |
-| Blocked | {n} | {n} | {n} | {n} |
-| Dismissed | {n} | {n} | {n} | {n} |
-| **Total** | **{n}** | **{n}** | **{n}** | **{n}** |
-
-## Decisions
-
-{For each Discussion-Deferred, Discussion-Tracked, Blocked, or skipped Fixable item, one line:}
-- Inline thread: `{path}:{line}` — {decision}: {brief description}
-- Review body / issue comment: `{reply_type}:{database_id}` — {decision}: {brief description}
-
-## Follow-up
-
-{Include all applicable lines below:}
-{If any follow-up issue was created:}
-Follow-up issue: #ISSUE_NUMBER
-
-{If any items will be handled manually by the author:}
-Author will address some remaining items manually.
-
-{If any items were explicitly deferred/skipped:}
-Some remaining items deferred — out of scope for this PR.
-```
-
-Write the summary and post it:
-
-```bash
-TIMESTAMP=$(date +%s)
-SUMMARY_FILE="/tmp/dlc-pr-summary-${TIMESTAMP}.md"
-# Write the summary content to SUMMARY_FILE
-
-gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"
-```
+The reference covers the three branching cases for issue creation, the per-item reply text table, and the summary template.
 
 ## Step 6: Commit, Push, and Report
 
