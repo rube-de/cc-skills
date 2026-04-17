@@ -4,7 +4,7 @@ description: >-
   PR babysitter: monitors CI status, auto-rebases when behind, auto-fixes CI
   where possible, delegates review comment handling to dlc:pr-check, and
   re-requests review after fixes. Designed for /loop usage with Remote Control.
-allowed-tools: [Bash, Read, Edit, Write, Grep, Glob, Skill, CronList, CronDelete]
+allowed-tools: [Bash, Read, Edit, Write, Grep, Glob, Skill, CronList, CronDelete, PushNotification]
 ---
 
 # DLC: PR Babysitter
@@ -21,7 +21,7 @@ The human set up this loop because they trust you to shepherd the PR to completi
 
 ## Notification Rules
 
-Only print status messages for **errors that need human attention** and **completion** (PR ready to merge). Routine actions (rebase, lint fix, CI retry, re-request review) are silent.
+Only fire `PushNotification` for **errors that need human attention** and **completion** (PR ready to merge). Routine actions (rebase, lint fix, CI retry, re-request review) are silent. `PushNotification` is always the sanctioned channel — never substitute with a `Notify:` print line or `echo`, because print output does not ping the user's device.
 
 ### Deduplication
 
@@ -29,8 +29,7 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 
 - `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
 - `rebase_conflict:<sorted_file_list>`
-- `needs_decision:<count>` (e.g., `needs_decision:2`)
-- `needs_decision:<count>,unresolved:<count>` (e.g., `needs_decision:2,unresolved:3`)
+- `pending_human:<count>` (count-only dedup, e.g., `pending_human:2`)
 - `unresolved:<count>`
 - `unresolved:<count>,ci_failing:<sorted_check_names>`
 - `ready`
@@ -64,7 +63,7 @@ Extract and store: PR_NUMBER, PR_TITLE, PR_BRANCH, BASE_BRANCH, PR_STATE, PR_URL
 
 **State gate:** If PR_STATE is not `OPEN`:
 - Write state key `closed:<state>`.
-- Notify: `PR #<number> is <state>. Babysit cancelled.`
+- Fire `PushNotification` with message `PR #<number> is <state>. Babysit cancelled.`
 - Self-cancel (see Cancellation Pattern below) and stop.
 
 ### Verify and checkout PR branch
@@ -232,7 +231,7 @@ Stop silently — CI needs to re-run.
 git rebase --abort
 ```
 
-Notify: `⚠️ Rebase conflict on PR #<number> — could not auto-resolve. File(s): <conflicting_files>. <url>`
+Fire `PushNotification` with message `⚠️ Rebase conflict on PR #<number> — could not auto-resolve. File(s): <conflicting_files>. <url>`.
 Write state key `rebase_conflict:<sorted_file_list>`.
 Stop.
 
@@ -244,15 +243,15 @@ Delegate all review comment handling to `dlc:pr-check`. It handles: fetching com
 
 **Trust the process:** Even after multiple cycles, `dlc:pr-check` evaluates each comment on its own merits. If comments are genuinely resolved, `dlc:pr-check` will find 0 unresolved items and confirm it — you never need to short-circuit this by handling comments yourself. Every cycle that reduces the unresolved count is real progress toward merge-ready.
 
-**Unattended mode:** The babysitter runs in a loop with no human at the terminal. When executing `dlc:pr-check`, do NOT use `AskUserQuestion` — auto-defer only genuinely ambiguous human-judgment items (Design Decisions, items with no clear recommended approach). Auto-implementable fixes per `dlc:pr-check`'s Step 3.5c criteria should still be implemented, not deferred. The babysitter will surface deferred items to the human as a notification instead of silently posting "Acknowledged" replies.
+**Unattended mode:** The babysitter runs in a loop with no human at the terminal, so invoke `dlc:pr-check` with the `--unattended` flag. That flag activates pr-check's **Autonomy Ladder** (ten low-risk patterns — rename, typo, null check, logging, etc. — always auto-implemented) and its **Pending-Human** classification for items that genuinely need human judgment (architectural trade-offs, product scope, ambiguous fixes). Pending-Human items surface back here through the `Pending-Human: <n> — ...` line in pr-check's Step 6 summary and produce a single `PushNotification` in Step 4. Under `--unattended`, pr-check posts **no** `Acknowledged — will be addressed by the author` replies — the halt is the communication.
 
 ```text
-Skill("dlc:pr-check", "<PR_NUMBER>")
+Skill("dlc:pr-check", "<PR_NUMBER> --unattended")
 ```
 
 After pr-check completes, parse its output summary to extract these values:
 - Total unresolved items remaining: items marked Fixed, Answered, Resolved, or Dismissed are **done**. Remaining = Total - (Fixed + Answered + Resolved + Dismissed).
-- **Discussion-Deferred count**: items where pr-check deferred to the author (these need human judgment). Extract the `{deferred}` value from the `Discussion: {n} ({deferred} deferred, {tracked} tracked)` line in the summary.
+- **Pending-Human count and items**: parse the `Pending-Human: <n> — <item1_short>; <item2_short>; ...` line from the Step 6 summary. The `<n>` is the count; split the tail on `;` (trimming whitespace) to get the per-item short descriptions. If the line is absent, the count is 0. This line is emitted only under `--unattended`.
 - Whether pr-check pushed any commits (look for "Pushed" in the summary or a non-empty git diff from before)
 
 If pr-check pushed commits, re-request review from all prior reviewers. Filter out bot accounts (logins ending in `[bot]`):
@@ -282,32 +281,26 @@ Categorize the fresh check results by `bucket` field (same logic as Step 1 — `
 
 Evaluate the following conditions **in order**. The first matching condition wins:
 
-**If pr-check reported Discussion-Deferred items (count > 0) AND remaining unresolved items:**
-Both need human attention — combine into a single notification so nothing is suppressed.
-- Notify: `🧑‍⚖️ PR #<number> has <deferred_count> discussion items needing your input + <unresolved_count> unresolved. <url>`
-- Write state key `needs_decision:<deferred_count>,unresolved:<unresolved_count>`.
-- Stop. Next cycle will re-check.
+**If pr-check reported Pending-Human items (count > 0):**
+These items require human judgment — architectural trade-offs, product scope decisions, or ambiguous fixes with no clear winner. The babysitter cannot resolve them; halt the loop loudly.
+- Build the message body: concatenate the per-item shorts with `; ` separators, leading with the PR number and count. Target under 200 characters total; if longer, truncate trailing items and append `…` so the most important signal fits in a single mobile notification.
+- Fire `PushNotification` with message `PR #<number>: <count> items need your call — <item1_short>; <item2_short>`.
+- Write state key `pending_human:<count>` (count-only dedup per spec).
+- Self-cancel (see Cancellation Pattern below) and stop. The user will triage via `/dlc:pr-check <PR>` in attended mode, then relaunch `/loop 10m /dlc:babysit <PR>` when ready to resume.
 
-**If pr-check reported Discussion-Deferred items (count > 0) AND 0 remaining unresolved:**
-These are discussion items that need human judgment — design decisions, architectural trade-offs, or ambiguous suggestions. The babysitter cannot resolve them.
-- Notify: `🧑‍⚖️ PR #<number> has <deferred_count> discussion items needing your input. <url>`
-- Write state key `needs_decision:<deferred_count>`.
-- Do NOT self-cancel — the PR may still need further cycles after the human decides.
-- Stop. Next cycle will re-check (if the human resolved them, pr-check will see the replies).
-
-**If pr-check reported remaining unresolved items (and 0 Discussion-Deferred) AND CI_STATUS is `failing`:**
+**If pr-check reported remaining unresolved items AND CI_STATUS is `failing`:**
 Both need attention — surface both in a single notification so CI failure isn't hidden behind unresolved items.
-- Notify: `💬 PR #<number> has <count> unresolved items after auto-fix + CI failing: <check_names>. <url>`
+- Fire `PushNotification` with message `💬 PR #<number> has <count> unresolved items after auto-fix + CI failing: <check_names>. <url>`.
 - Write state key `unresolved:<count>,ci_failing:<sorted_check_names>`.
 - Stop. Next cycle will re-check.
 
-**If pr-check reported remaining unresolved items (and 0 Discussion-Deferred) AND CI_STATUS is `passing`:**
-- Notify: `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`
+**If pr-check reported remaining unresolved items AND CI_STATUS is `passing`:**
+- Fire `PushNotification` with message `💬 PR #<number> has <count> unresolved items after auto-fix. Review needed. <url>`.
 - Write state key `unresolved:<count>`.
 - Stop. Next cycle will re-check.
 
 **If CI_STATUS is `failing`:**
-- Notify: `🔴 CI failing on PR #<number>: <title> — Failed: <check_names>. <url>/checks`
+- Fire `PushNotification` with message `🔴 CI failing on PR #<number>: <title> — Failed: <check_names>. <url>/checks`.
 - Write state key `ci_failing:<sorted_check_names>`.
 - Stop. Next cycle will re-check in Step 1.
 
@@ -315,12 +308,12 @@ Both need attention — surface both in a single notification so CI failure isn'
 Stop silently. Re-review was already requested in Step 3. Next cycle will re-check.
 
 **If mergeable is CONFLICTING:**
-- Notify: `⚠️ PR #<number> has merge conflicts. <url>`
+- Fire `PushNotification` with message `⚠️ PR #<number> has merge conflicts. <url>`.
 - Stop. Next cycle will attempt rebase in Step 2.
 
-**If pr-check reported 0 remaining unresolved items AND 0 Discussion-Deferred AND CI_STATUS is `passing` AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
+**If pr-check reported 0 remaining unresolved items AND 0 Pending-Human AND CI_STATUS is `passing` AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
 - Write state key `ready`.
-- Notify: `✅ PR #<number> ready to merge! — <title> — <url>`
+- Fire `PushNotification` with message `✅ PR #<number> ready to merge! — <title> — <url>`.
 - Self-cancel and stop.
 
 ## Cancellation Pattern
@@ -332,3 +325,5 @@ To self-cancel the babysit loop:
 3. Call `CronDelete` with that task's ID.
 4. Delete the state file: `.dev/dlc/babysit-<PR_NUMBER>.state`
 5. If no matching task is found, this was a manual invocation — skip cancellation.
+
+**Terminal states that follow this pattern:** `ready`, `closed:<state>`, `pending_human:<count>`. Each emits exactly one `PushNotification`, writes its state key, then runs the cancellation above. Non-terminal branches (`ci_failing:*`, `rebase_conflict:*`, `unresolved:*`) notify and stop without cancelling — the next `/loop` cycle re-evaluates.

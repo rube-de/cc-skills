@@ -4,6 +4,8 @@ description: >-
   PR review compliance: fetch review comments from an open PR,
   categorize as resolved/unresolved/dismissed, critically evaluate
   fixable items, implement approved fixes, and reply inline.
+  Pass --unattended to halt on human-judgment items (emitted as
+  Pending-Human) instead of prompting via AskUserQuestion.
 allowed-tools: [Bash, Read, Grep, Glob, Write, Edit, AskUserQuestion]
 ---
 
@@ -22,6 +24,17 @@ This skill uses progressive disclosure. The orchestration skeleton (fetch, categ
 Do **not** preload these references — each Step pointer below names its file and its skip condition.
 
 ## Step 1: Fetch PR Data
+
+### Parse arguments
+
+The skill accepts two arguments, in any order:
+
+- `<PR_NUMBER>` — numeric PR reference. Optional; when omitted, auto-detect from the current branch.
+- `--unattended` — optional flag. When present, set `UNATTENDED=true` and carry it through downstream steps. Gates the autonomy ladder in Step 3.5, suppresses `AskUserQuestion` in Steps 3.5 and 5a, activates Pending-Human classification, and emits the Step 6 `Pending-Human:` summary line. When absent (default), behavior is identical to attended mode.
+
+Parse `--unattended` out of the argument string before invoking the script; only the PR number (if any) goes to `pr-comments.sh`.
+
+### Run pr-comments.sh
 
 Run the `pr-comments.sh` script from the plugin's `scripts/` directory (two levels up from this skill):
 
@@ -256,6 +269,7 @@ Verify that every top-level thread, every review body, **and** every issue comme
 | Discussion-Deferred | Yes | Yes | Yes |
 | Discussion-Answered | Yes | Yes | Yes |
 | Discussion-Tracked | Yes | Yes | Yes |
+| Pending-Human | Yes | Yes | Yes |
 | Blocked | Yes | Yes | Yes |
 
 For each reviewer from Step 1, assert **all three**:
@@ -343,11 +357,12 @@ Print summary:
 PR review compliance check complete.
   - PR: #{number} ({title})
   - Total comments: {n} ({thread_count} threads + {review_body_count} review bodies + {issue_comment_count} issue comments)
-  - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked), Blocked: {n}, Dismissed: {n}
+  - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked, {pending_human} pending-human), Blocked: {n}, Dismissed: {n}
   - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when UNATTENDED=true AND n > 0; each short is the first 80 chars of the reviewer comment; babysit parses this exact line shape]
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

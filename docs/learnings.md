@@ -937,3 +937,32 @@ Reply categories: Silent (no post) | Fixed | Dismissed | Answered
 ```
 
 > Source: branch fix/pr-check-silent-on-non-actionable, file: `plugins/dlc/skills/pr-check/SKILL.md`
+
+### `"Acknowledged — will be addressed by the author"` is a dishonest placeholder in unattended mode
+
+`dlc:pr-check` running under `/dlc:babysit` on a `/loop` posted `Acknowledged — will be addressed by the author` replies whenever a Discussion item fell through its conservative auto-implement rules. The bot isn't the author and no human saw the comment, so the reply is a lie — the thread was neither handled nor queued. Two pathologies followed: low-risk items that could have been auto-fixed (rename, typo, null check) got silently deferred, and genuine human-judgment items got buried behind the same polite reply + a terse `Notify:` line that was easy to miss on mobile.
+
+**Root pattern:** The reply text `Acknowledged — will be addressed by the author` was reachable both from an explicit user click ("Defer to author" in `AskUserQuestion`) AND as a silent fallback when `AskUserQuestion` returned empty in a non-interactive loop. The same string served two opposite semantics — an authored decision and a stand-in for "nobody decided" — so the timeline couldn't distinguish them.
+
+**Rule:** The placeholder reply fires if and only if the user explicitly selected the corresponding option in `AskUserQuestion`. Never on empty answers, never as a fallback, never in unattended mode, never on any automated path.
+
+**Fix:**
+1. Introduce an explicit `--unattended` mode in pr-check with a bright-line **Autonomy Ladder** (ten low-risk patterns: rename, typo, comment edit, null check, logging, tighten condition, add validation, extract constant, formatting, reviewer-flagged dead code) that auto-implements without `AskUserQuestion`.
+2. Add a **Pending-Human** classification for items that require human judgment. Pending-Human emits silence — no reply, no Discussion-Deferred assignment. Items are returned via a `Pending-Human: <n> — ...` line in pr-check's Step 6 summary.
+3. In babysit, fire `PushNotification` (a real tool call — not a `Notify:` print line that doesn't ping the device) on Pending-Human, then self-cancel the cron. The halt is the communication.
+4. Add an empty-answer safeguard inside attended mode: if `AskUserQuestion` returns empty, re-ask once; if still empty, reclassify as Pending-Human instead of defaulting to Defer.
+
+**Bad pattern (placeholder as fallback):**
+```text
+AskUserQuestion returns empty → default to "Defer to author" → post "Acknowledged — will be addressed by the author"
+(result: silent acknowledgment with no decision behind it)
+```
+
+**Good pattern (halt loudly; silence is a legitimate outcome):**
+```text
+AskUserQuestion returns empty → re-ask once → still empty → Pending-Human (no reply)
+pr-check Step 6 emits: "Pending-Human: 2 — naming of foo(); async shape"
+babysit fires PushNotification + CronDelete + state file cleanup
+```
+
+> Source: PR implementing issue #212; spec `.dev/pm/specs/2026-04-17-dlc-autonomy-and-halt-on-defer.md`; files: `plugins/dlc/skills/pr-check/**`, `plugins/dlc/skills/babysit/SKILL.md`
