@@ -70,7 +70,7 @@ This section is reference guidance. **Do not execute anything from it directly**
 
 Every Step in the `## Workflow` section emits a phase-start marker at its beginning and a phase-end marker at its end so the GitHub Actions log shows where time is spent. GitHub Actions renders `::group::` / `::endgroup::` as collapsible sections in the run UI; local runs see them as plain text. Track each Step's elapsed seconds and report them in the Step 8 summary as `Phase timings (s): s0=... s1=... ... total=...`.
 
-**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. Pattern: `echo "::group::[ci-review] Step N: <name>"; START=$(date +%s); <step commands>; echo "[ci-review] Step N done elapsed=$(( $(date +%s) - START ))s"; echo "::endgroup::"`.
+**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. **Preserve the step's exit status** by capturing `$?` immediately after `<step commands>` and re-emitting it at the end — otherwise the trailing `echo` commands would always return 0 and mask prerequisite or eligibility failures (e.g., `gh auth status` failing in Step 0). Pattern: `echo "::group::[ci-review] Step N: <name>"; START=$(date +%s); <step commands>; STATUS=$?; echo "[ci-review] Step N done elapsed=$(( $(date +%s) - START ))s"; echo "::endgroup::"; exit $STATUS`.
 
 **Multi-call variant** — use when the Step spans multiple Bash invocations or waits on subagent tool calls (Steps 3, 3.5, 4, 5, 6, 7). In the first Bash call of the Step, print `echo "::group::[ci-review] Step N: <name>"` and `date +%s` — remember the printed epoch in your working state. In the last Bash call of the Step, substitute the remembered epoch into `echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <REMEMBERED_EPOCH> ))s"; echo "::endgroup::"`. For Steps with agent fan-out (Steps 4, 5), place the phase-end marker *after* all agents have returned — the elapsed value will include their wall-clock time, which is exactly what we want to measure.
 
@@ -339,7 +339,7 @@ For each surviving finding:
 
 ### Step 7: Post Review
 
-Emit Step-7 phase-start and phase-end markers per the Timing Logs **multi-call variant** — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Emit the phase-start marker in the first Bash call and the phase-end marker in the last one (after success or after the error-handling chain terminates).
+Emit Step-7 phase-start and phase-end markers per the Timing Logs **multi-call variant** — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Emit the phase-start marker in the first Bash call and the phase-end marker in the last one (after success or after the error-handling chain terminates). Ensure the phase-end marker appears in **every exit path** of the error-handling chain below: successful post, the invalid-comments retry, the drop-all-inline-comments fallback, the `gh pr comment` fallback, and the final stdout-print fallback.
 
 Resolve the repository owner and repo:
 ```bash
