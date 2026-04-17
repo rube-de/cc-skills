@@ -86,20 +86,23 @@ If checkout fails, stop. Do not proceed with git operations on the wrong branch.
 
 ## Step 1: Check CI Status
 
+Query the named checks **and** the raw workflow runs on the HEAD commit — the two views can disagree. An Action workflow can be `in_progress` or `queued` before (or without ever) registering a named check status, so relying on `gh pr checks` alone will prematurely classify CI as "settled" while bot reviewers are still writing comments. Treat either source reporting activity as a pending state.
+
 ```bash
 gh pr checks $PR_NUMBER --json name,state,bucket
+IN_PROGRESS_RUNS=$(gh run list --commit $(git rev-parse HEAD) --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
 ```
 
-Categorize each check by its `bucket` field:
+Categorize each named check by its `bucket` field:
 - **Running**: `bucket` is `pending`
 - **Failed**: `bucket` is `fail` or `cancel` — cancelled checks are not passing per GitHub required-check semantics
 - **Passed**: `bucket` is `pass`
 - **Neutral**: `bucket` is `skipping` — treat as non-blocking (not a failure)
 
-**If any checks are still running:**
-Stop without printing anything. This is the normal waiting state — no point acting on incomplete results.
+**If any checks are still running OR `IN_PROGRESS_RUNS > 0`:**
+Stop without printing anything. This is the normal waiting state — no point acting on incomplete results. `IN_PROGRESS_RUNS > 0` catches bot-review workflows (Copilot, CodeRabbit, Codex) that execute via GitHub Actions but may not surface a named check.
 
-**If ALL checks passed or neutral (no pending/fail/cancel), or NO checks exist:** Set `CI_STATUS=passing`. Continue to Step 2.
+**If ALL checks passed or neutral (no pending/fail/cancel) AND `IN_PROGRESS_RUNS == 0`, or NO checks and no runs exist:** Set `CI_STATUS=passing`. Continue to Step 2.
 
 **If any checks failed:** Set `CI_STATUS=failing` and record the failing check names. Continue to Step 1b (attempt auto-fix).
 
@@ -268,16 +271,17 @@ If pr-check did NOT push commits, skip the re-request — there's nothing new to
 
 ## Step 4: Assess and Notify
 
-After pr-check completes, re-fetch the PR state (pr-check may have pushed commits that changed things):
+After pr-check completes, re-fetch the PR state (pr-check may have pushed commits that changed things). Query both the named checks and the raw workflow runs, same as Step 1 — especially critical here because `pr-check` may have just pushed a commit that triggered new bot-review workflows that take minutes to finish:
 
 ```bash
 gh pr checks $PR_NUMBER --json name,state,bucket
+IN_PROGRESS_RUNS=$(gh run list --commit $(git rev-parse HEAD) --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
 Categorize the fresh check results by `bucket` field (same logic as Step 1 — `fail`/`cancel` = failed, `pass` = passed, `skipping` = neutral, `pending` = running):
-- **If any checks are still running** (`bucket` is `pending`): Stop silently — CI is incomplete on the new HEAD. Next cycle will re-evaluate.
-- **If ALL checks passed or neutral (no pending/fail/cancel), or NO checks exist:** Set `CI_STATUS=passing`.
+- **If any checks are still running** (`bucket` is `pending`) **OR `IN_PROGRESS_RUNS > 0`**: Stop silently — CI is incomplete on the new HEAD. Do NOT take any terminal action (notification + self-cancel) in this state. Next cycle will re-evaluate.
+- **If ALL checks passed or neutral (no pending/fail/cancel) AND `IN_PROGRESS_RUNS == 0`, or NO checks and no runs exist:** Set `CI_STATUS=passing`.
 - **If any checks failed** (`bucket` is `fail` or `cancel`): Set `CI_STATUS=failing` and record the fresh failing check names (replacing any stale values from Step 1).
 
 Evaluate the following conditions **in order**. The first matching condition wins:
