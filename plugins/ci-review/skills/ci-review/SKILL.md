@@ -184,7 +184,8 @@ Emit the Step-3 phase-end marker in a final Bash call after the context bundle i
 
 ```bash
 echo "[ci-review] Step 3 done elapsed=$(( $(date +%s) - <STEP3_START_EPOCH> ))s"
-echo "::endgroup::"```
+echo "::endgroup::"
+```
 
 ### Step 3.5: Ensure PR Branch is Checked Out
 
@@ -207,7 +208,8 @@ Close Step 3.5 with a phase-end Bash call (required on every branch — already-
 
 ```bash
 echo "[ci-review] Step 3.5 done elapsed=$(( $(date +%s) - <STEP3_5_START_EPOCH> ))s"
-echo "::endgroup::"```
+echo "::endgroup::"
+```
 
 ### Step 4: Launch Review Agents
 
@@ -269,7 +271,8 @@ After all agents have returned (or been recorded as failed), emit the Step-4 pha
 
 ```bash
 echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
-echo "::endgroup::"```
+echo "::endgroup::"
+```
 
 ### Step 5: Confidence Scoring
 
@@ -353,7 +356,8 @@ After all scorers have returned and filtering/deduplication is complete, emit th
 
 ```bash
 echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
-echo "::endgroup::"```
+echo "::endgroup::"
+```
 
 ### Step 6: Build Review Payload
 
@@ -404,18 +408,19 @@ After the payload is built, emit the Step-6 phase-end marker:
 
 ```bash
 echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-echo "::endgroup::"```
+echo "::endgroup::"
+```
 
 ### Step 7: Post Review
 
 Multi-call timing variant — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Fold the phase-start marker into the first Bash call (OWNER/REPO resolution below), and emit the phase-end marker at the end of **every exit path** of the error-handling chain: successful post, the invalid-comments retry, the drop-all-inline-comments fallback, the `gh pr comment` fallback, and the final stdout-print fallback.
 
-Resolve the repository owner and repo — Bash tool state does not persist across calls, so print the `owner/repo` string to stdout and remember it. The model substitutes the `<OWNER>` and `<REPO>` placeholders in the `gh api` block below with the remembered value — no reliance on shell variables from this call:
+Resolve the repository owner and repo — Bash tool state does not persist across calls, so print a labeled `OWNER_REPO=<owner/repo>` line to stdout and remember it. The model substitutes the `<OWNER>` and `<REPO>` placeholders in the `gh api` block below with the remembered value — no reliance on shell variables from this call:
 
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
 date +%s   # remember this epoch for the phase-end call on every exit path below
-gh repo view --json nameWithOwner --jq '.nameWithOwner'   # prints owner/repo to stdout — remember it and substitute OWNER/REPO below
+gh repo view --json nameWithOwner --jq '"OWNER_REPO=" + .nameWithOwner'
 ```
 
 Build the JSON payload using `jq` and post via `gh api`. Substitute the owner/repo you remembered from the phase-start call into `<OWNER>/<REPO>` below:
@@ -452,7 +457,8 @@ Print the review URL on success, then emit the Step-7 phase-end marker. **The sa
 
 ```bash
 echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - <STEP7_START_EPOCH> ))s"
-echo "::endgroup::"```
+echo "::endgroup::"
+```
 
 ### Step 8: Summary
 
