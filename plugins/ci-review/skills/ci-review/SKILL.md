@@ -70,9 +70,9 @@ This section is reference guidance. **Do not execute anything from it directly**
 
 Every Step in the `## Workflow` section emits a phase-start marker at its beginning and a phase-end marker at its end so the GitHub Actions log shows where time is spent. GitHub Actions renders `::group::` / `::endgroup::` as collapsible sections in the run UI; local runs see them as plain text. Track each Step's elapsed seconds and report them in the Step 8 summary as `Phase timings (s): s0=... s1=... ... total=...`.
 
-**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. **Preserve the step's exit status** by capturing `$?` immediately after `<step commands>` and re-emitting it at the end — otherwise the trailing `echo` commands would always return 0 and mask prerequisite or eligibility failures (e.g., `gh auth status` failing in Step 0). Pattern: `echo "::group::[ci-review] Step N: <name>"; START=$(date +%s); <step commands>; STATUS=$?; echo "[ci-review] Step N done elapsed=$(( $(date +%s) - START ))s"; echo "::endgroup::"; exit $STATUS`.
+**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. **Preserve the step's exit status** by capturing `$?` immediately after `<step commands>` and re-emitting it at the end — otherwise the trailing `echo` commands would always return 0 and mask prerequisite or eligibility failures (e.g., `gh auth status` failing in Step 0). **Route all timing-marker echoes to stderr (`>&2`)** so they do not pollute stdout — when a step produces parseable output (e.g., Step 2's `gh pr view --json`), the stdout must contain only that output for clean downstream parsing. GitHub Actions' `::group::` / `::endgroup::` workflow commands are recognized from both stdout and stderr, so routing markers to stderr preserves the collapsible-group rendering while keeping stdout pure. Pattern: `echo "::group::[ci-review] Step N: <name>" >&2; START=$(date +%s); <step commands>; STATUS=$?; echo "[ci-review] Step N done elapsed=$(( $(date +%s) - START ))s" >&2; echo "::endgroup::" >&2; exit $STATUS`.
 
-**Multi-call variant** — use when the Step spans multiple Bash invocations or waits on subagent tool calls (Steps 3, 3.5, 4, 5, 6, 7). In the first Bash call of the Step, print `echo "::group::[ci-review] Step N: <name>"` and `date +%s` — remember the printed epoch in your working state. In the last Bash call of the Step, substitute the remembered epoch into `echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <REMEMBERED_EPOCH> ))s"; echo "::endgroup::"`. For Steps with agent fan-out (Steps 4, 5), place the phase-end marker *after* all agents have returned — the elapsed value will include their wall-clock time, which is exactly what we want to measure.
+**Multi-call variant** — use when the Step spans multiple Bash invocations or waits on subagent tool calls (Steps 3, 3.5, 4, 5, 6, 7). Route all timing markers to stderr (`>&2`), same rationale as the single-call variant: keep stdout pure for any parseable output the Step emits (diffs, JSON, printed values for the model to remember). In the first Bash call of the Step, print `echo "::group::[ci-review] Step N: <name>" >&2` and `date +%s >&2` — remember the printed epoch in your working state. In the last Bash call of the Step, substitute the remembered epoch into `echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <REMEMBERED_EPOCH> ))s" >&2; echo "::endgroup::" >&2`. For Steps with agent fan-out (Steps 4, 5), place the phase-end marker *after* all agents have returned — the elapsed value will include their wall-clock time, which is exactly what we want to measure.
 
 ## Workflow
 
@@ -81,12 +81,12 @@ Every Step in the `## Workflow` section emits a phase-start marker at its beginn
 Verify `gh` CLI is available and authenticated. Single Bash invocation using the Timing Logs single-call variant:
 
 ```bash
-echo "::group::[ci-review] Step 0: Prerequisites"
+echo "::group::[ci-review] Step 0: Prerequisites" >&2
 START=$(date +%s)
 gh auth status
 STATUS=$?
-echo "[ci-review] Step 0 done elapsed=$(( $(date +%s) - START ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 0 done elapsed=$(( $(date +%s) - START ))s" >&2
+echo "::endgroup::" >&2
 exit $STATUS
 ```
 
@@ -98,11 +98,11 @@ If not authenticated (non-zero exit from `gh auth status`), abort with: "gh is n
 Emit timing markers via a minimal Bash invocation even though argument parsing itself has no other shell work — `s1=<parse>` in the Step 8 summary must be a measured elapsed value, never a placeholder:
 
 ```bash
-echo "::group::[ci-review] Step 1: Parse Arguments"
+echo "::group::[ci-review] Step 1: Parse Arguments" >&2
 START=$(date +%s)
 # Argument parsing is performed by the model from the conversation — no shell work required here.
-echo "[ci-review] Step 1 done elapsed=$(( $(date +%s) - START ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 1 done elapsed=$(( $(date +%s) - START ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 Extract from the argument string:
@@ -119,12 +119,12 @@ If no PR number is provided, abort with: "Usage: /ci-review <PR#> [focus text] [
 Single Bash invocation using the Timing Logs single-call variant. Preserves the `gh pr view` exit status so non-zero (PR not found, permissions) propagates for the abort check:
 
 ```bash
-echo "::group::[ci-review] Step 2: Eligibility Check"
+echo "::group::[ci-review] Step 2: Eligibility Check" >&2
 START=$(date +%s)
 gh pr view <PR#> --json state,number,title,url
 STATUS=$?
-echo "[ci-review] Step 2 done elapsed=$(( $(date +%s) - START ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 2 done elapsed=$(( $(date +%s) - START ))s" >&2
+echo "::endgroup::" >&2
 exit $STATUS
 ```
 
@@ -138,8 +138,8 @@ Print: "Reviewing PR #N: {title} ({url}) — profile: {single|lean|full|agent}"
 Multi-call timing variant. Emit the phase-start marker in a dedicated Bash call **before** launching the parallel operations below:
 
 ```bash
-echo "::group::[ci-review] Step 3: Gather Context"
-date +%s   # print and remember — pass this value into the Step 3 phase-end Bash call at the end
+echo "::group::[ci-review] Step 3: Gather Context" >&2
+date +%s >&2   # print and remember — pass this value into the Step 3 phase-end Bash call at the end
 ```
 
 Then launch these four operations in parallel:
@@ -183,8 +183,8 @@ Compile the context bundle:
 Emit the Step-3 phase-end marker in a final Bash call after the context bundle is compiled (substitute the epoch you remembered from the phase-start call):
 
 ```bash
-echo "[ci-review] Step 3 done elapsed=$(( $(date +%s) - <STEP3_START_EPOCH> ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 3 done elapsed=$(( $(date +%s) - <STEP3_START_EPOCH> ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 ### Step 3.5: Ensure PR Branch is Checked Out
@@ -192,8 +192,8 @@ echo "::endgroup::"
 Multi-call timing variant. Emit the phase-start marker in a first Bash call that prints everything subsequent calls need — Bash tool state does not persist across calls, so any value you need later must be echoed to stdout here:
 
 ```bash
-echo "::group::[ci-review] Step 3.5: Ensure PR Branch is Checked Out"
-date +%s   # remember this epoch for the phase-end call
+echo "::group::[ci-review] Step 3.5: Ensure PR Branch is Checked Out" >&2
+date +%s >&2   # remember this epoch for the phase-end call
 gh pr view <PR#> --json headRefOid --jq '"PR_HEAD_SHA=" + .headRefOid'
 echo "HEAD_SHA=$(git rev-parse HEAD)"
 ```
@@ -207,8 +207,8 @@ Review agents use `Read`, `Grep`, and `git blame` to examine the actual code —
 Close Step 3.5 with a phase-end Bash call (required on every branch — already-on-commit, checkout-succeeded, and checkout-failed-but-continuing):
 
 ```bash
-echo "[ci-review] Step 3.5 done elapsed=$(( $(date +%s) - <STEP3_5_START_EPOCH> ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 3.5 done elapsed=$(( $(date +%s) - <STEP3_5_START_EPOCH> ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 ### Step 4: Launch Review Agents
@@ -216,8 +216,8 @@ echo "::endgroup::"
 Multi-call timing variant. This is typically the longest phase — the elapsed value tells the user exactly how much time agent reasoning consumed. Emit the phase-start marker in a dedicated Bash call **before** launching agents:
 
 ```bash
-echo "::group::[ci-review] Step 4: Launch Review Agents"
-date +%s   # remember this epoch for the phase-end call
+echo "::group::[ci-review] Step 4: Launch Review Agents" >&2
+date +%s >&2   # remember this epoch for the phase-end call
 ```
 
 Select agents based on profile:
@@ -270,8 +270,8 @@ Changed files: {count} ({additions}+ / {deletions}-)
 After all agents have returned (or been recorded as failed), emit the Step-4 phase-end marker (substitute the remembered epoch):
 
 ```bash
-echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 ### Step 5: Confidence Scoring
@@ -279,8 +279,8 @@ echo "::endgroup::"
 Multi-call timing variant. Emit the phase-start marker in a dedicated Bash call **before** launching scorers:
 
 ```bash
-echo "::group::[ci-review] Step 5: Confidence Scoring"
-date +%s   # remember this epoch for the phase-end call
+echo "::group::[ci-review] Step 5: Confidence Scoring" >&2
+date +%s >&2   # remember this epoch for the phase-end call
 ```
 
 Collect all findings from all agents into a single list. For each finding, record:
@@ -355,8 +355,8 @@ Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
 After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
 
 ```bash
-echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 ### Step 6: Build Review Payload
@@ -364,8 +364,8 @@ echo "::endgroup::"
 Multi-call timing variant. Emit the phase-start marker in a dedicated Bash call before reading `references/REVIEW-POSTING.md` and deriving types:
 
 ```bash
-echo "::group::[ci-review] Step 6: Build Review Payload"
-date +%s   # remember this epoch for the phase-end call
+echo "::group::[ci-review] Step 6: Build Review Payload" >&2
+date +%s >&2   # remember this epoch for the phase-end call
 ```
 
 **Read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the detailed format specification.
@@ -407,23 +407,23 @@ For each surviving finding:
 After the payload is built, emit the Step-6 phase-end marker:
 
 ```bash
-echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 ### Step 7: Post Review
 
 Multi-call timing variant — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Fold the phase-start marker into the first Bash call (OWNER/REPO resolution below), and emit the phase-end marker at the end of **every exit path** of the error-handling chain: successful post, the invalid-comments retry, the drop-all-inline-comments fallback, the `gh pr comment` fallback, and the final stdout-print fallback.
 
-Resolve the repository owner and repo — Bash tool state does not persist across calls, so print the `owner/repo` string to stdout and remember it; derive `OWNER` and `REPO` in the subsequent Bash call that actually uses them (where they stay in scope for `gh api`):
+Resolve the repository owner and repo — Bash tool state does not persist across calls, so print the `owner/repo` string to stdout and remember it. The model substitutes the `<OWNER>` and `<REPO>` placeholders in the `gh api` block below with the remembered value — no reliance on shell variables from this call:
 
 ```bash
-echo "::group::[ci-review] Step 7: Post Review"
-date +%s   # remember this epoch for the phase-end call on every exit path below
-gh repo view --json nameWithOwner --jq '.nameWithOwner'   # prints owner/repo — remember it and substitute OWNER/REPO below
+echo "::group::[ci-review] Step 7: Post Review" >&2
+date +%s >&2   # remember this epoch for the phase-end call on every exit path below
+gh repo view --json nameWithOwner --jq '.nameWithOwner'   # prints owner/repo to stdout — remember it and substitute OWNER/REPO below
 ```
 
-Build the JSON payload using `jq` and post via `gh api`. Substitute the owner/repo you remembered from the phase-start call into `<OWNER>/<REPO>` below — do **not** rely on `$OWNER`/`$REPO` shell variables from the prior Bash call (they are not in scope here):
+Build the JSON payload using `jq` and post via `gh api`. Substitute the owner/repo you remembered from the phase-start call into `<OWNER>/<REPO>` below:
 
 ```bash
 PAYLOAD=$(jq -n \
@@ -456,8 +456,8 @@ PAYLOAD=$(jq -n \
 Print the review URL on success, then emit the Step-7 phase-end marker. **The same two-line phase-end block must follow every exit path above** (successful post, retry success after invalid-comment cleanup, drop-inline fallback success, `gh pr comment` fallback, and the stdout-print terminal fallback) so the Step-7 group is always closed:
 
 ```bash
-echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - <STEP7_START_EPOCH> ))s"
-echo "::endgroup::"
+echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - <STEP7_START_EPOCH> ))s" >&2
+echo "::endgroup::" >&2
 ```
 
 ### Step 8: Summary
