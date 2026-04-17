@@ -147,7 +147,7 @@ Using the `REVIEWER_ISSUE_COMMENTS` array from Step 1 (the filtered set that mat
 >
 > **Examples of non-actionable issue comments that are Resolved without a DLC reply:**
 > - Bot CI summaries: "No actionable issues found", "Lint passed", "All checks green", "Reviewed N files across M changed lines"
-> - Status updates from the PR author or reviewers: "rebased", "resolved conflicts", "pushed fix"
+> - Status updates from reviewers (PR-author comments are already excluded from `REVIEWER_ISSUE_COMMENTS` in Step 1): "rebased", "resolved conflicts", "pushed fix"
 > - Informational links or context with no ask (e.g., "For reference, see the spec at …")
 >
 > **Silent Resolved:** Issue comments classified Resolved via the non-actionable path produce **no outgoing reply** in Step 4. Do not generate an "Answered: no action needed" message — the original comment already said so.

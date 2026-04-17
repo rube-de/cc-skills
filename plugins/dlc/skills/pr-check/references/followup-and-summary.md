@@ -100,11 +100,11 @@ For each **Blocked** comment, map the user's Step 5a decision:
 | Included in follow-up issue | `Acknowledged — tracked in #ISSUE_NUMBER` |
 | Handle manually | `Acknowledged — will be addressed by the author` |
 
-For each **user-skipped Fixable** comment, always reply:
+For each **Skipped (user decision)** item — Fixable comments where the user chose "Skip this comment" during confidence gating — always reply:
 
 | Item Status | Reply Text |
 |-------------|------------|
-| Skipped Fixable | `Acknowledged — deferred (out of scope for this PR)` |
+| Skipped (user decision) | `Acknowledged — deferred (out of scope for this PR)` |
 
 Use the same reply routing as SKILL.md Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.
 
