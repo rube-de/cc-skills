@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/rube-de/cc-skills/compare/v1.62.1...v1.63.0) (2026-04-17)
+
+
+### Features
+
+* **ci-review:** add per-phase timing logs for Actions visibility ([#210](https://github.com/rube-de/cc-skills/issues/210)) ([054cd23](https://github.com/rube-de/cc-skills/commit/054cd23b79204886da9e6d166e56fd13cbef0907))
+
 ## [1.62.1](https://github.com/rube-de/cc-skills/compare/v1.62.0...v1.62.1) (2026-04-17)
 
 
