@@ -966,3 +966,15 @@ babysit fires PushNotification + CronDelete + state file cleanup
 ```
 
 > Source: PR implementing issue #212; spec `.dev/pm/specs/2026-04-17-dlc-autonomy-and-halt-on-defer.md`; files: `plugins/dlc/skills/pr-check/**`, `plugins/dlc/skills/babysit/SKILL.md`
+
+### The mode-split invariant: `AskUserQuestion` must be gated by `UNATTENDED` wherever it appears
+
+The first pass of `--unattended` only split the classifier for Discussion items. Fixable items still called `AskUserQuestion` on Medium/Low confidence — which meant unattended `/loop` runs re-introduced the exact empty-answer failure mode the feature was designed to kill. A reviewer caught it in post-merge review; the Pending-Human halt surfaced the gap rather than hiding it (meta-validation).
+
+**Rule:** Every `AskUserQuestion` call site in pr-check must check `UNATTENDED` before firing. Attended mode keeps the menu; unattended mode reclassifies as **Pending-Human**. An empty-answer safeguard belongs next to every call site, not just one — attended empty answers must reclassify as Pending-Human, never silently default to a user-facing acknowledgement reply.
+
+**Bad pattern:** split the classifier in one workflow (`discussion-workflow.md`) and leave another (`fixable-workflow.md`) unchanged. The invariant leaks.
+
+**Good pattern:** audit every call site before merging the first mode-split. If `AskUserQuestion` fires anywhere under `UNATTENDED=true`, the feature is incomplete.
+
+> Source: follow-up to #212 (#213); review thread `plugins/dlc/skills/pr-check/SKILL.md:35` (copilot-pull-request-reviewer); files: `plugins/dlc/skills/pr-check/references/fixable-workflow.md`
