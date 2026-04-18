@@ -30,7 +30,7 @@ Do **not** preload these references — each Step pointer below names its file a
 The skill accepts two arguments, in any order:
 
 - `<PR_NUMBER>` — numeric PR reference. Optional; when omitted, auto-detect from the current branch.
-- `--unattended` — optional flag. When present, set `UNATTENDED=true` and carry it through downstream steps. Gates the autonomy ladder in Step 3.5, suppresses `AskUserQuestion` in Steps 3.5 and 5a, activates Pending-Human classification, and emits the Step 6 `Pending-Human:` summary line. When absent (default), behavior is identical to attended mode.
+- `--unattended` — optional flag. When present, set `UNATTENDED=true` and carry it through downstream steps. Gates the autonomy ladder in Step 3.5, suppresses `AskUserQuestion` in Steps 3, 3.5, and 5a, activates Pending-Human classification, and emits the Step 6 `Pending-Human:` summary line. When absent (default), behavior is identical to attended mode.
 
 Parse `--unattended` out of the argument string before invoking the script; only the PR number (if any) goes to `pr-comments.sh`.
 

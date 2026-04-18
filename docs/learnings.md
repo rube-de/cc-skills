@@ -977,4 +977,4 @@ The first pass of `--unattended` only split the classifier for Discussion items.
 
 **Good pattern:** audit every call site before merging the first mode-split. If `AskUserQuestion` fires anywhere under `UNATTENDED=true`, the feature is incomplete.
 
-> Source: follow-up to #212 (#213); review thread `plugins/dlc/skills/pr-check/SKILL.md:35` (copilot-pull-request-reviewer); files: `plugins/dlc/skills/pr-check/references/fixable-workflow.md`
+> Source: follow-up to #212 (#213); surfaced by copilot-pull-request-reviewer on PR #213; files: `plugins/dlc/skills/pr-check/references/fixable-workflow.md`
