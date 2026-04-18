@@ -243,7 +243,7 @@ Delegate all review comment handling to `dlc:pr-check`. It handles: fetching com
 
 **Trust the process:** Even after multiple cycles, `dlc:pr-check` evaluates each comment on its own merits. If comments are genuinely resolved, `dlc:pr-check` will find 0 unresolved items and confirm it — you never need to short-circuit this by handling comments yourself. Every cycle that reduces the unresolved count is real progress toward merge-ready.
 
-**Unattended mode:** The babysitter runs in a loop with no human at the terminal, so invoke `dlc:pr-check` with the `--unattended` flag. That flag activates pr-check's **Autonomy Ladder** (ten low-risk patterns — rename, typo, null check, logging, etc. — always auto-implemented) and its **Pending-Human** classification for items that genuinely need human judgment (architectural trade-offs, product scope, ambiguous fixes). Pending-Human items surface back here through the `Pending-Human: <n> — ...` line in pr-check's Step 6 summary and produce a single `PushNotification` in Step 4. Under `--unattended`, pr-check posts **no** `Acknowledged — will be addressed by the author` replies — the halt is the communication.
+**Context — why unattended mode exists:** The babysitter runs in a loop with no human at the terminal. The invocation below therefore passes `--unattended` so pr-check activates its **Autonomy Ladder** (ten low-risk patterns — rename, typo, null check, logging, etc. — always auto-implemented) and its **Pending-Human** classification for items that genuinely need human judgment (architectural trade-offs, product scope, ambiguous fixes). Pending-Human items surface back here through the `Pending-Human: <n> — ...` line in pr-check's Step 6 summary and produce a single `PushNotification` in Step 4. Under `--unattended`, pr-check posts **no** `Acknowledged — will be addressed by the author` replies — the halt is the communication.
 
 ```text
 Skill("dlc:pr-check", "<PR_NUMBER> --unattended")
@@ -251,7 +251,7 @@ Skill("dlc:pr-check", "<PR_NUMBER> --unattended")
 
 After pr-check completes, parse its output summary to extract these values:
 - Total unresolved items remaining: items marked Fixed, Answered, Resolved, or Dismissed are **done**. Remaining = Total - (Fixed + Answered + Resolved + Dismissed).
-- **Pending-Human count and items**: parse the `Pending-Human: <n> — <item1_short>; <item2_short>; ...` line from the Step 6 summary. The `<n>` is the count; split the tail on `;` (trimming whitespace) to get the per-item short descriptions. If the line is absent, the count is 0. This line is emitted only under `--unattended`.
+- **Pending-Human count and items**: parse the `Pending-Human: <n> — <item1_short>; <item2_short>; ...` line from the Step 6 summary. The `<n>` is the count; split the tail on `;` (trimming whitespace) to get the per-item short descriptions. If the line is absent, the count is 0. This line is emitted only under `--unattended`. Worked example: `Pending-Human: 2 — rename foo to bar; clarify async semantics of handler()` → `count=2`, `items=["rename foo to bar", "clarify async semantics of handler()"]`.
 - Whether pr-check pushed any commits (look for "Pushed" in the summary or a non-empty git diff from before)
 
 If pr-check pushed commits, re-request review from all prior reviewers. Filter out bot accounts (logins ending in `[bot]`):

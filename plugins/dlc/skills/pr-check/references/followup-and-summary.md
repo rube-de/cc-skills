@@ -15,7 +15,10 @@ If none of these exist, SKILL.md skips this reference entirely and jumps to the 
 >
 > **Note:** Discussion items resolved in Step 3.5 (implemented as Implementable Fix or answered as Clarification) are already handled in SKILL.md Step 4. Discussion items deferred to the author proceed directly to Step 5b below — they do not appear here.
 >
-> **Unattended-mode behavior:** In unattended runs (`UNATTENDED=true`), Branches 2 and 3 skip `AskUserQuestion` and auto-create the follow-up issue for Blocked or Skipped items. The resulting reply `Acknowledged — tracked in #ISSUE_NUMBER` is factual (the issue exists), so the hard rule that `Acknowledged — will be addressed by the author` fires only on explicit user selection is not violated. Discussion-Tracked items cannot arise in unattended runs (they require an explicit "Create follow-up issue" click in `discussion-workflow.md` Section 4), so Branch 1 is the only reachable path for tracked items under `UNATTENDED=true`.
+> **Unattended-mode behavior** (applies when `UNATTENDED=true`):
+> - Branches 2 and 3 skip `AskUserQuestion` and auto-create the follow-up issue for Blocked or Skipped items — no user prompt.
+> - The resulting reply `Acknowledged — tracked in #ISSUE_NUMBER` is factual (the issue exists), so the hard rule that `Acknowledged — will be addressed by the author` fires only on explicit user selection is not violated — those are two different reply templates.
+> - Discussion-Tracked items cannot arise (they require an explicit "Create follow-up issue" click in `discussion-workflow.md` Section 4), so Branch 1 is the only reachable tracked-items path in unattended runs.
 
 **Per-item decisions from the Discussion workflow are final:**
 - **Discussion-Tracked** items are automatically included in the follow-up issue — the user already approved per-item during `discussion-workflow.md` section 3. Do not re-ask.
