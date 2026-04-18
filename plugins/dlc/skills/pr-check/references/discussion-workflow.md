@@ -38,11 +38,41 @@ Assess the effort and nature of each discussion item:
 Treat an Implementable Fix as auto-implementable when any of these hold:
 - All four criteria from `fixable-workflow.md` section 2 pass and there is a single clear approach
 - There are multiple approaches but one is clearly better (you would mark it "(Recommended)") — implement the recommended one
-- The confidence is medium, but the recommended action is obvious and low-risk (rename, add check, fix typo, adjust formatting, add missing validation), so it is safe to upgrade for execution purposes
+- The item matches an **Autonomy Ladder** pattern (see below) — always auto-implement in unattended runs; recommend auto-implementation in attended runs
 
 Apply this test: if you would present this to the user and confidently mark one option "(Recommended)", you already know the answer — just do it. `AskUserQuestion` exists for genuine ambiguity where reasonable engineers would disagree, not as a rubber stamp for decisions you've already made.
 
-Implementable Fix items that are not auto-implementable — for example, when there are multiple substantially different approaches with no clear winner, the change is behavior-changing or risky, or the trade-offs are non-obvious — route to `AskUserQuestion` in attended runs, or classify as **Discussion-Deferred** in unattended runs.
+### Autonomy Ladder
+
+The following low-risk patterns auto-implement when the change is **local** — under ~20 lines and confined to a single file:
+
+- Rename a variable, function, or type
+- Fix a typo
+- Edit a comment or docstring
+- Add a null check or guard
+- Add logging
+- Tighten a condition (narrow a range, add a precondition)
+- Add missing validation
+- Extract a constant or magic number
+- Adjust formatting, indentation, or whitespace
+- Remove reviewer-flagged dead code
+
+In unattended runs (`UNATTENDED=true`), matching any pattern is a **bright-line auto-implement rule** — skip `AskUserQuestion` entirely and implement now. In attended runs, the pattern still auto-implements unless the item also needs user judgment for another reason.
+
+If a ladder-pattern match would exceed the local-scope guard (touches multiple files or more than ~20 lines), fall through to standard Implementable-Fix handling — do not force it through the ladder.
+
+If the reviewer comment mixes a ladder pattern with an architectural concern (e.g., "rename this AND reconsider the overall design"), classify by the most complex ask. Do not auto-implement the rename in isolation when the reviewer's deeper concern is design.
+
+If implementation fails (file no longer exists, conflict, tool error), reclassify as **Blocked** with the reason `implementation failed: {error}` — same guardrail as section 4. Do NOT reclassify as Pending-Human; Blocked is the path for failed execution.
+
+### Attended / unattended mode split
+
+Implementable Fix items that are not auto-implementable — multiple substantially different approaches with no clear winner, behavior-changing or risky changes, or non-obvious trade-offs — split by mode:
+
+- **Attended runs** (`UNATTENDED` unset or false): route to `AskUserQuestion` in the menu below.
+- **Unattended runs** (`UNATTENDED=true`): classify as **Pending-Human**. Skip `AskUserQuestion`. Post no outgoing reply. Do NOT assign Discussion-Deferred — that path is attended-only and requires an explicit "Defer to author" click. Pending-Human items enter the Step 6 `Pending-Human:` summary line and halt the caller. Babysit fires `PushNotification` and self-cancels the cron; an attended `/dlc:pr-check` rerun surfaces the same items through the menu for explicit user triage.
+
+The same split applies to medium/low-confidence **Clarification Answer** items that don't meet the auto-reply criteria below, and to **Design Decision** / **Out-of-PR-Scope** items — these always require human judgment, so attended routes to the menu and unattended routes to Pending-Human.
 
 Skip `AskUserQuestion` and auto-reply **high-confidence Clarification Answer** items when the agent can draft a factual answer entirely from codebase evidence. A Clarification Answer is high-confidence when all four of these criteria pass:
 
@@ -70,7 +100,9 @@ When all four pass → auto-draft the reply without asking. Print: `Auto-replyin
 >
 > In these cases, fall through to `AskUserQuestion` instead (or reclassify per the defect-revealing rule above).
 
-**Genuinely ambiguous items only** — Medium/Low-confidence Implementable Fix that does not meet the auto-implement criteria above, medium/low-confidence Clarification Answer, true Design Decisions (architectural trade-offs where reasonable engineers would disagree), Out-of-PR-Scope, or Implementable Fix with multiple approaches (none clearly recommended) — use `AskUserQuestion`:
+**Attended mode, genuinely ambiguous items only** — This menu fires only when `UNATTENDED` is unset or false. For Medium/Low-confidence Implementable Fix that does not meet the auto-implement criteria above, medium/low-confidence Clarification Answer, true Design Decisions (architectural trade-offs where reasonable engineers would disagree), Out-of-PR-Scope, or Implementable Fix with multiple approaches (none clearly recommended), use `AskUserQuestion`:
+
+> **In unattended mode, skip this menu entirely and classify the item as Pending-Human per the mode split above.** Do not invoke `AskUserQuestion` on an unattended run — the tool has no user surface to render to, and empty returns silently produced `Acknowledged` replies under the old behavior.
 
 ```text
 Discussion item {n}/{total}: @{reviewer} at {location}
@@ -109,6 +141,10 @@ Include a brief rationale for why you recommend one approach over the others. Th
 
 The user can always override the recommendation by choosing any option.
 
+### Empty-answer safeguard (attended mode)
+
+If `AskUserQuestion` returns an empty answer (no user selection captured), do **not** assume a default. Re-ask the question once. If the second attempt is also empty, reclassify the item as **Pending-Human** and skip it. Never silently route to "Defer to author" — that path produces an `Acknowledged` reply, and `Acknowledged` is reserved for explicit user clicks only.
+
 ## 4. Execute Chosen Action
 
 **For "Implement now"**: Apply the same confidence-gated implementation as `fixable-workflow.md` section 3:
@@ -125,3 +161,4 @@ The user can always override the recommendation by choosing any option.
 
 > **Items reclassified as Fixed** follow the same `Fixed: {brief description}` reply format and routing used for Fixable items in SKILL.md Step 4.
 > **If an implementation fails** (tool error, file not found, conflict), reclassify as **Blocked** with the reason "implementation failed: {error}" — same guardrail as `fixable-workflow.md` section 3.
+> **Pending-Human** items (from unattended-mode classification in Section 3 or from the empty-answer safeguard) do NOT appear in the table above. They bypass Section 4 entirely: no user-chosen action, no reply text, no Step 5 follow-up, no thread resolve. They are emitted only in the Step 6 `Pending-Human:` summary line and counted in Step 4b coverage.

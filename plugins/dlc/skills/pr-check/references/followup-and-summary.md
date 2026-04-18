@@ -9,11 +9,16 @@ This reference covers the three post-reply steps that only fire when unresolved 
 
 If none of these exist, SKILL.md skips this reference entirely and jumps to the final commit/push/report step.
 
-## Step 5a: User-Gated Issue Creation
+## Step 5a: Follow-up Issue Creation
 
 > **Skip this sub-step entirely** if there are no issue-creation candidates — i.e. no **Discussion-Tracked**, **Blocked**, or **user-skipped Fixable** items remain. For example, when the only remaining items are Discussion-Deferred, proceed directly to Step 5b below (issue creation has no candidates to consider).
 >
 > **Note:** Discussion items resolved in Step 3.5 (implemented as Implementable Fix or answered as Clarification) are already handled in SKILL.md Step 4. Discussion items deferred to the author proceed directly to Step 5b below — they do not appear here.
+>
+> **Unattended-mode behavior** (applies when `UNATTENDED=true`):
+> - Branches 2 and 3 skip `AskUserQuestion` and auto-create the follow-up issue for Blocked or Skipped items — no user prompt.
+> - The resulting reply `Acknowledged — tracked in #ISSUE_NUMBER` is factual (the issue exists), so the hard rule that `Acknowledged — will be addressed by the author` fires only on explicit user selection is not violated — those are two different reply templates.
+> - Discussion-Tracked items cannot arise (they require an explicit "Create follow-up issue" click in `discussion-workflow.md` Section 4), so Branch 1 is the only reachable tracked-items path in unattended runs.
 
 **Per-item decisions from the Discussion workflow are final:**
 - **Discussion-Tracked** items are automatically included in the follow-up issue — the user already approved per-item during `discussion-workflow.md` section 3. Do not re-ask.
@@ -78,6 +83,8 @@ If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and prin
 
 If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, skip this step.
 
+> **Pending-Human items do NOT reach this step.** They were classified upstream in `discussion-workflow.md` and intentionally have no reply. Pending-Human is not equivalent to Discussion-Deferred: the former emits silence, the latter (attended-only) emits `Acknowledged — will be addressed by the author` when the user explicitly clicks "Defer to author" in the Section 3 menu. Never post `Acknowledged — will be addressed by the author` outside that explicit click.
+
 Post replies reflecting each item's outcome. The routing below covers inline threads, review bodies, and issue comments — not only inline threads. Items arrive here from different decision paths:
 
 For each **Discussion-Deferred** item (user chose "Defer to author" in the Discussion workflow), always reply:
@@ -135,7 +142,9 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 5c: PR Summary Comment
 
-If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, skip this step.
+If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, user-skipped Fixable, or Pending-Human items, skip this step.
+
+> **Unattended-mode conditional suppression:** In unattended runs (`UNATTENDED=true`), if the ONLY remaining items are Pending-Human — no Fixed, Answered, Deferred, Tracked, Blocked, or Skipped items to report — do NOT post this summary comment. The halt signal comes from the `PushNotification` fired by babysit, not from a PR-level comment. When auto-handled items coexist with Pending-Human items (e.g., 3 fixed + 2 pending), post the summary as normal with the Pending-Human row included.
 
 Post a PR-level summary comment containing the overall status and decisions.
 
@@ -152,6 +161,7 @@ Build the summary with these sections:
 | Skipped (user decision) | {n} | {n} | {n} | {n} |
 | Discussion-Deferred | {n} | {n} | {n} | {n} |
 | Discussion-Tracked | {n} | {n} | {n} | {n} |
+| Pending-Human | {n} | {n} | {n} | {n} |
 | Blocked | {n} | {n} | {n} | {n} |
 | Dismissed | {n} | {n} | {n} | {n} |
 | **Total** | **{n}** | **{n}** | **{n}** | **{n}** |
