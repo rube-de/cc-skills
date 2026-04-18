@@ -1,3 +1,10 @@
+# [1.64.0](https://github.com/rube-de/cc-skills/compare/v1.63.0...v1.64.0) (2026-04-18)
+
+
+### Features
+
+* **dlc:** autonomy ladder + halt-on-defer with PushNotification ([#213](https://github.com/rube-de/cc-skills/issues/213)) ([8f5da63](https://github.com/rube-de/cc-skills/commit/8f5da6332062b6163f26352dae0c5fc14670e00f)), closes [#212](https://github.com/rube-de/cc-skills/issues/212)
+
 # [1.63.0](https://github.com/rube-de/cc-skills/compare/v1.62.1...v1.63.0) (2026-04-17)
 
 
