@@ -316,7 +316,7 @@ Do **not** retry more than once. A second failure indicates a structural issue t
 
 ## Step 5: Follow-Up Issue, Decision-Aware Replies, and PR Summary
 
-If no Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items exist after Steps 3 and 3.5, skip this step and continue to Step 6.
+If no Discussion-Deferred, Discussion-Tracked, Blocked, user-skipped Fixable, or Pending-Human items exist after Steps 3 and 3.5, skip this step and continue to Step 6.
 
 Otherwise, read [`references/followup-and-summary.md`](references/followup-and-summary.md) now and follow its three sub-steps:
 
@@ -362,7 +362,7 @@ PR review compliance check complete.
   - Per-reviewer breakdown:
       @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
       @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when UNATTENDED=true AND n > 0; each short is the first 80 chars of the reviewer comment; babysit parses this exact line shape]
+  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment; babysit parses this exact line shape]
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

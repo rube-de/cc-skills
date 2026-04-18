@@ -9,7 +9,7 @@ This reference covers the three post-reply steps that only fire when unresolved 
 
 If none of these exist, SKILL.md skips this reference entirely and jumps to the final commit/push/report step.
 
-## Step 5a: User-Gated Issue Creation
+## Step 5a: Follow-up Issue Creation
 
 > **Skip this sub-step entirely** if there are no issue-creation candidates — i.e. no **Discussion-Tracked**, **Blocked**, or **user-skipped Fixable** items remain. For example, when the only remaining items are Discussion-Deferred, proceed directly to Step 5b below (issue creation has no candidates to consider).
 >
@@ -142,7 +142,7 @@ gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
 
 ## Step 5c: PR Summary Comment
 
-If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, or user-skipped Fixable items, skip this step.
+If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, user-skipped Fixable, or Pending-Human items, skip this step.
 
 > **Unattended-mode conditional suppression:** In unattended runs (`UNATTENDED=true`), if the ONLY remaining items are Pending-Human — no Fixed, Answered, Deferred, Tracked, Blocked, or Skipped items to report — do NOT post this summary comment. The halt signal comes from the `PushNotification` fired by babysit, not from a PR-level comment. When auto-handled items coexist with Pending-Human items (e.g., 3 fixed + 2 pending), post the summary as normal with the Pending-Human row included.
 

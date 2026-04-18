@@ -29,6 +29,7 @@ Notifications are deduplicated via a state file at `.dev/dlc/babysit-<PR_NUMBER>
 
 - `ci_failing:<sorted_check_names>` (e.g., `ci_failing:build,lint`)
 - `rebase_conflict:<sorted_file_list>`
+- `merge_conflict`
 - `pending_human:<count>` (count-only dedup, e.g., `pending_human:2`)
 - `unresolved:<count>`
 - `unresolved:<count>,ci_failing:<sorted_check_names>`
@@ -283,7 +284,7 @@ Evaluate the following conditions **in order**. The first matching condition win
 
 **If pr-check reported Pending-Human items (count > 0):**
 These items require human judgment — architectural trade-offs, product scope decisions, or ambiguous fixes with no clear winner. The babysitter cannot resolve them; halt the loop loudly.
-- Build the message body: concatenate the per-item shorts with `; ` separators, leading with the PR number and count. Target under 200 characters total; if longer, truncate trailing items and append `…` so the most important signal fits in a single mobile notification.
+- Build the message body: concatenate the per-item shorts with `;` separators, leading with the PR number and count. Target under 200 characters total; if longer, truncate trailing items and append `…` so the most important signal fits in a single mobile notification.
 - Fire `PushNotification` with message `PR #<number>: <count> items need your call — <item1_short>; <item2_short>`.
 - Write state key `pending_human:<count>` (count-only dedup per spec).
 - Self-cancel (see Cancellation Pattern below) and stop. The user will triage via `/dlc:pr-check <PR>` in attended mode, then relaunch `/loop 10m /dlc:babysit <PR>` when ready to resume.
@@ -309,6 +310,7 @@ Stop silently. Re-review was already requested in Step 3. Next cycle will re-che
 
 **If mergeable is CONFLICTING:**
 - Fire `PushNotification` with message `⚠️ PR #<number> has merge conflicts. <url>`.
+- Write state key `merge_conflict`.
 - Stop. Next cycle will attempt rebase in Step 2.
 
 **If pr-check reported 0 remaining unresolved items AND 0 Pending-Human AND CI_STATUS is `passing` AND reviewDecision is APPROVED (or empty) AND mergeable is MERGEABLE:**
@@ -326,4 +328,4 @@ To self-cancel the babysit loop:
 4. Delete the state file: `.dev/dlc/babysit-<PR_NUMBER>.state`
 5. If no matching task is found, this was a manual invocation — skip cancellation.
 
-**Terminal states that follow this pattern:** `ready`, `closed:<state>`, `pending_human:<count>`. Each emits exactly one `PushNotification`, writes its state key, then runs the cancellation above. Non-terminal branches (`ci_failing:*`, `rebase_conflict:*`, `unresolved:*`) notify and stop without cancelling — the next `/loop` cycle re-evaluates.
+**Terminal states that follow this pattern:** `ready`, `closed:<state>`, `pending_human:<count>`. Each emits exactly one `PushNotification`, writes its state key, then runs the cancellation above. Non-terminal branches (`ci_failing:*`, `rebase_conflict:*`, `merge_conflict`, `unresolved:*`) notify and stop without cancelling — the next `/loop` cycle re-evaluates.
