@@ -75,7 +75,7 @@ Each Fixable item lands in one of these final states:
 | Implementation succeeds | **Fixed** | SKILL.md Step 4 reply queue with `Fixed:` prefix |
 | User chose "Skip this comment" | **Skipped (user decision)** | SKILL.md Step 5 follow-up flow — acknowledged in [`followup-and-summary.md`](followup-and-summary.md) Step 5b with `Acknowledged — deferred (out of scope for this PR)` |
 | User chose "Implement with modification" | Proceeds as Fixed once the modified implementation lands | Same as Fixed |
-| Unattended mode, Medium/Low confidence (no `AskUserQuestion`) | **Pending-Human** | No reply, no Step 5 follow-up, no thread resolve. Counted in Step 4b coverage and emitted in the Step 6 `Pending-Human:` summary line for babysit to parse. |
+| Unattended mode, Medium/Low confidence (no `AskUserQuestion`) | **Pending-Human** | No reply, no Step 5a issue creation, no Step 5b decision-aware reply, no thread resolve. Counted in Step 4b coverage, may appear in the Step 5c summary row when mixed with other follow-up categories, and emitted in the Step 6 `Pending-Human:` summary line for babysit to parse. |
 | Attended mode, `AskUserQuestion` empty after one re-ask | **Pending-Human** | Same as above — honest halt rather than silent `Acknowledged — deferred`. |
 | Implementation fails (tool error, conflict) | **Blocked** with reason `implementation failed: {error}` | SKILL.md Step 5 follow-up flow (issue creation + acknowledgement) |
 

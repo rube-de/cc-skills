@@ -181,7 +181,7 @@ If no **Fixable** items exist from Step 2, skip this step.
 
 Otherwise, read [`references/fixable-workflow.md`](references/fixable-workflow.md) now and follow its three-phase workflow: context read → critical evaluation → confidence-gated implementation.
 
-The reference covers the four evaluation criteria (technical correctness, project alignment, regression risk, scope), anti-sycophancy rules, implementation guardrails, the attended/unattended split for Medium/Low-confidence items (unattended classifies as **Pending-Human** rather than calling `AskUserQuestion`), the attended empty-answer safeguard, and the Blocked-on-error reclassification rule. Items that implement successfully reclassify as **Fixed** and enter the Step 4 reply queue; Medium/Low-confidence items in unattended mode reclassify as **Pending-Human** and enter the Step 6 summary line; items whose implementation fails reclassify as **Blocked** and are handled by Step 5.
+The reference covers the four evaluation criteria (technical correctness, project alignment, regression risk, scope), anti-sycophancy rules, implementation guardrails, the attended/unattended split for Medium/Low-confidence items (unattended classifies as **Pending-Human** rather than calling `AskUserQuestion`), the attended empty-answer safeguard, and the Blocked-on-error reclassification rule. Items that implement successfully reclassify as **Fixed** and enter the Step 4 reply queue; Medium/Low-confidence items in unattended mode — and attended items where the empty-answer safeguard fires twice — reclassify as **Pending-Human** and enter the Step 6 summary line; items whose implementation fails reclassify as **Blocked** and are handled by Step 5.
 
 ## Step 3.5: Handle Discussion Items
 
