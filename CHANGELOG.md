@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/rube-de/cc-skills/compare/v1.64.0...v1.65.0) (2026-04-20)
+
+
+### Features
+
+* **dlc:** extend --unattended to Fixable items ([#214](https://github.com/rube-de/cc-skills/issues/214)) ([68bd438](https://github.com/rube-de/cc-skills/commit/68bd438a4770b2b663f3381c7e0cf2c0a632c66f)), closes [#213](https://github.com/rube-de/cc-skills/issues/213)
+
 # [1.64.0](https://github.com/rube-de/cc-skills/compare/v1.63.0...v1.64.0) (2026-04-18)
 
 
