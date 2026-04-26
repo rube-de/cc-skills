@@ -56,10 +56,11 @@ fi
 
 touch "$WARNED_FILE"
 
-cat <<'JSON'
+COOLDOWN_MIN=$((COOLDOWN_SECONDS / 60))
+cat <<JSON
 {
   "decision": "block",
-  "reason": "WAVE-GATE SAFETY NET (fires at most once per 5min during an active CDT dev-team — if you are seeing this, the Step 6b rules and the Lead Verification Rule in SKILL.md did not catch a handoff in time): Run TaskList. If ANY task is `status=pending && blockedBy=[] && owner=null`, that task is a wave-gate handoff you owe — send the kickoff message and assign ownership. If NO such task exists, all handoffs are accounted for; reply briefly with what you verified and stop again."
+  "reason": "WAVE-GATE SAFETY NET (fires at most once per ${COOLDOWN_MIN}min during an active CDT dev-team — if you are seeing this, the Step 6b rules and the Lead Verification Rule in SKILL.md did not catch a handoff in time): Run TaskList. If ANY task is \`status=pending && blockedBy=[] && owner=null\`, that task is a wave-gate handoff you owe — send the kickoff message and assign ownership. If NO such task exists, all handoffs are accounted for; reply briefly with what you verified and stop again."
 }
 JSON
 

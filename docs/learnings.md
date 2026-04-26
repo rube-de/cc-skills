@@ -306,8 +306,10 @@ COOLDOWN_SECONDS=300
 
 if [ -f "$WARNED_FILE" ]; then
   NOW=$(date +%s)
-  # macOS: stat -f %m, Linux: stat -c %Y
-  LAST=$(stat -f %m "$WARNED_FILE" 2>/dev/null || stat -c %Y "$WARNED_FILE" 2>/dev/null || echo 0)
+  # GNU stat first (-c %Y), then BSD stat (-f %m). On Linux, `stat -f` means
+  # --file-system, which would emit filesystem-status text and break the
+  # arithmetic below — so the GNU form must be tried first.
+  LAST=$(stat -c %Y "$WARNED_FILE" 2>/dev/null || stat -f %m "$WARNED_FILE" 2>/dev/null || echo 0)
   DELTA=$((NOW - LAST))
   [ "$DELTA" -ge 0 ] && [ "$DELTA" -lt "$COOLDOWN_SECONDS" ] && exit 0
 fi

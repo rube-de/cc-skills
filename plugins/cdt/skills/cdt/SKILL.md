@@ -114,6 +114,8 @@ You are a **coordinator**, not an implementer. During active team phases:
 
 ### Lead Verification Rule
 
-Before replying "standing by" or going idle during an active team session, run TaskList. If any task matches `status=pending && blockedBy=[] && owner=null`, that task is a wave-gate handoff you owe. Send the kickoff message to the appropriate teammate per dev-workflow.md (test tasks → code-tester / qa-tester per Step 6a; `Review all` → reviewer per Step 6b) and assign ownership BEFORE going idle.
+Before replying "standing by" or going idle during an active **dev-team** session, run TaskList. If any task matches `status=pending && blockedBy=[] && owner=null`, that task is a wave-gate handoff you owe. Send the kickoff message to the appropriate teammate per dev-workflow.md (test tasks → code-tester / qa-tester per Step 6a; `Review all` → reviewer per Step 6b) and assign ownership BEFORE going idle.
 
-A pending+unblocked+unowned task during an active team is never "standing by" time — it is always lead action time.
+A pending+unblocked+unowned task during an active dev-team is never "standing by" time — it is always lead action time.
+
+(Plan-team and bugfix-team have different topologies and don't use this same wave-gate handoff shape — their handoffs are covered by their own workflow files.)
