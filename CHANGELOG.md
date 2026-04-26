@@ -1,3 +1,10 @@
+## [1.65.1](https://github.com/rube-de/cc-skills/compare/v1.65.0...v1.65.1) (2026-04-26)
+
+
+### Bug Fixes
+
+* **dlc:** babysit also checks gh run list for in-progress runs ([#211](https://github.com/rube-de/cc-skills/issues/211)) ([86b740e](https://github.com/rube-de/cc-skills/commit/86b740e2584f2b5bfb37e3832871288da1250016))
+
 # [1.65.0](https://github.com/rube-de/cc-skills/compare/v1.64.0...v1.65.0) (2026-04-20)
 
 
