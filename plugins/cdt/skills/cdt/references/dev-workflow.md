@@ -237,15 +237,15 @@ Within a wave, intervene only on escalation (after 3 failed peer iteration cycle
 
 ### 6b. Wave Transitions
 
-A wave transition is a **lead action**, not a stand-back moment. When the testers' "all green" arrives, you owe the next teammate a kickoff. Work through this checklist linearly — do NOT reply "standing by" until step 4 is done.
+A wave transition is a **lead action**, not a stand-back moment. When the testers' "all green" arrives, you owe the next teammate a kickoff. Work through this checklist linearly — do NOT reply "standing by" until step 14 is done.
 
 After all test tasks complete:
-1. Verify all test tasks are `status=completed` in TaskList.
-2. Confirm the `Review all` task is unblocked (`blockedBy=[]`).
-3. SendMessage to reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
-4. TaskUpdate `Review all` with `owner="reviewer"`.
+11. Verify all test tasks are `status=completed` in TaskList.
+12. Confirm the `Review all` task is unblocked (`blockedBy=[]`).
+13. SendMessage to reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
+14. TaskUpdate `Review all` with `owner="reviewer"`.
 
-After step 4: Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+After step 14: Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 
 ### 6c. Post-Kickoff Standby
 
