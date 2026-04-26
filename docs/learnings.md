@@ -292,6 +292,34 @@ JSON
 
 > Source: [PR #218](https://github.com/rube-de/cc-skills/pull/218) — `Stop` hook shipped with `hookSpecificOutput.additionalContext` (valid for `UserPromptSubmit`/`PostToolUse`, not `Stop`). Caught only after a live `Stop` event hit the runtime validator. Spec had flagged the risk in "Open Questions" — verification was not performed before merge.
 
+### `decision: "block"` on high-frequency events needs a cooldown
+
+`Stop` and `SubagentStop` fire on every assistant turn that ends without further tool use. A hook that emits `decision: "block"` on these events forces the LLM to respond → which ends in another Stop → which re-fires the hook → indefinitely. Production hit 8+ consecutive blocks per Stop attempt before this was diagnosed.
+
+The hook output schema offers no non-blocking inject for `Stop`/`SubagentStop` (`hookSpecificOutput.additionalContext` works only for `PreToolUse`/`UserPromptSubmit`/`PostToolUse`/`PostToolBatch`). A hook that *must* surface a reminder on `Stop` has to combine `decision: "block"` with a cooldown — without one, every Stop is blocked.
+
+**Pattern** — co-locate a timestamp file with whatever state already triggers the hook, and short-circuit if the timestamp is recent:
+
+```sh
+WARNED_FILE=".dev/cdt/${BRANCH}/.cdt-wave-gate-warned"
+COOLDOWN_SECONDS=300
+
+if [ -f "$WARNED_FILE" ]; then
+  NOW=$(date +%s)
+  # macOS: stat -f %m, Linux: stat -c %Y
+  LAST=$(stat -f %m "$WARNED_FILE" 2>/dev/null || stat -c %Y "$WARNED_FILE" 2>/dev/null || echo 0)
+  DELTA=$((NOW - LAST))
+  [ "$DELTA" -ge 0 ] && [ "$DELTA" -lt "$COOLDOWN_SECONDS" ] && exit 0
+fi
+
+touch "$WARNED_FILE"
+# ... emit decision:block JSON ...
+```
+
+A 5-minute window reads as a *last-resort safety net* — long enough that legitimate Stops during active work don't accumulate fatigue, short enough that genuinely stuck workflows still surface the reminder within a useful timeframe. **Reframe the reason text to match the cooldown semantics**: *"fires at most once per 5min, the doc-layer rules already failed to catch this"* tells future readers the hook is a backstop, not a primary mechanism. Without that framing, the hook can be misread as the load-bearing rule and the workflow doc gets skipped.
+
+> Source: [PR #218](https://github.com/rube-de/cc-skills/pull/218) — initial `Stop` hook hit 8+ consecutive blocks per Stop attempt during a live `auto-task` run; commit `e3001ee` added the cooldown. The original spec anticipated *reminder fatigue* (lead learns to ignore the reminder) but not the *doom-loop* variant (reminder physically prevents progress).
+
 ---
 
 ## Plugin Structure
