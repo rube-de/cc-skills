@@ -86,12 +86,12 @@ If checkout fails, stop. Do not proceed with git operations on the wrong branch.
 
 ## Step 1: Check CI Status
 
-Query the named checks **and** the raw workflow runs on the PR's current HEAD commit — the two views can disagree. An Action workflow can be `in_progress` or `queued` before (or without ever) registering a named check status, so relying on `gh pr checks` alone will prematurely classify CI as "settled" while bot reviewers are still writing comments. Derive a single `PR_HEAD_SHA` from GitHub via `gh pr view --json headRefOid` so both checks evaluate the same commit even if the local checkout falls behind; `--limit 100` keeps reruns and multi-workflow PRs from falling outside the default 20-run window. Treat either source reporting activity as a pending state.
+Query the named checks **and** the raw workflow runs for the PR — the two views can disagree. An Action workflow can be `in_progress`, `queued`, `waiting`, `requested`, or `pending` before (or without ever) registering a named check status, so relying on `gh pr checks` alone will prematurely classify CI as "settled" while bot reviewers are still writing comments. Derive `PR_HEAD_SHA` from GitHub via `gh pr view --json headRefOid` so the `gh run list` query is pinned to the PR's current HEAD commit even if the local checkout falls behind; `gh pr checks $PR_NUMBER` is still read from the PR as usual. The `status != "completed"` filter catches every non-terminal run state (queued, in_progress, waiting, requested, pending). `--limit 100` keeps reruns and multi-workflow PRs from falling outside the default 20-run window. Treat either source reporting activity as a pending state.
 
 ```bash
 PR_HEAD_SHA=$(gh pr view $PR_NUMBER --json headRefOid --jq '.headRefOid')
 gh pr checks $PR_NUMBER --json name,state,bucket
-IN_PROGRESS_RUNS=$(gh run list --commit "$PR_HEAD_SHA" --limit 100 --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
+IN_PROGRESS_RUNS=$(gh run list --commit "$PR_HEAD_SHA" --limit 100 --json status --jq '[.[] | select(.status != "completed")] | length')
 ```
 
 Categorize each named check by its `bucket` field:
@@ -277,7 +277,7 @@ After pr-check completes, re-fetch the PR state (pr-check may have pushed commit
 ```bash
 PR_HEAD_SHA=$(gh pr view $PR_NUMBER --json headRefOid --jq '.headRefOid')
 gh pr checks $PR_NUMBER --json name,state,bucket
-IN_PROGRESS_RUNS=$(gh run list --commit "$PR_HEAD_SHA" --limit 100 --json status --jq '[.[] | select(.status == "in_progress" or .status == "queued")] | length')
+IN_PROGRESS_RUNS=$(gh run list --commit "$PR_HEAD_SHA" --limit 100 --json status --jq '[.[] | select(.status != "completed")] | length')
 gh pr view $PR_NUMBER --json reviewDecision,mergeable
 ```
 
