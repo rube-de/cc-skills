@@ -260,6 +260,38 @@ Security-critical hooks should **block when uncertain** (fail-closed) rather tha
 
 > Note: `enforce-lead-delegation.sh` is now dormant (Issue #59) — its fail-closed patterns remain as reference for future hooks. See "PreToolUse hooks cannot enforce role boundaries" above.
 
+### Hook output schemas are per-event — `jq` parsing is not a validation step
+
+The Claude Code hook contract defines a separate `hookSpecificOutput` sub-schema **per event type**. Only `PreToolUse`, `UserPromptSubmit`, `PostToolUse`, and `PostToolBatch` have a `hookSpecificOutput` variant. `Stop`, `SubagentStop`, `SessionStart`, `SessionEnd`, `PreCompact`, and `Notification` accept only the top-level fields (`decision`, `reason`, `systemMessage`, `continue`, `suppressOutput`, `stopReason`). A hook that emits `hookSpecificOutput.additionalContext` on a `Stop` event will fail runtime validation with `"(root): Invalid input"` even though the JSON is well-formed.
+
+`jq .` checks JSON syntax, not schema conformance — a hook that passes manual smoke tests can still fail in production. There is no offline validator; the only reliable test is to trigger the real event in a live Claude Code session.
+
+**Bad** — assumed `additionalContext` works for all events (it doesn't for `Stop`):
+```sh
+cat <<'JSON'
+{
+  "hookSpecificOutput": {
+    "hookEventName": "Stop",
+    "additionalContext": "REMINDER: ..."
+  }
+}
+JSON
+```
+
+**Good** — `Stop` hooks use top-level `decision` + `reason`, matching `block-cdt-without-teams.sh`:
+```sh
+cat <<'JSON'
+{
+  "decision": "block",
+  "reason": "REMINDER: ..."
+}
+JSON
+```
+
+**Rule of thumb**: When wiring a new hook event type, copy the output shape from an *existing working hook on the same event*, not from a different event. The available output mechanisms also vary by event — JSON `decision`/`reason`, stderr + `exit 2`, and side-effect-only scripts are all valid in this plugin (`block-cdt-without-teams.sh`, `check-agent-teams.sh`, `track-team-state.sh` respectively). Pick the one used by an existing hook on the same event before inventing.
+
+> Source: [PR #218](https://github.com/rube-de/cc-skills/pull/218) — `Stop` hook shipped with `hookSpecificOutput.additionalContext` (valid for `UserPromptSubmit`/`PostToolUse`, not `Stop`). Caught only after a live `Stop` event hit the runtime validator. Spec had flagged the risk in "Open Questions" — verification was not performed before merge.
+
 ---
 
 ## Plugin Structure
