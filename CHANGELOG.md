@@ -1,3 +1,10 @@
+# [1.67.0](https://github.com/rube-de/cc-skills/compare/v1.66.0...v1.67.0) (2026-04-27)
+
+
+### Features
+
+* **cdt:** append Agent Notes section to PR body in Wrap Up ([#219](https://github.com/rube-de/cc-skills/issues/219)) ([fad1506](https://github.com/rube-de/cc-skills/commit/fad1506514b489d3f70698f6cf965fd1f1b890e7)), closes [#215](https://github.com/rube-de/cc-skills/issues/215) [#215](https://github.com/rube-de/cc-skills/issues/215)
+
 # [1.66.0](https://github.com/rube-de/cc-skills/compare/v1.65.1...v1.66.0) (2026-04-27)
 
 
