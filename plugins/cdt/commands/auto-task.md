@@ -98,11 +98,23 @@ Automatically finalize without user interaction:
 1. Stage all changed files
 2. Commit with conventional commit message based on task
 3. Push branch to remote
-4. Create PR via `gh pr create` with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
+4. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Draft the *content* (excluding headings) for the `Open Questions` and `Context for Next Session` sections you will write to the handoff in step 7 — keep both in working memory so the PR body and the handoff carry identical body text under their respective headings. Then create PR via `gh pr create`. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
+
+    ```markdown
+    ## Agent Notes
+
+    ### Open Questions
+    [drafted Open Questions content — body only, no heading]
+
+    ### Context for Next Session
+    [drafted Context for Next Session content — body only, no heading]
+    ```
+
+    If both `Open Questions` and `Context for Next Session` are empty, omit the entire `## Agent Notes` block — do NOT emit an empty heading.
 5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 6. Ensure handoff directory exists: `mkdir -p .dev/cdt/handoffs`
-7. Write session handoff to `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2):
+7. Write session handoff to `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2). Reuse the same `Open Questions` and `Context for Next Session` content drafted for the PR body in step 4 — do not regenerate or rephrase:
 
     ```markdown
     # Session Handoff
