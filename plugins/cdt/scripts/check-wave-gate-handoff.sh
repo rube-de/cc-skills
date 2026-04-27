@@ -2,10 +2,16 @@
 # Stop hook: when the lead is about to go idle during an active CDT dev-team,
 # remind the lead to verify TaskList for unowned wave-gate handoffs.
 #
-# Last-resort safety net. The normal workflow rules (Step 6b in dev-workflow.md
-# + the Lead Verification Rule in SKILL.md) should catch every wave-gate
-# handoff before idle. If a handoff slips through, this hook fires at most
-# once per cooldown window per branch.
+# Last-resort safety net. The normal workflow rules (Step 6a/6b in
+# dev-workflow.md + the Lead Verification Rule in SKILL.md) should catch every
+# wave-gate handoff before idle. If a handoff slips through, this hook fires at
+# most once per cooldown window per branch.
+#
+# I/O channel: this script writes its decision JSON to stdout (Stop hooks
+# consume hook output from stdout). Sibling guard `block-cdt-without-teams.sh`
+# uses a different I/O channel (stderr) for its tool-input warning — the
+# filesystem-marker pattern is shared via `track-team-state.sh`, but the output
+# channel is not. STATE_FILE below points at that shared marker.
 #
 # Scope: dev-team only. plan-team and bugfix-team have different topologies
 # without the same wave-gate handoff shape, so the marker contents (team name
@@ -23,9 +29,17 @@ if [ ! -t 0 ]; then
   PAYLOAD=$(cat)
 fi
 
-if [ -n "$PAYLOAD" ] && command -v jq >/dev/null 2>&1; then
-  if printf '%s' "$PAYLOAD" | jq -e '.stop_hook_active == true' >/dev/null 2>&1; then
-    exit 0
+if [ -n "$PAYLOAD" ]; then
+  if command -v jq >/dev/null 2>&1; then
+    if printf '%s' "$PAYLOAD" | jq -e '.stop_hook_active == true' >/dev/null 2>&1; then
+      exit 0
+    fi
+  else
+    # jq-less fallback: a literal "stop_hook_active": true match is sufficient
+    # because Claude Code emits this field as a top-level boolean only.
+    if printf '%s' "$PAYLOAD" | grep -Eq '"stop_hook_active"[[:space:]]*:[[:space:]]*true'; then
+      exit 0
+    fi
   fi
 fi
 
@@ -60,7 +74,7 @@ COOLDOWN_MIN=$((COOLDOWN_SECONDS / 60))
 cat <<JSON
 {
   "decision": "block",
-  "reason": "WAVE-GATE SAFETY NET (fires at most once per ${COOLDOWN_MIN}min during an active CDT dev-team — if you are seeing this, the Step 6b rules and the Lead Verification Rule in SKILL.md did not catch a handoff in time): Run TaskList. If ANY task is \`status=pending && blockedBy=[] && owner=null\`, that task is a wave-gate handoff you owe — send the kickoff message and assign ownership. If NO such task exists, all handoffs are accounted for; reply briefly with what you verified and stop again."
+  "reason": "WAVE-GATE SAFETY NET (fires at most once per ${COOLDOWN_MIN}min during an active CDT dev-team — if you are seeing this, the Step 6a/6b rules and the Lead Verification Rule in SKILL.md did not catch a handoff in time): Run TaskList. If ANY task is \`status=pending && blockedBy=[] && owner=null\`, that task is a wave-gate handoff you owe — send the kickoff message and assign ownership. If NO such task exists, all handoffs are accounted for; reply briefly with what you verified and stop again."
 }
 JSON
 

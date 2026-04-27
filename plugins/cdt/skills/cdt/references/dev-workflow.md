@@ -230,22 +230,22 @@ Within a wave, intervene only on escalation (after 3 failed peer iteration cycle
 ### 6a. Impl→Test Wave Transition
 
 After all impl waves:
-7. Message code-tester teammate: "Implementation complete. Files: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
-8. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
-9. Code-tester and qa-tester run in parallel — they test different aspects.
-10. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly.
+1. Message code-tester teammate: "Implementation complete. Files: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
+2. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
+3. Code-tester and qa-tester run in parallel — they test different aspects.
+4. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly.
 
-### 6b. Wave Transitions
+### 6b. Test→Review Wave Transition
 
-A wave transition is a **lead action**, not a stand-back moment. When the testers' "all green" arrives, you owe the next teammate a kickoff. Work through this checklist linearly — do NOT reply "standing by" until step 14 is done.
+A wave transition is a **lead action**, not a stand-back moment. When the testers' "all green" arrives, you owe the next teammate a kickoff. Work through this checklist linearly — do NOT reply "standing by" until step 4 is done.
 
 After all test tasks complete:
-11. Verify all test tasks are `status=completed` in TaskList.
-12. Confirm the `Review all` task is unblocked (`blockedBy=[]`).
-13. SendMessage to reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
-14. TaskUpdate `Review all` with `owner="reviewer"`.
+1. Verify all test tasks are `status=completed` in TaskList.
+2. Confirm the `Review all` task is unblocked (`blockedBy=[]`).
+3. SendMessage to reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
+4. TaskUpdate `Review all` with `owner="reviewer"`.
 
-After step 14: Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+After step 4: Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
 
 ### 6c. Post-Kickoff Standby
 
