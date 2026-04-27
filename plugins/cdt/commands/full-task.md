@@ -113,7 +113,7 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Read `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (written by `dev-workflow.md` step 9 during Phase 2) and extract the *content* under its `## Open Questions` and `## Context for Next Session` headings — exclude the heading lines themselves and stop extraction at the next `##` heading. Create PR. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
+4. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Read `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (written by `dev-workflow.md` step 9 during Phase 2) and extract the *content* under its `## Open Questions` and `## Context for Next Session` headings — exclude the heading lines themselves and stop extraction at the next `## ` heading at the start of a line, or at end-of-file if there is no subsequent `## ` heading. Create PR. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
 
     ```markdown
     ## Agent Notes
