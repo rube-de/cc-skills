@@ -63,8 +63,8 @@ Planning Phase                    Development Phase
 |---------|---------|---------------|--------|
 | `/cdt:plan-task` | Planning only | N/A | `.dev/cdt/plans/plan-YYYYMMDD-HHMM.md` |
 | `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `Agent Notes` section |
-| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `Agent Notes` section |
+| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `## Agent Notes` |
+| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `## Agent Notes` |
 
 ### `/cdt:plan-task` — Design Phase
 
