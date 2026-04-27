@@ -8,10 +8,9 @@
 # most once per cooldown window per branch.
 #
 # I/O channel: this script writes its decision JSON to stdout (Stop hooks
-# consume hook output from stdout). Sibling guard `block-cdt-without-teams.sh`
-# uses a different I/O channel (stderr) for its tool-input warning — the
-# filesystem-marker pattern is shared via `track-team-state.sh`, but the output
-# channel is not. STATE_FILE below points at that shared marker.
+# consume hook output from stdout). The filesystem-marker pattern is shared
+# with sibling guard `block-cdt-without-teams.sh` via `track-team-state.sh`;
+# STATE_FILE below points at that shared marker.
 #
 # Scope: dev-team only. plan-team and bugfix-team have different topologies
 # without the same wave-gate handoff shape, so the marker contents (team name
