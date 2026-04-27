@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/rube-de/cc-skills/compare/v1.65.1...v1.66.0) (2026-04-27)
+
+
+### Features
+
+* **cdt:** add wave-gate handoff guardrails ([#217](https://github.com/rube-de/cc-skills/issues/217)) ([#218](https://github.com/rube-de/cc-skills/issues/218)) ([530b0fb](https://github.com/rube-de/cc-skills/commit/530b0fb99c92f741ce6302758b4a0bb00125c669)), closes [hi#frequency](https://github.com/hi/issues/frequency)
+
 ## [1.65.1](https://github.com/rube-de/cc-skills/compare/v1.65.0...v1.65.1) (2026-04-26)
 
 
