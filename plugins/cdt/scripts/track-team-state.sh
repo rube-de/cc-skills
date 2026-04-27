@@ -14,6 +14,9 @@ BRANCH_DIR=".dev/cdt/${BRANCH}"
 case "$ACTION" in
   create)
     mkdir -p "$BRANCH_DIR"
+    # Clear stale wave-gate cooldown marker from a prior team session so each
+    # new team starts with a fresh first-fire window.
+    rm -f "${BRANCH_DIR}/.cdt-wave-gate-warned"
     if command -v jq >/dev/null 2>&1; then
       TEAM_NAME=$(cat | jq -r '.tool_input.team_name // "unknown"' 2>/dev/null)
     else

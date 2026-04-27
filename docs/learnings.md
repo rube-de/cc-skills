@@ -260,6 +260,68 @@ Security-critical hooks should **block when uncertain** (fail-closed) rather tha
 
 > Note: `enforce-lead-delegation.sh` is now dormant (Issue #59) — its fail-closed patterns remain as reference for future hooks. See "PreToolUse hooks cannot enforce role boundaries" above.
 
+### Hook output schemas are per-event — `jq` parsing is not a validation step
+
+The Claude Code hook contract defines a separate `hookSpecificOutput` sub-schema **per event type**. Only `PreToolUse`, `UserPromptSubmit`, `PostToolUse`, and `PostToolBatch` have a `hookSpecificOutput` variant. `Stop`, `SubagentStop`, `SessionStart`, `SessionEnd`, `PreCompact`, and `Notification` accept only the top-level fields (`decision`, `reason`, `systemMessage`, `continue`, `suppressOutput`, `stopReason`). A hook that emits `hookSpecificOutput.additionalContext` on a `Stop` event will fail runtime validation with `"(root): Invalid input"` even though the JSON is well-formed.
+
+`jq .` checks JSON syntax, not schema conformance — a hook that passes manual smoke tests can still fail in production. There is no offline validator; the only reliable test is to trigger the real event in a live Claude Code session.
+
+**Bad** — assumed `additionalContext` works for all events (it doesn't for `Stop`):
+```sh
+cat <<'JSON'
+{
+  "hookSpecificOutput": {
+    "hookEventName": "Stop",
+    "additionalContext": "REMINDER: ..."
+  }
+}
+JSON
+```
+
+**Good** — `Stop` hooks use top-level `decision` + `reason`, matching `block-cdt-without-teams.sh`:
+```sh
+cat <<'JSON'
+{
+  "decision": "block",
+  "reason": "REMINDER: ..."
+}
+JSON
+```
+
+**Rule of thumb**: When wiring a new hook event type, copy the output shape from an *existing working hook on the same event*, not from a different event. The available output mechanisms also vary by event — JSON `decision`/`reason`, stderr + `exit 2`, and side-effect-only scripts are all valid in this plugin (`block-cdt-without-teams.sh`, `check-agent-teams.sh`, `track-team-state.sh` respectively). Pick the one used by an existing hook on the same event before inventing.
+
+> Source: [PR #218](https://github.com/rube-de/cc-skills/pull/218) — `Stop` hook shipped with `hookSpecificOutput.additionalContext` (valid for `UserPromptSubmit`/`PostToolUse`, not `Stop`). Caught only after a live `Stop` event hit the runtime validator. Spec had flagged the risk in "Open Questions" — verification was not performed before merge.
+
+### `decision: "block"` on high-frequency events needs a cooldown
+
+`Stop` and `SubagentStop` fire on every assistant turn that ends without further tool use. A hook that emits `decision: "block"` on these events forces the LLM to respond → which ends in another Stop → which re-fires the hook → indefinitely. Production hit 8+ consecutive blocks per Stop attempt before this was diagnosed.
+
+The hook output schema offers no non-blocking inject for `Stop`/`SubagentStop` (`hookSpecificOutput.additionalContext` works only for `PreToolUse`/`UserPromptSubmit`/`PostToolUse`/`PostToolBatch`). A hook that *must* surface a reminder on `Stop` has to combine `decision: "block"` with a cooldown — without one, every Stop is blocked.
+
+**Pattern** — co-locate a timestamp file with whatever state already triggers the hook, and short-circuit if the timestamp is recent:
+
+```sh
+WARNED_FILE=".dev/cdt/${BRANCH}/.cdt-wave-gate-warned"
+COOLDOWN_SECONDS=300
+
+if [ -f "$WARNED_FILE" ]; then
+  NOW=$(date +%s)
+  # GNU stat first (-c %Y), then BSD stat (-f %m). On Linux, `stat -f` means
+  # --file-system, which would emit filesystem-status text and break the
+  # arithmetic below — so the GNU form must be tried first.
+  LAST=$(stat -c %Y "$WARNED_FILE" 2>/dev/null || stat -f %m "$WARNED_FILE" 2>/dev/null || echo 0)
+  DELTA=$((NOW - LAST))
+  [ "$DELTA" -ge 0 ] && [ "$DELTA" -lt "$COOLDOWN_SECONDS" ] && exit 0
+fi
+
+touch "$WARNED_FILE"
+# ... emit decision:block JSON ...
+```
+
+A 5-minute window reads as a *last-resort safety net* — long enough that legitimate Stops during active work don't accumulate fatigue, short enough that genuinely stuck workflows still surface the reminder within a useful timeframe. **Reframe the reason text to match the cooldown semantics**: *"fires at most once per 5min, the doc-layer rules already failed to catch this"* tells future readers the hook is a backstop, not a primary mechanism. Without that framing, the hook can be misread as the load-bearing rule and the workflow doc gets skipped.
+
+> Source: [PR #218](https://github.com/rube-de/cc-skills/pull/218) — initial `Stop` hook hit 8+ consecutive blocks per Stop attempt during a live `auto-task` run; commit `e3001ee` added the cooldown. The original spec anticipated *reminder fatigue* (lead learns to ignore the reminder) but not the *doom-loop* variant (reminder physically prevents progress).
+
 ---
 
 ## Plugin Structure

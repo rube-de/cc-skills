@@ -225,17 +225,33 @@ For each wave:
    - If there are staged changes (`! git diff --cached --quiet`), commit: `git commit -m "feat(wave-N): [brief wave description from plan]"`
    - If nothing is staged in this wave (coordination-only), skip the commit
 
+Within a wave, intervene only on escalation (after 3 failed peer iteration cycles). The "stand back" rule in 6c applies once you have completed the wave-transition kickoff in 6a or 6b — not before.
+
+### 6a. Impl→Test Wave Transition
+
 After all impl waves:
-7. Message code-tester teammate: "Implementation complete. Files: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
-8. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
-9. Code-tester and qa-tester run in parallel — they test different aspects.
-10. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly. Intervene only on escalation.
+1. Message code-tester teammate: "Implementation complete. Files: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
+2. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
+3. Code-tester and qa-tester run in parallel — they test different aspects.
+4. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly.
+
+### 6b. Test→Review Wave Transition
+
+A wave transition is a **lead action**, not a stand-back moment. When the testers' "all green" arrives, you owe the next teammate a kickoff. Work through this checklist linearly — do NOT reply "standing by" until step 4 is done.
 
 After all test tasks complete:
-11. Message reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
-12. Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+1. Verify all test tasks are `status=completed` in TaskList.
+2. Confirm the `Review all` task is unblocked (`blockedBy=[]`).
+3. SendMessage to reviewer teammate: "Tests passing. Files: [list]. Begin review. Send fix requests directly to the developer teammate. Only message me when review is approved."
+4. TaskUpdate `Review all` with `owner="reviewer"`.
 
-After activating testers/reviewer, stand back:
+After step 4: Developer teammate↔Reviewer teammate iterate directly. Intervene only on escalation.
+
+### 6c. Post-Kickoff Standby
+
+This rule applies **only after** the wave-transition kickoff in 6a or 6b has been sent. Before the kickoff, you are not "standing by" — you owe a handoff.
+
+Once the kickoff is sent, stand back:
 - Do NOT expect failure reports — those go Developer↔Tester/Reviewer directly
 - You only receive: "all tests pass", "all QA checks pass", "review approved"
 - Intervene ONLY on escalation (after 3 failed peer iteration cycles)
