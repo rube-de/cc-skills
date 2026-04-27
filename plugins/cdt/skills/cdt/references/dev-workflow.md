@@ -225,15 +225,15 @@ For each wave:
    - If there are staged changes (`! git diff --cached --quiet`), commit: `git commit -m "feat(wave-N): [brief wave description from plan]"`
    - If nothing is staged in this wave (coordination-only), skip the commit
 
-### 6a. Intra-Wave Iteration
+Within a wave, intervene only on escalation (after 3 failed peer iteration cycles). The "stand back" rule in 6c applies once you have completed the wave-transition kickoff in 6a or 6b — not before.
+
+### 6a. Impl→Test Wave Transition
 
 After all impl waves:
 7. Message code-tester teammate: "Implementation complete. Files: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin testing. Report failures directly to the developer teammate. Only message me when all tests pass."
 8. Message qa-tester teammate: "Implementation complete. Files changed: [list]. Acceptance criteria to verify: [unchecked VERIFY items from Step 1 — i.e., `- [ ] VERIFY:` items only]. Begin QA testing. Report issues directly to the developer teammate. Only message me when all QA checks pass."
 9. Code-tester and qa-tester run in parallel — they test different aspects.
 10. Developer teammate↔Code-tester teammate and Developer teammate↔QA-tester teammate iterate directly.
-
-Within a wave, intervene only on escalation (after 3 failed peer iteration cycles). The "stand back" rule in 6c applies once you have completed the wave-transition kickoff in 6b — not before.
 
 ### 6b. Wave Transitions
 
@@ -249,7 +249,7 @@ After step 14: Developer teammate↔Reviewer teammate iterate directly. Interven
 
 ### 6c. Post-Kickoff Standby
 
-This rule applies **only after** the wave-transition kickoff in 6b has been sent. Before the kickoff, you are not "standing by" — you owe a handoff.
+This rule applies **only after** the wave-transition kickoff in 6a or 6b has been sent. Before the kickoff, you are not "standing by" — you owe a handoff.
 
 Once the kickoff is sent, stand back:
 - Do NOT expect failure reports — those go Developer↔Tester/Reviewer directly
