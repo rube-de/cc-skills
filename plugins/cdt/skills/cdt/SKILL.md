@@ -78,7 +78,7 @@ Reviews changed files for completeness, correctness, security, quality, and plan
 
 ## Rules
 
-- One team at a time — cleanup plan-team before starting dev-team
+- One team at a time — clean up the plan team before starting the dev team
 - Teammates debate directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate)
 - Researcher is always a subagent — Lead relays results
 - Plan.md is the single source of truth and handoff artifact

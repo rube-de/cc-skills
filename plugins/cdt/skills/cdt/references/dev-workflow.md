@@ -33,10 +33,16 @@ If missing or not one of `opus`/`sonnet`, default to `opus`.
 
 Generate a timestamp in `YYYYMMDD-HHMM` format for the session handoff output path. Store as `$TIMESTAMP`.
 
+## 2a. Compose Team Name
+
+Compose `$TEAM_NAME` as `dev-${BRANCH}-${TIMESTAMP}` (e.g. `dev-feat-rate-limiting-20260207-1430`). Scoping the team name to branch+timestamp prevents collisions on the global `~/.claude/teams/` namespace if a prior session orphaned a team dir.
+
 ## 3. Create Team
 
+Substitute `$TEAM_NAME` with the value computed in Step 2a.
+
 ```
-TeamCreate: team_name "dev-team"
+TeamCreate: team_name "$TEAM_NAME"
 ```
 
 ## 4. Create Tasks
@@ -48,10 +54,12 @@ TaskCreate for each plan task (preserve `depends_on` via `addBlockedBy`). Also c
 
 ## 5. Spawn Teammates
 
+Substitute `$TEAM_NAME` with the value from Step 2a in every spawn block below.
+
 **Developer teammate**:
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "developer"
   model: [developer_model from plan, default opus]
   prompt: >
@@ -82,7 +90,7 @@ Teammate tool:
 **Code-tester teammate** (always spawned):
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "code-tester"
   model: sonnet
   prompt: >
@@ -112,7 +120,7 @@ Teammate tool:
 **QA-tester teammate** (always spawned):
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "qa-tester"
   model: sonnet
   prompt: >
@@ -162,7 +170,7 @@ Teammate tool:
 **Reviewer teammate**:
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "reviewer"
   model: opus
   prompt: >

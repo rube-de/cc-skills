@@ -29,6 +29,10 @@ If no issue reference is found, skip this step.
 
 Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this for the plan output path. Store as `$TIMESTAMP`.
 
+## 1a. Compose Team Name
+
+Compose `$TEAM_NAME` as `plan-${BRANCH}-${TIMESTAMP}` (e.g. `plan-feat-rate-limiting-20260207-1430`). Scoping the team name to branch+timestamp prevents collisions on the global `~/.claude/teams/` namespace if a prior session orphaned a team dir.
+
 ## 2. Orient
 
 Read project context files (`CLAUDE.md`, `AGENTS.md`) to understand conventions and stack.
@@ -38,8 +42,10 @@ Do NOT explore the codebase with Glob/Grep — that is the architect's job in St
 
 ## 3. Create Team
 
+Substitute `$TEAM_NAME` with the value computed in Step 1a.
+
 ```
-TeamCreate: team_name "plan-team"
+TeamCreate: team_name "$TEAM_NAME"
 ```
 
 ## 4. Create Tasks
@@ -76,10 +82,10 @@ Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prom
 If `$ARGUMENTS` includes `--review-plan`, inject before the `Set \`**Council Review**: true\`` line in the architect prompt below:
 "The Lead has requested council review via `--review-plan` flag — set `**Council Review**: true` in the plan metadata."
 
-**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` from Step 1):
+**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` and `$TEAM_NAME` → the value from Step 1a):
 ```
 Teammate tool:
-  team_name: "plan-team"
+  team_name: "$TEAM_NAME"
   name: "architect"
   model: opus
   prompt: >
@@ -200,14 +206,14 @@ Teammate tool:
     16. Mark task complete
 ```
 
-**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` from Step 1):
+**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` and `$TEAM_NAME` → the value from Step 1a):
 
 If `$ARGUMENTS` includes `--review-plan`, inject after the `Plan path:` line in the PM prompt below:
 "Council review has been requested via `--review-plan` flag."
 
 ```text
 Teammate tool:
-  team_name: "plan-team"
+  team_name: "$TEAM_NAME"
   name: "product-manager"
   model: sonnet
   prompt: >

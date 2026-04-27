@@ -50,7 +50,11 @@ STATE_FILE="${BRANCH_DIR}/.cdt-team-active"
 [ ! -f "$STATE_FILE" ] && exit 0
 
 TEAM_NAME=$(cat "$STATE_FILE" 2>/dev/null)
-[ "$TEAM_NAME" != "dev-team" ] && exit 0
+# Match both legacy bare "dev-team" and scoped "dev-<branch>-<timestamp>" forms.
+case "$TEAM_NAME" in
+  dev-*) ;;
+  *) exit 0 ;;
+esac
 
 WARNED_FILE="${BRANCH_DIR}/.cdt-wave-gate-warned"
 COOLDOWN_SECONDS=300
