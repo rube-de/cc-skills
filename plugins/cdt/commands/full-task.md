@@ -113,7 +113,19 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
+4. Read `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (written by `dev-workflow.md` step 9 during Phase 2) and extract its `Open Questions` and `Context for Next Session` sections verbatim. Create PR. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable, see below), and an `## Agent Notes` block formatted as:
+
+    ```markdown
+    ## Agent Notes
+
+    ### Open Questions
+    [extracted Open Questions content]
+
+    ### Context for Next Session
+    [extracted Context for Next Session content]
+    ```
+
+    If both extracted sections are empty, omit the entire `## Agent Notes` block — do NOT emit an empty heading. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
 5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
 6. Clean up branch state: `[ -n "$BRANCH" ] && rm -rf ".dev/cdt/$BRANCH"`

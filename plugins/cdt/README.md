@@ -63,8 +63,8 @@ Planning Phase                    Development Phase
 |---------|---------|---------------|--------|
 | `/cdt:plan-task` | Planning only | N/A | `.dev/cdt/plans/plan-YYYYMMDD-HHMM.md` |
 | `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
+| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `Agent Notes` section |
+| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `Agent Notes` section |
 
 ### `/cdt:plan-task` — Design Phase
 
@@ -85,6 +85,10 @@ Runs `/cdt:plan-task`, presents the plan to the user for approval (Approve / Rev
 ### `/cdt:auto-task` — Autonomous Mode
 
 Same as `/cdt:full-task` but skips the approval gate. Proceeds directly from planning to development.
+
+### PR body enrichment (full-task and auto-task)
+
+When either command opens a PR during Wrap Up, the PR body is enriched with an `## Agent Notes` block mirroring the handoff's `Open Questions` and `Context for Next Session` sections. This carries the agent's forward-looking signal into the PR (where downstream tooling can consume it) since the handoff file itself lives under gitignored `.dev/`. If both sections are empty, the block is omitted.
 
 ## Hooks
 
