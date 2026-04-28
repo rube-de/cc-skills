@@ -364,7 +364,9 @@ If `AskUserQuestion` returns an empty answer, re-ask — do not assume a default
 explicitly choose.
 
 **Act on the user's choice. Do not stop and tell the user to re-invoke a slash command — once
-they have confirmed a path, take it.**
+they have confirmed a path, take it. Substitute the concrete spec filepath written in Step 5
+wherever the table below shows `<spec-path>` or `.dev/pm/specs/...` — never echo the placeholder
+verbatim to the user.**
 
 | User choice | Action |
 |-------------|--------|
