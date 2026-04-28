@@ -31,7 +31,7 @@ Flow: Tester → Developer → Tester → Developer → Tester → Reviewer
 
 `[tm]` = teammate (Agent Team)  `[sa]` = subagent
 
-The `bugfix-team` label above is a role name; the actual team name created by the workflow is scoped per run as `bugfix-<branch-slug>-<timestamp>` to avoid collisions on the global `~/.claude/teams/` namespace, where `branch-slug` is the current branch name with `/` replaced by `-`.
+The `bugfix-team` label above is a role name; the actual team name created by the workflow is scoped per run as `bugfix-<branch-slug>-<YYYYMMDD-HHMMSS>-<nonce>` to avoid collisions on the global `~/.claude/teams/` namespace, where `branch-slug` is the current branch name with `/` replaced by `-`.
 
 ## Step 0: Workflow Declaration
 
