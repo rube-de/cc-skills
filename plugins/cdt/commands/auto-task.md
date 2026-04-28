@@ -29,6 +29,8 @@ Phase 1: plan-team                    Phase 2: dev-team
 
 `[tm]` = teammate (Agent Team)  `[sa]` = subagent
 
+The `plan-team` / `dev-team` labels above are role names; the actual team names created by the workflow are scoped per run as `plan-<branch-slug>-<timestamp>` and `dev-<branch-slug>-<timestamp>` to avoid collisions on the global `~/.claude/teams/` namespace, where `branch-slug` is the current branch name with `/` replaced by `-`.
+
 ## Step 0: Git Check
 
 1. Run `git fetch origin`

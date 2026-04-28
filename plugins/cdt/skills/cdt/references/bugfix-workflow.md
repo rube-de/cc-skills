@@ -47,10 +47,16 @@ If the issue lacks structured fields (no expected/actual behavior sections), not
 
 Store the assembled spec as `$BUG_SPEC` for use in teammate messages.
 
+## 1a. Compose Team Name
+
+Compute a second-resolution `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `bugfix-bugfix-fix-null-return-getuser-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
+
 ## 2. Create Team
 
+Substitute `$TEAM_NAME` with the value computed in Step 1a.
+
 ```text
-TeamCreate: team_name "bugfix-team"
+TeamCreate: team_name "$TEAM_NAME"
 ```
 
 ## 3. Create Tasks
@@ -68,10 +74,12 @@ Use `addBlockedBy` to enforce sequencing.
 
 ## 4. Spawn Teammates
 
+Substitute `$TEAM_NAME` with the value from Step 1a in every spawn block below.
+
 **Tester teammate**:
 ```yaml
 Teammate tool:
-  team_name: "bugfix-team"
+  team_name: "$TEAM_NAME"
   name: "tester"
   model: sonnet
   prompt: >
@@ -119,7 +127,7 @@ Teammate tool:
 **Developer teammate**:
 ```yaml
 Teammate tool:
-  team_name: "bugfix-team"
+  team_name: "$TEAM_NAME"
   name: "developer"
   model: opus
   prompt: >
@@ -169,7 +177,7 @@ Teammate tool:
 **Reviewer teammate**:
 ```yaml
 Teammate tool:
-  team_name: "bugfix-team"
+  team_name: "$TEAM_NAME"
   name: "reviewer"
   model: opus
   prompt: >
@@ -325,7 +333,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 - Teammates iterate directly — Tester↔Developer, Reviewer↔Developer
 - Lead only receives: test results summaries, review verdicts, escalations
 - Researcher is a subagent — Lead relays if needed
-- One team only — `bugfix-team`
+- One team only — the bugfix team (named `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` per run)
 - All three quality checks mandatory (test, verify, review)
 - Always cleanup team before finishing
 - If stuck — abort gracefully and report what was accomplished

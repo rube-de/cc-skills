@@ -10,14 +10,16 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 4. Run `git checkout -b <branch> origin/<default-branch>` to create the feature branch from the latest remote default branch
 5. Run `git pull` to ensure up-to-date
 
-## 0a. Issue Detection
+## 0a. Derive Branch Slug
 
-**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+**Unconditional** — every subsequent step relies on `$BRANCH_SLUG`, regardless of whether the user supplied an issue reference. CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+
+## 0b. Issue Detection
 
 If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
 
 1. Extract the issue number (digits only) and store it in `$ISSUE_NUM`
-2. Write: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
+2. Write: `mkdir -p ".dev/cdt/$BRANCH_SLUG" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH_SLUG/.cdt-issue"`
 3. Fetch issue context: `gh issue view "$ISSUE_NUM" --json title,body,labels,assignees`
 4. Use the issue title and body as additional context for planning
 
@@ -29,6 +31,10 @@ If no issue reference is found, skip this step.
 
 Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this for the plan output path. Store as `$TIMESTAMP`.
 
+## 1a. Compose Team Name
+
+Compute a second-resolution timestamp `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` (separate from the minute-resolution `$TIMESTAMP` used for the plan path) and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `plan-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `plan-feat-rate-limiting-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
+
 ## 2. Orient
 
 Read project context files (`CLAUDE.md`, `AGENTS.md`) to understand conventions and stack.
@@ -38,8 +44,10 @@ Do NOT explore the codebase with Glob/Grep — that is the architect's job in St
 
 ## 3. Create Team
 
+Substitute `$TEAM_NAME` with the value computed in Step 1a.
+
 ```
-TeamCreate: team_name "plan-team"
+TeamCreate: team_name "$TEAM_NAME"
 ```
 
 ## 4. Create Tasks
@@ -76,10 +84,10 @@ Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prom
 If `$ARGUMENTS` includes `--review-plan`, inject before the `Set \`**Council Review**: true\`` line in the architect prompt below:
 "The Lead has requested council review via `--review-plan` flag — set `**Council Review**: true` in the plan metadata."
 
-**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` from Step 1):
+**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` and `$TEAM_NAME` → the value from Step 1a):
 ```
 Teammate tool:
-  team_name: "plan-team"
+  team_name: "$TEAM_NAME"
   name: "architect"
   model: opus
   prompt: >
@@ -200,14 +208,14 @@ Teammate tool:
     16. Mark task complete
 ```
 
-**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` from Step 1):
+**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` and `$TEAM_NAME` → the value from Step 1a):
 
 If `$ARGUMENTS` includes `--review-plan`, inject after the `Plan path:` line in the PM prompt below:
 "Council review has been requested via `--review-plan` flag."
 
 ```text
 Teammate tool:
-  team_name: "plan-team"
+  team_name: "$TEAM_NAME"
   name: "product-manager"
   model: sonnet
   prompt: >
@@ -353,7 +361,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.dev/cdt/$BRANCH/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
+> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.dev/cdt/$BRANCH_SLUG/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
 
 ## 9. Present
 

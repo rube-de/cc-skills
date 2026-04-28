@@ -12,11 +12,11 @@ Detailed execution steps for the development phase. The Lead reads this before r
 
 ## 0a. Issue Detection
 
-**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
 
 1. First, check `$ARGUMENTS` and the plan file for GitHub issue references (`#N`, URL).
-2. If found, extract the number into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
-3. Otherwise, if `".dev/cdt/$BRANCH/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
+2. If found, extract the number into `$ISSUE_NUM` and write/overwrite: `mkdir -p ".dev/cdt/$BRANCH_SLUG" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH_SLUG/.cdt-issue"`
+3. Otherwise, if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists → read the issue number from it into `$ISSUE_NUM`.
 4. If an issue is linked (`$ISSUE_NUM` is set), fetch details for context: `gh issue view "$ISSUE_NUM" --json title,body`
 
 The team creation hook will attempt to assign and move to "In Progress" (best-effort — may no-op if no project item exists).
@@ -33,10 +33,16 @@ If missing or not one of `opus`/`sonnet`, default to `opus`.
 
 Generate a timestamp in `YYYYMMDD-HHMM` format for the session handoff output path. Store as `$TIMESTAMP`.
 
+## 2a. Compose Team Name
+
+Compute a second-resolution timestamp `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` (separate from the minute-resolution `$TIMESTAMP` used for the handoff path) and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `dev-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `dev-feat-rate-limiting-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
+
 ## 3. Create Team
 
+Substitute `$TEAM_NAME` with the value computed in Step 2a.
+
 ```
-TeamCreate: team_name "dev-team"
+TeamCreate: team_name "$TEAM_NAME"
 ```
 
 ## 4. Create Tasks
@@ -48,10 +54,12 @@ TaskCreate for each plan task (preserve `depends_on` via `addBlockedBy`). Also c
 
 ## 5. Spawn Teammates
 
+Substitute `$TEAM_NAME` with the value from Step 2a in every spawn block below.
+
 **Developer teammate**:
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "developer"
   model: [developer_model from plan, default opus]
   prompt: >
@@ -82,7 +90,7 @@ Teammate tool:
 **Code-tester teammate** (always spawned):
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "code-tester"
   model: sonnet
   prompt: >
@@ -112,7 +120,7 @@ Teammate tool:
 **QA-tester teammate** (always spawned):
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "qa-tester"
   model: sonnet
   prompt: >
@@ -162,7 +170,7 @@ Teammate tool:
 **Reviewer teammate**:
 ```
 Teammate tool:
-  team_name: "dev-team"
+  team_name: "$TEAM_NAME"
   name: "reviewer"
   model: opus
   prompt: >
@@ -311,9 +319,9 @@ If creating PR:
 1. Stage all remaining changes (doc updates and any post-wave fixes from test/review cycles)
 2. Commit with conventional commit message based on task (this is the final wrap-up commit)
 3. Push branch (includes all per-wave commits plus this wrap-up commit)
-4. Create PR with plan summary as description. Derive `BRANCH=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
-5. After PR creation, if `".dev/cdt/$BRANCH/.cdt-scripts-path"` exists, move the issue to "In Review":
-   `"$(cat ".dev/cdt/$BRANCH/.cdt-scripts-path")/sync-github-issue.sh" review`
+4. Create PR with plan summary as description. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only), then include `Closes #$ISSUE_NO` in the PR body.
+5. After PR creation, if `".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path"` exists, move the issue to "In Review":
+   `"$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path")/sync-github-issue.sh" review`
 
 If commit & push only:
 1. Stage all remaining changes (doc updates and any post-wave fixes from test/review cycles)
