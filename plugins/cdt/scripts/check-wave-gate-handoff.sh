@@ -54,7 +54,7 @@ TEAM_NAME=$(cat "$STATE_FILE" 2>/dev/null)
 # "dev-<branch-slug>-<YYYYMMDD>-<HHMM[SS]>[-<nonce>]". A bare "dev-*" prefix
 # match would also fire for unrelated user-named teams (e.g. "dev-foo"),
 # blocking arbitrary sessions every cooldown window.
-echo "$TEAM_NAME" | grep -qE '^dev-team$|^dev-.+-[0-9]{8}-[0-9]{4,6}(-[0-9a-f]{4})?$' || exit 0
+echo "$TEAM_NAME" | grep -qE '^dev-team$|^dev-.+-[0-9]{8}-([0-9]{4}|[0-9]{6})(-[0-9a-f]{4})?$' || exit 0
 
 WARNED_FILE="${BRANCH_DIR}/.cdt-wave-gate-warned"
 COOLDOWN_SECONDS=300

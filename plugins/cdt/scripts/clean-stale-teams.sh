@@ -1,6 +1,6 @@
 #!/bin/sh
 # Removes stale CDT team/task dirs from ~/.claude/.
-# Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4,6}(-[0-9a-f]{4})?$ — accepts
+# Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-([0-9]{4}|[0-9]{6})(-[0-9a-f]{4})?$ — accepts
 # minute (HHMM) and second (HHMMSS) resolution timestamps, with an optional
 # 4-hex per-run nonce. Legacy bare names (plan-team / dev-team / bugfix-team)
 # are intentionally not matched.
@@ -21,7 +21,7 @@ print_help() {
   cat <<'HELP_END'
 clean-stale-teams.sh — remove stale CDT team/task dirs under ~/.claude/.
 
-Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4,6}(-[0-9a-f]{4})?$ (minute or
+Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-([0-9]{4}|[0-9]{6})(-[0-9a-f]{4})?$ (minute or
 second timestamp, optional 4-hex nonce). Legacy bare names
 (plan-team / dev-team / bugfix-team) are intentionally not matched.
 
@@ -65,7 +65,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-REGEX='^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4,6}(-[0-9a-f]{4})?$'
+REGEX='^(plan|dev|bugfix)-.*-[0-9]{8}-([0-9]{4}|[0-9]{6})(-[0-9a-f]{4})?$'
 SWEPT=0
 REMOVED=0
 FAILED=0
