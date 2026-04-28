@@ -47,9 +47,9 @@ If the issue lacks structured fields (no expected/actual behavior sections), not
 
 Store the assembled spec as `$BUG_SPEC` for use in teammate messages.
 
-## 1a. Generate Timestamps & Compose Team Name
+## 1a. Compose Team Name
 
-Generate a minute-resolution timestamp in `YYYYMMDD-HHMM` format and store as `$TIMESTAMP` (used elsewhere if needed). Then compute a second-resolution `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `bugfix-bugfix-fix-null-return-getuser-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
+Compute a second-resolution `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `bugfix-bugfix-fix-null-return-getuser-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
 
 ## 2. Create Team
 
