@@ -49,7 +49,7 @@ Store the assembled spec as `$BUG_SPEC` for use in teammate messages.
 
 ## 1a. Generate Timestamps & Compose Team Name
 
-Generate a minute-resolution timestamp in `YYYYMMDD-HHMM` format and store as `$TIMESTAMP` (used elsewhere if needed). Then compute a second-resolution `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` and compose `$TEAM_NAME` as `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}` (e.g. `bugfix-bugfix-fix-null-return-getuser-20260207-143052`). Scoping the team name to branch+second-timestamp prevents collisions on the global `~/.claude/teams/` namespace — even when the same branch retries the workflow within the same minute after an orphaned team dir.
+Generate a minute-resolution timestamp in `YYYYMMDD-HHMM` format and store as `$TIMESTAMP` (used elsewhere if needed). Then compute a second-resolution `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `bugfix-bugfix-fix-null-return-getuser-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
 
 ## 2. Create Team
 
@@ -333,7 +333,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 - Teammates iterate directly — Tester↔Developer, Reviewer↔Developer
 - Lead only receives: test results summaries, review verdicts, escalations
 - Researcher is a subagent — Lead relays if needed
-- One team only — the bugfix team (named `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}` per run)
+- One team only — the bugfix team (named `bugfix-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` per run)
 - All three quality checks mandatory (test, verify, review)
 - Always cleanup team before finishing
 - If stuck — abort gracefully and report what was accomplished

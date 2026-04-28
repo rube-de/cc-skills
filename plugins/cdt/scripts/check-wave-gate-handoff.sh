@@ -50,11 +50,11 @@ STATE_FILE="${BRANCH_DIR}/.cdt-team-active"
 [ ! -f "$STATE_FILE" ] && exit 0
 
 TEAM_NAME=$(cat "$STATE_FILE" 2>/dev/null)
-# Match both legacy bare "dev-team" and scoped "dev-<branch>-<timestamp>" forms.
-case "$TEAM_NAME" in
-  dev-*) ;;
-  *) exit 0 ;;
-esac
+# Match only the CDT-shaped dev team names — legacy bare "dev-team" or scoped
+# "dev-<branch-slug>-<YYYYMMDD>-<HHMM[SS]>[-<nonce>]". A bare "dev-*" prefix
+# match would also fire for unrelated user-named teams (e.g. "dev-foo"),
+# blocking arbitrary sessions every cooldown window.
+echo "$TEAM_NAME" | grep -qE '^dev-team$|^dev-.+-[0-9]{8}-[0-9]{4,6}(-[0-9a-f]{4})?$' || exit 0
 
 WARNED_FILE="${BRANCH_DIR}/.cdt-wave-gate-warned"
 COOLDOWN_SECONDS=300

@@ -12,14 +12,14 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 
 ## 0a. Derive Branch Slug
 
-**Unconditional** — every subsequent step relies on `$BRANCH`, regardless of whether the user supplied an issue reference. CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+**Unconditional** — every subsequent step relies on `$BRANCH_SLUG`, regardless of whether the user supplied an issue reference. CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
 
 ## 0b. Issue Detection
 
 If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
 
 1. Extract the issue number (digits only) and store it in `$ISSUE_NUM`
-2. Write: `mkdir -p ".dev/cdt/$BRANCH" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH/.cdt-issue"`
+2. Write: `mkdir -p ".dev/cdt/$BRANCH_SLUG" && echo "$ISSUE_NUM" > ".dev/cdt/$BRANCH_SLUG/.cdt-issue"`
 3. Fetch issue context: `gh issue view "$ISSUE_NUM" --json title,body,labels,assignees`
 4. Use the issue title and body as additional context for planning
 
@@ -33,7 +33,7 @@ Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this 
 
 ## 1a. Compose Team Name
 
-Compute a second-resolution timestamp `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` (separate from the minute-resolution `$TIMESTAMP` used for the plan path). Compose `$TEAM_NAME` as `plan-${BRANCH}-${TEAM_TIMESTAMP}` (e.g. `plan-feat-rate-limiting-20260207-143052`). Scoping the team name to branch+second-timestamp prevents collisions on the global `~/.claude/teams/` namespace — even when the same branch retries the workflow within the same minute after an orphaned team dir.
+Compute a second-resolution timestamp `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` (separate from the minute-resolution `$TIMESTAMP` used for the plan path) and a 4-hex-char per-run nonce `TEAM_NONCE=$(od -An -N2 -tx1 /dev/urandom 2>/dev/null | tr -d ' \n')`. Compose `$TEAM_NAME` as `plan-${BRANCH_SLUG}-${TEAM_TIMESTAMP}-${TEAM_NONCE}` (e.g. `plan-feat-rate-limiting-20260207-143052-9f3a`). The nonce closes the residual same-second collision window that a timestamp alone leaves open.
 
 ## 2. Orient
 
@@ -361,7 +361,7 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.dev/cdt/$BRANCH/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
+> **State lifecycle**: TeamDelete removes `.cdt-team-active` only. The `.cdt-issue` and `.cdt-scripts-path` files persist in `.dev/cdt/$BRANCH_SLUG/` for the dev phase and Wrap Up. The full branch directory is cleaned up during the command-level Wrap Up (`/full-task`, `/auto-task`).
 
 ## 9. Present
 
