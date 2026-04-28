@@ -1,3 +1,10 @@
+## [1.67.1](https://github.com/rube-de/cc-skills/compare/v1.67.0...v1.67.1) (2026-04-28)
+
+
+### Bug Fixes
+
+* **cdt:** scope team names per run to eliminate TeamCreate collisions ([#220](https://github.com/rube-de/cc-skills/issues/220)) ([470c1e8](https://github.com/rube-de/cc-skills/commit/470c1e86b2aa2fb899cbcaaca9dae2a43eeef06e)), closes [#209](https://github.com/rube-de/cc-skills/issues/209)
+
 # [1.67.0](https://github.com/rube-de/cc-skills/compare/v1.66.0...v1.67.0) (2026-04-27)
 
 
