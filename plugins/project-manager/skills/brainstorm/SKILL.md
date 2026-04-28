@@ -363,9 +363,11 @@ Options:
 If `AskUserQuestion` returns an empty answer, re-ask — do not assume a default. The user must
 explicitly choose.
 
-**Act on the user's choice. Do not stop and tell the user to re-invoke a slash command — once
-they have confirmed a path, take it. Substitute the concrete spec filepath written in Step 5
-wherever the table below shows `<spec-path>` — never echo the placeholder verbatim to the user.**
+**Act on the user's choice immediately. When the table tells you to invoke `project-manager:pm`
+(Create issues, Both), call the `Skill` tool directly — do not ask the user to re-type `/pm`.
+When the table tells you to tell the user a `/cdt:plan-task` command (Plan implementation, and
+the Both follow-up), print the exact command with the concrete spec filepath written in Step 5
+substituted for `<spec-path>` — never echo the placeholder verbatim.**
 
 | User choice | Action |
 |-------------|--------|
