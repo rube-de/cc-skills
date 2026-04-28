@@ -360,8 +360,25 @@ Options:
   - Done for now — I'll come back to this later
 ```
 
-Do NOT automatically invoke any downstream skill. Let the user choose their path. The spec is
-saved to `.dev/pm/specs/` — they can come back to it in a future session.
+If `AskUserQuestion` returns an empty answer, re-ask — do not assume a default. The user must
+explicitly choose.
+
+**Act on the user's choice immediately. When the table tells you to invoke `project-manager:pm`
+(Create issues, Both), call the `Skill` tool directly — do not ask the user to re-type `/pm`.
+When the table tells you to tell the user a `/cdt:plan-task` command (Plan implementation, and
+the Both follow-up), print the exact command with the concrete spec filepath written in Step 5
+substituted for `<spec-path>` — never echo the placeholder verbatim.**
+
+| User choice | Action |
+|-------------|--------|
+| Create issues (/pm) | Invoke `project-manager:pm` via the `Skill` tool with no arguments. `pm` will auto-detect the just-approved spec in `.dev/pm/specs/` and skip its own ambiguity check. |
+| Both | Invoke `project-manager:pm` via the `Skill` tool now. After `pm` returns, tell the user that the next step is `/cdt:plan-task <spec-path>` (substitute the concrete Step 5 filepath; never echo `<spec-path>` literally) for implementation planning. Do not auto-invoke cross-plugin `cdt` — leave that to the user. |
+| Plan implementation (/cdt:plan-task) | Tell the user the exact command to run: `/cdt:plan-task implement the spec at <spec-path>`. (Do not auto-invoke `cdt`; it lives in a separate plugin and may need user-shaped framing.) |
+| Done for now | Confirm the spec path is saved at `<spec-path>` and end the session. |
+
+The hard gate at the top of this skill still applies: never invoke `/pm`, `/cdt`, or any
+implementation tool **before** Step 7 approval. After approval, however, the user's chosen path
+is binding and should be executed without forcing a manual re-invocation.
 
 ## Principles
 
