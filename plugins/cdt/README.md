@@ -168,7 +168,7 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 | Dev-task can't find plan | Wrong path | Pass the timestamped plan path as argument |
 | Stuck in iteration loop | Max cycles exceeded | After 3 cycles, escalates to user automatically |
 | File conflicts between tasks | Parallel task overlap | Tasks in same wave should not touch same files |
-| Stale team dirs accumulating in `~/.claude/teams/` | Workflow exited before Wrap Up | Run [`scripts/clean-stale-teams.sh`](scripts/clean-stale-teams.sh) (dry-run by default; pass `--yes` to delete) |
+| Stale team dirs accumulating in `~/.claude/teams/` | Workflow exited before Wrap Up | Run [`sh scripts/clean-stale-teams.sh`](scripts/clean-stale-teams.sh) (dry-run by default; pass `--yes` to delete). If you hit permission-denied errors removing `~/.claude/teams/`, run it from your local shell outside Claude Code. |
 
 ## References
 
