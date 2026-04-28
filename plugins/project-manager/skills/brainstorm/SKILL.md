@@ -372,7 +372,7 @@ substituted for `<spec-path>` — never echo the placeholder verbatim.**
 | User choice | Action |
 |-------------|--------|
 | Create issues (/pm) | Invoke `project-manager:pm` via the `Skill` tool with no arguments. `pm` will auto-detect the just-approved spec in `.dev/pm/specs/` and skip its own ambiguity check. |
-| Both | Invoke `project-manager:pm` via the `Skill` tool now. After `pm` returns, tell the user that the next step is `/cdt:plan-task <spec-path>` for implementation planning (do not auto-invoke cross-plugin `cdt` — leave that to the user). |
+| Both | Invoke `project-manager:pm` via the `Skill` tool now. After `pm` returns, tell the user that the next step is `/cdt:plan-task <spec-path>` (substitute the concrete Step 5 filepath; never echo `<spec-path>` literally) for implementation planning. Do not auto-invoke cross-plugin `cdt` — leave that to the user. |
 | Plan implementation (/cdt:plan-task) | Tell the user the exact command to run: `/cdt:plan-task implement the spec at <spec-path>`. (Do not auto-invoke `cdt`; it lives in a separate plugin and may need user-shaped framing.) |
 | Done for now | Confirm the spec path is saved at `<spec-path>` and end the session. |
 
