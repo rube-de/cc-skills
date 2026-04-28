@@ -1,13 +1,30 @@
 #!/bin/sh
 # Removes stale CDT team/task dirs from ~/.claude/.
-# Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4}$
-# Legacy bare names (plan-team / dev-team / bugfix-team) are intentionally not matched.
+# Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4,6}$ — accepts both minute
+# (HHMM) and second (HHMMSS) resolution timestamps. Legacy bare names
+# (plan-team / dev-team / bugfix-team) are intentionally not matched.
 #
 # Usage:
-#   clean-stale-teams.sh                       # dry-run, default older-than 7 days
-#   clean-stale-teams.sh --yes                 # actually delete
-#   clean-stale-teams.sh --older-than 1 --yes  # delete dirs older than 1 day
-#   clean-stale-teams.sh --help                # print this help
+#   clean-stale-teams.sh                       dry-run, default older-than 7 days
+#   clean-stale-teams.sh --yes                 actually delete
+#   clean-stale-teams.sh --older-than 1 --yes  delete dirs older than 1 day
+#   clean-stale-teams.sh --help                print this help
+
+print_help() {
+  cat <<'HELP_END'
+clean-stale-teams.sh — remove stale CDT team/task dirs under ~/.claude/.
+
+Matches ^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4,6}$ (minute or second
+timestamp). Legacy bare names (plan-team / dev-team / bugfix-team) are
+intentionally not matched.
+
+Usage:
+  clean-stale-teams.sh                       dry-run, default older-than 7 days
+  clean-stale-teams.sh --yes                 actually delete
+  clean-stale-teams.sh --older-than 1 --yes  delete dirs older than 1 day
+  clean-stale-teams.sh --help                print this help
+HELP_END
+}
 
 DRY_RUN=1
 OLDER_THAN_DAYS=7
@@ -27,7 +44,7 @@ while [ $# -gt 0 ]; do
       shift 2
       ;;
     -h|--help)
-      sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'
+      print_help
       exit 0
       ;;
     *)
@@ -37,34 +54,45 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-REGEX='^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4}$'
+REGEX='^(plan|dev|bugfix)-.*-[0-9]{8}-[0-9]{4,6}$'
 SWEPT=0
 REMOVED=0
+FAILED=0
 
 for ROOT in "$HOME/.claude/teams" "$HOME/.claude/tasks"; do
   [ -d "$ROOT" ] || continue
-  while IFS= read -r DIR; do
-    [ -z "$DIR" ] && continue
+  # Iterate immediate children only — replaces non-POSIX `find -mindepth/-maxdepth`.
+  for DIR in "$ROOT"/*; do
+    [ -d "$DIR" ] || continue
     NAME=$(basename "$DIR")
     echo "$NAME" | grep -qE "$REGEX" || continue
+    # POSIX-portable mtime check: `find <path> -prune -mtime +N` evaluates only the path itself.
+    AGED=$(find "$DIR" -prune -mtime "+$OLDER_THAN_DAYS" 2>/dev/null)
+    [ -n "$AGED" ] || continue
     SWEPT=$((SWEPT + 1))
     if [ "$DRY_RUN" -eq 1 ]; then
       echo "[DRY-RUN] would remove: $DIR"
     else
-      rm -rf "$DIR"
-      REMOVED=$((REMOVED + 1))
-      echo "removed: $DIR"
+      if rm -rf "$DIR" 2>/dev/null; then
+        REMOVED=$((REMOVED + 1))
+        echo "removed: $DIR"
+      else
+        FAILED=$((FAILED + 1))
+        echo "failed to remove: $DIR" >&2
+      fi
     fi
-  done <<HEREDOC_END
-$(find "$ROOT" -mindepth 1 -maxdepth 1 -type d -mtime "+$OLDER_THAN_DAYS" 2>/dev/null)
-HEREDOC_END
+  done
 done
 
 echo ""
 if [ "$DRY_RUN" -eq 1 ]; then
   echo "[DRY-RUN] $SWEPT dir(s) matched. Re-run with --yes to remove."
+  exit 0
 else
   echo "$REMOVED dir(s) removed."
+  if [ "$FAILED" -gt 0 ]; then
+    echo "$FAILED dir(s) failed to remove (see stderr)." >&2
+    exit 1
+  fi
+  exit 0
 fi
-
-exit 0

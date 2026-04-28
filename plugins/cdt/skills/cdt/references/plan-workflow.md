@@ -10,9 +10,11 @@ Detailed execution steps for the planning phase. The Lead reads this before runn
 4. Run `git checkout -b <branch> origin/<default-branch>` to create the feature branch from the latest remote default branch
 5. Run `git pull` to ensure up-to-date
 
-## 0a. Issue Detection
+## 0a. Derive Branch Slug
 
-**Branch-scoped state**: CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+**Unconditional** — every subsequent step relies on `$BRANCH`, regardless of whether the user supplied an issue reference. CDT state lives in `.dev/cdt/<branch-slug>/` where `<branch-slug>` is the current branch with `/` replaced by `-`. Derive with: `BRANCH=$(git branch --show-current | tr '/' '-')`; if empty (detached HEAD), checkout a branch before proceeding.
+
+## 0b. Issue Detection
 
 If `$ARGUMENTS` contains a GitHub issue reference (`#N`, `#N description`, or `https://github.com/OWNER/REPO/issues/N`):
 
@@ -31,7 +33,7 @@ Generate a timestamp in `YYYYMMDD-HHMM` format (e.g. `20260207-1430`). Use this 
 
 ## 1a. Compose Team Name
 
-Compose `$TEAM_NAME` as `plan-${BRANCH}-${TIMESTAMP}` (e.g. `plan-feat-rate-limiting-20260207-1430`). Scoping the team name to branch+timestamp prevents collisions on the global `~/.claude/teams/` namespace if a prior session orphaned a team dir.
+Compute a second-resolution timestamp `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` (separate from the minute-resolution `$TIMESTAMP` used for the plan path). Compose `$TEAM_NAME` as `plan-${BRANCH}-${TEAM_TIMESTAMP}` (e.g. `plan-feat-rate-limiting-20260207-143052`). Scoping the team name to branch+second-timestamp prevents collisions on the global `~/.claude/teams/` namespace — even when the same branch retries the workflow within the same minute after an orphaned team dir.
 
 ## 2. Orient
 

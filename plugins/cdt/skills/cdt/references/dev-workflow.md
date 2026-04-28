@@ -35,7 +35,7 @@ Generate a timestamp in `YYYYMMDD-HHMM` format for the session handoff output pa
 
 ## 2a. Compose Team Name
 
-Compose `$TEAM_NAME` as `dev-${BRANCH}-${TIMESTAMP}` (e.g. `dev-feat-rate-limiting-20260207-1430`). Scoping the team name to branch+timestamp prevents collisions on the global `~/.claude/teams/` namespace if a prior session orphaned a team dir.
+Compute a second-resolution timestamp `TEAM_TIMESTAMP=$(date +%Y%m%d-%H%M%S)` (separate from the minute-resolution `$TIMESTAMP` used for the handoff path). Compose `$TEAM_NAME` as `dev-${BRANCH}-${TEAM_TIMESTAMP}` (e.g. `dev-feat-rate-limiting-20260207-143052`). Scoping the team name to branch+second-timestamp prevents collisions on the global `~/.claude/teams/` namespace — even when the same branch retries the workflow within the same minute after an orphaned team dir.
 
 ## 3. Create Team
 
