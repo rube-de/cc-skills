@@ -7,7 +7,7 @@
 # silently drop it.
 
 INPUT=$(cat)
-PROMPT=$(echo "$INPUT" | jq -r '.prompt // ""')
+PROMPT=$(printf '%s\n' "$INPUT" | jq -r '.prompt // ""')
 
 BRANCH=$(git branch --show-current 2>/dev/null)
 [ -z "$BRANCH" ] && exit 0
@@ -23,15 +23,15 @@ TITLE_SET="${BRANCH_DIR}/.cdt-session-titled"
 # Activation: the prompt invokes /cdt OR a CDT team is already live for this
 # branch. This covers both the first /cdt:plan-task invocation and resumed
 # sessions where the team was created in an earlier process.
-if ! echo "$PROMPT" | grep -qE '^\s*/cdt(\s|:|$)' && [ ! -f "$TEAM_ACTIVE" ]; then
+if ! printf '%s\n' "$PROMPT" | grep -qE '^[[:space:]]*/cdt([[:space:]]|:|$)' && [ ! -f "$TEAM_ACTIVE" ]; then
   exit 0
 fi
 
-# Prefer GitHub issue title if the branch encodes an issue reference. The
-# `issue-N` form is canonical; bare-number prefixes (e.g. `123-foo`) are also
-# accepted because semantic-release-style branch names use them.
+# Prefer GitHub issue title if the branch encodes an explicit issue reference.
+# Only matches `issue-N` or `#N` forms to avoid false positives from bare
+# numeric segments (e.g. `feature/release-2026-04` → 2026).
 TITLE=""
-ISSUE_NUM=$(echo "$BRANCH" | grep -oE '(^|[/_-])(issue-|#)?[0-9]+' | grep -oE '[0-9]+' | head -1)
+ISSUE_NUM=$(printf '%s\n' "$BRANCH" | grep -oE '(issue-|#)[0-9]+' | grep -oE '[0-9]+' | head -1)
 if [ -n "$ISSUE_NUM" ] && command -v gh >/dev/null 2>&1; then
   TITLE=$(gh issue view "$ISSUE_NUM" --json title --jq .title 2>/dev/null)
 fi

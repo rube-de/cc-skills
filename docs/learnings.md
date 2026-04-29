@@ -503,7 +503,7 @@ rg '"type":"custom-title"' "$JSONL"   # presence here = real runtime effect
 Claude Code's public hook docs and SDK type definitions lag behind the binary. When a feature appears missing or misdocumented, search the compiled CLI for the on-disk field names:
 
 ```bash
-strings $(readlink -f $(which claude)) | rg '"customTitle"|tengu_session_renamed|setSessionTitle'
+strings "$(command -v claude)" | rg '"customTitle"|tengu_session_renamed|setSessionTitle'
 ```
 
 This surfaced the rename API (JSONL event types like `custom-title` / `agent-name`, internal setter functions, telemetry event names) when the public docs implied no such mechanism existed, and exposed the **field-name asymmetry** that's easy to miss otherwise: the JSONL stores the title under `customTitle`, but the *hook output* takes it under `sessionTitle`. Reading only the on-disk artifact (or only the hook docs) hides that.
