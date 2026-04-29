@@ -52,7 +52,7 @@ TITLE_SET="${BRANCH_DIR}/.cdt-session-titled"
 # Only matches `issue-N` or `#N` forms to avoid false positives from bare
 # numeric segments (e.g. `feature/release-2026-04` → 2026).
 TITLE=""
-ISSUE_NUM=$(printf '%s\n' "$BRANCH" | grep -oE '(^|[/_-])(issue-|#)[0-9]+' | grep -oE '[0-9]+' | head -1)
+ISSUE_NUM=$(printf '%s\n' "$BRANCH" | grep -oE '(^|[/_-])(issue-|#)[0-9]+($|[/_-])' | grep -oE '[0-9]+' | head -1)
 if [ -n "$ISSUE_NUM" ] && command -v gh >/dev/null 2>&1; then
   TITLE=$(gh issue view "$ISSUE_NUM" --json title --jq .title 2>/dev/null)
 fi
