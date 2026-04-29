@@ -33,7 +33,7 @@ case "$BRANCH" in
   main|master) exit 0 ;;
 esac
 
-BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-')
+BRANCH_SLUG=$(printf '%s\n' "$BRANCH" | tr '/' '-')
 BRANCH_DIR=".dev/cdt/${BRANCH_SLUG}"
 TEAM_ACTIVE="${BRANCH_DIR}/.cdt-team-active"
 TITLE_SET="${BRANCH_DIR}/.cdt-session-titled"
@@ -55,11 +55,11 @@ fi
 
 # Fallback to branch name with conventional prefix stripped.
 if [ -z "$TITLE" ]; then
-  TITLE=$(echo "$BRANCH" \
+  TITLE=$(printf '%s\n' "$BRANCH" \
     | sed -E 's#^(feat|feature|bugfix|refactor|cdt|chore|hotfix|test|docs)/##')
 fi
 
-SLUG=$(echo "$TITLE" \
+SLUG=$(printf '%s\n' "$TITLE" \
   | tr '[:upper:]' '[:lower:]' \
   | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##')
 
