@@ -1,3 +1,10 @@
+# [1.68.0](https://github.com/rube-de/cc-skills/compare/v1.67.2...v1.68.0) (2026-04-29)
+
+
+### Features
+
+* **cdt:** auto-rename Claude Code session per CDT branch ([#223](https://github.com/rube-de/cc-skills/issues/223)) ([88219d3](https://github.com/rube-de/cc-skills/commit/88219d358b0d71eb8e0bc71b7fe0d8f8ff01202f)), closes [#42](https://github.com/rube-de/cc-skills/issues/42) [feature/#42](https://github.com/rube-de/cc-skills/issues/42)
+
 ## [1.67.2](https://github.com/rube-de/cc-skills/compare/v1.67.1...v1.67.2) (2026-04-28)
 
 ## [1.67.1](https://github.com/rube-de/cc-skills/compare/v1.67.0...v1.67.1) (2026-04-28)
