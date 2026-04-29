@@ -16,6 +16,10 @@
           {
             "type": "command",
             "command": "${CLAUDE_PLUGIN_ROOT}/scripts/block-cdt-without-teams.sh"
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/scripts/set-session-title.sh"
           }
         ]
       }

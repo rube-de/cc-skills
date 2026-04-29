@@ -473,6 +473,45 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 
 ---
 
+## Hooks
+
+### Hook output schema validity ≠ runtime effect
+
+Claude Code's hook validator is **permissive** about field names it does not recognise — it accepts unknown keys inside `hookSpecificOutput` without erroring, but the runtime then silently drops them. So an absence of validator errors does not mean a hook output is honoured. To verify a capability actually fires, **grep the resulting session JSONL** (`~/.claude/projects/<slug>/<session-id>.jsonl`) for the on-disk record the feature is supposed to produce.
+
+Concrete example: `hookSpecificOutput.sessionTitle` (added in v2.1.94) only takes effect on `UserPromptSubmit` hooks. On `PreToolUse` and `SessionStart` the validator passes — no error, no warning — but no `{"type":"custom-title", ...}` record is ever written. Only an empirical probe between the two events revealed which one honoured the field.
+
+**Bad pattern (trust validator silence):**
+```text
+hook emits hookSpecificOutput.sessionTitle on PreToolUse
+no validation error appears
+→ assume it works → ship → later discover nothing renamed
+```
+
+**Good pattern (probe with a throwaway session, then grep the JSONL):**
+```bash
+PROBE_UUID=$(uuidgen)
+claude --print --session-id "$PROBE_UUID" --settings ./probe-settings.json "test"
+JSONL=~/.claude/projects/<slug>/$PROBE_UUID.jsonl
+rg '"type":"custom-title"' "$JSONL"   # presence here = real runtime effect
+```
+
+> Source: [`plugins/cdt/scripts/set-session-title.sh`](../plugins/cdt/scripts/set-session-title.sh) — the auto-rename hook discovered the event/field mapping by probing two hook events and comparing the JSONL output between them
+
+### When the docs are wrong, the Claude Code binary tells the truth
+
+Claude Code's public hook docs and SDK type definitions lag behind the binary. When a feature appears missing or misdocumented, search the compiled CLI for the on-disk field names:
+
+```bash
+strings $(readlink -f $(which claude)) | rg '"customTitle"|tengu_session_renamed|setSessionTitle'
+```
+
+This surfaced the rename API (JSONL event types like `custom-title` / `agent-name`, internal setter functions, telemetry event names) when the public docs implied no such mechanism existed, and exposed the **field-name asymmetry** that's easy to miss otherwise: the JSONL stores the title under `customTitle`, but the *hook output* takes it under `sessionTitle`. Reading only the on-disk artifact (or only the hook docs) hides that.
+
+> Source: discovery process behind `set-session-title.sh`; cross-referenced with [issue #44902](https://github.com/anthropics/claude-code/issues/44902) confirming v2.1.94 added the hook field but the public docs are still out of sync
+
+---
+
 ## Common Pitfalls
 
 | Pitfall | Symptom | Fix |
