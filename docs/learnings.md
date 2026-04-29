@@ -473,6 +473,127 @@ The script uses jq regex patterns (`in.progress`, `in.review`) for case-insensit
 
 ---
 
+## Hooks
+
+### Hook output schema validity ≠ runtime effect
+
+Claude Code's hook validator is **permissive** about field names it does not recognise — it accepts unknown keys inside `hookSpecificOutput` without erroring, but the runtime then silently drops them. So an absence of validator errors does not mean a hook output is honoured. To verify a capability actually fires, **grep the resulting session JSONL** (`~/.claude/projects/<slug>/<session-id>.jsonl`) for the on-disk record the feature is supposed to produce.
+
+Concrete example: `hookSpecificOutput.sessionTitle` (added in v2.1.94) only takes effect on `UserPromptSubmit` hooks. On `PreToolUse` and `SessionStart` the validator passes — no error, no warning — but no `{"type":"custom-title", ...}` record is ever written. Only an empirical probe between the two events revealed which one honoured the field.
+
+**Bad pattern (trust validator silence):**
+```text
+hook emits hookSpecificOutput.sessionTitle on PreToolUse
+no validation error appears
+→ assume it works → ship → later discover nothing renamed
+```
+
+**Good pattern (probe with a throwaway session, then grep the JSONL):**
+```bash
+PROBE_UUID=$(uuidgen)
+claude --print --session-id "$PROBE_UUID" --settings ./probe-settings.json "test"
+JSONL=~/.claude/projects/<slug>/$PROBE_UUID.jsonl
+rg '"type":"custom-title"' "$JSONL"   # presence here = real runtime effect
+```
+
+> Source: [`plugins/cdt/scripts/set-session-title.sh`](../plugins/cdt/scripts/set-session-title.sh) — the auto-rename hook discovered the event/field mapping by probing two hook events and comparing the JSONL output between them
+
+### Pick the hook event that fires *after* the state change you depend on
+
+When a hook reads dynamic state (current branch, files on disk, env), the same
+script attached to two events can produce wildly different results — not because
+one event is "broken," but because **the state the hook reads exists at one
+event and not the other**.
+
+Concrete failure: an early version of CDT's session-rename hook ran on
+`UserPromptSubmit`. The activation check (`prompt starts with /cdt`) was
+correct, but the *body* read `git branch --show-current` to derive the title.
+The first `/cdt:plan-task` prompt is delivered while the user is still on
+`main` — the workflow only checks out the feature branch as a tool call after
+the prompt is processed. Result: the hook computed a title from `main`,
+producing `cdt-main` and burning the per-branch marker on `main` forever.
+
+The fix wasn't to change the activation logic — it was to **move the trigger
+later**. A `Stop` hook fires after the branch checkout has happened, so
+`git branch --show-current` returns the right answer. The activation guard
+shifts from "prompt matches /cdt" to "a CDT team is currently active for this
+branch" (a marker file written by `PreToolUse:TeamCreate`).
+
+**Bad pattern (state read at wrong event):**
+```text
+UserPromptSubmit fires → script runs → git branch --show-current returns "main"
+→ wrong title "cdt-main" → marker poisoned
+```
+
+**Good pattern (state read after relevant tool calls have completed):**
+```text
+PreToolUse:TeamCreate sets .cdt-team-active marker on the new branch
+Stop fires (any subsequent turn) → git branch --show-current returns feature branch
+→ correct title → marker written
+```
+
+Heuristic: if the hook script reads any state that the model itself manipulates
+during its turn (working dir, branch, files, env), prefer post-turn events
+(`Stop`, `PostToolUse`) over pre-turn (`UserPromptSubmit`, `PreToolUse`). The
+exception is when you specifically need to *block* the action — pre-turn
+events are the only ones that can do that.
+
+> Source: [`plugins/cdt/scripts/set-session-title.sh`](../plugins/cdt/scripts/set-session-title.sh) — moved from UserPromptSubmit to Stop after observing the `cdt-main` failure on the first /cdt:plan-task invocation
+
+### Inject JSONL events directly when the hook output API doesn't reach far enough
+
+Claude Code's `hookSpecificOutput` channel is not symmetric across hook events
+— some fields (e.g. `sessionTitle`) only take effect on one specific event.
+When you need the same effect from a different event (e.g. `Stop`, where
+`sessionTitle` is silently dropped), bypass the API and write directly to the
+session's JSONL transcript. Plan Mode does this internally, and the hook input
+on most events includes `.transcript_path` precisely so external scripts can
+participate.
+
+The on-disk schema for a custom-title event is:
+```json
+{"type":"custom-title","customTitle":"<title>","sessionId":"<uuid>"}
+```
+
+Note the **field-name asymmetry**: the hook output API uses `sessionTitle`, but
+the JSONL stores it under `customTitle`. The on-disk name is the stable one —
+that's the contract Claude Code's `/resume` picker reads.
+
+`jq -nc` emits the JSON object as a single buffered `write()` syscall, and `>>`
+opens the file with O_APPEND so each `write()` is positioned atomically (the
+kernel sets the offset before writing). Multiple `custom-title` events with the
+same value are also harmless — the picker reads last-wins. Capping the slug
+keeps the line short enough that jq flushes in one `write()` call.
+
+**Pattern:**
+```bash
+jq -nc --arg s "$SESSION_ID" --arg t "$TITLE" '{
+  type: "custom-title",
+  customTitle: $t,
+  sessionId: $s
+}' >> "$TRANSCRIPT_PATH"
+```
+
+This pattern generalises: any JSONL event Claude Code writes internally
+(`agent-name`, `permission-mode`, etc.) can be appended from a hook, regardless
+of whether `hookSpecificOutput` exposes a corresponding field.
+
+> Source: [`plugins/cdt/scripts/set-session-title.sh`](../plugins/cdt/scripts/set-session-title.sh) — moved from `hookSpecificOutput.sessionTitle` to direct JSONL append when relocating the trigger to `Stop` (where `sessionTitle` is dropped)
+
+### When the docs are wrong, the Claude Code binary tells the truth
+
+Claude Code's public hook docs and SDK type definitions lag behind the binary. When a feature appears missing or misdocumented, search the compiled CLI for the on-disk field names:
+
+```bash
+strings "$(command -v claude)" | rg '"customTitle"|tengu_session_renamed|setSessionTitle'
+```
+
+This surfaced the rename API (JSONL event types like `custom-title` / `agent-name`, internal setter functions, telemetry event names) when the public docs implied no such mechanism existed, and exposed the **field-name asymmetry** that's easy to miss otherwise: the JSONL stores the title under `customTitle`, but the *hook output* takes it under `sessionTitle`. Reading only the on-disk artifact (or only the hook docs) hides that.
+
+> Source: discovery process behind `set-session-title.sh`; cross-referenced with [issue #44902](https://github.com/anthropics/claude-code/issues/44902) confirming v2.1.94 added the hook field but the public docs are still out of sync
+
+---
+
 ## Common Pitfalls
 
 | Pitfall | Symptom | Fix |
