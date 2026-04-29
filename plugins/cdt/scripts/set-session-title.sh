@@ -1,31 +1,48 @@
 #!/bin/bash
-# UserPromptSubmit hook: on the first CDT-related prompt for a branch, set the
-# session title once — sourced from the linked GitHub issue title if the branch
-# encodes an issue number, else from the branch name itself. The choice of
-# UserPromptSubmit (vs. PreToolUse:TeamCreate) is forced: hookSpecificOutput.sessionTitle
-# is only honoured on UserPromptSubmit; other hook events accept the field but
-# silently drop it.
+# Stop hook: when a CDT team is active on a feature branch, rename the
+# Claude Code session by appending a `custom-title` event directly to the
+# session's JSONL transcript. Fires once per branch via marker.
+#
+# Why this design (vs. hookSpecificOutput.sessionTitle on UserPromptSubmit):
+#   - UserPromptSubmit fires too early: /cdt:plan-task and friends ship the
+#     first prompt while still on `main`, before the workflow checks out the
+#     feature branch. Naming the session there produces "cdt-main" and burns
+#     the per-branch marker on `main` itself.
+#   - Stop fires after every assistant turn, including the final turn of an
+#     autonomous /auto-task — which is the one prompt that case ever sends.
+#   - hookSpecificOutput.sessionTitle is only honoured on UserPromptSubmit, so
+#     we cannot use the API field from Stop. We instead write the same
+#     `{"type":"custom-title", ...}` JSONL event Plan Mode writes; the
+#     /resume picker indexes that event regardless of who appended it.
 
 INPUT=$(cat)
-PROMPT=$(printf '%s\n' "$INPUT" | jq -r '.prompt // ""')
+SESSION_ID=$(printf '%s\n' "$INPUT" | jq -r '.session_id // ""')
+TRANSCRIPT_PATH=$(printf '%s\n' "$INPUT" | jq -r '.transcript_path // ""')
+
+[ -z "$SESSION_ID" ] && exit 0
+[ -z "$TRANSCRIPT_PATH" ] && exit 0
+[ ! -f "$TRANSCRIPT_PATH" ] && exit 0
 
 BRANCH=$(git branch --show-current 2>/dev/null)
 [ -z "$BRANCH" ] && exit 0
+
+# Skip on the default branch. CDT always cuts a feature branch as step 1, so
+# any Stop firing on main/master means we're outside a CDT run — and writing
+# the marker on main would block renames forever for plain main usage.
+case "$BRANCH" in
+  main|master) exit 0 ;;
+esac
 
 BRANCH_SLUG=$(echo "$BRANCH" | tr '/' '-')
 BRANCH_DIR=".dev/cdt/${BRANCH_SLUG}"
 TEAM_ACTIVE="${BRANCH_DIR}/.cdt-team-active"
 TITLE_SET="${BRANCH_DIR}/.cdt-session-titled"
 
+# Only act when a CDT team has been created on this branch.
+[ ! -f "$TEAM_ACTIVE" ] && exit 0
+
 # One-shot per branch: once we've named the session, stay silent forever.
 [ -f "$TITLE_SET" ] && exit 0
-
-# Activation: the prompt invokes /cdt OR a CDT team is already live for this
-# branch. This covers both the first /cdt:plan-task invocation and resumed
-# sessions where the team was created in an earlier process.
-if ! printf '%s\n' "$PROMPT" | grep -qE '^[[:space:]]*/cdt([[:space:]]|:|$)' && [ ! -f "$TEAM_ACTIVE" ]; then
-  exit 0
-fi
 
 # Prefer GitHub issue title if the branch encodes an explicit issue reference.
 # Only matches `issue-N` or `#N` forms to avoid false positives from bare
@@ -39,7 +56,7 @@ fi
 # Fallback to branch name with conventional prefix stripped.
 if [ -z "$TITLE" ]; then
   TITLE=$(echo "$BRANCH" \
-    | sed -E 's#^(feature|bugfix|refactor|cdt|chore|hotfix|test|docs)/##')
+    | sed -E 's#^(feat|feature|bugfix|refactor|cdt|chore|hotfix|test|docs)/##')
 fi
 
 SLUG=$(echo "$TITLE" \
@@ -48,14 +65,16 @@ SLUG=$(echo "$TITLE" \
 
 [ -z "$SLUG" ] && exit 0
 
-# Persist the marker BEFORE emitting JSON so a downstream crash can't trigger a
-# rename on every retry.
-mkdir -p "$BRANCH_DIR"
-date +%s > "$TITLE_SET"
+# Append the custom-title event the /resume picker indexes, then mark the
+# branch as titled. Marker writes only on successful append so a transient
+# failure leaves the marker absent and the next Stop firing retries.
+if jq -nc --arg s "$SESSION_ID" --arg t "cdt-${SLUG}" '{
+  type: "custom-title",
+  customTitle: $t,
+  sessionId: $s
+}' >> "$TRANSCRIPT_PATH"; then
+  mkdir -p "$BRANCH_DIR"
+  date +%s > "$TITLE_SET"
+fi
 
-jq -n --arg t "cdt-${SLUG}" '{
-  hookSpecificOutput: {
-    hookEventName: "UserPromptSubmit",
-    sessionTitle: $t
-  }
-}'
+exit 0
