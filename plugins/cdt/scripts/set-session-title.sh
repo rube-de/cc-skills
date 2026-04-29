@@ -15,9 +15,13 @@
 #     `{"type":"custom-title", ...}` JSONL event Plan Mode writes; the
 #     /resume picker indexes that event regardless of who appended it.
 
+# Guard: skip interactive invocations and environments without jq.
+[ -t 0 ] && exit 0
+command -v jq >/dev/null 2>&1 || exit 0
+
 INPUT=$(cat)
-SESSION_ID=$(printf '%s\n' "$INPUT" | jq -r '.session_id // ""')
-TRANSCRIPT_PATH=$(printf '%s\n' "$INPUT" | jq -r '.transcript_path // ""')
+SESSION_ID=$(printf '%s\n' "$INPUT" | jq -r '.session_id // ""' 2>/dev/null)
+TRANSCRIPT_PATH=$(printf '%s\n' "$INPUT" | jq -r '.transcript_path // ""' 2>/dev/null)
 
 [ -z "$SESSION_ID" ] && exit 0
 [ -z "$TRANSCRIPT_PATH" ] && exit 0
@@ -48,7 +52,7 @@ TITLE_SET="${BRANCH_DIR}/.cdt-session-titled"
 # Only matches `issue-N` or `#N` forms to avoid false positives from bare
 # numeric segments (e.g. `feature/release-2026-04` → 2026).
 TITLE=""
-ISSUE_NUM=$(printf '%s\n' "$BRANCH" | grep -oE '(issue-|#)[0-9]+' | grep -oE '[0-9]+' | head -1)
+ISSUE_NUM=$(printf '%s\n' "$BRANCH" | grep -oE '(^|[/_-])(issue-|#)[0-9]+' | grep -oE '[0-9]+' | head -1)
 if [ -n "$ISSUE_NUM" ] && command -v gh >/dev/null 2>&1; then
   TITLE=$(gh issue view "$ISSUE_NUM" --json title --jq .title 2>/dev/null)
 fi
@@ -61,7 +65,9 @@ fi
 
 SLUG=$(printf '%s\n' "$TITLE" \
   | tr '[:upper:]' '[:lower:]' \
-  | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##')
+  | sed -E 's#[^a-z0-9]+#-#g; s#^-+##; s#-+$##' \
+  | cut -c1-120 \
+  | sed -E 's#-+$##')
 
 [ -z "$SLUG" ] && exit 0
 
