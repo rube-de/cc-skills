@@ -559,10 +559,11 @@ Note the **field-name asymmetry**: the hook output API uses `sessionTitle`, but
 the JSONL stores it under `customTitle`. The on-disk name is the stable one —
 that's the contract Claude Code's `/resume` picker reads.
 
-Append-only writes are POSIX-atomic for sub-PIPE_BUF lines (~4KB), so a single
-`jq -nc ... >> "$TRANSCRIPT_PATH"` is safe even with Claude Code writing to the
-same file concurrently. Multiple `custom-title` events with the same value are
-also harmless — the picker reads last-wins.
+`jq -nc` emits the JSON object as a single buffered `write()` syscall, and `>>`
+opens the file with O_APPEND so each `write()` is positioned atomically (the
+kernel sets the offset before writing). Multiple `custom-title` events with the
+same value are also harmless — the picker reads last-wins. Capping the slug
+keeps the line short enough that jq flushes in one `write()` call.
 
 **Pattern:**
 ```bash
