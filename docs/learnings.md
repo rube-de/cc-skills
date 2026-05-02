@@ -322,6 +322,32 @@ A 5-minute window reads as a *last-resort safety net* — long enough that legit
 
 > Source: [PR #218](https://github.com/rube-de/cc-skills/pull/218) — initial `Stop` hook hit 8+ consecutive blocks per Stop attempt during a live `auto-task` run; commit `e3001ee` added the cooldown. The original spec anticipated *reminder fatigue* (lead learns to ignore the reminder) but not the *doom-loop* variant (reminder physically prevents progress).
 
+### Generative framing at wrap-up triggers hallucinated Agent Notes
+
+At the end of a long successful workflow, a prompt that says "Draft the content for Open Questions and Context for Next Session" primes the model into *generation mode* — it produces plausible-sounding bullets rather than verifying facts. User memories like "check facts before writing" do not fire because the surrounding framing is explicitly generative.
+
+**Observed failure** (PR Chalet-Labs/contentgenie#437):
+- Bullet claimed admin section lacked a route-scoped error boundary → `src/app/(app)/admin/error.tsx` already existed; a `fd error.tsx` would have caught it.
+- Bullet claimed sequential `revalidatePath` calls are I/O-expensive → `revalidatePath` in Next.js 14 is in-memory tag registration, not I/O; there was nothing to batch.
+
+Both bullets were removed after a follow-up user question.
+
+**Fix**: Insert an evidence gate at every *generation* site — not at extraction/copy-through sites.
+
+**Bad** — generative framing with no verification gate:
+```markdown
+Draft the *content* (excluding headings) for the `Open Questions` and `Context for Next Session` sections … keep both in working memory so the PR body and the handoff carry identical body text.
+```
+
+**Good** — evidence gate appended inline:
+```markdown
+Draft the *content* (excluding headings) for the `Open Questions` and `Context for Next Session` sections … keep both in working memory so the PR body and the handoff carry identical body text. Each bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not.
+```
+
+**Sites to update**: `commands/auto-task.md` Wrap-Up step 4 (drafts inline), `skills/cdt/references/dev-workflow.md` Section 9 (writes handoff template). `commands/full-task.md` Wrap-Up step 4 only *extracts* — add a one-liner there as defence-in-depth.
+
+> Source: [Issue #224](https://github.com/rube-de/cc-skills/issues/224) — two hallucinated Open Questions bullets shipped in a real PR; evidence gate added to generation sites.
+
 ---
 
 ## Plugin Structure
@@ -622,6 +648,7 @@ This surfaced the rename API (JSONL event types like `custom-title` / `agent-nam
 | Hardcoding Glob/Grep/Read as only exploration method | Context window bloated with raw search results; misses structural patterns | Use Discover→Target pattern: Explore agent (built-in) for broad discovery, repomix-explorer (if available) for structural overview, then Glob/Grep/Read for targeted follow-up |
 | No reviewer-level tracking in multi-step workflows | Comments silently dropped — no way to detect which reviewer's feedback was skipped | Add an enumeration step (baseline) before processing and a coverage verification step (assertion) after — with HALT on mismatch |
 | jq multi-line `+` inside object literal | `{ key: (expr) + (expr) }` fails with "unexpected '+', expecting '}'" | Wrap entire addition in outer parens: `{ key: ((expr) + (expr)) }` — jq's object parser can't disambiguate `+` from the field separator |
+| Generative wrap-up framing produces hallucinated Agent Notes | "Draft the content for Open Questions" puts model in generation mode — it invents plausible bullets without checking branch state | Add evidence gate inline: "Each bullet MUST cite verified evidence … drop the bullet if you cannot point to specific evidence" |
 | Review bodies vs review threads conflation | Bot feedback (CodeRabbit) posted as review bodies is invisible; `in_reply_to` fails on review bodies | Separate GraphQL queries (`reviews` vs `reviewThreads`), separate `reply_type` discriminator, separate reply routing (`in_reply_to` for inline, `gh pr comment` for bodies) |
 | Auto-dismissing `is_outdated` threads | Unresolved design feedback silently marked as dismissed | Only GitHub's formal dismiss mechanism (`state == "DISMISSED"`) counts; `is_outdated` threads go to Unresolved for re-checking |
 | Advisory hooks instead of inline validation | PostToolUse hook warns about invalid output, but LLM follows workflow steps — warning is ignored | Make validation a named workflow step with explicit "mark as failed" semantics; hooks remain as defense-in-depth only |
