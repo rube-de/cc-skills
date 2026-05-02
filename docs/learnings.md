@@ -344,7 +344,7 @@ Draft the *content* (excluding headings) for the `Open Questions` and `Context f
 Draft the *content* (excluding headings) for the `Open Questions` and `Context for Next Session` sections … keep both in working memory so the PR body and the handoff carry identical body text. Each bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not.
 ```
 
-**Sites to update**: `commands/auto-task.md` Wrap-Up step 4 (drafts inline), `skills/cdt/references/dev-workflow.md` Section 9 (writes handoff template). `commands/full-task.md` Wrap-Up step 4 only *extracts* — add a one-liner there as defence-in-depth.
+**Sites to update**: `commands/auto-task.md` Wrap-Up step 4 (drafts inline), `skills/cdt/references/dev-workflow.md` Section 9 (writes handoff template). `commands/full-task.md` Wrap-Up step 4 only *extracts* — add a one-liner there as defense-in-depth.
 
 > Source: [Issue #224](https://github.com/rube-de/cc-skills/issues/224) — two hallucinated Open Questions bullets shipped in a real PR; evidence gate added to generation sites.
 
