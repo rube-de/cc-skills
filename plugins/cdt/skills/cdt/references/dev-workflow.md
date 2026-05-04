@@ -306,6 +306,8 @@ Write the session handoff to `.dev/cdt/handoffs/handoff-$TIMESTAMP.md`:
 [What a future session working in this area needs to know that isn't obvious from the code/PR]
 ```
 
+Each `Open Questions` and `Context for Next Session` bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not.
+
 ## 10. Wrap Up
 
 Ask user:
