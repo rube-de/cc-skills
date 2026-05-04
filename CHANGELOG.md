@@ -1,3 +1,10 @@
+# [1.69.0](https://github.com/rube-de/cc-skills/compare/v1.68.0...v1.69.0) (2026-05-04)
+
+
+### Features
+
+* **cdt:** require evidence-grounded Agent Notes in wrap-up ([#226](https://github.com/rube-de/cc-skills/issues/226)) ([44d795d](https://github.com/rube-de/cc-skills/commit/44d795d3f1da34b73349e75368a4fb941db7ae6d)), closes [#224](https://github.com/rube-de/cc-skills/issues/224)
+
 # [1.68.0](https://github.com/rube-de/cc-skills/compare/v1.67.2...v1.68.0) (2026-04-29)
 
 
