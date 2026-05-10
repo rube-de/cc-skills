@@ -364,7 +364,7 @@ Read .agentnotes/cdt/$BRANCH_SLUG.md and extract content under the `### Open Que
 3. Within that slice, extract `### Open Questions` and `### Context for Next Session` content.
 ```
 
-Use start-of-line anchors (`^##`) for both the outer block delimiter and the inner sections — fenced-code-block content can include `## ` mid-line and would otherwise corrupt the slice boundaries.
+Use start-of-line anchors for both the outer block delimiter (`^## `) and the inner sections (`^### `) — fenced-code-block content can include `## ` or `### ` mid-line and would otherwise corrupt the slice boundaries.
 
 > Source: [Issue #221](https://github.com/rube-de/cc-skills/issues/221) — promoted CDT session handoff from per-file (`.dev/cdt/handoffs/handoff-$TIMESTAMP.md`) to per-branch append-mode log (`.agentnotes/cdt/$BRANCH_SLUG.md`); `full-task.md` Wrap Up step 4 must locate the latest `## Session` block before extracting `### Open Questions` and `### Context for Next Session`.
 
