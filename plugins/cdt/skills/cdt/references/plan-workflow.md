@@ -59,6 +59,26 @@ TaskCreate:
 3. "Validate requirements" — for PM (blocked by Task 2, receives research findings)
 ```
 
+## 4a. Initialize Directives
+
+Write the per-run directives sidecar to `.dev/cdt/plans/plan-$TIMESTAMP.directives.json` using the `Write` tool. Store the path as `$DIRECTIVES_PATH`.
+
+Determine initial values from invocation context:
+- `auto_task_baseline`: `true` if invoked via `/cdt:auto-task` (per `auto-task.md` Phase 1 instruction); else `false`.
+- `council_review`: `true` if `$ARGUMENTS` includes `--review-plan`; else `false`.
+
+File content (canonical formatting — architect's `Edit` depends on exact match):
+
+```json
+{
+  "schema_version": "1",
+  "auto_task_baseline": <bool>,
+  "council_review": <bool>
+}
+```
+
+The file persists alongside the plan as an audit trail. See [references/directives-schema.md](directives-schema.md) for full schema, lifecycle, and extension policy.
+
 ## 5a. Research (if needed)
 
 If the task involves external libraries, APIs, or patterns the architect needs:
@@ -81,10 +101,7 @@ If no research is needed (pure internal refactor, well-known patterns), set `$RE
 
 Spawn architect and PM simultaneously. Inject `$RESEARCH_CONTEXT` into both prompts.
 
-If `$ARGUMENTS` includes `--review-plan`, inject before the `Set \`**Council Review**: true\`` line in the architect prompt below:
-"The Lead has requested council review via `--review-plan` flag — set `**Council Review**: true` in the plan metadata."
-
-**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` and `$TEAM_NAME` → the value from Step 1a):
+**Architect teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md`, `[directives-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.directives.json`, and `$TEAM_NAME` → the value from Step 1a):
 ```
 Teammate tool:
   team_name: "$TEAM_NAME"
@@ -116,9 +133,11 @@ Teammate tool:
     5. If you need additional library docs beyond the pre-loaded research, message the lead
     6. Design: components, interfaces, file changes, data flow, testing strategy
        Set `**Developer Model**: sonnet` if the implementation is straightforward file modifications. The default `opus` should be used for complex algorithm design, intricate state management, or security-critical code.
-       Set `**Council Review**: true` if the architecture involves security-critical code,
-       complex state management, or novel patterns that benefit from external validation.
-       Default is `false`. When `--review-plan` is passed, the lead will inject an explicit directive above.
+       If the architecture involves security-critical code, complex state management, or
+       novel patterns that benefit from external validation, use `Edit` on `[directives-path]`
+       to change `"council_review": false` to `"council_review": true`. Do NOT mutate any
+       other field. If `--review-plan` was passed, the Lead has already set `council_review: true`
+       at initialization, so no Edit is needed.
     7. **Task sizing**: Each task MUST touch ≤3 files and represent a single independently-verifiable concern. If a change requires >3 files, either: (a) split it into multiple tasks with explicit dependencies, or (b) justify why a single task is necessary and list all files it will touch in the task description. Exception: docs-only tasks (type: docs) may touch more files.
     8. **TDD ordering**: Where feasible, create test-writing tasks BEFORE their corresponding implementation tasks. The developer writes a failing test first, then implements until it passes (red-green-refactor). If a test requires implementation scaffolding first (e.g., new types, interfaces), set `depends_on` on the test task to list the scaffolding task(s).
     9. **Acceptance criteria**: Write every acceptance criterion as a testable assertion using a Markdown checkbox item that begins with `- [ ] VERIFY:` (for example: `- [ ] VERIFY: <condition>`). Each must be verifiable by running a command, checking output, or inspecting code — never subjective prose like "improved performance" or "better UX". Place them in the plan's `## Acceptance Criteria` section.
@@ -136,7 +155,6 @@ Teammate tool:
 
         **Generated**: [Date]  **Target**: [Original request]
         **Developer Model**: [opus|sonnet]
-        **Council Review**: [true|false] (default: false — enable for critical or high-risk features)
 
         ## Overview
         [Architecture, key decisions, research findings — 2-3 paragraphs]
@@ -208,10 +226,7 @@ Teammate tool:
     16. Mark task complete
 ```
 
-**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md` and `$TEAM_NAME` → the value from Step 1a):
-
-If `$ARGUMENTS` includes `--review-plan`, inject after the `Plan path:` line in the PM prompt below:
-"Council review has been requested via `--review-plan` flag."
+**PM teammate** (substitute `[plan-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.md`, `[directives-path]` → `.dev/cdt/plans/plan-$TIMESTAMP.directives.json`, and `$TEAM_NAME` → the value from Step 1a):
 
 ```text
 Teammate tool:
@@ -242,19 +257,26 @@ Teammate tool:
     If the design has flaws, say so with specifics. Your job is to find real problems. If the design is genuinely sound, approve — but never rubber-stamp.
 
     3. Message the architect teammate directly with initial concerns.
-       If the Lead indicated `--review-plan` was requested, note that additional feedback may follow after council review.
-    4. Opt-in council review:
-       a. After the architect messages you that the plan file is ready and provides its path,
-          read the plan at [plan-path] and parse its metadata
-       b. If the Lead indicated `--review-plan` was passed, OR the plan metadata includes
-          `Council Review: true`:
-          i. Invoke: Skill tool with skill "council", args "plan [plan-path]"
-          ii. Incorporate council findings into your assessment
-          iii. Include council feedback verbatim in your validation report (step 5) when NEEDS_REVISION
-          Note: Council rejection does NOT independently block — synthesize it as advisory input
-          into your own verdict. You remain the single source of feedback to the architect.
-          Invoke council at most once per plan; do not re-run on subsequent revision cycles.
-       c. Otherwise, skip council invocation entirely (no council latency added)
+       After reading the directives file in Step 4, note that additional feedback may follow if external review runs.
+    4. External review (directives-driven):
+       a. Read `[directives-path]` with the Read tool. If the file is missing, malformed JSON,
+          or has an unknown `schema_version`, log a warning and treat all directives as `false`
+          (fail-safe).
+       b. If `auto_task_baseline: true`:
+          i. Spawn `Task subagent_type: "codex-consultant"` exactly once. Pass the critique
+             prompt template from `council:review-plan/SKILL.md` lines 115-146, with
+             `<plan_content>` populated from [plan-path]. Codex returns Critical/Warning/Note
+             findings as JSON.
+          ii. If the Task result indicates codex CLI is unavailable, log a skip notice and
+              proceed — auto-task does NOT halt.
+       c. If `council_review: true`:
+          i. Invoke: Skill tool with skill "council", args "plan [plan-path]" — exactly once.
+       d. Synthesize all returned findings into your single advisory verdict. Both paths are
+          advisory only — neither baseline nor council can hard-block. You remain the single
+          source of feedback to the architect. Include findings verbatim in your validation
+          report (step 5) when NEEDS_REVISION.
+       e. If neither directive is `true`, skip external review entirely (no latency added).
+       f. Invoke each tier at most once per plan; do not re-run on subsequent revision cycles.
     5. Produce validation report: APPROVED or NEEDS_REVISION with specifics
        If NEEDS_REVISION: message the architect teammate directly with the full report,
        including council feedback verbatim when council was invoked
@@ -286,7 +308,6 @@ The architect teammate writes the plan file. Your role is to verify it exists an
 
 **Generated**: [Date]  **Target**: [Original request]
 **Developer Model**: [opus|sonnet]
-**Council Review**: [true|false] (default: false — enable for critical or high-risk features)
 
 ## Overview
 [Architecture, key decisions, research findings — 2-3 paragraphs]
