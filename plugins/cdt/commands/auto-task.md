@@ -8,6 +8,7 @@ description: "Create an agent team for autonomous workflow: plan (Architect team
 > All implementation, testing, review, and documentation MUST be delegated to teammates via SendMessage.
 > If you find yourself about to edit a file, STOP and delegate to the appropriate teammate instead.
 > You verify plan/report artifacts written by teammates.
+> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install — a single idempotent `printf >>` to `AGENTS.md` or `CLAUDE.md`, guarded by `rg -q '\.agentnotes/cdt'`) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
 
 # /auto-task — Autonomous Workflow
 
@@ -162,8 +163,22 @@ Automatically finalize without user interaction:
 
     Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file.
 
-9. Clean up branch state: `[ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
-10. Print PR URL to user
+9. Commit and push the session log and discovery hint. The feature commit (step 2) cannot include these because they are written *after* PR creation; this second commit ensures both artifacts land in the PR's commit history (without it the log + hint stay local-only and the PR never reflects the new branch-scoped log design):
+
+    ```bash
+    git add ".agentnotes/cdt/$BRANCH_SLUG.md"
+    [ -f AGENTS.md ] && git add AGENTS.md
+    [ -f CLAUDE.md ] && git add CLAUDE.md
+    if ! git diff --cached --quiet; then
+      git commit -m "chore(cdt): record session log for $TIMESTAMP"
+      git push origin HEAD
+    fi
+    ```
+
+    The `git diff --cached --quiet` guard is an edge-case safety net — under normal conditions the log file (step 7) always produces a staged change. If both the log write and the hint install were no-ops, the commit is skipped silently rather than failing on an empty commit.
+
+10. Clean up branch state: `[ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
+11. Print PR URL to user
 
 ## Bridge
 
