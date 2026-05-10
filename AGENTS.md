@@ -41,7 +41,7 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 
 ## Cross-branch agent context
 
-When picking up work in an unfamiliar area, run `rg -l '' .agentnotes/cdt/` (or `ls .agentnotes/cdt/`) to surface prior CDT session logs for related branches. Each file is a committed, append-mode log of `## Session …` blocks with What's Done / Open Questions / Context for Next Session — the canonical surface for cross-branch handoffs that don't reach merged-PR descriptions.
+When picking up work in an unfamiliar area, run `rg -l "" .agentnotes/cdt/` (or `ls .agentnotes/cdt/`) to surface prior CDT session logs for related branches. Each file is a committed, append-mode log of `## Session …` blocks with What's Done / Open Questions / Context for Next Session — the canonical surface for cross-branch handoffs that don't reach merged-PR descriptions.
 
 ## Learnings
 

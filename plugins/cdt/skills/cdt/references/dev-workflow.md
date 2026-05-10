@@ -31,7 +31,7 @@ If missing or not one of `opus`/`sonnet`, default to `opus`.
 
 ## 2. Generate Timestamp
 
-Generate a timestamp in `YYYYMMDD-HHMM` format for the session handoff output path. Store as `$TIMESTAMP`.
+Generate a timestamp in `YYYYMMDD-HHMM` format for the session log output path. Store as `$TIMESTAMP`.
 
 ## 2a. Compose Team Name
 
@@ -284,9 +284,9 @@ After APPROVED:
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-## 9. Write Session Handoff
+## 9. Write Session Log
 
-The session handoff is a committed, branch-scoped, append-mode log at `.agentnotes/cdt/$BRANCH_SLUG.md`. Each CDT session appends one `## Session $TIMESTAMP` block; future agents on other branches `rg` against this directory to learn cross-branch context.
+The session log is a committed, branch-scoped, append-mode log at `.agentnotes/cdt/$BRANCH_SLUG.md`. Each CDT session appends one `## Session $TIMESTAMP` block; future agents on other branches `rg` against this directory to learn cross-branch context.
 
 1. Ensure directory exists: `mkdir -p .agentnotes/cdt`
 2. Derive the file path: `LOG_PATH=".agentnotes/cdt/$BRANCH_SLUG.md"` (reuse `$BRANCH_SLUG` from § 0a).
@@ -333,7 +333,7 @@ The session handoff is a committed, branch-scoped, append-mode log at `.agentnot
     fi
     ```
 
-   Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file; if the user removes the line, the next wrap-up re-adds it.
+    Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file; if the user removes the line, the next wrap-up re-adds it.
 
 ## 10. Wrap Up
 
@@ -364,7 +364,7 @@ If commit & push only:
 - Fixing bugs yourself when developer↔tester cycles haven't been exhausted
 - Reviewing code yourself instead of messaging reviewer teammate
 - "Quick fixing" a file because it's faster than delegating
-- Skipping the session handoff (section 9) before wrap-up
+- Skipping the session log (section 9) before wrap-up
 - Updating project documentation yourself instead of delegating to developer teammate
 
 ## Rules

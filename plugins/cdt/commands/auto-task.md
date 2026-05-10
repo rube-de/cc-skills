@@ -160,7 +160,7 @@ Automatically finalize without user interaction:
     fi
     ```
 
-   Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file.
+    Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file.
 
 9. Clean up branch state: `[ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
 10. Print PR URL to user
