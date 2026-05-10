@@ -348,6 +348,49 @@ Draft the *content* (excluding headings) for the `Open Questions` and `Context f
 
 > Source: [Issue #224](https://github.com/rube-de/cc-skills/issues/224) — two hallucinated Open Questions bullets shipped in a real PR; evidence gate added to generation sites.
 
+### Read-extract anchoring: locate the latest of N similar sub-blocks before slicing
+
+When a downstream step extracts content from an append-mode log (sessions, entries, runs), the file may contain many sub-blocks of the same shape. The extraction MUST anchor on the block delimiter to find the *latest* block, then slice within it — not search the whole file with the inner-section heading. Otherwise the first occurrence wins and the extraction silently returns stale data.
+
+**Bad** — search the whole file for `### Open Questions`, get the first match (which is the *oldest* session):
+```markdown
+Read .agentnotes/cdt/$BRANCH_SLUG.md and extract content under the `### Open Questions` heading.
+```
+
+**Good** — anchor on the latest `## Session ` line, slice from there to the next `## ` heading or EOF, then extract within the slice:
+```markdown
+1. Find the **last** line matching `^## Session ` (start-of-line anchor).
+2. Slice from that line to the next `^## ` heading or EOF (whichever is first).
+3. Within that slice, extract `### Open Questions` and `### Context for Next Session` content.
+```
+
+Use start-of-line anchors for both the outer block delimiter (`^## `) and the inner sections (`^### `) — this prevents *mid-line* matches against tokens like `## ` or `### `. Anchors do **not** exclude `## `/`### ` tokens that appear at column 0 inside fenced code blocks, so for full robustness also avoid emitting top-level `##`/`###` headings inside fenced examples within these logs, or pick a delimiter that cannot legitimately appear in code (e.g., an HTML-comment sentinel).
+
+> Source: [Issue #221](https://github.com/rube-de/cc-skills/issues/221) — promoted CDT session handoff from per-file (`.dev/cdt/handoffs/handoff-$TIMESTAMP.md`) to per-branch append-mode log (`.agentnotes/cdt/$BRANCH_SLUG.md`); `full-task.md` Wrap Up step 4 must locate the latest `## Session` block before extracting `### Open Questions` and `### Context for Next Session`.
+
+### Self-installing host-repo hints from plugins: idempotent grep + append at workflow-end
+
+When a plugin needs a discovery hint (or any one-line marker) in a host repo, append it from the workflow's wrap-up step using an idempotent grep guard. Target the convention file primary (`AGENTS.md`), fall back to a secondary (`CLAUDE.md`), and skip silently if neither exists — never auto-create project docs. Anchor idempotency on a unique literal (path or marker string) in the appended line so re-runs are no-ops.
+
+**Bad** — write unconditionally on every wrap-up (file bloats with N copies of the hint):
+```bash
+echo "$HINT" >> AGENTS.md
+```
+
+**Good** — grep guard with primary/fallback target and silent-skip on missing files:
+```bash
+HINT='When picking up work in an unfamiliar area, run `rg -l "" .agentnotes/cdt/` to surface prior CDT session logs.'
+if [ -f AGENTS.md ] && ! rg -q '\.agentnotes/cdt' AGENTS.md; then
+  printf '\n%s\n' "$HINT" >> AGENTS.md
+elif [ ! -f AGENTS.md ] && [ -f CLAUDE.md ] && ! rg -q '\.agentnotes/cdt' CLAUDE.md; then
+  printf '\n%s\n' "$HINT" >> CLAUDE.md
+fi
+```
+
+The `elif [ ! -f AGENTS.md ]` guard prevents double-install when both files exist (only the primary gets the hint). The unique literal `.agentnotes/cdt` in the append line doubles as the idempotency anchor — there's no separate marker comment to maintain.
+
+> Source: [Issue #221](https://github.com/rube-de/cc-skills/issues/221) — `.agentnotes/cdt/<branch-slug>.md` discoverability needs a hint in the host repo's docs; the cc-skills bootstrap edits `AGENTS.md` directly, but plugin installs in other repos rely on the wrap-up auto-install in `dev-workflow.md` § 9 and `auto-task.md` step 8.
+
 ---
 
 ## Plugin Structure

@@ -8,6 +8,7 @@ description: "Create an agent team for autonomous workflow: plan (Architect team
 > All implementation, testing, review, and documentation MUST be delegated to teammates via SendMessage.
 > If you find yourself about to edit a file, STOP and delegate to the appropriate teammate instead.
 > You verify plan/report artifacts written by teammates.
+> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install performed in Wrap Up step 8) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
 
 # /auto-task — Autonomous Workflow
 
@@ -75,7 +76,7 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9 and 10 — this command handles handoff and wrap-up). dev-workflow.md generates its own timestamp for the session handoff.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9 and 10 — this command handles the session log write and wrap-up). dev-workflow.md generates its own timestamp for the session log.
 
 ## Phase 2: Completion Audit
 
@@ -100,7 +101,7 @@ Automatically finalize without user interaction:
 1. Stage all changed files
 2. Commit with conventional commit message based on task
 3. Push branch to remote
-4. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Draft the *content* (excluding headings) for the `Open Questions` and `Context for Next Session` sections you will write to the handoff in step 7 — keep both in working memory so the PR body and the handoff carry identical body text under their respective headings. Each bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not. Then create PR via `gh pr create`. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
+4. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Draft the *content* (excluding headings) for the `Open Questions` and `Context for Next Session` sections you will write to the session log in step 7 — keep both in working memory so the PR body and the session log carry identical body text under their respective headings. Each bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not. Then create PR via `gh pr create`. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
 
     ```markdown
     ## Agent Notes
@@ -115,30 +116,69 @@ Automatically finalize without user interaction:
     If both `Open Questions` and `Context for Next Session` are empty, omit the entire `## Agent Notes` block — do NOT emit an empty heading.
 5. After PR creation, if `".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Ensure handoff directory exists: `mkdir -p .dev/cdt/handoffs`
-7. Write session handoff to `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (using `$TIMESTAMP` from Phase 2). Reuse the same `Open Questions` and `Context for Next Session` content drafted for the PR body in step 4 — do not regenerate or rephrase:
+6. Ensure log directory exists: `mkdir -p .agentnotes/cdt`
+7. Write the session log to `.agentnotes/cdt/$BRANCH_SLUG.md` (using `$BRANCH_SLUG` from step 4 and `$TIMESTAMP` from Phase 2). The log is append-mode: each CDT session appends one `## Session $TIMESTAMP` block; the `# Branch:` header stays exactly once at the top. Reuse the same `Open Questions` and `Context for Next Session` content drafted for the PR body in step 4 — do not regenerate or rephrase.
 
-    ```markdown
-    # Session Handoff
+    a. Derive `LOG_PATH=".agentnotes/cdt/$BRANCH_SLUG.md"`.
+    b. If `$LOG_PATH` does NOT exist, write the file as:
 
-    **Task**: [original task from $ARGUMENTS]
-    **Branch**: [branch name]  **Date**: [date]  **Plan**: [plan path from Phase 1]
+        ```markdown
+        # Branch: [branch name]
 
-    ## What's Done
-    [1-2 sentences — what was accomplished]
+        **Created**: [date]
+        **First plan**: [plan path from Phase 1]
 
-    ## Open Questions
-    [Unresolved items, deferred decisions, known limitations]
+        ---
 
-    ## Context for Next Session
-    [What a future session working in this area needs to know that isn't obvious from the code/PR]
+        ## Session $TIMESTAMP
 
-    ## References
-    - PR: [PR URL from step 4]
+        **Task**: [original task from $ARGUMENTS]
+        **Plan**: [plan path from Phase 1]
+
+        ### What's Done
+        [1-2 sentences — what was accomplished]
+
+        ### Open Questions
+        [Unresolved items, deferred decisions, known limitations]
+
+        ### Context for Next Session
+        [What a future session working in this area needs to know that isn't obvious from the code/PR]
+
+        ### References
+        - PR: [PR URL from step 4]
+        ```
+
+    c. If `$LOG_PATH` already exists, read its prior content verbatim into memory, then rewrite the file as `<prior content>` + `\n---\n\n` + a new `## Session $TIMESTAMP` block (same shape as 7b's session block — without the `# Branch:` header).
+
+8. Install the discovery hint into project docs (idempotent, one-shot per host repo):
+
+    ```bash
+    HINT='When picking up work in an unfamiliar area, run `rg -l "" .agentnotes/cdt/` to surface prior CDT session logs.'
+    if [ -f AGENTS.md ] && ! rg -q '\.agentnotes/cdt' AGENTS.md; then
+      printf '\n%s\n' "$HINT" >> AGENTS.md
+    elif [ ! -f AGENTS.md ] && [ -f CLAUDE.md ] && ! rg -q '\.agentnotes/cdt' CLAUDE.md; then
+      printf '\n%s\n' "$HINT" >> CLAUDE.md
+    fi
     ```
 
-8. Clean up branch state: `[ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
-9. Print PR URL to user
+    Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file.
+
+9. Commit and push the session log and discovery hint. The feature commit (step 2) cannot include these because they are written *after* PR creation; this second commit ensures both artifacts land in the PR's commit history (without it the log + hint stay local-only and the PR never reflects the new branch-scoped log design):
+
+    ```bash
+    git add ".agentnotes/cdt/$BRANCH_SLUG.md"
+    [ -f AGENTS.md ] && git add AGENTS.md
+    [ -f CLAUDE.md ] && git add CLAUDE.md
+    if ! git diff --cached --quiet; then
+      git commit -m "chore(cdt): record session log for $TIMESTAMP"
+      git push origin HEAD
+    fi
+    ```
+
+    The `git diff --cached --quiet` guard is an edge-case safety net — under normal conditions the log file (step 7) always produces a staged change. If both the log write and the hint install were no-ops, the commit is skipped silently rather than failing on an empty commit.
+
+10. Clean up branch state: `[ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
+11. Print PR URL to user
 
 ## Bridge
 

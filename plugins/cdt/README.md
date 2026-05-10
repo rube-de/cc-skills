@@ -34,7 +34,7 @@ Planning Phase                    Development Phase
                                  │  Researcher               │
                                  │  (on-demand lookups)      │
                                  ├───────────────────────────┤
-                                 │  Output: session-handoff  │
+                                 │  Output: session log      │
                                  └───────────────────────────┘
 ```
 
@@ -62,9 +62,9 @@ Planning Phase                    Development Phase
 | Command | Purpose | Approval Gate | Output |
 |---------|---------|---------------|--------|
 | `/cdt:plan-task` | Planning only | N/A | `.dev/cdt/plans/plan-YYYYMMDD-HHMM.md` |
-| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` |
-| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `## Agent Notes` |
-| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` + PR body with `## Agent Notes` |
+| `/cdt:dev-task` | Develop from existing plan | N/A | Updated plan + `.agentnotes/cdt/<branch-slug>.md` |
+| `/cdt:full-task` | Complete workflow | **Yes** (user choice) | `plan.md` + `.agentnotes/cdt/<branch-slug>.md` + PR body with `## Agent Notes` |
+| `/cdt:auto-task` | Autonomous end-to-end | No | `plan.md` + `.agentnotes/cdt/<branch-slug>.md` + PR body with `## Agent Notes` |
 
 ### `/cdt:plan-task` — Design Phase
 
@@ -76,7 +76,7 @@ Spawns Architect + PM + Researcher. The Architect designs the solution, the PM v
 
 Spawns Developer + Code-Tester + Reviewer + Researcher + QA-Tester. Executes tasks wave-by-wave from the plan, with parallel tasks within each wave and sequential ordering between waves.
 
-**Output**: Updated plan + `.dev/cdt/handoffs/handoff-YYYYMMDD-HHMM.md` with session context, open questions, and notes for future sessions.
+**Output**: Updated plan + `.agentnotes/cdt/<branch-slug>.md` — a committed, branch-scoped, append-mode session log. Each CDT run on the branch appends one `## Session YYYYMMDD-HHMM` block with What's Done / Open Questions / Context for Next Session / References sub-sections, so future agents on other branches can `rg -l "" .agentnotes/cdt/` to learn cross-branch context.
 
 ### `/cdt:full-task` — Plan + Approve + Dev
 
@@ -88,7 +88,11 @@ Same as `/cdt:full-task` but skips the approval gate. Proceeds directly from pla
 
 ### PR body enrichment (full-task and auto-task)
 
-When either command opens a PR during Wrap Up, the PR body is enriched with an `## Agent Notes` block mirroring the handoff's `Open Questions` and `Context for Next Session` sections. This carries the agent's forward-looking signal into the PR (where downstream tooling can consume it) since the handoff file itself lives under gitignored `.dev/`. If both sections are empty, the block is omitted.
+When either command opens a PR during Wrap Up, the PR body is enriched with an `## Agent Notes` block mirroring the *latest* session's `### Open Questions` and `### Context for Next Session` content from `.agentnotes/cdt/<branch-slug>.md`. The PR body carries only the most recent session for downstream tooling consumers (e.g. `pr-explainer-action`); the full multi-session history lives in the committed branch log. If both sections are empty, the block is omitted.
+
+### Discovery hint auto-install
+
+On every wrap-up that writes a session log, CDT idempotently appends a one-line discovery hint to the host repo's `AGENTS.md` (or `CLAUDE.md` if no `AGENTS.md` exists). The hint instructs future agents to `rg -l "" .agentnotes/cdt/` when picking up unfamiliar work. Idempotency is anchored on the literal string `.agentnotes/cdt` already being present, so re-runs are no-ops. If neither file exists, CDT skips silently — the plugin will never auto-create project docs.
 
 ## Hooks
 

@@ -4,6 +4,8 @@ description: "Create an agent team to develop: Developer teammate + Code-tester 
 ---
 
 > **ROLE: Coordinator only.** You do NOT edit source code, test files, or project docs. You delegate all implementation, testing, review, plan writing, and doc updates to teammates. You verify plan/report artifacts written by teammates.
+>
+> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install performed in dev-workflow.md §9 step 6) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
 
 # /dev-task — Development Phase
 

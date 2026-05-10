@@ -31,7 +31,7 @@ If missing or not one of `opus`/`sonnet`, default to `opus`.
 
 ## 2. Generate Timestamp
 
-Generate a timestamp in `YYYYMMDD-HHMM` format for the session handoff output path. Store as `$TIMESTAMP`.
+Generate a timestamp in `YYYYMMDD-HHMM` format for the session log output path. Store as `$TIMESTAMP`.
 
 ## 2a. Compose Team Name
 
@@ -284,36 +284,63 @@ After APPROVED:
 2. Wait for all teammates to confirm shutdown (they may approve or reject — if rejected, resolve the issue first)
 3. Once all teammates have stopped, run TeamDelete to clean up the team
 
-## 9. Write Session Handoff
+## 9. Write Session Log
 
-Ensure directory exists: `mkdir -p .dev/cdt/handoffs`
+The session log is a committed, branch-scoped, append-mode log at `.agentnotes/cdt/$BRANCH_SLUG.md`. Each CDT session appends one `## Session $TIMESTAMP` block; future agents on other branches `rg` against this directory to learn cross-branch context.
 
-Write the session handoff to `.dev/cdt/handoffs/handoff-$TIMESTAMP.md`:
+1. Ensure directory exists: `mkdir -p .agentnotes/cdt`
+2. Derive the file path: `LOG_PATH=".agentnotes/cdt/$BRANCH_SLUG.md"` (reuse `$BRANCH_SLUG` from § 0a).
+3. If `$LOG_PATH` does NOT exist, write the file with the header block followed by the first session block:
 
-```markdown
-# Session Handoff
+    ```markdown
+    # Branch: [branch name]
 
-**Task**: [original request from plan's "Target" field]
-**Branch**: [branch name]  **Date**: [date]  **Plan**: [plan path from $ARGUMENTS]
+    **Created**: [date]
+    **First plan**: [plan path from $ARGUMENTS]
 
-## What's Done
-[1-2 sentences — what was accomplished]
+    ---
 
-## Open Questions
-[Unresolved items, deferred decisions, known limitations]
+    ## Session $TIMESTAMP
 
-## Context for Next Session
-[What a future session working in this area needs to know that isn't obvious from the code/PR]
-```
+    **Task**: [original request from plan's "Target" field]
+    **Plan**: [plan path from $ARGUMENTS]
 
-Each `Open Questions` and `Context for Next Session` bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not.
+    ### What's Done
+    [1-2 sentences — what was accomplished]
+
+    ### Open Questions
+    [Unresolved items, deferred decisions, known limitations]
+
+    ### Context for Next Session
+    [What a future session working in this area needs to know that isn't obvious from the code/PR]
+
+    ### References
+    - PR: [PR URL if known, otherwise omit this bullet]
+    ```
+
+4. If `$LOG_PATH` already exists, read its full prior content verbatim into memory, then rewrite the file as `<prior content>` + `\n---\n\n` + a new `## Session $TIMESTAMP` block (same shape as step 3's session block — without the `# Branch:` header, which stays exactly once at the top).
+
+5. Each `### Open Questions` and `### Context for Next Session` bullet MUST cite verified evidence — a grep result, a `file:line` reference, a recent test/build/log output, or a deliberate plan-time decision recorded in the plan file. If you cannot point to specific evidence in the current branch state, drop the bullet. Empty sections are fine; speculative bullets are not.
+
+6. Install the discovery hint into project docs (idempotent, one-shot per host repo). Run:
+
+    ```bash
+    HINT='When picking up work in an unfamiliar area, run `rg -l "" .agentnotes/cdt/` to surface prior CDT session logs.'
+    if [ -f AGENTS.md ] && ! rg -q '\.agentnotes/cdt' AGENTS.md; then
+      printf '\n%s\n' "$HINT" >> AGENTS.md
+    elif [ ! -f AGENTS.md ] && [ -f CLAUDE.md ] && ! rg -q '\.agentnotes/cdt' CLAUDE.md; then
+      printf '\n%s\n' "$HINT" >> CLAUDE.md
+    fi
+    ```
+
+    Skip silently if neither file exists — the plugin must NOT auto-create project docs. Idempotency is anchored on the literal string `.agentnotes/cdt` in the host file; if the user removes the line, the next wrap-up re-adds it.
 
 ## 10. Wrap Up
 
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Session handoff written to .dev/cdt/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
+  "Development complete. Session log written to .agentnotes/cdt/$BRANCH_SLUG.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 
@@ -337,8 +364,8 @@ If commit & push only:
 - Fixing bugs yourself when developer↔tester cycles haven't been exhausted
 - Reviewing code yourself instead of messaging reviewer teammate
 - "Quick fixing" a file because it's faster than delegating
-- Skipping the session handoff (section 9) before wrap-up
-- Updating project documentation yourself instead of delegating to developer teammate
+- Skipping the session log (section 9) before wrap-up
+- Updating project documentation yourself (other than the § 9 step 6 discovery-hint install, which is the explicit narrow exception per the command preambles) instead of delegating to developer teammate
 
 ## Rules
 
