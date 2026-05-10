@@ -116,7 +116,7 @@ Automatically finalize without user interaction:
 5. After PR creation, if `".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path"` exists, move the issue to "In Review":
    `"$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path")/sync-github-issue.sh" review`
 6. Ensure log directory exists: `mkdir -p .agentnotes/cdt`
-7. Write the session log to `.agentnotes/cdt/$BRANCH_SLUG.md` (using `$BRANCH_SLUG` from § 0a and `$TIMESTAMP` from Phase 2). The log is append-mode: each CDT session appends one `## Session $TIMESTAMP` block; the `# Branch:` header stays exactly once at the top. Reuse the same `Open Questions` and `Context for Next Session` content drafted for the PR body in step 4 — do not regenerate or rephrase.
+7. Write the session log to `.agentnotes/cdt/$BRANCH_SLUG.md` (using `$BRANCH_SLUG` from step 4 and `$TIMESTAMP` from Phase 2). The log is append-mode: each CDT session appends one `## Session $TIMESTAMP` block; the `# Branch:` header stays exactly once at the top. Reuse the same `Open Questions` and `Context for Next Session` content drafted for the PR body in step 4 — do not regenerate or rephrase.
 
     a. Derive `LOG_PATH=".agentnotes/cdt/$BRANCH_SLUG.md"`.
     b. If `$LOG_PATH` does NOT exist, write the file as:

@@ -76,7 +76,7 @@ Spawns Architect + PM + Researcher. The Architect designs the solution, the PM v
 
 Spawns Developer + Code-Tester + Reviewer + Researcher + QA-Tester. Executes tasks wave-by-wave from the plan, with parallel tasks within each wave and sequential ordering between waves.
 
-**Output**: Updated plan + `.agentnotes/cdt/<branch-slug>.md` — a committed, branch-scoped, append-mode session log. Each CDT run on the branch appends one `## Session YYYYMMDD-HHMM` block with What's Done / Open Questions / Context for Next Session / References sub-sections, so future agents on other branches can `rg .agentnotes/cdt/` to learn cross-branch context.
+**Output**: Updated plan + `.agentnotes/cdt/<branch-slug>.md` — a committed, branch-scoped, append-mode session log. Each CDT run on the branch appends one `## Session YYYYMMDD-HHMM` block with What's Done / Open Questions / Context for Next Session / References sub-sections, so future agents on other branches can `rg -l "" .agentnotes/cdt/` to learn cross-branch context.
 
 ### `/cdt:full-task` — Plan + Approve + Dev
 
