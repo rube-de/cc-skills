@@ -8,7 +8,7 @@ description: "Create an agent team for autonomous workflow: plan (Architect team
 > All implementation, testing, review, and documentation MUST be delegated to teammates via SendMessage.
 > If you find yourself about to edit a file, STOP and delegate to the appropriate teammate instead.
 > You verify plan/report artifacts written by teammates.
-> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install — a single idempotent `printf >>` to `AGENTS.md` or `CLAUDE.md`, guarded by `rg -q '\.agentnotes/cdt'`) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
+> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install performed in Wrap Up step 8) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
 
 # /auto-task — Autonomous Workflow
 

@@ -8,7 +8,7 @@ description: "Create an agent team for full workflow: plan (Architect teammate +
 > All implementation, testing, review, and documentation MUST be delegated to teammates via SendMessage.
 > If you find yourself about to edit a file, STOP and delegate to the appropriate teammate instead.
 > You verify plan/report artifacts written by teammates.
-> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install in dev-workflow.md §9 step 6 — a single idempotent `printf >>` to `AGENTS.md` or `CLAUDE.md`, guarded by `rg -q '\.agentnotes/cdt'`) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
+> **Narrow exception**: One-shot Bash file-appends for plugin-install side effects (specifically the discovery-hint install performed in dev-workflow.md §9 step 6) are explicitly permitted. This exception does NOT extend to Edit/Write/NotebookEdit on any file, nor to broader Bash file edits on source, test, or doc content.
 
 # /full-task — Complete Workflow
 
@@ -116,7 +116,7 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Read the branch-scoped session log at `.agentnotes/cdt/$BRANCH_SLUG.md` (written by `dev-workflow.md` step 9 during Phase 2) and extract the latest session's `### Open Questions` and `### Context for Next Session` content using this anchored slice:
+4. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). If `.agentnotes/cdt/$BRANCH_SLUG.md` is missing, unreadable, or contains no `^## Session ` line, treat the extracted `Open Questions` and `Context for Next Session` as empty (which naturally omits the `## Agent Notes` block via the empty-section rule below) and skip the slice steps. Otherwise, read the branch-scoped session log (written by `dev-workflow.md` step 9 during Phase 2) and extract the latest session's `### Open Questions` and `### Context for Next Session` content using this anchored slice:
 
     a. Find the **last** line in the file matching `^## Session ` (start-of-line anchor). This anchors on the most recent session block.
     b. Slice from that line to the next `^## ` heading at start-of-line, or to EOF if no subsequent `## ` heading exists.
