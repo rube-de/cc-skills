@@ -236,13 +236,13 @@ Find **every** `for p in council cdt ... ; do` loop in the file. There are multi
 For example, change:
 
 ```
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev; do
+for p in council cdt pm plugin-dev temporal doppler oasis-dev; do
 ```
 
 to:
 
 ```
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev <name>; do
+for p in council cdt pm plugin-dev temporal doppler oasis-dev <name>; do
 ```
 
 Also find the individual `claude plugin install` commands listed one per line and add:

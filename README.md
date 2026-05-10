@@ -11,7 +11,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 |--------|----------|---------|-------------|
 | [council](./plugins/council/) | Code Review | Plugin or Skill | Orchestrate Gemini, Codex, Qwen, GLM-5.1, and Kimi K2.5 for consensus-driven reviews |
 | [cdt](./plugins/cdt/) | Development | Plugin only | Multi-agent dev team with four modes: plan, dev, full, and auto via Agent Teams |
-| [project-manager](./plugins/project-manager/) | Productivity | Plugin or Skill | GitHub issue lifecycle: create, triage, and audit issues for LLM agent teams |
+| [pm](./plugins/pm/) | Productivity | Plugin or Skill | GitHub issue lifecycle: create, triage, and audit issues for LLM agent teams |
 | [plugin-dev](./plugins/plugin-dev/) | Development | Plugin or Skill | Scaffold plugins, validate SKILL.md frontmatter, audit hooks |
 | [temporal](./plugins/temporal/) | Development | Plugin or Skill | Temporal durable execution: CLI, SDK patterns, workflow orchestration |
 | [doppler](./plugins/doppler/) | DevOps | Plugin or Skill | Doppler secrets management: CLI, secrets injection, CI/CD integrations |
@@ -55,7 +55,7 @@ This clones the marketplace to `~/.claude/plugins/marketplaces/rube-cc-skills/`.
 # Install individual plugins
 claude plugin install council@rube-cc-skills
 claude plugin install cdt@rube-cc-skills
-claude plugin install project-manager@rube-cc-skills
+claude plugin install pm@rube-cc-skills
 claude plugin install plugin-dev@rube-cc-skills
 claude plugin install temporal@rube-cc-skills
 claude plugin install doppler@rube-cc-skills
@@ -65,7 +65,7 @@ claude plugin install ci-review@rube-cc-skills
 claude plugin install dlc@rube-cc-skills
 
 # Or install all at once
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do claude plugin install "$p@rube-cc-skills"; done
+for p in council cdt pm plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do claude plugin install "$p@rube-cc-skills"; done
 
 # Restart Claude Code to activate
 claude
@@ -89,7 +89,7 @@ By default, `npx skills` installs skills at **project scope** (`.claude/` in the
 npx skills add rube-de/cc-skills --list
 
 # Install specific skills (project scope by default)
-npx skills add rube-de/cc-skills --skill project-manager
+npx skills add rube-de/cc-skills --skill pm
 npx skills add rube-de/cc-skills --skill council
 
 # Install all skills
@@ -143,7 +143,7 @@ To make plugins available to Claude cloud agents, CI runners, or teammates witho
 claude plugin marketplace add rube-de/cc-skills
 
 # 2. Install plugins at project scope
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
+for p in council cdt pm plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
   claude plugin install "$p@rube-cc-skills" --scope project
 done
 
@@ -176,7 +176,7 @@ cc-skills/
 │   │   ├── hooks/           # Session start hooks
 │   │   ├── scripts/         # Agent team checks
 │   │   └── skills/          # cdt
-│   ├── project-manager/     # Issue lifecycle
+│   ├── pm/     # Issue lifecycle
 │   │   └── skills/          # pm, next, update, review
 │   ├── plugin-dev/          # Plugin development tools
 │   │   ├── commands/        # Scaffolding command
@@ -218,7 +218,7 @@ cd ~/.claude/plugins/marketplaces/rube-cc-skills && git pull
 claude plugin install council@rube-cc-skills
 
 # Or reinstall all plugins
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
+for p in council cdt pm plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
   claude plugin install "$p@rube-cc-skills"
 done
 
@@ -231,7 +231,7 @@ For **project-scoped** plugins, add `--scope project` and re-commit:
 ```bash
 cd ~/.claude/plugins/marketplaces/rube-cc-skills && git pull
 
-for p in council cdt project-manager plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
+for p in council cdt pm plugin-dev temporal doppler oasis-dev ci-review jules-review dlc; do
   claude plugin install "$p@rube-cc-skills" --scope project
 done
 

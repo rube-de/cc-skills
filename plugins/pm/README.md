@@ -1,4 +1,4 @@
-# project-manager
+# pm
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/Skills-5-blue.svg)](skills/)
@@ -155,7 +155,7 @@ This is a **skills-only plugin** — no hooks, agents, or commands. Both install
 claude plugin marketplace add rube-de/cc-skills
 
 # 2. Install the plugin
-claude plugin install project-manager@rube-cc-skills
+claude plugin install pm@rube-cc-skills
 
 # 3. Restart Claude Code
 claude
@@ -164,7 +164,7 @@ claude
 ### Skill Install (via [skills.sh](https://skills.sh))
 
 ```bash
-npx skills add rube-de/cc-skills --skill project-manager
+npx skills add rube-de/cc-skills --skill pm
 ```
 
 ## Usage Examples

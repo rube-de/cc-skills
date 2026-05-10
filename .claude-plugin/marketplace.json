@@ -49,10 +49,10 @@
       ]
     },
     {
-      "name": "project-manager",
+      "name": "pm",
       "description": "GitHub issue lifecycle: brainstorm design approaches, create structured issues for LLM agent teams, triage and recommend next issues, audit and clean up stale backlogs, and deep-validate individual issues against the codebase",
       "version": "1.69.0",
-      "source": "./plugins/project-manager",
+      "source": "./plugins/pm",
       "category": "productivity",
       "author": {
         "name": "rube-de",
