@@ -176,7 +176,7 @@ cc-skills/
 │   │   ├── hooks/           # Session start hooks
 │   │   ├── scripts/         # Agent team checks
 │   │   └── skills/          # cdt
-│   ├── pm/     # Issue lifecycle
+│   ├── pm/                  # Issue lifecycle
 │   │   └── skills/          # pm, next, update, review
 │   ├── plugin-dev/          # Plugin development tools
 │   │   ├── commands/        # Scaffolding command
