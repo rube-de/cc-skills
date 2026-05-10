@@ -8,7 +8,7 @@
 |--------|----------|----------------|
 | council | Code Review | `/council`, `/council:review-plan` |
 | cdt | Development | `/cdt` |
-| project-manager | Productivity | `/pm`, `/pm:brainstorm`, `/pm:next`, `/pm:update`, `/pm:review` |
+| pm | Productivity | `/pm`, `/pm:brainstorm`, `/pm:next`, `/pm:update`, `/pm:review` |
 | plugin-dev | Development | `/plugin-dev`, `/plugin-dev:create`, `/plugin-dev:develop` |
 | temporal | Development | `/temporal` |
 | doppler | DevOps | `/doppler` |
