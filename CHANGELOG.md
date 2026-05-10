@@ -1,3 +1,10 @@
+# [2.1.0](https://github.com/rube-de/cc-skills/compare/v2.0.0...v2.1.0) (2026-05-10)
+
+
+### Features
+
+* **cdt:** commit agent notes as branch-scoped append-mode logs ([#228](https://github.com/rube-de/cc-skills/issues/228)) ([376516f](https://github.com/rube-de/cc-skills/commit/376516f1340437f4c08f5b4aeff6620e8e74b9b8)), closes [#221](https://github.com/rube-de/cc-skills/issues/221)
+
 # [2.0.0](https://github.com/rube-de/cc-skills/compare/v1.69.0...v2.0.0) (2026-05-10)
 
 
