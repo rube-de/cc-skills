@@ -76,7 +76,7 @@ Log a brief summary of the plan to the user (task count, waves, key decisions), 
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9 and 10 — this command handles handoff and wrap-up). dev-workflow.md generates its own timestamp for the session handoff.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip sections 9 and 10 — this command handles the session log write and wrap-up). dev-workflow.md generates its own timestamp for the session log.
 
 ## Phase 2: Completion Audit
 

@@ -84,7 +84,7 @@ Do NOT proceed without approval. If revisions: update plan, re-present.
 
 ## Phase 2: Development
 
-Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip section 10 — this command handles wrap-up). dev-workflow.md generates its own timestamp for the session handoff.
+Follow the development workflow defined in @dev-workflow.md using the plan path from Phase 1 (skip Step 0 — Git Check was already done above; skip section 10 — this command handles wrap-up). dev-workflow.md generates its own timestamp for the session log.
 
 ## Phase 2: Completion Audit
 
