@@ -107,7 +107,7 @@ If any role was created but never used: **WARN** "Role {name} was created but ne
 Ask user:
 ```
 AskUserQuestion:
-  "Development complete. Session handoff written to .dev/cdt/handoffs/handoff-$TIMESTAMP.md. Ready to commit, push, and create a PR?"
+  "Development complete. Session log written to .agentnotes/cdt/$BRANCH_SLUG.md. Ready to commit, push, and create a PR?"
   Options: Create PR (Recommended) | Commit & push only | Skip
 ```
 
@@ -115,7 +115,14 @@ If creating PR:
 1. Stage changed files
 2. Commit with conventional commit message based on task
 3. Push branch
-4. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Read `.dev/cdt/handoffs/handoff-$TIMESTAMP.md` (written by `dev-workflow.md` step 9 during Phase 2) and extract the *content* under its `## Open Questions` and `## Context for Next Session` headings — exclude the heading lines themselves and stop extraction at the next `## ` heading at the start of a line, or at end-of-file if there is no subsequent `## ` heading. If extracted bullets contain claims you cannot verify in the current branch state, drop them rather than copying through. Create PR. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
+4. Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`; if `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty, read `ISSUE_NO="$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-issue")"`; validate ISSUE_NO is numeric (digits only). Read the branch-scoped session log at `.agentnotes/cdt/$BRANCH_SLUG.md` (written by `dev-workflow.md` step 9 during Phase 2) and extract the latest session's `### Open Questions` and `### Context for Next Session` content using this anchored slice:
+
+    a. Find the **last** line in the file matching `^## Session ` (start-of-line anchor). This anchors on the most recent session block.
+    b. Slice from that line to the next `^## ` heading at start-of-line, or to EOF if no subsequent `## ` heading exists.
+    c. Within that slice, extract the content under `### Open Questions` and `### Context for Next Session` — exclude the heading lines themselves and stop extraction at the next `^### ` heading at start-of-line or at end-of-slice.
+    d. If extracted bullets contain claims you cannot verify in the current branch state, drop them rather than copying through.
+
+    Create PR. PR body = plan summary as description, `Closes #$ISSUE_NO` (if applicable), and an `## Agent Notes` block formatted as:
 
     ```markdown
     ## Agent Notes

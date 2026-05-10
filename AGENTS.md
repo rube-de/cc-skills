@@ -39,6 +39,10 @@ See [docs/PLUGIN-AUTHORING.md](./docs/PLUGIN-AUTHORING.md) for the full authorin
 - PRs target `main`; semantic-release handles versioning on merge — never edit versions by hand
 - **Prompt engineering review**: When a change touches agent prompts (`prompt: >` blocks, SKILL.md instructions, `*-workflow.md` teammate prompts, `agents/*.md`), review it against known pitfalls in [`docs/learnings.md`](docs/learnings.md) before creating the PR. Specifically check: no literal actions in preambles before numbered workflow gates, no dual numbered sequences, imperatives over aphorisms, and no terminology mismatches with existing workflow steps.
 
+## Cross-branch agent context
+
+When picking up work in an unfamiliar area, run `rg -l '' .agentnotes/cdt/` (or `ls .agentnotes/cdt/`) to surface prior CDT session logs for related branches. Each file is a committed, append-mode log of `## Session …` blocks with What's Done / Open Questions / Context for Next Session — the canonical surface for cross-branch handoffs that don't reach merged-PR descriptions.
+
 ## Learnings
 
 Accumulated lessons from developing skills and plugins live in [`docs/learnings.md`](docs/learnings.md).
