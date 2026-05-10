@@ -365,7 +365,7 @@ If commit & push only:
 - Reviewing code yourself instead of messaging reviewer teammate
 - "Quick fixing" a file because it's faster than delegating
 - Skipping the session log (section 9) before wrap-up
-- Updating project documentation yourself instead of delegating to developer teammate
+- Updating project documentation yourself (other than the § 9 step 6 discovery-hint install, which is the explicit narrow exception per the command preambles) instead of delegating to developer teammate
 
 ## Rules
 
