@@ -1,3 +1,19 @@
+# [2.0.0](https://github.com/rube-de/cc-skills/compare/v1.69.0...v2.0.0) (2026-05-10)
+
+
+* refactor(pm)!: rename plugin from project-manager to pm ([#227](https://github.com/rube-de/cc-skills/issues/227)) ([d3ce5e9](https://github.com/rube-de/cc-skills/commit/d3ce5e9cb17e64dd1e3a65ffa87a7c6c41cad6b1))
+
+
+### BREAKING CHANGES
+
+* the plugin's slash-command prefix changes from
+/project-manager:* to /pm:*. Users who installed the plugin as
+`project-manager` must reinstall under the new name (`pm`). Any
+external scripts or docs referencing `plugins/project-manager/` need
+to point at `plugins/pm/`.
+
+* fix: address PR review comments
+
 # [1.69.0](https://github.com/rube-de/cc-skills/compare/v1.68.0...v1.69.0) (2026-05-04)
 
 
