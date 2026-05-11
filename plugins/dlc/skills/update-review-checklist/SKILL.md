@@ -83,8 +83,8 @@ The `--skip-prefix` filter in the helper script only excludes *merged* prior run
 ```bash
 OPEN_PRIOR=$(gh pr list --repo "$REPO" --state open \
   --search "head:chore/update-review-checklist-" \
-  --json number,url,headRefName \
-  --jq '.[]')
+  --json url \
+  --jq '.[0].url // empty')
 ```
 
 **If `OPEN_PRIOR` is non-empty:**
@@ -115,7 +115,7 @@ Capture the JSON output into `PR_DATA`. Validate the response shape — abort wi
 
 ```bash
 CURRENT_CHECKLIST="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-existing.XXXXXX")"
-gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content' | base64 -d > "$CURRENT_CHECKLIST"
+gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content' | base64 --decode > "$CURRENT_CHECKLIST"
 ```
 
 ## Step 3: Filter Comments
@@ -308,7 +308,6 @@ update-review-checklist complete.
   Merged PRs inspected: $N  (skipped own PRs: $K)
   Comments fetched:     $M
   Filter drops:
-    - bots:                       $A
     - unresolved-by-commit:       $B
     - hard-skip patterns:         $C
   Clusters above threshold:       $D

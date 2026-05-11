@@ -14,7 +14,8 @@
 #     "repo": "owner/name",
 #     "lookback_days": 30,
 #     "cutoff_date": "YYYY-MM-DD",
-#     "merged_prs_inspected": N,
+#     "merged_prs_inspected": N,   // PRs actually analyzed (post-skip, post-fetch)
+#     "merged_prs_listed": N,       // raw `gh pr list` count before --skip-prefix filtering
 #     "skipped_own_prs": N,
 #     "prs": [
 #       {
@@ -140,8 +141,6 @@ CUTOFF_DATE=$(date -u -v-"${LOOKBACK_DAYS}"d +%Y-%m-%d 2>/dev/null \
 
 _tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/fetch-merged-pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
 trap 'rm -rf "$_tmpdir"' EXIT
-
-MAX_PAGES=20  # safety cap, matches pr-comments.sh
 
 # --- list merged PRs in window ---------------------------------------------
 #
@@ -428,7 +427,7 @@ jq -n \
   --arg repo "$OWNER/$REPO" \
   --argjson lookback "$LOOKBACK_DAYS" \
   --arg cutoff "$CUTOFF_DATE" \
-  --argjson total "$_total_merged" \
+  --argjson listed "$_total_merged" \
   --argjson skipped "$_skipped" \
   --argjson sum_total "$_sum_comments" \
   --argjson sum_bots "$_sum_bot_filtered" \
@@ -440,7 +439,8 @@ jq -n \
     repo:                  $repo,
     lookback_days:         $lookback,
     cutoff_date:           $cutoff,
-    merged_prs_inspected:  $total,
+    merged_prs_inspected:  ($prs | length),
+    merged_prs_listed:     $listed,
     skipped_own_prs:       $skipped,
     prs:                   $prs,
     summary: {
@@ -450,6 +450,6 @@ jq -n \
       comments_resolved_by_commit: $sum_resolved,
       comments_with_severity:     $sum_severity,
       truncated:                  $truncated,
-      list_limit_hit:             ($total >= 200)
+      list_limit_hit:             ($listed >= 200)
     }
   }'
