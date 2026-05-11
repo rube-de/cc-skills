@@ -508,6 +508,70 @@ Skills that make 3–4 sequential `gh` CLI calls waste context window space on r
 
 > Source: [Issue #74](https://github.com/rube-de/cc-skills/issues/74) — `pr-check` and `pm:next` batched into `pr-comments.sh` and `open-issues.sh` respectively.
 
+### `jq` function parameters are filters, not values — rebind to a local var
+
+`def f(p): ...` looks like a function with a value parameter, but jq parameters are *filters* substituted at call sites. Inside the body, every reference to `p` re-evaluates the filter against the current `.`. When `p` is itself a path expression (e.g. `$first_c.createdAt`), and the function body shifts `.` to a different value (e.g. iterating over an array of strings), the filter is re-evaluated in the new scope and breaks.
+
+**Bad** — `created` is re-evaluated each time `.` shifts:
+```jq
+def resolved(created):
+  [ $author_commit_dates[] | select(. > created) ] | length > 0;
+
+# Call site:
+resolved($first_c.createdAt)
+```
+
+Inside `select`, `.` is now an item from `$author_commit_dates` (a date string), and `created` re-evaluates as `<string>.createdAt` → `Cannot index string with string "createdAt"`.
+
+**Good** — bind the parameter to a `$`-variable on entry so the value is captured once:
+```jq
+def resolved(created_filter):
+  (created_filter) as $created |
+  [ $author_commit_dates[] | select(. > $created) ] | length > 0;
+```
+
+This is the canonical pattern any time a jq function:
+- Takes a parameter that is a path expression (`$x.foo`, `.bar.baz`), AND
+- Uses that parameter inside a context where `.` is something other than the original input.
+
+Functions whose parameter is *purely* a `$`-variable (e.g. `f($pr_author)`) are safe — variable references do not depend on `.`. Functions that only use the parameter on the original `.` are safe — `.` hasn't shifted yet.
+
+> Source: `fetch-merged-pr-comments.sh` — initial implementation defined `def resolved(created)` and `def detect_severity(body)` with raw filter parameters. The first smoke test produced `jq: error: Cannot index string with string "createdAt"` because the parameter filter was re-evaluated inside `select(. > created)`. Fixed by rebinding to `(created) as $created` on entry. Same fix applied prophylactically to `detect_severity`.
+
+### JSON-array assembly: prefer JSONL + `--slurpfile` to manual `[`/`,`/`]`
+
+When a shell loop produces N JSON records and you want a single JSON array on stdout, the obvious "open with `[`, separator `,`, close with `]`" approach is brittle: any per-iteration failure (mid-loop `continue`, jq error, network blip) leaves a malformed file (`[,]`, trailing comma, missing close).
+
+**Bad** — manual array assembly:
+```bash
+echo "[" > out.jsonl
+first=1
+for x in ...; do
+  if some_step; then
+    if [ "$first" = 1 ]; then jq -c '.' result >> out.jsonl; first=0
+    else printf "," >> out.jsonl; jq -c '.' result >> out.jsonl
+    fi
+  fi
+done
+echo "]" >> out.jsonl
+```
+
+**Good** — JSONL per iteration, slurp at the end:
+```bash
+: > out.jsonl
+for x in ...; do
+  if some_step; then
+    jq -c '.' result >> out.jsonl
+  fi
+done
+
+jq -n --slurpfile prs out.jsonl '{prs: $prs}'
+```
+
+`--slurpfile` reads N newline-separated JSON values into an array natively. Per-iteration failures are no-ops; an empty file slurps to `[]`. No special-case for the first element, no comma bookkeeping, no malformed-file risk.
+
+> Source: `fetch-merged-pr-comments.sh` — first draft used manual `[`/`,`/`]` assembly and hit `jq: Bad JSON: Expected value before ','` whenever a per-PR transform failed mid-loop. Switched to JSONL + `--slurpfile`; the special-case logic and the `_sep` marker hack both disappeared. ~15 fewer lines and one less failure mode.
+
 ---
 
 ## GitHub Issue Integration in Agent Teams
