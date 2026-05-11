@@ -42,6 +42,8 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)       Bugfix Phase (bu
 **Teammates** message each other directly (Architect teammate↔PM teammate, Developer teammate↔Code-tester teammate, Developer teammate↔QA-tester teammate, Developer teammate↔Reviewer teammate). In bugfix mode: Tester teammate↔Developer teammate, Reviewer teammate↔Developer teammate.
 **Researcher** is a subagent — Lead relays results.
 
+**Directives mechanism** (plan phase): Lead → teammate control signals (e.g. `auto_task_baseline`, `council_review`) live in a per-run sidecar JSON file at `.dev/cdt/plans/plan-$TIMESTAMP.directives.json`, not in prompt prose. See [references/directives-schema.md](references/directives-schema.md) for schema and lifecycle.
+
 ## Roles
 
 ### Researcher (subagent — spawn via Task without team_name)

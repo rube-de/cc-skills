@@ -55,6 +55,8 @@ Workflow: auto-task
 
 Follow the planning workflow defined in @plan-workflow.md (skip Step 0 — Git Check was already done above). plan-workflow.md generates its own `$TIMESTAMP` for the plan path.
 
+When the Lead executes Step 4a (Initialize Directives) in `plan-workflow.md`, set `auto_task_baseline: true` in the directives file — this command is the trigger for the always-on advisory baseline review (see [../skills/cdt/references/directives-schema.md](../skills/cdt/references/directives-schema.md)).
+
 ## Phase 1: Completion Audit
 
 Before proceeding, log which roles were actually used during Phase 1:
