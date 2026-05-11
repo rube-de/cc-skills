@@ -108,21 +108,40 @@ This rule applies in both attended and unattended modes. Dry-run is the one exce
 
 Run the helper script that lists merged PRs in window, fetches review-thread + review-body + issue-comment data per PR, applies the resolved-by-commit heuristic, and detects severity labels:
 
+The skill's bash blocks run with cwd at the skill's base directory (`plugins/dlc/skills/update-review-checklist/`) — same convention as `dlc:pr-check`, documented in `docs/learnings.md:505`. The LLM consumer should `cd` into the skill directory before executing this block. The `../../scripts/` prefix then resolves to `plugins/dlc/scripts/`.
+
 ```bash
 FETCH_ERR="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-fetch-err.XXXXXX")"
-PR_DATA=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/fetch-merged-pr-comments.sh" "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
+PR_DATA=$(sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
   err_msg=$(jq -r '.error // .' "$FETCH_ERR" 2>/dev/null || cat "$FETCH_ERR")
   rm -f "$FETCH_ERR"
   echo "fetch-merged-pr-comments.sh failed: $err_msg" >&2
   exit 1
 }
+
+# Validate response shape — the helper writes errors to stderr (handled above)
+# but the success path must still contain the expected JSON keys.
+if ! printf '%s' "$PR_DATA" | jq -e '.prs and .summary' >/dev/null; then
+  echo "fetch-merged-pr-comments.sh: response missing .prs or .summary" >&2
+  rm -f "$FETCH_ERR"
+  exit 1
+fi
+
+# Replay per-PR warnings (GraphQL skips, jq-transform failures) on stdout when
+# the helper succeeded — useful for operators in scheduled runs. The script
+# uses stderr for *both* fatal errors (already handled above) and these soft
+# warnings; we surface the warnings here rather than silently discarding them.
+if [ -s "$FETCH_ERR" ]; then
+  echo "fetch-merged-pr-comments.sh warnings:" >&2
+  cat "$FETCH_ERR" >&2
+fi
 rm -f "$FETCH_ERR"
 
 # Extract cutoff_date from the helper response — used in the Step 9 summary.
 CUTOFF_DATE=$(printf '%s' "$PR_DATA" | jq -r '.cutoff_date')
 ```
 
-The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). Also abort if `.prs` is missing from `$PR_DATA`. The `mktemp` path mirrors the `CURRENT_CHECKLIST` pattern below — concurrent scheduled runs against the same `$TMPDIR` cannot collide on a fixed `/tmp/fetch-err.json` path. The script path uses `${CLAUDE_PLUGIN_ROOT}` (set by the Claude Code plugin runtime — same convention as `plugins/cdt/hooks/hooks.json`) so the helper resolves correctly when the skill runs against another repo's working directory.
+The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). The `jq -e '.prs and .summary'` check enforces the documented schema on the success path. The `mktemp` path mirrors the `CURRENT_CHECKLIST` pattern below — concurrent scheduled runs against the same `$TMPDIR` cannot collide on a fixed `/tmp/fetch-err.json` path.
 
 **If `.summary.truncated == true`:** Warn on stdout that the helper hit a per-PR pagination cap and some comments may be missing. Continue with the partial data.
 
@@ -307,18 +326,37 @@ cd "$ORIG_CWD"
 
 Write a small JSON state file in the **calling repo** (the place this skill was invoked from), not the cloned target. This file is informational; it does not gate future runs.
 
+Pick `STATUS` and `LAST_PR_URL` based on what actually happened, so the state file truthfully reflects the run instead of always claiming `pr_opened`:
+
+- `pr_opened` — `DRY_RUN=false`, a PR was created, `$PR_URL` is set
+- `no_entries` — `DRY_RUN=false` but no clusters survived dedup (Step 7 was a no-op); `$PR_URL` empty
+- `dry_run` — `DRY_RUN=true` (Step 6 exit path); `$PR_URL` empty
+- `pending_human_only` — only Pending-Human clusters; no PR opened; `$PR_URL` empty
+
 ```bash
 SLUG=$(printf '%s' "$REPO" | tr '/' '-')
 mkdir -p "$ORIG_CWD/.dev/dlc"
+PENDING_COUNT=$(printf '%s' "$PENDING_HUMAN" | jq 'length // 0')
+
+if [ "$DRY_RUN" = "true" ]; then
+  STATUS="dry_run"; LAST_PR_URL=""
+elif [ -n "$PR_URL" ]; then
+  STATUS="pr_opened"; LAST_PR_URL="$PR_URL"
+elif [ "$PENDING_COUNT" -gt 0 ]; then
+  STATUS="pending_human_only"; LAST_PR_URL=""
+else
+  STATUS="no_entries"; LAST_PR_URL=""
+fi
+
 cat > "$ORIG_CWD/.dev/dlc/update-review-checklist-$SLUG.state" <<EOF
 {
   "last_run_at": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "last_pr_url": "$PR_URL",
+  "last_pr_url": "$LAST_PR_URL",
   "lookback": "$LOOKBACK",
   "threshold": $THRESHOLD,
   "entries_added": $ENTRIES_ADDED,
-  "pending_human": $(printf '%s' "$PENDING_HUMAN" | jq 'length // 0'),
-  "status": "pr_opened"
+  "pending_human": $PENDING_COUNT,
+  "status": "$STATUS"
 }
 EOF
 ```

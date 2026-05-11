@@ -190,14 +190,14 @@ query($owner: String!, $repo: String!, $number: Int!) {
       comments(first: 100) {
         totalCount
         nodes {
-          id databaseId body createdAt
+          id body createdAt
           author { login __typename }
         }
       }
       reviews(first: 100) {
         totalCount
         nodes {
-          id databaseId body state createdAt
+          id body state createdAt
           author { login __typename }
         }
       }
@@ -208,13 +208,13 @@ query($owner: String!, $repo: String!, $number: Int!) {
           comments(first: 50) {
             totalCount
             nodes {
-              id databaseId body createdAt
+              id body createdAt
               author { login __typename }
             }
           }
         }
       }
-      commits(first: 100) {
+      commits(first: 250) {
         totalCount
         nodes {
           commit {
