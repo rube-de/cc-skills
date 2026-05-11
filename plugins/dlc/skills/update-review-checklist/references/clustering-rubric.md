@@ -12,9 +12,13 @@ Drop a comment from clustering when its body matches any of the following. These
 | Formatting nits matched by `^(nit|style|format):` *and* the comment proposes no semantic change | Style is handled by linters, not human checklist gates |
 | "Consider …" / "What about …" wishlist comments with no specific action and no commit response | Already filtered by resolved-by-commit, but defensive — drop if `severity == null` and body starts with these |
 | Praise / acknowledgement (`LGTM`, `nice`, `👍`, etc., body < 40 chars) | No action proposed |
-| Bot CI summaries that slipped past `.is_bot` (e.g. human-posted "all checks green") | No reviewer signal |
+| CodeRabbit no-findings summary: `^actionable comments posted:\s*0\b` | Header-only review summary, no member finding to cluster |
+| Qodo no-findings summary: `^code review by qodo` followed by all-zero category counters (e.g. `🐞 Bugs (0)` AND `📘 Rule violations (0)` AND `📎 Requirement gaps (0)`) | All-zero counters = no findings; keep if any counter > 0 |
+| Empty or near-empty bodies (after stripping whitespace and markdown, < 20 chars) | No content to cluster on; usually a wrapper for inline thread comments which arrive separately |
 
 Match case-insensitively. If a comment matches a skip pattern AND carries a severity label (`high`/`medium`/`low`), **keep it** — severity-labelled findings are signal even when their leading word is "nit".
+
+The hard-skip rules above are content-defined, not author-defined. Bot accounts that post substantive reviews (Copilot, CodeRabbit non-zero summaries, Codex, Gemini, Qodo non-zero summaries) pass through; only their explicit no-findings summary formats are caught. This generalises across repos with any reviewer mix — human-led, bot-led, or hybrid.
 
 ## Severity Weights
 

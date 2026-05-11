@@ -121,9 +121,10 @@ gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content' | ba
 
 Apply these filters in order; keep counters so the final summary can report what was dropped and why.
 
-1. **Drop bots** (`.is_bot == true`). Reviewer signal lives in human comments; bot comments are summaries, not new findings. *Council/codex findings posted via the GitHub CLI as a non-bot account are kept.*
-2. **Drop unresolved-by-commit** (`.resolved_by_commit == false`). A reviewer comment that did not provoke a code change from the PR author is either (a) a wishlist item ignored or deferred, or (b) something the reviewer themselves resolved as not-needed. Either way, it is not a pattern worth promoting to the checklist.
-3. **Drop hard-skip patterns** — read [`references/clustering-rubric.md`](references/clustering-rubric.md) now and apply its explicit blocklist (typos, formatting nits, "consider" wishlists with no specific action).
+1. **Drop unresolved-by-commit** (`.resolved_by_commit == false`). A reviewer comment that did not provoke a code change from the PR author is either (a) a wishlist item ignored or deferred, or (b) something the reviewer themselves resolved as not-needed. Either way, it is not a pattern worth promoting to the checklist.
+2. **Drop hard-skip patterns** — read [`references/clustering-rubric.md`](references/clustering-rubric.md) now and apply its explicit blocklist (typos, formatting nits, "consider" wishlists with no specific action, automated review-summary comments with zero findings).
+
+The `.is_bot` field on each comment is retained as metadata for the PR body's "Derived from" table, but is **not** a filter input. Substantive reviewers in many repos are bot accounts (Copilot, CodeRabbit, Codex, Gemini, Qodo); filtering on author type would discard the primary signal. Noise from automated reviewers is content-defined and handled by the hard-skip patterns instead.
 
 Record the per-step drop counts. They surface in the Step 9 summary.
 
