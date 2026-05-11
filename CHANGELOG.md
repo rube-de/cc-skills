@@ -1,3 +1,10 @@
+# [2.2.0](https://github.com/rube-de/cc-skills/compare/v2.1.0...v2.2.0) (2026-05-11)
+
+
+### Features
+
+* **cdt:** directives mechanism with auto-task codex baseline review ([#229](https://github.com/rube-de/cc-skills/issues/229)) ([53d3a6a](https://github.com/rube-de/cc-skills/commit/53d3a6a50647aa2caef70bd42159388b720ac4fd)), closes [#225](https://github.com/rube-de/cc-skills/issues/225)
+
 # [2.1.0](https://github.com/rube-de/cc-skills/compare/v2.0.0...v2.1.0) (2026-05-10)
 
 
