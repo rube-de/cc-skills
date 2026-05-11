@@ -294,11 +294,24 @@ while [ "$_idx" -lt "$_pr_count" ]; do
     # resolved_by_commit: a comment is "resolved by commit" iff ≥1 author commit
     # lands AFTER the comment.created_at. We compare ISO strings — safe because
     # ISO8601 is lexicographically orderable.
-    [ $pr.commits.nodes[] |
-      .commit |
-      select((.author.user.login // null) == $pr_author) |
-      .committedDate
-    ] | sort as $author_commit_dates |
+    #
+    # Primary identity: commit.author.user.login (the GitHub-linked identity).
+    # Fallback: GitHub returns author.user = null when the commit email is not
+    # linked to a GitHub account, which would otherwise zero out the signal for
+    # the whole PR. In that case we fall back to using ALL commit dates —
+    # degraded mode (a co-author commit could resolve a comment) but better
+    # than dropping every comment as unresolved-by-commit in Step 3.
+    ( [ $pr.commits.nodes[] |
+        .commit |
+        select((.author.user.login // null) == $pr_author) |
+        .committedDate
+      ] | sort
+    ) as $strict_author_dates |
+    ( if ($strict_author_dates | length) > 0
+        then $strict_author_dates
+        else [ $pr.commits.nodes[] | .commit.committedDate ] | sort
+      end
+    ) as $author_commit_dates |
 
     # Severity detection regex applied across two formats:
     #   * council / deep-review prose:  "Severity: High" / "Confidence: Medium"
