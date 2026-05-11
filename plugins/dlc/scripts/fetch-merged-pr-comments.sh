@@ -207,6 +207,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
         nodes {
           id isResolved path line
           comments(first: 50) {
+            totalCount
             nodes {
               id databaseId body createdAt
               author { login __typename }
@@ -266,7 +267,8 @@ while [ "$_idx" -lt "$_pr_count" ]; do
     ( ($pr.comments.totalCount       > ($pr.comments.nodes       | length)) or
       ($pr.reviews.totalCount        > ($pr.reviews.nodes        | length)) or
       ($pr.reviewThreads.totalCount  > ($pr.reviewThreads.nodes  | length)) or
-      ($pr.commits.totalCount        > ($pr.commits.nodes        | length))
+      ($pr.commits.totalCount        > ($pr.commits.nodes        | length)) or
+      ([ $pr.reviewThreads.nodes[] | (.comments.totalCount > (.comments.nodes | length)) ] | any)
     )
   ' "$_tmpdir/pr-$_pr_number.json")
   if [ "$_pr_trunc" = "true" ]; then
@@ -318,23 +320,26 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       (created_filter) as $created |
       [ $author_commit_dates[] | select(. > $created) ] | length > 0;
 
-    # Threads → comments[]. Exclude threads started by the PR author — these
-    # are typically self-notes or questions, not reviewer feedback.
-    [ $pr.reviewThreads.nodes[] |
-      . as $thread |
-      ($thread.comments.nodes[0]) as $first_c |
-      select($first_c != null and ($first_c.author.login // "ghost") != $pr_author) |
+    # Threads → per-comment entries. Iterate all non-author comments per
+    # thread so reviewer follow-ups (not just the root) reach clustering.
+    # Filter PR-author comments and DLC reply sentinels with the same rules
+    # used by the review-bodies and issue-comments blocks below.
+    [ $pr.reviewThreads.nodes[] as $thread |
+      $thread.comments.nodes[] |
+      . as $c |
+      select(($c.author.login // "ghost") != $pr_author) |
+      select(($c.body // "") | contains("<!-- dlc-reply:") | not) |
       {
-        id:                 $thread.id,
+        id:                 ($c.id // $thread.id),
         type:               "thread",
-        author:             ($first_c.author.login // "ghost"),
-        is_bot:             (($first_c.author.__typename // "") == "Bot"),
-        body:               ($first_c.body // ""),
+        author:             ($c.author.login // "ghost"),
+        is_bot:             (($c.author.__typename // "") == "Bot"),
+        body:               (($c.body // "") | .[0:2000]),
         path:               $thread.path,
         line:               $thread.line,
-        created_at:         $first_c.createdAt,
-        resolved_by_commit: resolved($first_c.createdAt),
-        severity:           detect_severity($first_c.body)
+        created_at:         $c.createdAt,
+        resolved_by_commit: resolved($c.createdAt),
+        severity:           detect_severity($c.body // "")
       }
     ] as $thread_comments |
 
@@ -350,7 +355,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
         type:               "review_body",
         author:             (.author.login // "ghost"),
         is_bot:             ((.author.__typename // "") == "Bot"),
-        body:               .body,
+        body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
         created_at:         .createdAt,
@@ -370,7 +375,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
         type:               "issue_comment",
         author:             (.author.login // "ghost"),
         is_bot:             ((.author.__typename // "") == "Bot"),
-        body:               .body,
+        body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
         created_at:         .createdAt,

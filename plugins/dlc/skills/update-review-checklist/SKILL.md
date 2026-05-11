@@ -29,7 +29,7 @@ The recurring nature is the entire signal. A one-off finding is noise; a finding
 
 ## Notification Rules
 
-Fire `PushNotification` only for **terminal states that benefit the user knowing about**:
+`PushNotification` fires only for **terminal states that benefit the user knowing about**:
 
 - `pr_opened` — a checklist update PR was opened (include the PR URL)
 - `pending_human` — under `--unattended`, clusters that need a human call were skipped
