@@ -32,7 +32,7 @@ Persisting the file alongside the plan also gives an audit trail: which review t
 | Field | Type | Default | Meaning |
 |-------|------|---------|---------|
 | `schema_version` | string | required | Schema version. PM warns and uses safe-defaults (all directives `false`) on unknown values. |
-| `auto_task_baseline` | bool | `false` | If `true`, PM spawns `Task subagent_type: "codex-consultant"` exactly once for advisory baseline review. |
+| `auto_task_baseline` | bool | `false` | If `true`, PM spawns `Task subagent_type: "council:codex-consultant"` exactly once for advisory baseline review. |
 | `council_review` | bool | `false` | If `true`, PM invokes `Skill: council args "plan [plan-path]"` exactly once for 2-consultant deep review. |
 
 Both review tiers are **advisory only** — neither can hard-block. PM remains the single source of feedback to the architect.
@@ -60,13 +60,13 @@ Both review tiers are **advisory only** — neither can hard-block. PM remains t
 
 ## Canonical JSON formatting
 
-The Lead writes the file with this exact formatting (2-space indent, trailing newline). Architect's `Edit` depends on byte-level match:
+The Lead writes the file with this exact formatting (2-space indent, trailing newline). The architect's `Edit` depends on byte-level match of the structure and key order; the boolean values themselves are determined by invocation context (see [Lifecycle](#lifecycle) above). The example below shows the baseline values (both `false`):
 
-```
+```json
 {
   "schema_version": "1",
-  "auto_task_baseline": <bool>,
-  "council_review": <bool>
+  "auto_task_baseline": false,
+  "council_review": false
 }
 ```
 
@@ -96,4 +96,4 @@ Adding a new directive:
 - `plan-workflow.md` Step 5b architect prompt — Edit instruction
 - `plan-workflow.md` Step 5b PM prompt Step 4 — read + dispatch logic
 - `commands/auto-task.md` Phase 1 — sets `auto_task_baseline: true`
-- `council:review-plan/SKILL.md` lines 115-146 — critique prompt template reused by codex-baseline path
+- `council:review-plan/SKILL.md`, the "Consultant Prompt" section under Step 3 — critique prompt template reused by codex-baseline path

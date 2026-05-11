@@ -61,19 +61,22 @@ TaskCreate:
 
 ## 4a. Initialize Directives
 
-Write the per-run directives sidecar to `.dev/cdt/plans/plan-$TIMESTAMP.directives.json` using the `Write` tool. Store the path as `$DIRECTIVES_PATH`.
+Ensure the plans directory exists, then write the per-run directives sidecar to `.dev/cdt/plans/plan-$TIMESTAMP.directives.json`:
+
+1. Call the Bash tool: `mkdir -p .dev/cdt/plans`
+2. Call the Write tool to create the sidecar file at the path above.
 
 Determine initial values from invocation context:
 - `auto_task_baseline`: `true` if invoked via `/cdt:auto-task` (per `auto-task.md` Phase 1 instruction); else `false`.
 - `council_review`: `true` if `$ARGUMENTS` includes `--review-plan`; else `false`.
 
-File content (canonical formatting — architect's `Edit` depends on exact match):
+Canonical formatting (2-space indent, trailing newline) — the architect's later `Edit` depends on byte-level match of the structure and key order. The example below shows the baseline values (both `false`); substitute `true` where the rules above require it:
 
 ```json
 {
   "schema_version": "1",
-  "auto_task_baseline": <bool>,
-  "council_review": <bool>
+  "auto_task_baseline": false,
+  "council_review": false
 }
 ```
 
@@ -263,10 +266,10 @@ Teammate tool:
           or has an unknown `schema_version`, log a warning and treat all directives as `false`
           (fail-safe).
        b. If `auto_task_baseline: true`:
-          i. Spawn `Task subagent_type: "codex-consultant"` exactly once. Pass the critique
-             prompt template from `council:review-plan/SKILL.md` lines 115-146, with
-             `<plan_content>` populated from [plan-path]. Codex returns Critical/Warning/Note
-             findings as JSON.
+          i. Spawn `Task subagent_type: "council:codex-consultant"` exactly once. Pass the
+             critique prompt template from `council:review-plan/SKILL.md` (the "Consultant
+             Prompt" section under Step 3), with `<plan_content>` populated from [plan-path].
+             Codex returns Critical/Warning/Note findings as JSON.
           ii. If the Task result indicates codex CLI is unavailable, log a skip notice and
               proceed — auto-task does NOT halt.
        c. If `council_review: true`:
