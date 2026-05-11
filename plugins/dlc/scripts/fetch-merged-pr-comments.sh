@@ -36,7 +36,7 @@
 #             "line": 42 | null,
 #             "created_at": "ISO8601",
 #             "resolved_by_commit": true,
-#             "severity": "high|medium|low|null"
+#             "severity": "high" | "medium" | "low" | null  // string or JSON null (unquoted)
 #           }
 #         ]
 #       }

@@ -6,10 +6,18 @@ Read this in Step 3 to apply the hard-skip filter and again in Step 4 to cluster
 
 Drop a comment from clustering when its body matches any of the following. These patterns produce noise, not patterns worth promoting to a checklist.
 
+The formatting-nits row in the table below describes the pattern in prose to avoid GFM table escape ambiguity. The literal regex an implementation should use is:
+
+```regex
+^(nit|style|format):
+```
+
+Matched case-insensitively against the comment body's leading non-whitespace token.
+
 | Pattern | Why dropped |
 |---|---|
 | Pure typo flags (`typo:`, `s/foo/bar`, `^typo in ` lead-in) | One-off lexical errors; not a checklist-worthy class |
-| Formatting nits matched by `^(nit&#124;style&#124;format):` *and* the comment proposes no semantic change | Style is handled by linters, not human checklist gates |
+| Formatting nits whose body starts with `nit:`, `style:`, or `format:` (case-insensitive) *and* the comment proposes no semantic change | Style is handled by linters, not human checklist gates |
 | "Consider …" / "What about …" wishlist comments with no specific action and no commit response | Already filtered by resolved-by-commit, but defensive — drop if `severity == null` and body starts with these |
 | Praise / acknowledgement (`LGTM`, `nice`, `👍`, etc., body < 40 chars) | No action proposed |
 | CodeRabbit no-findings summary: `^actionable comments posted:\s*0\b` | Header-only review summary, no member finding to cluster |
@@ -88,7 +96,7 @@ The helper script regex-matches comment bodies against these two formats:
 
 - **Council / deep-review prose** (most common):
   - `Severity: High` / `Severity: Medium` / `Severity: Low`
-  - `Confidence: High` / `Confidence: Medium`
+  - `Confidence: High` / `Confidence: Medium` / `Confidence: Low`
 - **Inline label-style** (sometimes used in bot or council output):
   - `severity/high`, `severity/critical`, `severity/medium`, `severity/low`
   - `deep-review/critical`

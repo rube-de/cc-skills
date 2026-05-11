@@ -544,16 +544,16 @@ When a shell loop produces N JSON records and you want a single JSON array on st
 
 **Bad** — manual array assembly:
 ```bash
-echo "[" > out.jsonl
+echo "[" > out.json
 first=1
 for x in ...; do
   if some_step; then
-    if [ "$first" = 1 ]; then jq -c '.' result >> out.jsonl; first=0
-    else printf "," >> out.jsonl; jq -c '.' result >> out.jsonl
+    if [ "$first" = 1 ]; then jq -c '.' result >> out.json; first=0
+    else printf "," >> out.json; jq -c '.' result >> out.json
     fi
   fi
 done
-echo "]" >> out.jsonl
+echo "]" >> out.json
 ```
 
 **Good** — JSONL per iteration, slurp at the end:

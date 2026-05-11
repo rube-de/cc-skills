@@ -110,16 +110,19 @@ Run the helper script that lists merged PRs in window, fetches review-thread + r
 
 ```bash
 FETCH_ERR="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-fetch-err.XXXXXX")"
-PR_DATA=$(sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
+PR_DATA=$(sh "${CLAUDE_PLUGIN_ROOT}/scripts/fetch-merged-pr-comments.sh" "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
   err_msg=$(jq -r '.error // .' "$FETCH_ERR" 2>/dev/null || cat "$FETCH_ERR")
   rm -f "$FETCH_ERR"
   echo "fetch-merged-pr-comments.sh failed: $err_msg" >&2
   exit 1
 }
 rm -f "$FETCH_ERR"
+
+# Extract cutoff_date from the helper response — used in the Step 9 summary.
+CUTOFF_DATE=$(printf '%s' "$PR_DATA" | jq -r '.cutoff_date')
 ```
 
-The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). Also abort if `.prs` is missing from `$PR_DATA`. The `mktemp` path mirrors the `CURRENT_CHECKLIST` pattern below — concurrent scheduled runs against the same `$TMPDIR` cannot collide on a fixed `/tmp/fetch-err.json` path.
+The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). Also abort if `.prs` is missing from `$PR_DATA`. The `mktemp` path mirrors the `CURRENT_CHECKLIST` pattern below — concurrent scheduled runs against the same `$TMPDIR` cannot collide on a fixed `/tmp/fetch-err.json` path. The script path uses `${CLAUDE_PLUGIN_ROOT}` (set by the Claude Code plugin runtime — same convention as `plugins/cdt/hooks/hooks.json`) so the helper resolves correctly when the skill runs against another repo's working directory.
 
 **If `.summary.truncated == true`:** Warn on stdout that the helper hit a per-PR pagination cap and some comments may be missing. Continue with the partial data.
 
