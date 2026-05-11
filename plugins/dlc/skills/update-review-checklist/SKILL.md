@@ -165,7 +165,7 @@ Non-ambiguous clusters pass through unchanged. The active set after this gate is
 
 ## Step 5: Dedup Against Existing Checklist
 
-Read [`references/checklist-schema.md`](references/checklist-schema.md) now. For each surviving cluster, apply its semantic-dedup rubric against `/tmp/current-checklist.md`. The rubric's three diagnostic questions classify each cluster as **duplicate** (drop), **distinct** (keep), or **ambiguous** (needs a call).
+Read [`references/checklist-schema.md`](references/checklist-schema.md) now. For each surviving cluster, apply its semantic-dedup rubric against the checklist content at `$CURRENT_CHECKLIST` (the per-run path from Step 2). The rubric's three diagnostic questions classify each cluster as **duplicate** (drop), **distinct** (keep), or **ambiguous** (needs a call).
 
 ### Ambiguous-dedup gate
 
@@ -236,7 +236,7 @@ The `$CURRENT_CHECKLIST` cache from Step 2 may be stale relative to the freshly 
 CHECKLIST_PATH="$WORKDIR/docs/code-review-checklist.md"
 ```
 
-If a meaningful diff exists between `/tmp/current-checklist.md` and `$CHECKLIST_PATH` (e.g. someone merged checklist changes between Step 2 and now), re-run the Step 5 dedup gate against the fresh content before continuing. For monthly-cadence runs this is almost never the case.
+If a meaningful diff exists between `$CURRENT_CHECKLIST` and `$CHECKLIST_PATH` (e.g. someone merged checklist changes between Step 2 and now), re-run the Step 5 dedup gate against the fresh content before continuing. For monthly-cadence runs this is almost never the case.
 
 ### Edit the checklist
 
