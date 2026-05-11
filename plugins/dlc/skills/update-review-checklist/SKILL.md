@@ -49,15 +49,20 @@ Read `$ARGUMENTS` and extract:
 
 - `REPO` — optional positional `owner/name`. If absent, default to `gh repo view --json owner,name` for the current working directory.
 - `LOOKBACK` — `--lookback <Nd>` (default `30d`). Format is a positive integer followed by `d`.
-- `THRESHOLD` — `--threshold <N>` (default `2`). Minimum number of **distinct PRs** a cluster must span to be promoted.
+- `THRESHOLD` — `--threshold <N>` (default `2`). Minimum number of **distinct PRs** a cluster must span to be promoted. Must be a positive integer ≥1.
 - `DRY_RUN` — `--dry-run` flag. When present, set `DRY_RUN=true`.
 - `UNATTENDED` — `--unattended` flag. When present, suppress `AskUserQuestion` calls; ambiguous clusters and ambiguous dedup matches become Pending-Human items reported in the final summary instead of prompting the user.
 
-Reject unknown flags with a one-line error and exit non-zero.
+Reject unknown flags, non-`Nd` LOOKBACK values, and non-positive-integer THRESHOLD values with a one-line error and exit non-zero. THRESHOLD validation matters because it is emitted unquoted into the state-file JSON in Step 8 — a malformed value corrupts the file.
 
-Initialise two counters that other steps mutate:
+Initialise two counters that other steps mutate. `PENDING_HUMAN` is a **JSON array** because Step 8 pipes it to `jq` (`jq 'length // 0'`) and Steps 4/5 mutate it via `jq` appends — an unset or non-JSON value breaks the pipeline:
 
-- `PENDING_HUMAN` — list of `{theme, source_prs, reason}` records (clusters held back from the PR because they needed a human call). Used in Step 9 to emit the `Pending-Human:` line.
+```bash
+PENDING_HUMAN='[]'   # JSON array; append records via `jq '. + [$new]'`
+ENTRIES_ADDED=0
+```
+
+- `PENDING_HUMAN` — JSON array of `{theme, source_prs, reason}` records (clusters held back from the PR because they needed a human call). Used in Step 9 to emit the `Pending-Human:` line.
 - `ENTRIES_ADDED` — count of clusters actually written to the checklist file (distinct from "clusters that survived clustering" — Pending-Human clusters are *not* counted here).
 
 ## Step 1: Precondition Check
@@ -104,14 +109,17 @@ This rule applies in both attended and unattended modes. Dry-run is the one exce
 Run the helper script that lists merged PRs in window, fetches review-thread + review-body + issue-comment data per PR, applies the resolved-by-commit heuristic, and detects severity labels:
 
 ```bash
-PR_DATA=$(sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK" 2>/tmp/fetch-err.json) || {
-  err_msg=$(jq -r '.error // .'  /tmp/fetch-err.json 2>/dev/null || cat /tmp/fetch-err.json)
+FETCH_ERR="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-fetch-err.XXXXXX")"
+PR_DATA=$(sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
+  err_msg=$(jq -r '.error // .' "$FETCH_ERR" 2>/dev/null || cat "$FETCH_ERR")
+  rm -f "$FETCH_ERR"
   echo "fetch-merged-pr-comments.sh failed: $err_msg" >&2
   exit 1
 }
+rm -f "$FETCH_ERR"
 ```
 
-The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). Also abort if `.prs` is missing from `$PR_DATA`.
+The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). Also abort if `.prs` is missing from `$PR_DATA`. The `mktemp` path mirrors the `CURRENT_CHECKLIST` pattern below — concurrent scheduled runs against the same `$TMPDIR` cannot collide on a fixed `/tmp/fetch-err.json` path.
 
 **If `.summary.truncated == true`:** Warn on stdout that the helper hit a per-PR pagination cap and some comments may be missing. Continue with the partial data.
 
