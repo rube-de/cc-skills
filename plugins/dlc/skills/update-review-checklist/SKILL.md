@@ -132,7 +132,20 @@ The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit 
 
 ```bash
 CURRENT_CHECKLIST="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-existing.XXXXXX")"
-gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content' | base64 --decode > "$CURRENT_CHECKLIST"
+
+# Capture gh api output separately so a fetch failure (auth, rate limit, 404)
+# is not masked by a successful base64 exit status in a pipeline.
+ENCODED=$(gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content') || {
+  echo "Failed to fetch docs/code-review-checklist.md from $REPO" >&2
+  exit 1
+}
+
+# Portable base64 decode: GNU/macOS Big Sur+ accept --decode; older BSD/macOS
+# use -D. Fall back across both so the skill works on every reviewer-supported
+# runtime without forcing a coreutils dependency.
+if ! printf '%s' "$ENCODED" | base64 --decode > "$CURRENT_CHECKLIST" 2>/dev/null; then
+  printf '%s' "$ENCODED" | base64 -D > "$CURRENT_CHECKLIST"
+fi
 ```
 
 ## Step 3: Filter Comments
