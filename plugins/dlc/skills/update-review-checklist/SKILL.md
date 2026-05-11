@@ -62,19 +62,22 @@ Initialise two counters that other steps mutate:
 
 ## Step 1: Precondition Check
 
-Verify the target repo has `docs/code-review-checklist.md`:
+Verify the target repo has `docs/code-review-checklist.md`. Capture stderr so a 404 (missing file — expected) can be distinguished from real failures (auth, rate limit, network):
 
 ```bash
-gh api "repos/$REPO/contents/docs/code-review-checklist.md" --silent >/dev/null 2>&1
+if ! gh_err=$(gh api "repos/$REPO/contents/docs/code-review-checklist.md" --silent 2>&1 >/dev/null); then
+  if printf '%s\n' "$gh_err" | grep -q "HTTP 404"; then
+    echo "$REPO has no docs/code-review-checklist.md — create one first, then re-run /dlc:update-review-checklist. See issue cc-skills#216 for the shape."
+    exit 0
+  fi
+  # Real failure — auth, rate limit, network. Surface the message and notify.
+  printf 'Precondition check failed for %s: %s\n' "$REPO" "$gh_err" >&2
+  # Caller should fire PushNotification with $gh_err and exit non-zero.
+  exit 1
+fi
 ```
 
-**If the file does not exist (404):** Print one line to stdout and exit 0. Do **not** fire `PushNotification` — this is not an error, just an unmet prerequisite:
-
-```text
-$REPO has no docs/code-review-checklist.md — create one first, then re-run /dlc:update-review-checklist. See issue cc-skills#216 for the shape.
-```
-
-**If the API call fails for any other reason** (auth, rate limit, network): emit one line, fire `PushNotification` with the error, exit non-zero.
+The `HTTP 404` substring match is the documented `gh api` error format — `gh api` prints `gh: ... (HTTP 404)` to stderr on missing resources.
 
 ## Step 1.5: Guard Against an Existing Open Update PR
 
@@ -82,9 +85,8 @@ The `--skip-prefix` filter in the helper script only excludes *merged* prior run
 
 ```bash
 OPEN_PRIOR=$(gh pr list --repo "$REPO" --state open \
-  --search "head:chore/update-review-checklist-" \
-  --json url \
-  --jq '.[0].url // empty')
+  --json headRefName,url \
+  --jq '[ .[] | select(.headRefName | startswith("chore/update-review-checklist-")) ][0].url // empty')
 ```
 
 **If `OPEN_PRIOR` is non-empty:**
@@ -102,10 +104,14 @@ This rule applies in both attended and unattended modes. Dry-run is the one exce
 Run the helper script that lists merged PRs in window, fetches review-thread + review-body + issue-comment data per PR, applies the resolved-by-commit heuristic, and detects severity labels:
 
 ```bash
-sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK"
+PR_DATA=$(sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK" 2>/tmp/fetch-err.json) || {
+  err_msg=$(jq -r '.error // .'  /tmp/fetch-err.json 2>/dev/null || cat /tmp/fetch-err.json)
+  echo "fetch-merged-pr-comments.sh failed: $err_msg" >&2
+  exit 1
+}
 ```
 
-Capture the JSON output into `PR_DATA`. Validate the response shape — abort with the error message if `.error` is present, or if `.prs` is missing.
+The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit non-zero, so validation must check the exit code and parse stderr (not look for `.error` in `$PR_DATA`). Also abort if `.prs` is missing from `$PR_DATA`.
 
 **If `.summary.truncated == true`:** Warn on stdout that the helper hit a per-PR pagination cap and some comments may be missing. Continue with the partial data.
 
@@ -219,7 +225,7 @@ Use a temporary work directory unconditionally — even when the target repo *is
 WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/update-review-checklist.XXXXXX")"
 trap 'rm -rf "$WORKDIR"' EXIT
 
-BRANCH="chore/update-review-checklist-$(date -u +%Y-%m-%d-%H%M)"
+BRANCH="chore/update-review-checklist-$(date -u +%Y-%m-%d-%H%M%S)"
 
 gh repo clone "$REPO" "$WORKDIR" -- --depth 50 >/dev/null
 cd "$WORKDIR"

@@ -16,7 +16,7 @@
 #     "cutoff_date": "YYYY-MM-DD",
 #     "merged_prs_inspected": N,   // PRs actually analyzed (post-skip, post-fetch)
 #     "merged_prs_listed": N,       // raw `gh pr list` count before --skip-prefix filtering
-#     "skipped_own_prs": N,
+#     "skipped_own_prs": N,         // PRs dropped by --skip-prefix (head branch startswith match, NOT author-based)
 #     "prs": [
 #       {
 #         "number": 123,
@@ -428,6 +428,7 @@ jq -n \
   --argjson lookback "$LOOKBACK_DAYS" \
   --arg cutoff "$CUTOFF_DATE" \
   --argjson listed "$_total_merged" \
+  --argjson list_limit "$LIST_LIMIT" \
   --argjson skipped "$_skipped" \
   --argjson sum_total "$_sum_comments" \
   --argjson sum_bots "$_sum_bot_filtered" \
@@ -450,6 +451,6 @@ jq -n \
       comments_resolved_by_commit: $sum_resolved,
       comments_with_severity:     $sum_severity,
       truncated:                  $truncated,
-      list_limit_hit:             ($listed >= 200)
+      list_limit_hit:             ($listed >= $list_limit)
     }
   }'
