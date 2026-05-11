@@ -240,6 +240,9 @@ _sum_bot_filtered=0
 _sum_resolved=0
 _sum_severity=0
 _truncated_any=false
+# Count per-PR GraphQL / transform failures so the summary distinguishes
+# "no PRs/comments found" from "every fetch failed silently".
+_failures=0
 
 # Iterate the filtered PR list.
 _pr_count=$(jq 'length' "$_tmpdir/pr-list-filtered.json")
@@ -252,11 +255,13 @@ while [ "$_idx" -lt "$_pr_count" ]; do
     -F owner="$OWNER" -F repo="$REPO" -F number="$_pr_number" \
     > "$_tmpdir/pr-$_pr_number.json" 2>"$_tmpdir/pr-$_pr_number-err.txt"; then
     echo "Warning: GraphQL query for PR #$_pr_number failed, skipping: $(tr '"' "'" < "$_tmpdir/pr-$_pr_number-err.txt")" >&2
+    _failures=$((_failures + 1))
     continue
   fi
 
   if jq -e '(.errors // []) | length > 0' "$_tmpdir/pr-$_pr_number.json" >/dev/null 2>&1; then
     echo "Warning: PR #$_pr_number returned GraphQL errors, skipping: $(jq -r '[.errors[].message] | join("; ")' "$_tmpdir/pr-$_pr_number.json")" >&2
+    _failures=$((_failures + 1))
     continue
   fi
 
@@ -404,6 +409,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
 
   if [ ! -s "$_tmpdir/pr-$_pr_number-out.json" ]; then
     echo "Warning: jq transform for PR #$_pr_number produced no output, skipping: $(cat "$_tmpdir/pr-$_pr_number-jq-err.txt")" >&2
+    _failures=$((_failures + 1))
     continue
   fi
 
@@ -421,6 +427,14 @@ while [ "$_idx" -lt "$_pr_count" ]; do
   jq -c '.' "$_tmpdir/pr-$_pr_number-out.json" >> "$_tmpdir/prs.jsonl"
 done
 
+# If we had PRs to process but every one failed, exit non-zero so callers can
+# distinguish "no PRs/comments found" from "every fetch errored". A silent
+# empty-array would otherwise look like "no clusters to propose" in unattended
+# runs and the issue would never surface.
+if [ "$_kept" -gt 0 ] && [ ! -s "$_tmpdir/prs.jsonl" ]; then
+  die_json "all $_failures per-PR fetches/transforms failed; no PR data produced" "ALL_FETCHES_FAILED"
+fi
+
 # --- assemble final document ----------------------------------------------
 
 jq -n \
@@ -434,6 +448,7 @@ jq -n \
   --argjson sum_bots "$_sum_bot_filtered" \
   --argjson sum_resolved "$_sum_resolved" \
   --argjson sum_severity "$_sum_severity" \
+  --argjson failures "$_failures" \
   --argjson truncated "$([ "$_truncated_any" = true ] && echo true || echo false)" \
   --slurpfile prs "$_tmpdir/prs.jsonl" \
   '{
@@ -450,6 +465,7 @@ jq -n \
       bot_comments:               $sum_bots,
       comments_resolved_by_commit: $sum_resolved,
       comments_with_severity:     $sum_severity,
+      pr_fetch_failures:          $failures,
       truncated:                  $truncated,
       list_limit_hit:             ($listed >= $list_limit)
     }

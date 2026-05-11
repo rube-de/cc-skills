@@ -89,7 +89,7 @@ The `HTTP 404` substring match is the documented `gh api` error format — `gh a
 The `--skip-prefix` filter in the helper script only excludes *merged* prior runs. An open prior PR is still in flight; opening a second one stacks duplicates and pollutes the review queue.
 
 ```bash
-OPEN_PRIOR=$(gh pr list --repo "$REPO" --state open \
+OPEN_PRIOR=$(gh pr list --repo "$REPO" --state open --limit 200 \
   --json headRefName,url \
   --jq '[ .[] | select(.headRefName | startswith("chore/update-review-checklist-")) ][0].url // empty')
 ```
