@@ -318,10 +318,12 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       (created_filter) as $created |
       [ $author_commit_dates[] | select(. > $created) ] | length > 0;
 
-    # Threads → comments[].
+    # Threads → comments[]. Exclude threads started by the PR author — these
+    # are typically self-notes or questions, not reviewer feedback.
     [ $pr.reviewThreads.nodes[] |
       . as $thread |
       ($thread.comments.nodes[0]) as $first_c |
+      select($first_c != null and ($first_c.author.login // "ghost") != $pr_author) |
       {
         id:                 $thread.id,
         type:               "thread",
@@ -336,9 +338,13 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $thread_comments |
 
-    # Review bodies → comments[].
+    # Review bodies → comments[]. Exclude PR-author review bodies and DLC
+    # reply sentinels — same rule as issue comments below; neither carries
+    # reviewer signal.
     [ $pr.reviews.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
+      select((.author.login // "ghost") != $pr_author) |
+      select(.body | contains("<!-- dlc-reply:") | not) |
       {
         id:                 .id,
         type:               "review_body",

@@ -9,7 +9,7 @@ Drop a comment from clustering when its body matches any of the following. These
 | Pattern | Why dropped |
 |---|---|
 | Pure typo flags (`typo:`, `s/foo/bar`, `^typo in ` lead-in) | One-off lexical errors; not a checklist-worthy class |
-| Formatting nits matched by `^(nit|style|format):` *and* the comment proposes no semantic change | Style is handled by linters, not human checklist gates |
+| Formatting nits matched by `^(nit\|style\|format):` *and* the comment proposes no semantic change | Style is handled by linters, not human checklist gates |
 | "Consider …" / "What about …" wishlist comments with no specific action and no commit response | Already filtered by resolved-by-commit, but defensive — drop if `severity == null` and body starts with these |
 | Praise / acknowledgement (`LGTM`, `nice`, `👍`, etc., body < 40 chars) | No action proposed |
 | CodeRabbit no-findings summary: `^actionable comments posted:\s*0\b` | Header-only review summary, no member finding to cluster |

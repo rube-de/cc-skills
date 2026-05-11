@@ -111,10 +111,11 @@ Capture the JSON output into `PR_DATA`. Validate the response shape — abort wi
 
 **If `.summary.list_limit_hit == true`:** Warn that the merged-PR list cap (200) was reached and recent PRs may be missing from analysis. Continue with what was returned.
 
-**Existing checklist read.** Also fetch the current checklist content for the dedup step in Step 5:
+**Existing checklist read.** Also fetch the current checklist content for the dedup step in Step 5. Use `mktemp` so concurrent scheduled runs against different repos cannot overwrite each other's dedup input:
 
 ```bash
-gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content' | base64 -d > /tmp/current-checklist.md
+CURRENT_CHECKLIST="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-existing.XXXXXX")"
+gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.content' | base64 -d > "$CURRENT_CHECKLIST"
 ```
 
 ## Step 3: Filter Comments
@@ -220,7 +221,7 @@ trap 'rm -rf "$WORKDIR"' EXIT
 
 BRANCH="chore/update-review-checklist-$(date -u +%Y-%m-%d-%H%M)"
 
-gh repo clone "$REPO" "$WORKDIR" -- --depth 50 --branch main >/dev/null
+gh repo clone "$REPO" "$WORKDIR" -- --depth 50 >/dev/null
 cd "$WORKDIR"
 git checkout -b "$BRANCH"
 ```
@@ -229,7 +230,7 @@ The `trap ... EXIT` ensures the work dir is cleaned up whether the step succeeds
 
 ### Re-read the checklist from the clone
 
-The `/tmp/current-checklist.md` cache from Step 2 may be stale relative to the freshly cloned HEAD. Re-read in-place so Step 5's dedup is sound against the *actual* file you're about to edit:
+The `$CURRENT_CHECKLIST` cache from Step 2 may be stale relative to the freshly cloned HEAD. Re-read in-place so Step 5's dedup is sound against the *actual* file you're about to edit:
 
 ```bash
 CHECKLIST_PATH="$WORKDIR/docs/code-review-checklist.md"
