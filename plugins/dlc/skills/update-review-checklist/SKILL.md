@@ -163,9 +163,14 @@ ENCODED=$(gh api "repos/$REPO/contents/docs/code-review-checklist.md" --jq '.con
 
 # Portable base64 decode: GNU/macOS Big Sur+ accept --decode; older BSD/macOS
 # use -D. Fall back across both so the skill works on every reviewer-supported
-# runtime without forcing a coreutils dependency.
+# runtime without forcing a coreutils dependency. Fail fast if BOTH fail —
+# otherwise Step 5 would dedup against an empty/corrupt checklist and propose
+# duplicates of entries that already exist.
 if ! printf '%s' "$ENCODED" | base64 --decode > "$CURRENT_CHECKLIST" 2>/dev/null; then
-  printf '%s' "$ENCODED" | base64 -D > "$CURRENT_CHECKLIST"
+  if ! printf '%s' "$ENCODED" | base64 -D > "$CURRENT_CHECKLIST" 2>/dev/null; then
+    echo "Failed to base64-decode docs/code-review-checklist.md from $REPO (neither --decode nor -D succeeded)" >&2
+    exit 1
+  fi
 fi
 ```
 
@@ -268,7 +273,11 @@ Use a temporary work directory unconditionally — even when the target repo *is
 
 ```bash
 WORKDIR="$(mktemp -d "${TMPDIR:-/tmp}/update-review-checklist.XXXXXX")"
-trap 'rm -rf "$WORKDIR"' EXIT
+# Compose with the Step 2 cleanup so both temp resources are removed. Bash
+# `trap '...' EXIT` REPLACES the previous EXIT trap, so a bare
+# `trap 'rm -rf "$WORKDIR"' EXIT` here would silently strand the checklist
+# tempfile created in Step 2. Compose both cleanups into one handler.
+trap 'rm -rf "$WORKDIR"; rm -f "$CURRENT_CHECKLIST"' EXIT
 
 BRANCH="chore/update-review-checklist-$(date -u +%Y-%m-%d-%H%M%S)"
 
