@@ -265,13 +265,17 @@ while [ "$_idx" -lt "$_pr_count" ]; do
     continue
   fi
 
-  # Track if any nested totalCount exceeded what we fetched (data is incomplete).
+  # Track if any nested totalCount exceeded what we fetched (comment/review/thread
+  # data is incomplete). Commits are intentionally capped at the last 100 because
+  # only recent commits matter for `resolved_by_commit` scoring, so commit
+  # truncation is NOT a signal of missing comment data and is excluded here —
+  # otherwise every >100-commit PR would trigger a spurious "comments may be
+  # missing" warning in downstream consumers.
   _pr_trunc=$(jq -r '
     .data.repository.pullRequest as $pr |
     ( ($pr.comments.totalCount       > ($pr.comments.nodes       | length)) or
       ($pr.reviews.totalCount        > ($pr.reviews.nodes        | length)) or
       ($pr.reviewThreads.totalCount  > ($pr.reviewThreads.nodes  | length)) or
-      ($pr.commits.totalCount        > ($pr.commits.nodes        | length)) or
       ([ $pr.reviewThreads.nodes[] | (.comments.totalCount > (.comments.nodes | length)) ] | any)
     )
   ' "$_tmpdir/pr-$_pr_number.json")
