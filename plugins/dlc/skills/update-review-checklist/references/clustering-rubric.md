@@ -9,10 +9,10 @@ Drop a comment from clustering when its body matches any of the following. These
 The formatting-nits row in the table below describes the pattern in prose to avoid GFM table escape ambiguity. The literal regex an implementation should use is:
 
 ```regex
-^(nit|style|format):
+^\s*(nit|style|format):
 ```
 
-Matched case-insensitively against the comment body's leading non-whitespace token.
+Matched case-insensitively. The leading `\s*` permits common preamble whitespace (markdown blockquote indentation, list markers, accidental leading spaces) so a comment body like `"  nit: trailing whitespace"` still matches.
 
 | Pattern | Why dropped |
 |---|---|

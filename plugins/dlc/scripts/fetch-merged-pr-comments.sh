@@ -214,7 +214,7 @@ query($owner: String!, $repo: String!, $number: Int!) {
           }
         }
       }
-      commits(first: 250) {
+      commits(last: 100) {
         totalCount
         nodes {
           commit {

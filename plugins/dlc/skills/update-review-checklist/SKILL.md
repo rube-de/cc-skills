@@ -127,10 +127,11 @@ if ! printf '%s' "$PR_DATA" | jq -e '.prs and .summary' >/dev/null; then
   exit 1
 fi
 
-# Replay per-PR warnings (GraphQL skips, jq-transform failures) on stdout when
+# Replay per-PR warnings (GraphQL skips, jq-transform failures) on stderr when
 # the helper succeeded — useful for operators in scheduled runs. The script
 # uses stderr for *both* fatal errors (already handled above) and these soft
-# warnings; we surface the warnings here rather than silently discarding them.
+# warnings; we re-emit them to stderr so they reach the same destination an
+# operator would inspect, rather than silently discarding them.
 if [ -s "$FETCH_ERR" ]; then
   echo "fetch-merged-pr-comments.sh warnings:" >&2
   cat "$FETCH_ERR" >&2
@@ -151,6 +152,7 @@ The helper uses `die_json` to write `{error, code}` JSON to **stderr** and exit 
 
 ```bash
 CURRENT_CHECKLIST="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-existing.XXXXXX")"
+trap 'rm -f "$CURRENT_CHECKLIST"' EXIT  # clean up on any exit path — important for scheduled recurring runs
 
 # Capture gh api output separately so a fetch failure (auth, rate limit, 404)
 # is not masked by a successful base64 exit status in a pipeline.
@@ -336,13 +338,13 @@ Pick `STATUS` and `LAST_PR_URL` based on what actually happened, so the state fi
 ```bash
 SLUG=$(printf '%s' "$REPO" | tr '/' '-')
 mkdir -p "$ORIG_CWD/.dev/dlc"
-PENDING_COUNT=$(printf '%s' "$PENDING_HUMAN" | jq 'length // 0')
+PENDING_HUMAN_COUNT=$(printf '%s' "$PENDING_HUMAN" | jq 'length // 0')
 
 if [ "$DRY_RUN" = "true" ]; then
   STATUS="dry_run"; LAST_PR_URL=""
 elif [ -n "$PR_URL" ]; then
   STATUS="pr_opened"; LAST_PR_URL="$PR_URL"
-elif [ "$PENDING_COUNT" -gt 0 ]; then
+elif [ "$PENDING_HUMAN_COUNT" -gt 0 ]; then
   STATUS="pending_human_only"; LAST_PR_URL=""
 else
   STATUS="no_entries"; LAST_PR_URL=""
@@ -355,7 +357,7 @@ cat > "$ORIG_CWD/.dev/dlc/update-review-checklist-$SLUG.state" <<EOF
   "lookback": "$LOOKBACK",
   "threshold": $THRESHOLD,
   "entries_added": $ENTRIES_ADDED,
-  "pending_human": $PENDING_COUNT,
+  "pending_human": $PENDING_HUMAN_COUNT,
   "status": "$STATUS"
 }
 EOF
