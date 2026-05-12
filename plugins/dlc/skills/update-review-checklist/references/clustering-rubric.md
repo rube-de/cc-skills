@@ -12,7 +12,7 @@ The formatting-nits row in the table below describes the pattern in prose to avo
 ^\s*(nit|style|format):
 ```
 
-Matched case-insensitively. The leading `\s*` permits common preamble whitespace (markdown blockquote indentation, list markers, accidental leading spaces) so a comment body like `"  nit: trailing whitespace"` still matches.
+Matched case-insensitively. The leading `\s*` permits accidental leading whitespace (spaces or tabs) so a comment body like `"  nit: trailing whitespace"` still matches. Markdown preamble characters like `>`, `-`, or `*` are not whitespace and so are *not* matched — in practice review-tool comment bodies are delivered without those prefixes, so widening the regex to cover them would add noise without adding signal.
 
 | Pattern | Why dropped |
 |---|---|

@@ -67,9 +67,17 @@ ENTRIES_ADDED=0
 
 ## Step 1: Precondition Check
 
-Verify the target repo has `docs/code-review-checklist.md`. Capture stderr so a 404 (missing file — expected) can be distinguished from real failures (auth, rate limit, network):
+Verify the target repo has `docs/code-review-checklist.md`. Capture stderr so a 404 (missing file — expected) can be distinguished from real failures (auth, rate limit, network).
+
+First confirm the repo itself is accessible, because `gh api` returns the same `HTTP 404` for "repo not found / no access" as it does for "file not found". Without this disambiguation, an auth or typo failure would be silently treated as "missing checklist" and exit 0 in a scheduled run — masking real problems:
 
 ```bash
+if ! repo_err=$(gh api "repos/$REPO" --silent 2>&1 >/dev/null); then
+  printf 'Cannot access repo %s: %s\n' "$REPO" "$repo_err" >&2
+  # Caller should fire PushNotification with $repo_err and exit non-zero.
+  exit 1
+fi
+
 if ! gh_err=$(gh api "repos/$REPO/contents/docs/code-review-checklist.md" --silent 2>&1 >/dev/null); then
   if printf '%s\n' "$gh_err" | grep -q "HTTP 404"; then
     echo "$REPO has no docs/code-review-checklist.md — create one first, then re-run /dlc:update-review-checklist. See issue cc-skills#216 for the shape."
@@ -82,7 +90,7 @@ if ! gh_err=$(gh api "repos/$REPO/contents/docs/code-review-checklist.md" --sile
 fi
 ```
 
-The `HTTP 404` substring match is the documented `gh api` error format — `gh api` prints `gh: ... (HTTP 404)` to stderr on missing resources.
+The `HTTP 404` substring match is the documented `gh api` error format — `gh api` prints `gh: ... (HTTP 404)` to stderr on missing resources. The repo-level check above ensures that a 404 reaching the file check is unambiguously "file missing" rather than "repo inaccessible".
 
 ## Step 1.5: Guard Against an Existing Open Update PR
 

@@ -110,12 +110,12 @@ case "$LOOKBACK" in
   *d)
     _lb_n="${LOOKBACK%d}"
     if ! printf '%s' "$_lb_n" | grep -qE '^[1-9][0-9]*$'; then
-      die_json "Invalid --lookback value: $LOOKBACK (expected NNd, e.g. 30d)" "ARG_LOOKBACK"
+      die_json "Invalid --lookback value: $LOOKBACK (expected Nd, e.g. 30d)" "ARG_LOOKBACK"
     fi
     LOOKBACK_DAYS="$_lb_n"
     ;;
   *)
-    die_json "Invalid --lookback value: $LOOKBACK (expected NNd, e.g. 30d)" "ARG_LOOKBACK"
+    die_json "Invalid --lookback value: $LOOKBACK (expected Nd, e.g. 30d)" "ARG_LOOKBACK"
     ;;
 esac
 
