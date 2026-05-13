@@ -1,3 +1,10 @@
+# [2.3.0](https://github.com/rube-de/cc-skills/compare/v2.2.0...v2.3.0) (2026-05-13)
+
+
+### Features
+
+* **dlc:** add update-review-checklist skill (closes [#216](https://github.com/rube-de/cc-skills/issues/216)) ([#230](https://github.com/rube-de/cc-skills/issues/230)) ([607963b](https://github.com/rube-de/cc-skills/commit/607963bdd072391c892f38855cc8d736dc6dc2eb))
+
 # [2.2.0](https://github.com/rube-de/cc-skills/compare/v2.1.0...v2.2.0) (2026-05-11)
 
 
