@@ -50,7 +50,7 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
 ```bash
 # Run before ANY council invocation
 for cli in gemini codex qwen omp opencode; do
-  command -v $cli >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
+  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
 done
 ```
 

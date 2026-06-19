@@ -41,15 +41,19 @@ omp -p --model zai/glm-5.2 "Analyze the service layer architecture @src/services
 ```
 
 ### Reviewing Diffs & Command Output
-`omp` does not read piped stdin — capture the content to a file, then attach it with `@`:
+`omp` does not read piped stdin — capture the content to a unique temp file (`mktemp` avoids collisions when consultants run in parallel), then attach it with `@`:
 ```bash
 # PR review
-git diff main...HEAD > /tmp/pr.diff
-omp -p --model zai/glm-5.2 "Review these PR changes for issues @/tmp/pr.diff"
+diff_file=$(mktemp)
+git diff main...HEAD > "$diff_file"
+omp -p --model zai/glm-5.2 "Review these PR changes for issues @$diff_file"
+rm -f "$diff_file"
 
 # Specific commit range
-git diff HEAD~5 > /tmp/recent.diff
-omp -p --model zai/glm-5.2 "Review recent changes @/tmp/recent.diff"
+range_file=$(mktemp)
+git diff HEAD~5 > "$range_file"
+omp -p --model zai/glm-5.2 "Review recent changes @$range_file"
+rm -f "$range_file"
 ```
 
 ### Interactive Mode
@@ -82,7 +86,8 @@ omp --model zai/glm-5.2  # Start interactive session (omit -p)
 
 ### PR Review
 ```bash
-git diff main...HEAD > /tmp/pr.diff
+diff_file=$(mktemp)
+git diff main...HEAD > "$diff_file"
 omp -p --model zai/glm-5.2 "Review this PR:
 1. Breaking changes or regressions
 2. Security vulnerabilities
@@ -90,7 +95,8 @@ omp -p --model zai/glm-5.2 "Review this PR:
 4. Error handling gaps
 5. Test coverage needs
 
-Be specific with file:line references. @/tmp/pr.diff"
+Be specific with file:line references. @$diff_file"
+rm -f "$diff_file"
 ```
 
 ### Architecture Review

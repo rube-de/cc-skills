@@ -11,10 +11,10 @@ AVAILABLE=()
 MISSING=()
 
 for cli in gemini codex qwen omp opencode; do
-  if command -v $cli >/dev/null 2>&1; then
-    AVAILABLE+=($cli)
+  if command -v "$cli" >/dev/null 2>&1; then
+    AVAILABLE+=("$cli")
   else
-    MISSING+=($cli)
+    MISSING+=("$cli")
   fi
 done
 

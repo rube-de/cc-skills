@@ -152,8 +152,10 @@ npx skills add rube-de/cc-skills --skill council
 At least one external CLI must be installed:
 
 ```bash
-# Check availability
-command -v gemini && command -v codex && command -v qwen && command -v omp && command -v opencode
+# Check availability (prints ✓/✗ per CLI — any one is enough)
+for cli in gemini codex qwen omp opencode; do
+  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
+done
 
 # Install as needed
 # gemini  — https://github.com/google-gemini/gemini-cli
