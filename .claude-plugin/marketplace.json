@@ -9,7 +9,7 @@
   "plugins": [
     {
       "name": "council",
-      "description": "AI Council - Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.1, Kimi K2.5) for consensus-driven code reviews, plan validation, and architectural decisions",
+      "description": "AI Council - Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.2, Kimi K2.5) for consensus-driven code reviews, plan validation, and architectural decisions",
       "version": "2.3.0",
       "source": "./plugins/council",
       "category": "code-review",

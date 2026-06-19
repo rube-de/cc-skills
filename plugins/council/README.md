@@ -7,7 +7,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.1, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
+Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.2, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
 > [!NOTE]
 > **Dual-Layer Architecture**: External consultants provide model diversity across 5 different AI providers, while internal Claude subagents provide deep, tool-assisted analysis — one for security/bugs/performance, one for quality/compliance/history/docs.
@@ -22,7 +22,7 @@ Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.1, Kimi K2.5) an
 | Gemini | `gemini` | Architecture, security, fast analysis |
 | Codex | `codex` | PR review, bug detection, security |
 | Qwen | `qwen` | Code quality, brainstorming, explanations |
-| GLM-5.1 | `opencode -m zai-coding-plan/glm-5.1` | Alternative perspectives, algorithms |
+| GLM-5.2 | `omp -p --model zai/glm-5.2` | Alternative perspectives, algorithms |
 | Kimi K2.5 | `opencode run -m opencode/kimi-k2.5-free` | Long-context reasoning, creative solutions |
 
 **Layer 2 — Claude Subagents** (concern depth, tool access):
@@ -93,7 +93,7 @@ Built-in taxonomy auto-rejects:
 │     ├── gemini -p "review ..." -f changed_files          │
 │     ├── codex "review ..."                               │
 │     ├── qwen "review ..."                                │
-│     ├── opencode -m zai-coding-plan/glm-5.1 "review ..." │
+│     ├── omp -p --model zai/glm-5.2 "review ..."          │
 │     └── opencode run -m kimi-k2.5-free "review ..."      │
 │                                                          │
 │  3. Layer 2: Claude Subagents (parallel)                 │
@@ -153,13 +153,14 @@ At least one external CLI must be installed:
 
 ```bash
 # Check availability
-command -v gemini && command -v codex && command -v qwen && command -v opencode
+command -v gemini && command -v codex && command -v qwen && command -v omp && command -v opencode
 
 # Install as needed
 # gemini  — https://github.com/google-gemini/gemini-cli
 # codex   — https://github.com/openai/codex
 # qwen    — https://github.com/QwenLM/qwen-cli
-# opencode — https://github.com/opencode-ai/opencode (GLM-5.1 + Kimi)
+# omp     — https://github.com/can1357/oh-my-pi (GLM-5.2)
+# opencode — https://github.com/opencode-ai/opencode (Kimi)
 ```
 
 The plugin operates in partial-success mode — it proceeds with whichever consultants are available.
@@ -172,18 +173,19 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | gemini CLI | Recommended | Gemini consultant |
 | codex CLI | Recommended | Codex consultant |
 | qwen CLI | Recommended | Qwen consultant |
-| opencode CLI | Recommended | GLM-5.1 + Kimi consultants |
+| omp CLI | Recommended | GLM-5.2 consultant |
+| opencode CLI | Recommended | Kimi consultant |
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| "No consultants available" | No external CLIs installed | Install at least one: gemini, codex, qwen, or opencode |
+| "No consultants available" | No external CLIs installed | Install at least one: gemini, codex, qwen, omp, or opencode |
 | Consultant returns empty output | Rate limiting or timeout | Automatic retry with exponential backoff; check API quotas |
 | Low confidence scores | Vague review scope | Use concern-specific mode: `/council review security` |
 | Too many false positives | Broad review on large diff | Use `/council quick` for parallel triage (2-agent lightweight review) |
 | JSON validation warnings | Consultant output malformed | PostToolUse hook retries; check CLI version |
-| Pre-flight warning on start | CLI not in PATH | Verify installation: `which gemini codex qwen opencode` |
+| Pre-flight warning on start | CLI not in PATH | Verify installation: `which gemini codex qwen omp opencode` |
 
 ## References
 

@@ -10,7 +10,7 @@ Before ANY workflow, execute:
 AVAILABLE=()
 MISSING=()
 
-for cli in gemini codex qwen opencode; do
+for cli in gemini codex qwen omp opencode; do
   if command -v $cli >/dev/null 2>&1; then
     AVAILABLE+=($cli)
   else
