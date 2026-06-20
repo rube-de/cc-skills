@@ -23,7 +23,7 @@ The omp CLI (`omp`) provides access to GLM-5.2 through the `zai` provider. Key p
 - `-p` runs non-interactively (print result and exit).
 - `--model zai/glm-5.2` selects the model.
 - `--no-tools` disables omp's built-in `read`/`bash`/`edit`/`write` tools, so the model cannot inspect or modify the workspace through them. **It does not make the session report-only on its own:** `--no-tools` does *not* disable custom-tool discovery. omp still scans its working directory's `.omp/tools/` and `.claude/tools/` and `import()`s those modules at startup, executing their code regardless of `--no-tools`. A reviewed branch that ships a `.omp/tools/*.ts` file would run during the review.
-- **Run omp from an isolated sandbox directory** (see "Report-Only Sandbox" below) whenever the reviewed content is untrusted. Custom-tool discovery is keyed to omp's cwd, so a throwaway cwd outside the repo starves it; attach the real files by absolute `@path`.
+- **Run omp from an isolated sandbox directory** (see "Report-Only Sandbox" below) whenever the reviewed content is untrusted. *Project-level* custom-tool discovery (`<cwd>/.claude/tools`, `<cwd>/.omp/tools`) is keyed to omp's cwd, so a throwaway cwd outside the repo starves the untrusted repo's own tools — that closes the main vector (a reviewed branch shipping its own `.omp/tools/*.ts`, which would run at `import()` time with no model involvement). Attach the real files by absolute `@path`. **Caveat:** *user-level* tools (`~/.claude/tools`, `~/.omp/plugins/*`) resolve from `$HOME`, not cwd, so the sandbox does **not** starve them — see "What the sandbox does and doesn't cover" below.
 - Attach files by writing `@path` inside the prompt; each referenced file's contents are read into the message context. Multiple `@path` tokens (and multi-line prompts) work. Use **absolute** paths so attachment still works from the sandbox cwd.
 - `omp` does **not** read piped stdin — `git diff | omp …` silently drops the diff and the model answers from nothing. To review a diff or any command output, write it to a file first and attach it with `@`.
 
@@ -40,6 +40,10 @@ Because `--no-tools` does not stop custom-tool discovery, run omp from a throwaw
   omp -p --no-tools --model zai/glm-5.2 "Review this code for security issues @$repo/src/auth/middleware.ts"
 )
 ```
+
+**What the sandbox does and doesn't cover.** It starves *project-level* discovery (`<cwd>/.claude/tools`, `<cwd>/.omp/tools`) — the vector that matters most, since those files run at `import()` time with no model involvement. It does **not** disable *user-level* tools (`~/.claude/tools`, `~/.omp/plugins/*`): omp resolves these from `$HOME` regardless of cwd, and neither `--no-tools` (empties built-in `toolNames` only) nor `--no-extensions` (gates custom *commands*, not *tools*) drops them from the model-callable set. So with user-level tools installed, a prompt injection in an untrusted diff could still get the model to invoke one mid-review.
+
+For untrusted code, the robust isolation is OS-level: a container or a dedicated account whose `~/.claude/tools` and `~/.omp/plugins` are empty. Relocating `$HOME` into the sandbox would also starve user-level discovery, but omp keeps its auth/model config under `~/.omp/agent/`, so a bare `HOME=$sandbox` breaks the run — don't rely on it without provisioning that config. On your normal account, keep `~/.claude/tools` and `~/.omp/plugins` to trusted tools only.
 
 ### Multiple Files
 ```bash
