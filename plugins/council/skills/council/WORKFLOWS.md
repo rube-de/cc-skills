@@ -10,7 +10,7 @@ Before ANY workflow, execute:
 AVAILABLE=()
 MISSING=()
 
-for cli in gemini codex qwen omp opencode; do
+for cli in codex qwen omp opencode; do
   if command -v "$cli" >/dev/null 2>&1; then
     AVAILABLE+=("$cli")
   else
@@ -364,7 +364,7 @@ fi
 
    | Agent | Model | Role |
    |-------|-------|------|
-   | `council:gemini-consultant` | Gemini Flash (`-m flash`) | Fast external perspective |
+   | `council:gemini-consultant` | Gemini 3.5 Flash (`google-antigravity/gemini-3.5-flash`) | Fast external perspective |
    | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
 
    **Skipped** (reserved for full council escalation):
@@ -375,7 +375,7 @@ fi
    Launch simultaneously:
 
    ```text
-   Task(council:gemini-consultant, flags="-m flash"):
+   Task(council:gemini-consultant):
    "Quick review of [artifact]. Return JSON with:
    - consultant: your name (e.g. 'gemini')
    - success: true

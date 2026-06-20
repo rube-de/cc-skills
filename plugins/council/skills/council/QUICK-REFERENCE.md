@@ -49,7 +49,7 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
 
 ```bash
 # Run before ANY council invocation
-for cli in gemini codex qwen omp opencode; do
+for cli in codex qwen omp opencode; do
   command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
 done
 ```
@@ -105,7 +105,7 @@ Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
 
 | Agent | Model | Role |
 |-------|-------|------|
-| `council:gemini-consultant` | Gemini Flash | Fast external perspective |
+| `council:gemini-consultant` | Gemini 3.5 Flash | Fast external perspective |
 | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
 
 **Skipped in quick mode** (only run if escalating to full council):
@@ -296,10 +296,9 @@ Weighted → CRITICAL (Gemini's expertise dominates)
 ## CLI Commands
 
 ```bash
-# Gemini
-gemini -p "prompt" -f files
-gemini -m flash -p "quick check"  # Fast mode
-gemini -m pro -p "deep analysis"  # Thorough mode
+# Gemini (antigravity login; run from an isolated cwd for untrusted code — --no-tools does NOT block .omp/tools execution; see gemini-consultant.md "Report-Only Sandbox")
+omp -p --no-tools --model google-antigravity/gemini-3.5-flash "prompt"
+omp -p --no-tools --model google-antigravity/gemini-3.5-flash "prompt @file"
 
 # Codex
 cat file | codex "prompt"

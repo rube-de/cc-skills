@@ -7,7 +7,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.2, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
+Orchestrate multiple AI consultants (Gemini 3.5 Flash, Codex, Qwen, GLM-5.2, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
 > [!NOTE]
 > **Dual-Layer Architecture**: External consultants provide model diversity across 5 different AI providers, while internal Claude subagents provide deep, tool-assisted analysis — one for security/bugs/performance, one for quality/compliance/history/docs.
@@ -19,7 +19,7 @@ Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.2, Kimi K2.5) an
 **Layer 1 — External Consultants** (model diversity, same prompt):
 | Consultant | CLI | Strength |
 |------------|-----|----------|
-| Gemini | `gemini` | Architecture, security, fast analysis |
+| Gemini 3.5 Flash | `omp -p --no-tools --model google-antigravity/gemini-3.5-flash` | Architecture, security, fast analysis |
 | Codex | `codex` | PR review, bug detection, security |
 | Qwen | `qwen` | Code quality, brainstorming, explanations |
 | GLM-5.2 | `omp -p --no-tools --model zai/glm-5.2` | Alternative perspectives, algorithms |
@@ -90,7 +90,7 @@ Built-in taxonomy auto-rejects:
 │  1. Pre-flight — verify CLI availability                 │
 │                                                          │
 │  2. Layer 1: External Consultants (parallel, 120s)       │
-│     ├── gemini -p "review ..." -f changed_files          │
+│     ├── omp -p --no-tools --model .../gemini-3.5-flash   │
 │     ├── codex "review ..."                               │
 │     ├── qwen "review ..."                                │
 │     ├── omp -p --no-tools --model zai/glm-5.2 "..."      │
@@ -153,15 +153,14 @@ At least one external CLI must be installed:
 
 ```bash
 # Check availability (prints ✓/✗ per CLI — any one is enough)
-for cli in gemini codex qwen omp opencode; do
+for cli in codex qwen omp opencode; do
   command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
 done
 
 # Install as needed
-# gemini  — https://github.com/google-gemini/gemini-cli
 # codex   — https://github.com/openai/codex
 # qwen    — https://github.com/QwenLM/qwen-cli
-# omp     — https://github.com/can1357/oh-my-pi (GLM-5.2)
+# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.5 Flash via antigravity, GLM-5.2)
 # opencode — https://github.com/opencode-ai/opencode (Kimi)
 ```
 
@@ -172,22 +171,21 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | Component | Required | Purpose |
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
-| gemini CLI | Recommended | Gemini consultant |
 | codex CLI | Recommended | Codex consultant |
 | qwen CLI | Recommended | Qwen consultant |
-| omp CLI | Recommended | GLM-5.2 consultant |
+| omp CLI | Recommended | Gemini and GLM-5.2 consultants |
 | opencode CLI | Recommended | Kimi consultant |
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| "No consultants available" | No external CLIs installed | Install at least one: gemini, codex, qwen, omp, or opencode |
+| "No consultants available" | No external CLIs installed | Install at least one: codex, qwen, omp, or opencode |
 | Consultant returns empty output | Rate limiting or timeout | Automatic retry with exponential backoff; check API quotas |
 | Low confidence scores | Vague review scope | Use concern-specific mode: `/council review security` |
 | Too many false positives | Broad review on large diff | Use `/council quick` for parallel triage (2-agent lightweight review) |
 | JSON validation warnings | Consultant output malformed | PostToolUse hook retries; check CLI version |
-| Pre-flight warning on start | CLI not in PATH | Verify installation: `which gemini codex qwen omp opencode` |
+| Pre-flight warning on start | CLI not in PATH | Verify installation: `which codex qwen omp opencode` |
 
 ## References
 
