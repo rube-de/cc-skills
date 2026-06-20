@@ -81,7 +81,7 @@ fi
    - 4/5: Proceed with note: "[X] consultant unavailable"
    - 3/5: Proceed with warning: "Limited council - only 3 responses"
    - 2/5: Proceed with strong warning: "Limited council - only 2 responses"
-   - 1/5: Abort council, fall back to single consultant mode
+   - 1/5: Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation"
    - 0/5: Abort with error: "Council unavailable - all consultants failed"
 
 5. **Apply Weighted Synthesis**

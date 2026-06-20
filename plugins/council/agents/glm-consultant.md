@@ -24,7 +24,7 @@ The omp CLI (`omp`) provides access to GLM-5.2 through the `zai` provider. Key p
 - `--model zai/glm-5.2` selects the model.
 - `--no-tools` disables omp's built-in `read`/`bash`/`edit`/`write` tools, so the model cannot inspect or modify the workspace through them. **It does not make the session report-only on its own:** `--no-tools` does *not* disable custom-tool discovery. omp still scans its working directory's `.omp/tools/` and `.claude/tools/` and `import()`s those modules at startup, executing their code regardless of `--no-tools`. A reviewed branch that ships a `.omp/tools/*.ts` file would run during the review.
 - **Run omp from an isolated sandbox directory** (see "Report-Only Sandbox" below) whenever the reviewed content is untrusted. *Project-level* custom-tool discovery (`<cwd>/.claude/tools`, `<cwd>/.omp/tools`) is keyed to omp's cwd, so a throwaway cwd outside the repo starves the untrusted repo's own tools — that closes the main vector (a reviewed branch shipping its own `.omp/tools/*.ts`, which would run at `import()` time with no model involvement). Attach the real files by absolute `@path`. **Caveat:** *user-level* tools (`~/.claude/tools`, `~/.omp/plugins/*`) resolve from `$HOME`, not cwd, so the sandbox does **not** starve them — see "What the sandbox does and doesn't cover" below.
-- Attach files by writing `@path` inside the prompt; each referenced file's contents are read into the message context. Multiple `@path` tokens (and multi-line prompts) work. Use **absolute** paths so attachment still works from the sandbox cwd.
+- Attach files by writing `@path` inside the prompt; each referenced file's contents are read into the message context. Multiple `@path` tokens (and multi-line prompts) work. Use **absolute** paths so attachment still works from the sandbox cwd. **Quote any mention that interpolates a path** — `@\"$repo/file\"` — because omp's unquoted-mention parser stops at the first space (`[^\s@]+`), so an absolute path containing a space (e.g. a repo under `/Users/me/My App`) is truncated and the file is silently skipped.
 - `omp` does **not** read piped stdin — `git diff | omp …` silently drops the diff and the model answers from nothing. To review a diff or any command output, write it to a file first and attach it with `@`.
 
 ### Report-Only Sandbox (required for untrusted code)
@@ -37,7 +37,7 @@ Because `--no-tools` does not stop custom-tool discovery, run omp from a throwaw
   sandbox=$(mktemp -d)
   trap 'rm -rf "$sandbox"' EXIT        # remove the sandbox even on error/interrupt
   cd "$sandbox"                        # isolate cwd: omp won't discover the repo's custom tools
-  omp -p --no-tools --model zai/glm-5.2 "Review this code for security issues @$repo/src/auth/middleware.ts"
+  omp -p --no-tools --model zai/glm-5.2 "Review this code for security issues @\"$repo/src/auth/middleware.ts\""
 )
 ```
 
@@ -49,7 +49,7 @@ For untrusted code, the robust isolation is OS-level: a container or a dedicated
 ```bash
 (
   repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT; cd "$sandbox"
-  omp -p --no-tools --model zai/glm-5.2 "Analyze the service layer architecture @$repo/src/services/order.ts @$repo/src/services/pricing.ts"
+  omp -p --no-tools --model zai/glm-5.2 "Analyze the service layer architecture @\"$repo/src/services/order.ts\" @\"$repo/src/services/pricing.ts\""
 )
 ```
 
@@ -62,7 +62,7 @@ For untrusted code, the robust isolation is OS-level: a container or a dedicated
   trap 'rm -rf "$sandbox"' EXIT
   git diff main...HEAD > "$sandbox/changes.diff"   # capture before cd
   cd "$sandbox"
-  omp -p --no-tools --model zai/glm-5.2 "Review these PR changes for issues @$sandbox/changes.diff"
+  omp -p --no-tools --model zai/glm-5.2 "Review these PR changes for issues @\"$sandbox/changes.diff\""
 )
 
 # Specific commit range
@@ -71,7 +71,7 @@ For untrusted code, the robust isolation is OS-level: a container or a dedicated
   trap 'rm -rf "$sandbox"' EXIT
   git diff HEAD~5 > "$sandbox/changes.diff"
   cd "$sandbox"
-  omp -p --no-tools --model zai/glm-5.2 "Review recent changes @$sandbox/changes.diff"
+  omp -p --no-tools --model zai/glm-5.2 "Review recent changes @\"$sandbox/changes.diff\""
 )
 ```
 
@@ -118,7 +118,7 @@ omp --no-tools --model zai/glm-5.2  # Start interactive session (omit -p)
 4. Error handling gaps
 5. Test coverage needs
 
-Be specific with file:line references. @$sandbox/changes.diff"
+Be specific with file:line references. @\"$sandbox/changes.diff\""
 )
 ```
 
@@ -132,7 +132,7 @@ Be specific with file:line references. @$sandbox/changes.diff"
 3. Assess extensibility
 4. Compare to common patterns (Clean Architecture, Hexagonal, etc.)
 
-Provide concrete improvement suggestions. @$repo/src/core/server.ts @$repo/src/core/router.ts @$repo/src/core/context.ts"
+Provide concrete improvement suggestions. @\"$repo/src/core/server.ts\" @\"$repo/src/core/router.ts\" @\"$repo/src/core/context.ts\""
 )
 ```
 
@@ -147,7 +147,7 @@ Provide concrete improvement suggestions. @$repo/src/core/server.ts @$repo/src/c
 4. Time/space complexity analysis
 5. Potential optimizations
 
-Be rigorous and mathematical. @$repo/src/algorithms/dp-solver.ts"
+Be rigorous and mathematical. @\"$repo/src/algorithms/dp-solver.ts\""
 )
 ```
 
@@ -165,7 +165,7 @@ Provide your independent analysis:
 2. What alternatives would you propose?
 3. What did they potentially miss?
 
-@$repo/src/services/order.ts"
+@\"$repo/src/services/order.ts\""
 )
 ```
 
@@ -183,7 +183,7 @@ Symptoms:
 
 The rate limiter is attached below. What could cause this? Systematic debugging approach?
 
-@$repo/src/middleware/rate-limiter.ts"
+@\"$repo/src/middleware/rate-limiter.ts\""
 )
 ```
 

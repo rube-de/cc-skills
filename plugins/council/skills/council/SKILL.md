@@ -1,6 +1,6 @@
 ---
 name: council
-description: Consult external AI council (Gemini, Codex, Qwen, GLM-5.2) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
+description: Consult external AI council (Gemini, Codex, Qwen, GLM-5.2, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
 argument-hint: "[review|plan|adversarial|consensus|quick] [security|architecture|bugs|quality] [--blind]"
 allowed-tools: Task, Read, Grep, Glob, Bash, TodoWrite
 user-invocable: true
@@ -150,7 +150,7 @@ Use `--blind` when you want to compare Claude's blind opinion against its tool-a
 | 4/5 | Proceed with note: "[X] consultant unavailable" |
 | 3/5 | Proceed with warning: "Limited council - only 3 responses" |
 | 2/5 | Proceed with strong warning: "Limited council - only 2 responses" |
-| 1/5 | Abort council, fall back to single consultant mode |
+| 1/5 | Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation" |
 | 0/5 | Abort with error: "Council unavailable - all consultants failed" |
 
 ### Structured Response Format

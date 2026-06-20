@@ -77,7 +77,7 @@ Built-in taxonomy auto-rejects:
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| `preflight.sh` | SessionStart | Check CLI availability for all 4 external tools |
+| `preflight.sh` | SessionStart | Check CLI availability for all external consultant CLIs |
 | `validate-json-output.sh` | PostToolUse (Bash) | Validate consultant output matches expected JSON schema |
 
 ## How It Works

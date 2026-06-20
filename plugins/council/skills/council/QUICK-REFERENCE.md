@@ -178,7 +178,7 @@ Escalation to full council launches **all** agents (5 external + 2 Claude subage
 | 4/5 | Proceed + note |
 | 3/5 | Proceed + warning |
 | 2/5 | Proceed + strong warning |
-| 1/5 | Abort → single consultant |
+| 1/5 | Proceed (single consultant) + strong warning |
 | 0/5 | Abort with error |
 
 ## Structured Response Schema
