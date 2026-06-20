@@ -93,7 +93,7 @@ Built-in taxonomy auto-rejects:
 │     ├── gemini -p "review ..." -f changed_files          │
 │     ├── codex "review ..."                               │
 │     ├── qwen "review ..."                                │
-│     ├── omp -p --model zai/glm-5.2 "review ..."          │
+│     ├── omp -p --no-tools --model zai/glm-5.2 "..."      │
 │     └── opencode run -m kimi-k2.5-free "review ..."      │
 │                                                          │
 │  3. Layer 2: Claude Subagents (parallel)                 │
