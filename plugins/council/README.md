@@ -22,7 +22,7 @@ Orchestrate multiple AI consultants (Gemini, Codex, Qwen, GLM-5.2, Kimi K2.5) an
 | Gemini | `gemini` | Architecture, security, fast analysis |
 | Codex | `codex` | PR review, bug detection, security |
 | Qwen | `qwen` | Code quality, brainstorming, explanations |
-| GLM-5.2 | `omp -p --model zai/glm-5.2` | Alternative perspectives, algorithms |
+| GLM-5.2 | `omp -p --no-tools --model zai/glm-5.2` | Alternative perspectives, algorithms |
 | Kimi K2.5 | `opencode run -m opencode/kimi-k2.5-free` | Long-context reasoning, creative solutions |
 
 **Layer 2 — Claude Subagents** (concern depth, tool access):

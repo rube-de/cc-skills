@@ -312,8 +312,8 @@ qwen "@src/*.ts analyze these"
 qwen -s "@file test this"  # Sandbox mode
 
 # GLM
-omp -p --model zai/glm-5.2 "prompt"
-omp -p --model zai/glm-5.2 "prompt @file"
+omp -p --no-tools --model zai/glm-5.2 "prompt"
+omp -p --no-tools --model zai/glm-5.2 "prompt @file"
 
 # Kimi
 opencode run -m opencode/kimi-k2.5-free "prompt"

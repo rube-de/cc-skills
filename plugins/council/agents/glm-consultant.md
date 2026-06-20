@@ -22,43 +22,48 @@ The omp CLI (`omp`) provides access to GLM-5.2 through the `zai` provider. Key p
 
 - `-p` runs non-interactively (print result and exit).
 - `--model zai/glm-5.2` selects the model.
+- `--no-tools` keeps the session strictly **report-only** — it disables omp's built-in `read`/`bash`/`edit`/`write` tools, so a prompt injection inside an attached file or diff cannot make GLM inspect or modify the workspace. `@path` attachment still works under this flag.
 - Attach files by writing `@path` inside the prompt; each referenced file's contents are read into the message context. Multiple `@path` tokens (and multi-line prompts) work.
 - `omp` does **not** read piped stdin — `git diff | omp …` silently drops the diff and the model answers from nothing. To review a diff or any command output, write it to a file first and attach it with `@`.
 
 ### Basic Query
 ```bash
-omp -p --model zai/glm-5.2 "Your prompt here"
+omp -p --no-tools --model zai/glm-5.2 "Your prompt here"
 ```
 
 ### Query with File Context
 ```bash
-omp -p --model zai/glm-5.2 "Review this code for security issues @src/auth/middleware.ts"
+omp -p --no-tools --model zai/glm-5.2 "Review this code for security issues @src/auth/middleware.ts"
 ```
 
 ### Multiple Files
 ```bash
-omp -p --model zai/glm-5.2 "Analyze the service layer architecture @src/services/order.ts @src/services/pricing.ts"
+omp -p --no-tools --model zai/glm-5.2 "Analyze the service layer architecture @src/services/order.ts @src/services/pricing.ts"
 ```
 
 ### Reviewing Diffs & Command Output
 `omp` does not read piped stdin — capture the content to a unique temp file (`mktemp` avoids collisions when consultants run in parallel), then attach it with `@`:
 ```bash
-# PR review
-diff_file=$(mktemp)
-git diff main...HEAD > "$diff_file"
-omp -p --model zai/glm-5.2 "Review these PR changes for issues @$diff_file"
-rm -f "$diff_file"
+# PR review (subshell + EXIT trap removes the temp file even on error/interrupt)
+(
+  diff_file=$(mktemp)
+  trap 'rm -f "$diff_file"' EXIT
+  git diff main...HEAD > "$diff_file"
+  omp -p --no-tools --model zai/glm-5.2 "Review these PR changes for issues @$diff_file"
+)
 
 # Specific commit range
-range_file=$(mktemp)
-git diff HEAD~5 > "$range_file"
-omp -p --model zai/glm-5.2 "Review recent changes @$range_file"
-rm -f "$range_file"
+(
+  range_file=$(mktemp)
+  trap 'rm -f "$range_file"' EXIT
+  git diff HEAD~5 > "$range_file"
+  omp -p --no-tools --model zai/glm-5.2 "Review recent changes @$range_file"
+)
 ```
 
 ### Interactive Mode
 ```bash
-omp --model zai/glm-5.2  # Start interactive session (omit -p)
+omp --no-tools --model zai/glm-5.2  # Start interactive session (omit -p)
 ```
 
 ## Core Responsibilities
@@ -86,9 +91,11 @@ omp --model zai/glm-5.2  # Start interactive session (omit -p)
 
 ### PR Review
 ```bash
-diff_file=$(mktemp)
-git diff main...HEAD > "$diff_file"
-omp -p --model zai/glm-5.2 "Review this PR:
+(
+  diff_file=$(mktemp)
+  trap 'rm -f "$diff_file"' EXIT
+  git diff main...HEAD > "$diff_file"
+  omp -p --no-tools --model zai/glm-5.2 "Review this PR:
 1. Breaking changes or regressions
 2. Security vulnerabilities
 3. Performance implications
@@ -96,12 +103,12 @@ omp -p --model zai/glm-5.2 "Review this PR:
 5. Test coverage needs
 
 Be specific with file:line references. @$diff_file"
-rm -f "$diff_file"
+)
 ```
 
 ### Architecture Review
 ```bash
-omp -p --model zai/glm-5.2 "Analyze this core module architecture:
+omp -p --no-tools --model zai/glm-5.2 "Analyze this core module architecture:
 1. Evaluate separation of concerns
 2. Identify coupling issues
 3. Assess extensibility
@@ -112,7 +119,7 @@ Provide concrete improvement suggestions. @src/core/server.ts @src/core/router.t
 
 ### Algorithm Verification
 ```bash
-omp -p --model zai/glm-5.2 "Verify this dynamic programming solution:
+omp -p --no-tools --model zai/glm-5.2 "Verify this dynamic programming solution:
 1. Is the recurrence relation correct?
 2. Are base cases handled properly?
 3. What edge cases might fail?
@@ -124,7 +131,7 @@ Be rigorous and mathematical. @src/algorithms/dp-solver.ts"
 
 ### Code Review (Alternative Perspective)
 ```bash
-omp -p --model zai/glm-5.2 "Review this order service.
+omp -p --no-tools --model zai/glm-5.2 "Review this order service.
 
 Context: Gemini suggested extracting a PricingService.
 Codex recommended using the Strategy pattern.
@@ -139,7 +146,7 @@ Provide your independent analysis:
 
 ### Debugging Session
 ```bash
-omp -p --model zai/glm-5.2 "Debug this intermittent failure:
+omp -p --no-tools --model zai/glm-5.2 "Debug this intermittent failure:
 
 Symptoms:
 - Fails ~5% of requests under load
