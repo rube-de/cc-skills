@@ -21,9 +21,9 @@ done
 echo "Available: ${AVAILABLE[*]}"
 echo "Missing: ${MISSING[*]}"
 
-# Abort if less than 2 available
-if [ ${#AVAILABLE[@]} -lt 2 ]; then
-  echo "ERROR: Need at least 2 consultants. Aborting."
+# Abort only if no consultants are available
+if [ ${#AVAILABLE[@]} -lt 1 ]; then
+  echo "ERROR: No consultants available. Aborting."
   exit 1
 fi
 ```

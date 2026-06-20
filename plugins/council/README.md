@@ -94,7 +94,7 @@ Built-in taxonomy auto-rejects:
 │     ├── codex "review ..."                               │
 │     ├── qwen "review ..."                                │
 │     ├── omp -p --no-tools --model zai/glm-5.2 "..."      │
-│     └── opencode run -m kimi-k2.5-free "review ..."      │
+│     └── opencode run -m opencode/kimi-k2.5-free "..."    │
 │                                                          │
 │  3. Layer 2: Claude Subagents (parallel)                 │
 │     ├── claude-deep-review (security, bugs, performance) │
