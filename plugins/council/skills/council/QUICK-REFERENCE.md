@@ -49,8 +49,8 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
 
 ```bash
 # Run before ANY council invocation
-for cli in gemini codex qwen opencode; do
-  command -v $cli >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
+for cli in gemini codex qwen omp opencode; do
+  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
 done
 ```
 
@@ -60,7 +60,7 @@ done
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                       CONSULTANT EXPERTISE MATRIX                            │
 ├─────────────┬─────────┬─────────┬─────────┬─────────┬────────────────────────┤
-│ Task        │ Gemini  │ Codex   │ Qwen    │ GLM-5.1 │ Kimi K2.5              │
+│ Task        │ Gemini  │ Codex   │ Qwen    │ GLM-5.2 │ Kimi K2.5              │
 ├─────────────┼─────────┼─────────┼─────────┼─────────┼────────────────────────┤
 │ Security    │ 0.90    │ 0.80    │ 0.70    │ 0.75    │ 0.70                   │
 │ PR Review   │ 0.85    │ 0.90    │ 0.80    │ 0.75    │ 0.80                   │
@@ -178,7 +178,7 @@ Escalation to full council launches **all** agents (5 external + 2 Claude subage
 | 4/5 | Proceed + note |
 | 3/5 | Proceed + warning |
 | 2/5 | Proceed + strong warning |
-| 1/5 | Abort → single consultant |
+| 1/5 | Proceed (single consultant) + strong warning |
 | 0/5 | Abort with error |
 
 ## Structured Response Schema
@@ -311,9 +311,9 @@ qwen "@file prompt"
 qwen "@src/*.ts analyze these"
 qwen -s "@file test this"  # Sandbox mode
 
-# GLM
-opencode -m zai-coding-plan/glm-5.1 "prompt"
-opencode -m zai-coding-plan/glm-5.1 -f file "prompt"
+# GLM (run from an isolated cwd for untrusted code — --no-tools does NOT block .omp/tools execution; see glm-consultant.md "Report-Only Sandbox")
+omp -p --no-tools --model zai/glm-5.2 "prompt"
+omp -p --no-tools --model zai/glm-5.2 "prompt @file"
 
 # Kimi
 opencode run -m opencode/kimi-k2.5-free "prompt"

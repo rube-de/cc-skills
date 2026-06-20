@@ -9,7 +9,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 
 | Plugin | Category | Install | Description |
 |--------|----------|---------|-------------|
-| [council](./plugins/council/) | Code Review | Plugin or Skill | Orchestrate Gemini, Codex, Qwen, GLM-5.1, and Kimi K2.5 for consensus-driven reviews |
+| [council](./plugins/council/) | Code Review | Plugin or Skill | Orchestrate Gemini, Codex, Qwen, GLM-5.2, and Kimi K2.5 for consensus-driven reviews |
 | [cdt](./plugins/cdt/) | Development | Plugin only | Multi-agent dev team with four modes: plan, dev, full, and auto via Agent Teams |
 | [pm](./plugins/pm/) | Productivity | Plugin or Skill | GitHub issue lifecycle: create, triage, and audit issues for LLM agent teams |
 | [plugin-dev](./plugins/plugin-dev/) | Development | Plugin or Skill | Scaffold plugins, validate SKILL.md frontmatter, audit hooks |
