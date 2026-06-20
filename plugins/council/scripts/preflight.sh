@@ -3,7 +3,7 @@
 # Verifies external CLI tools are available for council consultants
 
 missing=()
-for cli in gemini codex qwen omp opencode; do
+for cli in codex qwen omp opencode; do
   command -v "$cli" >/dev/null 2>&1 || missing+=("$cli")
 done
 
