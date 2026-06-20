@@ -744,6 +744,16 @@ The negative control (no `@`, codename never returned) is what proves the `@` to
 
 > Source: [PR #231](https://github.com/rube-de/cc-skills/pull/231) — a Codex review (P1) claimed omp's `@path` examples attached nothing, reasoning from `parseArgs` alone. An empirical `--no-tools` A/B/control against omp v16.1.1 refuted it and surfaced the `at-imports.ts` message-body scan the parser-only reading missed. Same genre as "Hook output schema validity ≠ runtime effect" and "When the docs are wrong, the Claude Code binary tells the truth" — trust the runtime artifact over the source/docs.
 
+### A `--no-X` flag may not gate every X-loading path — verify the gate, then sandbox
+
+`--no-tools` on omp (oh-my-pi) is necessary but **not sufficient** to make a review session report-only. It only sets `options.toolNames = []`, disabling the built-in `read`/`bash`/`edit`/`write` tools — but **custom-tool discovery is a separate, ungated path**. `sdk.ts` calls `discoverCustomToolPaths()` unconditionally (custom *commands* are gated by `disableExtensionDiscovery`; custom *tools* are not, and there is no `--no-custom-tools` flag), and the loader `import()`s every `.omp/tools/*.ts` it finds under the cwd — executing that module's top-level code at session startup. Net effect: `omp -p --no-tools` inside an untrusted checkout that ships `.omp/tools/evil.ts` runs attacker code during the review.
+
+**Mitigation (no flag exists): sandbox the cwd.** Discovery is keyed to omp's working directory, so run omp from a throwaway `mktemp -d` dir (lands outside the repo) and attach the real content by **absolute** `@path`. Verified empirically against omp v16.1.1: a probe `.omp/tools/probe.ts` that writes a marker executed under `omp -p --no-tools` when omp ran inside its dir, and did **not** execute when omp ran from a separate sandbox cwd with the file attached by absolute path.
+
+The transferable rule: when a tool offers a `--no-X` flag, confirm *which* X-loading paths it actually gates before treating it as a security boundary — a flag named for the common case ("tools") can leave a sibling path ("custom tools") wide open. Read the flag's consumer (here, the single `if (parsed.noTools)` site in `main.ts`), not just its declaration.
+
+> Source: [PR #231](https://github.com/rube-de/cc-skills/pull/231) — a later Codex P1 flagged that `--no-tools` leaves omp's custom-tool discovery active. Confirmed by source (`main.ts` `noTools` only empties `toolNames`; `sdk.ts` discovers custom tools unconditionally) **and** by executing a probe both ways. Fixed by sandboxing the consultant's omp invocations. Extends the entry above: the first omp P1 was wrong, this one was right — both adjudicated by running it, not reading it.
+
 ---
 
 ## Common Pitfalls

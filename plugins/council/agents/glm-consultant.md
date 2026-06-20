@@ -22,46 +22,57 @@ The omp CLI (`omp`) provides access to GLM-5.2 through the `zai` provider. Key p
 
 - `-p` runs non-interactively (print result and exit).
 - `--model zai/glm-5.2` selects the model.
-- `--no-tools` keeps the session strictly **report-only** — it disables omp's built-in `read`/`bash`/`edit`/`write` tools, so a prompt injection inside an attached file or diff cannot make GLM inspect or modify the workspace. `@path` attachment still works under this flag.
-- Attach files by writing `@path` inside the prompt; each referenced file's contents are read into the message context. Multiple `@path` tokens (and multi-line prompts) work.
+- `--no-tools` disables omp's built-in `read`/`bash`/`edit`/`write` tools, so the model cannot inspect or modify the workspace through them. **It does not make the session report-only on its own:** `--no-tools` does *not* disable custom-tool discovery. omp still scans its working directory's `.omp/tools/` and `.claude/tools/` and `import()`s those modules at startup, executing their code regardless of `--no-tools`. A reviewed branch that ships a `.omp/tools/*.ts` file would run during the review.
+- **Run omp from an isolated sandbox directory** (see "Report-Only Sandbox" below) whenever the reviewed content is untrusted. Custom-tool discovery is keyed to omp's cwd, so a throwaway cwd outside the repo starves it; attach the real files by absolute `@path`.
+- Attach files by writing `@path` inside the prompt; each referenced file's contents are read into the message context. Multiple `@path` tokens (and multi-line prompts) work. Use **absolute** paths so attachment still works from the sandbox cwd.
 - `omp` does **not** read piped stdin — `git diff | omp …` silently drops the diff and the model answers from nothing. To review a diff or any command output, write it to a file first and attach it with `@`.
 
-### Basic Query
-```bash
-omp -p --no-tools --model zai/glm-5.2 "Your prompt here"
-```
+### Report-Only Sandbox (required for untrusted code)
 
-### Query with File Context
+Because `--no-tools` does not stop custom-tool discovery, run omp from a throwaway directory so the reviewed repo's `.omp/tools/` and `.claude/tools/` are never on omp's cwd. `mktemp -d` lands outside the repo; capture repo content (file paths, diffs) **before** `cd`, then attach by absolute path:
+
 ```bash
-omp -p --no-tools --model zai/glm-5.2 "Review this code for security issues @src/auth/middleware.ts"
+(
+  repo="$PWD"
+  sandbox=$(mktemp -d)
+  trap 'rm -rf "$sandbox"' EXIT        # remove the sandbox even on error/interrupt
+  cd "$sandbox"                        # isolate cwd: omp won't discover the repo's custom tools
+  omp -p --no-tools --model zai/glm-5.2 "Review this code for security issues @$repo/src/auth/middleware.ts"
+)
 ```
 
 ### Multiple Files
 ```bash
-omp -p --no-tools --model zai/glm-5.2 "Analyze the service layer architecture @src/services/order.ts @src/services/pricing.ts"
+(
+  repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT; cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Analyze the service layer architecture @$repo/src/services/order.ts @$repo/src/services/pricing.ts"
+)
 ```
 
 ### Reviewing Diffs & Command Output
-`omp` does not read piped stdin — capture the content to a unique temp file (`mktemp` avoids collisions when consultants run in parallel), then attach it with `@`:
+`omp` does not read piped stdin — write the diff **into the sandbox dir** (capture it before `cd`, since `git` needs the repo cwd), then attach it by absolute path:
 ```bash
-# PR review (subshell + EXIT trap removes the temp file even on error/interrupt)
+# PR review (sandbox dir isolates cwd; trap removes it even on error/interrupt)
 (
-  diff_file=$(mktemp)
-  trap 'rm -f "$diff_file"' EXIT
-  git diff main...HEAD > "$diff_file"
-  omp -p --no-tools --model zai/glm-5.2 "Review these PR changes for issues @$diff_file"
+  sandbox=$(mktemp -d)
+  trap 'rm -rf "$sandbox"' EXIT
+  git diff main...HEAD > "$sandbox/changes.diff"   # capture before cd
+  cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Review these PR changes for issues @$sandbox/changes.diff"
 )
 
 # Specific commit range
 (
-  range_file=$(mktemp)
-  trap 'rm -f "$range_file"' EXIT
-  git diff HEAD~5 > "$range_file"
-  omp -p --no-tools --model zai/glm-5.2 "Review recent changes @$range_file"
+  sandbox=$(mktemp -d)
+  trap 'rm -rf "$sandbox"' EXIT
+  git diff HEAD~5 > "$sandbox/changes.diff"
+  cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Review recent changes @$sandbox/changes.diff"
 )
 ```
 
 ### Interactive Mode
+You drive an interactive session against your **trusted** working tree, so the sandbox is optional — but never start it inside an untrusted checkout, since custom-tool discovery still applies to omp's cwd:
 ```bash
 omp --no-tools --model zai/glm-5.2  # Start interactive session (omit -p)
 ```
@@ -92,9 +103,10 @@ omp --no-tools --model zai/glm-5.2  # Start interactive session (omit -p)
 ### PR Review
 ```bash
 (
-  diff_file=$(mktemp)
-  trap 'rm -f "$diff_file"' EXIT
-  git diff main...HEAD > "$diff_file"
+  sandbox=$(mktemp -d)
+  trap 'rm -rf "$sandbox"' EXIT
+  git diff main...HEAD > "$sandbox/changes.diff"   # capture before cd
+  cd "$sandbox"
   omp -p --no-tools --model zai/glm-5.2 "Review this PR:
 1. Breaking changes or regressions
 2. Security vulnerabilities
@@ -102,36 +114,44 @@ omp --no-tools --model zai/glm-5.2  # Start interactive session (omit -p)
 4. Error handling gaps
 5. Test coverage needs
 
-Be specific with file:line references. @$diff_file"
+Be specific with file:line references. @$sandbox/changes.diff"
 )
 ```
 
 ### Architecture Review
 ```bash
-omp -p --no-tools --model zai/glm-5.2 "Analyze this core module architecture:
+(
+  repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT; cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Analyze this core module architecture:
 1. Evaluate separation of concerns
 2. Identify coupling issues
 3. Assess extensibility
 4. Compare to common patterns (Clean Architecture, Hexagonal, etc.)
 
-Provide concrete improvement suggestions. @src/core/server.ts @src/core/router.ts @src/core/context.ts"
+Provide concrete improvement suggestions. @$repo/src/core/server.ts @$repo/src/core/router.ts @$repo/src/core/context.ts"
+)
 ```
 
 ### Algorithm Verification
 ```bash
-omp -p --no-tools --model zai/glm-5.2 "Verify this dynamic programming solution:
+(
+  repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT; cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Verify this dynamic programming solution:
 1. Is the recurrence relation correct?
 2. Are base cases handled properly?
 3. What edge cases might fail?
 4. Time/space complexity analysis
 5. Potential optimizations
 
-Be rigorous and mathematical. @src/algorithms/dp-solver.ts"
+Be rigorous and mathematical. @$repo/src/algorithms/dp-solver.ts"
+)
 ```
 
 ### Code Review (Alternative Perspective)
 ```bash
-omp -p --no-tools --model zai/glm-5.2 "Review this order service.
+(
+  repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT; cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Review this order service.
 
 Context: Gemini suggested extracting a PricingService.
 Codex recommended using the Strategy pattern.
@@ -141,12 +161,15 @@ Provide your independent analysis:
 2. What alternatives would you propose?
 3. What did they potentially miss?
 
-@src/services/order.ts"
+@$repo/src/services/order.ts"
+)
 ```
 
 ### Debugging Session
 ```bash
-omp -p --no-tools --model zai/glm-5.2 "Debug this intermittent failure:
+(
+  repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT; cd "$sandbox"
+  omp -p --no-tools --model zai/glm-5.2 "Debug this intermittent failure:
 
 Symptoms:
 - Fails ~5% of requests under load
@@ -156,7 +179,8 @@ Symptoms:
 
 The rate limiter is attached below. What could cause this? Systematic debugging approach?
 
-@src/middleware/rate-limiter.ts"
+@$repo/src/middleware/rate-limiter.ts"
+)
 ```
 
 ## Query Formulation Guidelines

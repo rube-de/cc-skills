@@ -311,7 +311,7 @@ qwen "@file prompt"
 qwen "@src/*.ts analyze these"
 qwen -s "@file test this"  # Sandbox mode
 
-# GLM
+# GLM (run from an isolated cwd for untrusted code — --no-tools does NOT block .omp/tools execution; see glm-consultant.md "Report-Only Sandbox")
 omp -p --no-tools --model zai/glm-5.2 "prompt"
 omp -p --no-tools --model zai/glm-5.2 "prompt @file"
 
