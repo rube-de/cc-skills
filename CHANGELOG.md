@@ -1,3 +1,10 @@
+# [2.4.0](https://github.com/rube-de/cc-skills/compare/v2.3.0...v2.4.0) (2026-06-20)
+
+
+### Features
+
+* **council:** migrate GLM consultant to omp CLI with GLM-5.2 ([#231](https://github.com/rube-de/cc-skills/issues/231)) ([592f68f](https://github.com/rube-de/cc-skills/commit/592f68f8453d54fe5e3184377fb0d27a8a15e88b))
+
 # [2.3.0](https://github.com/rube-de/cc-skills/compare/v2.2.0...v2.3.0) (2026-05-13)
 
 
