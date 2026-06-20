@@ -1,3 +1,10 @@
+# [2.5.0](https://github.com/rube-de/cc-skills/compare/v2.4.0...v2.5.0) (2026-06-20)
+
+
+### Features
+
+* **council:** migrate gemini consultant to omp CLI with Gemini 3.5 Flash ([#232](https://github.com/rube-de/cc-skills/issues/232)) ([7aba118](https://github.com/rube-de/cc-skills/commit/7aba11803787f7b639ad38000034f28052cfc08b))
+
 # [2.4.0](https://github.com/rube-de/cc-skills/compare/v2.3.0...v2.4.0) (2026-06-20)
 
 
