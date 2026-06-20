@@ -725,6 +725,25 @@ This surfaced the rename API (JSONL event types like `custom-title` / `agent-nam
 
 > Source: discovery process behind `set-session-title.sh`; cross-referenced with [issue #44902](https://github.com/anthropics/claude-code/issues/44902) confirming v2.1.94 added the hook field but the public docs are still out of sync
 
+### Verify a CLI's runtime behavior by executing it — source-reading shows intent, not behavior
+
+When a skill or agent documents how to invoke an external CLI, confirm the documented invocation actually works by **running the CLI**, not by reading its argument parser. Source-reading establishes *intent*; only execution establishes *behavior*. Two layers of the same tool can disagree, and an agent doc that gets it wrong silently feeds the model nothing (or hallucinated output) at runtime.
+
+Concrete case: the `council` GLM consultant attaches files to `omp` (oh-my-pi) via `@path` tokens. A reviewer read omp's argv parser — `parseArgs` only records a file attachment when a *whole argv token* starts with `@` (`src/cli/args.ts`) — and concluded that an `@path` embedded inside a quoted prompt stays plain text, so every file-review example was broken. That conclusion was wrong: omp has a *second* `@`-resolution layer. `src/discovery/at-imports.ts` scans the message **body** with `AT_IMPORT_REGEX = /(^|[ \t])@([./~A-Za-z0-9_-][^\s]*)/g`, so a space-delimited `@/path` mid-prompt is imported. Reading only the parser missed the discovery layer.
+
+**Testing a CLI that is itself an agent requires removing the tool-access confounder.** `omp` is a coding agent: in `-p` (print) mode it can still *read files with its own tools*, so it returns a file's contents whether or not `@` attached them. To isolate the attachment channel, disable tools with `--no-tools`:
+
+```bash
+# --no-tools forces file content through the @-attachment path only
+omp -p --no-tools --model zai/glm-5.2 "...reply with the codename, else NOFILE. @/tmp/f.txt"      # -> codename (embedded @ works)
+omp -p --no-tools --model zai/glm-5.2 "...reply with the codename, else NOFILE." @/tmp/f.txt        # -> codename (separate token works)
+omp -p --no-tools --model zai/glm-5.2 "...reply with the codename, else NOFILE. file at /tmp/f.txt" # -> NOFILE   (no @ = no attach)
+```
+
+The negative control (no `@`, codename never returned) is what proves the `@` token is the trigger — without it, the agent's own file-reading tools make every variant "work" and the test proves nothing. Design the probe so the *absence* of the mechanism produces an observably different result.
+
+> Source: [PR #231](https://github.com/rube-de/cc-skills/pull/231) — a Codex review (P1) claimed omp's `@path` examples attached nothing, reasoning from `parseArgs` alone. An empirical `--no-tools` A/B/control against omp v16.1.1 refuted it and surfaced the `at-imports.ts` message-body scan the parser-only reading missed. Same genre as "Hook output schema validity ≠ runtime effect" and "When the docs are wrong, the Claude Code binary tells the truth" — trust the runtime artifact over the source/docs.
+
 ---
 
 ## Common Pitfalls
@@ -769,6 +788,7 @@ This surfaced the rename API (JSONL event types like `custom-title` / `agent-nam
 | Dual numbered sequences in a single prompt | LLM loses track of progress — restarts at "Step 1" of the second sequence or conflates steps across sequences | Use a single continuous numbering scheme across the entire prompt; if phases are needed, use named phases with sub-steps (e.g., 3a, 3b) rather than restarting at 1 |
 | Terminology mismatches across workflow steps | LLM treats the same concept as two different things (e.g., "plan" in Step 1 vs "specification" in Step 4), causing missed references or contradictory actions | Audit all workflow steps for consistent term usage; define key terms once at the top and use them identically throughout — never synonym-swap mid-prompt |
 | Hard-gate prohibition phrased without scope leaks into post-confirmation territory | A skill correctly refuses to invoke downstream skills before approval, but the same blanket "do NOT invoke any downstream skill" instruction also blocks the post-confirmation hand-off — forcing the user to manually re-type the slash command after they have already chosen | Scope the prohibition to its actual precondition ("before Step N approval"); after the gate clears, define the exact downstream invocation in an action table mapping each user choice to a concrete `Skill` call (or explicit "tell the user to run X"). Never phrase the gate as a global no-invoke rule when it is really a pre-confirmation rule. |
+| Documenting external-CLI behavior from source-reading | Examples silently attach nothing / model hallucinates output at runtime | Execute the CLI to verify; for agent-CLIs, isolate the channel under test (`--no-tools`) with a negative control |
 
 > Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59), [Issue #115](https://github.com/rube-de/cc-skills/issues/115), [PR #157](https://github.com/rube-de/cc-skills/pull/157), [PR #210](https://github.com/rube-de/cc-skills/pull/210), [PR #222](https://github.com/rube-de/cc-skills/pull/222)
 
