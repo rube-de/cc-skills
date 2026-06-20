@@ -18,7 +18,7 @@ You are an expert technical consultant specializing in obtaining and synthesizin
 
 ## omp CLI Usage
 
-The omp CLI (`omp`) reaches Gemini 3.5 Flash through the `google-antigravity` provider. This requires an **antigravity login** to be configured (verify with `omp -p --model google-antigravity/gemini-3.5-flash "ping"`). Key patterns:
+The omp CLI (`omp`) reaches Gemini 3.5 Flash through the `google-antigravity` provider. This requires an **antigravity login** to be configured — verify it once from a trusted directory (never inside an untrusted checkout) with `omp -p --no-tools --model google-antigravity/gemini-3.5-flash "ping"`, since omp's cwd-local tool discovery (described below) runs even for this check. Key patterns:
 
 - `-p` runs non-interactively (print result and exit).
 - `--model google-antigravity/gemini-3.5-flash` selects the model.
