@@ -38,7 +38,6 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 - **Safe vs unsafe upsert modes**: On conflict/upsert paths, does "safe mode" still include protected fields (e.g., `sourceUrl`, `webhookUrl`, ownership fields) in the insert values? Protected fields should be omitted from client-facing write paths entirely, not just from the ON CONFLICT clause
 - **Client data → global state**: Does a client-facing action (subscribe, save, bookmark) write client-provided metadata to a shared table that other users read from? If so, any user can deface shared content
 - **SSRF via unvalidated URLs**: Does the endpoint accept a URL from the client and later fetch it server-side (RSS feeds, webhooks, image URLs, callbacks) without validating against an allowlist or equivalent safe-URL validator (e.g., blocking private/loopback IP ranges)?
-- **Fork PR secret exposure**: For GitHub Actions workflows, does `pull_request_target` pass secrets or checkout fork code? Unlike `pull_request` (which withholds secrets from forks), `pull_request_target` runs with full secret access in the base repo context — if it checks out the PR head ref, a fork can exfiltrate secrets. Also check whether `pull_request` workflows assume secrets are present and fail ungracefully when they are empty strings
 
 ### Bugs
 
@@ -78,6 +77,34 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 - **Algorithmic complexity**: O(n²) where O(n) or O(n log n) is possible, nested iterations over large collections
 - **Missing caching**: Repeated expensive operations (DB lookups, API calls, computations) that could be memoized
 
+### CI/CD Security
+
+When changes touch `.github/workflows/*.yml`, review them as a distinct attack surface — workflows execute with repository credentials and a separate set of failure modes from application code. Report findings here under `type: "security"` (cost/performance items under `type: "performance"`).
+
+#### Supply Chain
+
+- **Unpinned actions**: Are 3rd-party GitHub Actions referenced by mutable tag (`@v1`, `@main`) instead of full commit SHA? A compromised tag silently executes malicious code with the workflow's permissions. Check if the repo's existing workflows use SHA pinning as a convention — if they do, the new workflow must follow suit
+- **Unpinned external/config sources**: Do config fields, submodules, or plugin/extension manifests reference a mutable git branch/tag instead of a pinned commit? Unreviewed third-party code can then run with full token access on every future run. (Generic form of the action-pinning concern, applied to non-`uses:` sources — e.g. a config field pointing at a live branch.)
+
+#### Workflow Triggers
+
+- **Missing author gating**: Can any GitHub user trigger a secrets-backed workflow by mentioning `@bot` in an issue/comment? Check for `author_association` or permission-level conditions. The `pull_request` `synchronize` event fires for any push — if the PR was opened by an allowlisted user, later commits by non-allowlisted actors still trigger the job
+- **Fork PR secret exposure**: For GitHub Actions workflows, does `pull_request_target` pass secrets or checkout fork code? Unlike `pull_request` (which withholds secrets from forks), `pull_request_target` runs with full secret access in the base repo context — if it checks out the PR head ref, a fork can exfiltrate secrets. Also check whether `pull_request` workflows assume secrets are present and fail ungracefully when they are empty strings
+- **Unintended re-triggers**: Does the `assigned` event trigger on issues that already contain the bot mention? Re-assignment would re-trigger the workflow on stale body content
+- **Script injection via expression interpolation**: Is untrusted input (`github.event.issue.title`, `pull_request.title`, comment bodies, branch names) interpolated directly into a `run:` shell block via `${{ }}`? An attacker controls that text and can inject shell commands that execute with the job's token. Safe pattern: pass the value through an `env:` variable and reference `"$VAR"`, never inline `${{ }}` in a shell step
+
+#### Permissions
+
+- **Insufficient permissions**: Does the workflow grant `read` permissions where `write` is needed? Check if the action's documented behavior (posting comments, creating branches, pushing commits) matches the declared permissions
+- **Excessive permissions**: Does the workflow grant permissions it doesn't need? Apply least-privilege — `issues: read` is unnecessary if the workflow never reads issues
+
+#### Cost / Performance
+
+- **Missing `timeout-minutes`**: Default is 6 hours (360 minutes). A hung AI/LLM job consumes billable minutes for the full duration
+- **Missing concurrency group**: Rapid pushes produce overlapping parallel runs. Add `concurrency` with `cancel-in-progress: true` for review-type workflows
+- **Draft PR filtering**: Does the workflow trigger on every `synchronize` event including drafts? Expensive operations (AI review, full CI) should skip draft PRs
+- **No bot filtering**: Does the workflow trigger on bot-authored PRs (dependency bumps, auto-formatting)? These may not need full review
+
 ## How to Use Your Tools
 
 Don't just review the diff in isolation. Use your native access:
@@ -109,6 +136,13 @@ Don't just review the diff in isolation. Use your native access:
    a. Read the handler: does it verify the authenticated user owns the resource (e.g., checking a userId/ownerId column)?
    b. Grep for other endpoints modifying the same table — do they have ownership checks?
    c. Follow the data flow: does client-provided metadata end up in shared/global state?
+8. For GitHub Actions workflows (.github/workflows/*.yml):
+   a. Read the workflow file and check trigger events, permissions, and secrets usage
+   b. Grep for existing workflows in the repo — do they pin actions to SHA?
+   c. Check if permissions match the action's documented requirements
+   d. Verify author_association or permission gating on comment-triggered workflows
+   e. Check for timeout-minutes and concurrency settings
+   f. Check for untrusted ${{ }} input interpolated into run: shell steps
 ```
 
 ## What NOT to Review
