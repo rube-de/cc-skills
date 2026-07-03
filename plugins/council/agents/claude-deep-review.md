@@ -79,7 +79,7 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 
 ### CI/CD Security
 
-When changes touch `.github/workflows/*.yml`, review them as a distinct attack surface — workflows execute with repository credentials and a separate set of failure modes from application code. Report findings here under `type: "security"` (cost/performance items under `type: "performance"`).
+When changes touch `.github/workflows/*.yml` or `*.yaml`, review them as a distinct attack surface — workflows execute with repository credentials and a separate set of failure modes from application code. Report findings here under `type: "security"` (functional bugs — e.g. a workflow that fails from insufficient permissions — under `type: "bug"`, cost/performance items under `type: "performance"`).
 
 #### Supply Chain
 
@@ -136,7 +136,7 @@ Don't just review the diff in isolation. Use your native access:
    a. Read the handler: does it verify the authenticated user owns the resource (e.g., checking a userId/ownerId column)?
    b. Grep for other endpoints modifying the same table — do they have ownership checks?
    c. Follow the data flow: does client-provided metadata end up in shared/global state?
-8. For GitHub Actions workflows (.github/workflows/*.yml):
+8. For GitHub Actions workflows (.github/workflows/*.yml or *.yaml):
    a. Read the workflow file and check trigger events, permissions, and secrets usage
    b. Grep for existing workflows in the repo — do they pin actions to SHA?
    c. Check if permissions match the action's documented requirements
