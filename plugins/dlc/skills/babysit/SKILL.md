@@ -49,18 +49,18 @@ Create `.dev/dlc/` if it does not exist. Read the state file if it exists.
 If `$ARGUMENTS` contains a number, use it as PR_NUMBER and fetch that PR explicitly:
 
 ```bash
-gh pr view $PR_NUMBER --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable
+gh pr view $PR_NUMBER --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable,author
 ```
 
 If no number is provided, auto-detect from the current branch:
 
 ```bash
-gh pr view --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable
+gh pr view --json number,title,headRefName,baseRefName,state,url,reviewDecision,mergeable,author
 ```
 
 If no PR exists for the current branch, stop silently.
 
-Extract and store: PR_NUMBER, PR_TITLE, PR_BRANCH, BASE_BRANCH, PR_STATE, PR_URL, REVIEW_DECISION, MERGEABLE.
+Extract and store: PR_NUMBER, PR_TITLE, PR_BRANCH, BASE_BRANCH, PR_STATE, PR_URL, REVIEW_DECISION, MERGEABLE, PR_AUTHOR (`.author.login`).
 
 **State gate:** If PR_STATE is not `OPEN`:
 - Write state key `closed:<state>`.
@@ -259,10 +259,13 @@ After pr-check completes, parse its output summary to extract these values:
 - **Pending-Human count and items**: parse the `Pending-Human: <n> — <item1_short>; <item2_short>; ...` line from the Step 6 summary. The `<n>` is the count; split the tail on `;` (trimming whitespace) to get the per-item short descriptions. If the line is absent, the count is 0. This line is emitted only under `--unattended`. Worked example: `Pending-Human: 2 — rename foo to bar; clarify async semantics of handler()` → `count=2`, `items=["rename foo to bar", "clarify async semantics of handler()"]`.
 - Whether pr-check pushed any commits (look for "Pushed" in the summary or a non-empty git diff from before)
 
-If pr-check pushed commits, re-request review from all prior reviewers. Filter out bot accounts (logins ending in `[bot]`):
+If pr-check pushed commits, re-request review from all prior **human** reviewers. Bots re-trigger automatically on every push, so only humans need an explicit nudge. Use the REST reviews endpoint's `user.type` field (`Bot` vs `User`) as the discriminator, and drop the PR author — you cannot request review from a PR's own author.
+
+> **Why not filter on the `[bot]` login suffix:** `gh pr view --json reviews` returns author logins *without* the `[bot]` suffix (e.g. `coderabbitai`, `gemini-code-assist`), so an `endswith("[bot]")` filter silently fails to exclude App-based review bots **and** leaves the PR author in the list. The REST `user.type` field is format-independent and reliably reports `Bot` vs `User`. (`gh api` substitutes `{owner}`/`{repo}` from the current repo automatically.)
 
 ```bash
-REVIEWERS=$(gh pr view $PR_NUMBER --json reviews --jq '[.reviews[].author.login | select(endswith("[bot]") | not)] | unique | join(",")')
+REVIEWERS=$(gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews \
+  --jq "[.[].user | select(.type == \"User\") | .login] | map(select(. != \"$PR_AUTHOR\")) | unique | join(\",\")")
 if [ -n "$REVIEWERS" ]; then
   gh pr edit $PR_NUMBER --add-reviewer "$REVIEWERS"
 fi
