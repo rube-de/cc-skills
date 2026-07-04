@@ -83,7 +83,7 @@ When changes touch `.github/workflows/*.{yml,yaml}`, review them as a distinct a
 
 #### Supply Chain
 
-- **Unpinned actions**: Are 3rd-party GitHub Actions referenced by mutable tag (`@v1`, `@main`) instead of full commit SHA? A compromised tag silently executes malicious code with the workflow's permissions. Recommend pinning to a full commit SHA, but treat it as a suggestion the developer can decline — leaving actions on mutable tags is a valid choice. If the repo's existing workflows already pin to SHA, flag any new workflow that breaks that convention
+- **Unpinned actions**: Are third-party GitHub Actions referenced by mutable tag (`@v1`, `@main`) instead of full commit SHA? A compromised tag silently executes malicious code with the workflow's permissions. Recommend pinning to a full commit SHA, but treat it as a suggestion the developer can decline — leaving actions on mutable tags is a valid choice. If the repo's existing workflows already pin to SHA, flag any new workflow that breaks that convention
 - **Unpinned external/config sources**: Do config fields, submodules, or plugin/extension manifests reference a mutable git branch/tag instead of a pinned commit? Unreviewed third-party code can then run with full token access on every future run. (Generic form of the action-pinning concern, applied to non-`uses:` sources — e.g. a config field pointing at a live branch.)
 
 #### Workflow Triggers
