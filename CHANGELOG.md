@@ -1,3 +1,10 @@
+# [2.6.0](https://github.com/rube-de/cc-skills/compare/v2.5.0...v2.6.0) (2026-07-04)
+
+
+### Features
+
+* **council:** add GitHub Actions / CI security review section to deep-review ([#233](https://github.com/rube-de/cc-skills/issues/233)) ([e82b8a7](https://github.com/rube-de/cc-skills/commit/e82b8a7cef4f5f61730e0a5ca9a993cfd04a5323)), closes [#152](https://github.com/rube-de/cc-skills/issues/152)
+
 # [2.5.0](https://github.com/rube-de/cc-skills/compare/v2.4.0...v2.5.0) (2026-06-20)
 
 
