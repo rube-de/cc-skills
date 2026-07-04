@@ -95,7 +95,7 @@ When changes touch `.github/workflows/*.{yml,yaml}`, review them as a distinct a
 #### Permissions
 
 - **Insufficient permissions**: Does the workflow grant `read` permissions where `write` is needed? Check if the action's documented behavior (posting comments, creating branches, pushing commits) matches the declared permissions
-- **Excessive permissions**: Does the workflow grant permissions it doesn't need? Apply least-privilege — `issues: read` is unnecessary if the workflow never reads issues
+- **Excessive permissions**: Does the workflow grant permissions it doesn't need — or omit the `permissions:` block entirely? Apply least-privilege — `issues: read` is unnecessary if the workflow never reads issues. A workflow with no `permissions:` block inherits the repository/org default `GITHUB_TOKEN` scope, which is often the permissive read/write-all setting, so a missing block is itself an excessive-permission finding — recommend an explicit least-privilege `permissions:` block
 
 #### Cost / Performance
 
