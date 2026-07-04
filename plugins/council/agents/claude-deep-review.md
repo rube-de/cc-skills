@@ -79,18 +79,17 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 
 ### CI/CD Security
 
-When changes touch `.github/workflows/*.yml` or `*.yaml`, review them as a distinct attack surface — workflows execute with repository credentials and a separate set of failure modes from application code. Report findings here under `type: "security"` (functional bugs — e.g. a workflow that fails from insufficient permissions — under `type: "bug"`, cost/performance items under `type: "performance"`).
+When changes touch `.github/workflows/*.{yml,yaml}`, review them as a distinct attack surface — workflows execute with repository credentials and a separate set of failure modes from application code. Report findings here under `type: "security"` (functional bugs — e.g. a workflow that fails from insufficient permissions — under `type: "bug"`, cost/performance items under `type: "performance"`).
 
 #### Supply Chain
 
-- **Unpinned actions**: Are 3rd-party GitHub Actions referenced by mutable tag (`@v1`, `@main`) instead of full commit SHA? A compromised tag silently executes malicious code with the workflow's permissions. Check if the repo's existing workflows use SHA pinning as a convention — if they do, the new workflow must follow suit
+- **Unpinned actions**: Are 3rd-party GitHub Actions referenced by mutable tag (`@v1`, `@main`) instead of full commit SHA? A compromised tag silently executes malicious code with the workflow's permissions. Recommend pinning to a full commit SHA, but treat it as a suggestion the developer can decline — leaving actions on mutable tags is a valid choice. If the repo's existing workflows already pin to SHA, flag any new workflow that breaks that convention
 - **Unpinned external/config sources**: Do config fields, submodules, or plugin/extension manifests reference a mutable git branch/tag instead of a pinned commit? Unreviewed third-party code can then run with full token access on every future run. (Generic form of the action-pinning concern, applied to non-`uses:` sources — e.g. a config field pointing at a live branch.)
 
 #### Workflow Triggers
 
 - **Missing author gating**: Can any GitHub user trigger a secrets-backed workflow by mentioning `@bot` in an issue/comment? Check for `author_association` or permission-level conditions. The `pull_request` `synchronize` event fires for any push — if the PR was opened by an allowlisted user, later commits by non-allowlisted actors still trigger the job
 - **Fork PR secret exposure**: For GitHub Actions workflows, does `pull_request_target` pass secrets or checkout fork code? Unlike `pull_request` (which withholds secrets from forks), `pull_request_target` runs with full secret access in the base repo context — if it checks out the PR head ref, a fork can exfiltrate secrets. Also check whether `pull_request` workflows assume secrets are present and fail ungracefully when they are empty strings
-- **Unintended re-triggers**: Does the `assigned` event trigger on issues that already contain the bot mention? Re-assignment would re-trigger the workflow on stale body content
 - **Script injection via expression interpolation**: Is untrusted input (`github.event.issue.title`, `pull_request.title`, comment bodies, branch names) interpolated directly into a `run:` shell block via `${{ }}`? An attacker controls that text and can inject shell commands that execute with the job's token. Safe pattern: pass the value through an `env:` variable and reference `"$VAR"`, never inline `${{ }}` in a shell step
 
 #### Permissions
@@ -104,6 +103,7 @@ When changes touch `.github/workflows/*.yml` or `*.yaml`, review them as a disti
 - **Missing concurrency group**: Rapid pushes produce overlapping parallel runs. Add `concurrency` with `cancel-in-progress: true` for review-type workflows
 - **Draft PR filtering**: Does the workflow trigger on every `synchronize` event including drafts? Expensive operations (AI review, full CI) should skip draft PRs
 - **No bot filtering**: Does the workflow trigger on bot-authored PRs (dependency bumps, auto-formatting)? These may not need full review
+- **Re-triggers on assignment/label churn**: Does an expensive, content-reading job (LLM call, opening a PR, posting comments) fire on `assigned`/`labeled`/`edited` with no guard? Those events fire on churn unrelated to content — a re-assignment re-runs the whole job on the same, now-stale body. Gate on a condition (e.g. the assignee is the bot and the body changed) so it doesn't re-fire on noise
 
 ## How to Use Your Tools
 
@@ -136,7 +136,7 @@ Don't just review the diff in isolation. Use your native access:
    a. Read the handler: does it verify the authenticated user owns the resource (e.g., checking a userId/ownerId column)?
    b. Grep for other endpoints modifying the same table — do they have ownership checks?
    c. Follow the data flow: does client-provided metadata end up in shared/global state?
-8. For GitHub Actions workflows (.github/workflows/*.yml or *.yaml):
+8. For GitHub Actions workflows (.github/workflows/*.{yml,yaml}):
    a. Read the workflow file and check trigger events, permissions, and secrets usage
    b. Grep for existing workflows in the repo — do they pin actions to SHA?
    c. Check if permissions match the action's documented requirements
