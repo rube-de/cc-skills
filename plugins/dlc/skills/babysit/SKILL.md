@@ -261,11 +261,11 @@ After pr-check completes, parse its output summary to extract these values:
 
 If pr-check pushed commits, re-request review from all prior **human** reviewers. Bots re-trigger automatically on every push, so only humans need an explicit nudge. Use the REST reviews endpoint's `user.type` field (`Bot` vs `User`) as the discriminator, and drop the PR author — you cannot request review from a PR's own author.
 
-> **Why not filter on the `[bot]` login suffix:** `gh pr view --json reviews` returns author logins *without* the `[bot]` suffix (e.g. `coderabbitai`, `gemini-code-assist`), so an `endswith("[bot]")` filter silently fails to exclude App-based review bots **and** leaves the PR author in the list. The REST `user.type` field is format-independent and reliably reports `Bot` vs `User`. (`gh api` substitutes `{owner}`/`{repo}` from the current repo automatically.)
+> **Why not filter on the `[bot]` login suffix:** `gh pr view --json reviews` returns author logins *without* the `[bot]` suffix (e.g. `coderabbitai`, `gemini-code-assist`), so an `endswith("[bot]")` filter silently fails to exclude App-based review bots **and** leaves the PR author in the list. The REST `user.type` field is format-independent and reliably reports `Bot` vs `User`. `--paginate` fetches every page — the reviews endpoint returns 30 per page by default, so on a PR with many bot reviews a human reviewer on a later page isn't missed — and `jq -s '(add // [])'` merges the per-page arrays before filtering. (`gh api` substitutes `{owner}`/`{repo}` from the current repo automatically.)
 
 ```bash
-REVIEWERS=$(gh api repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews \
-  --jq "[.[].user | select(.type == \"User\") | .login] | map(select(. != \"$PR_AUTHOR\")) | unique | join(\",\")")
+REVIEWERS=$(gh api --paginate repos/{owner}/{repo}/pulls/$PR_NUMBER/reviews \
+  | jq -rs "(add // []) | [.[].user | select(.type == \"User\" and .login != \"$PR_AUTHOR\") | .login] | unique | join(\",\")")
 if [ -n "$REVIEWERS" ]; then
   gh pr edit $PR_NUMBER --add-reviewer "$REVIEWERS"
 fi

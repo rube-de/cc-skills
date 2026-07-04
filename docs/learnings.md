@@ -1335,7 +1335,7 @@ The first pass of `--unattended` only split the classifier for Discussion items.
 
 **Root pattern:** the `[bot]` login suffix is present on some GitHub API surfaces and absent on others for the *same* account. REST `GET /pulls/{pr}/reviews` returns `user.login = "coderabbitai[bot]"` **with** the suffix and `user.type = "Bot"`; GraphQL and `gh pr view --json reviews` return `author.login = "coderabbitai"` **without** it. The `endswith("[bot]")` heuristic was written for REST-shaped logins but applied to the suffix-stripped `gh pr view` output, so it silently matched nothing. The bug failed *open* (bots passed through) rather than erroring, so it survived casual testing.
 
-**Rule:** Distinguish bots from humans by the explicit type field the API hands you — REST `user.type` (`Bot`/`User`) or GraphQL `author.__typename` (`Bot`/`User`) — never by pattern-matching the login string. Type fields are format-independent; login-suffix presence is coupled to which endpoint produced the string. Separately, always exclude the PR author from any re-request-reviewers list — GitHub rejects requesting review from a PR's own author.
+**Rule:** Distinguish bots from humans by the explicit type field the API hands you — REST `user.type` (`Bot`/`User`) or GraphQL `author.__typename` (`Bot`/`User`) — never by pattern-matching the login string. Type fields are format-independent; login-suffix presence is coupled to which endpoint produced the string. Separately, always exclude the PR author from any re-request-reviewers list — GitHub rejects requesting review from a PR's own author. And paginate the fetch (`gh api --paginate` + `jq -s '(add // [])'`): the reviews endpoint returns 30 per page, so a single-page read silently drops human reviewers sitting behind many bot reviews — the same *fail-open under-inclusion* the type-field fix was meant to close.
 
 **Bad pattern (login-suffix heuristic, endpoint-coupled, fails open):**
 ```bash
@@ -1346,8 +1346,8 @@ gh pr view $PR --json reviews \
 
 **Good pattern (explicit type field, endpoint-independent, author excluded):**
 ```bash
-gh api repos/{owner}/{repo}/pulls/$PR/reviews \
-  --jq "[.[].user | select(.type == \"User\") | .login] | map(select(. != \"$PR_AUTHOR\")) | unique | join(\",\")"
+gh api --paginate repos/{owner}/{repo}/pulls/$PR/reviews \
+  | jq -rs "(add // []) | [.[].user | select(.type == \"User\" and .login != \"$PR_AUTHOR\") | .login] | unique | join(\",\")"
 ```
 
-> Source: PR #233 babysit run; file: `plugins/dlc/skills/babysit/SKILL.md` (Step 0 extraction adds `PR_AUTHOR`; Step 3 re-request switches to REST `user.type`)
+> Source: PR #233 babysit run; file: `plugins/dlc/skills/babysit/SKILL.md` (Step 0 extraction adds `PR_AUTHOR`; Step 3 re-request switches to REST `user.type`). Pagination (`--paginate` + `jq -s '(add // [])'`) and the folded-`select` simplification added in PR #234 after five reviewers flagged the first-page-only fetch.
