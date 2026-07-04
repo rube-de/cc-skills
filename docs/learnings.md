@@ -1350,4 +1350,4 @@ gh api --paginate repos/{owner}/{repo}/pulls/$PR/reviews \
   | jq -rs "(add // []) | [.[].user | select(.type == \"User\" and .login != \"$PR_AUTHOR\") | .login] | unique | join(\",\")"
 ```
 
-> Source: PR #233 babysit run; file: `plugins/dlc/skills/babysit/SKILL.md` (Step 0 extraction adds `PR_AUTHOR`; Step 3 re-request switches to REST `user.type`). Pagination (`--paginate` + `jq -s '(add // [])'`) and the folded-`select` simplification added in PR #234 after five reviewers flagged the first-page-only fetch.
+> Source: PR #233 babysit run; file: `plugins/dlc/skills/babysit/SKILL.md` (Step 0 extraction adds `PR_AUTHOR`; Step 3 re-request switches to REST `user.type`, paginates with `--paginate` + `jq -s '(add // [])'`, and folds the author exclusion into the `select`).
