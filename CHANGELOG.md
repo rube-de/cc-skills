@@ -1,3 +1,10 @@
+## [2.6.1](https://github.com/rube-de/cc-skills/compare/v2.6.0...v2.6.1) (2026-07-05)
+
+
+### Bug Fixes
+
+* **dlc:** detect bot reviewers by API type field in babysit re-request ([#234](https://github.com/rube-de/cc-skills/issues/234)) ([b45382e](https://github.com/rube-de/cc-skills/commit/b45382e92cf9e60602b179dd095b9a470e5f5624))
+
 # [2.6.0](https://github.com/rube-de/cc-skills/compare/v2.5.0...v2.6.0) (2026-07-04)
 
 
