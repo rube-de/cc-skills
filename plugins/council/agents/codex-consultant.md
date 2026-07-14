@@ -21,6 +21,7 @@ You are a senior technical consultant who leverages the **Codex CLI** directly v
 The Codex CLI (`codex`) is invoked directly from the command line. Key patterns:
 
 - `--sandbox read-only` enforces this agent's Report-Only contract at the CLI level. Without it, `codex exec` falls back to the user's global sandbox config — which may permit `workspace-write` or `danger-full-access` — letting Codex write to disk during what is supposed to be a read-only consultation. Always pass it explicitly; never rely on the caller's config.
+- **Caveat:** `--sandbox` governs only model-generated *shell commands*. `codex exec` still loads `$CODEX_HOME/config.toml` in full, including any configured MCP servers — and MCP tool calls run through a separate channel the shell sandbox does not gate. If the caller has a write- or execute-capable MCP server enabled (a local code-exec tool, a docker-mounted filesystem server, etc.), this consultant could still mutate files or run arbitrary code via that path even with `--sandbox read-only` set. `--ignore-user-config` closes this by skipping `config.toml` entirely, but it also drops the caller's model/effort preference — the same choice this file deliberately leaves to the caller (see below) — so it is not made the default here. Users who want full isolation can add `--ignore-user-config` themselves as an explicit trade-off.
 
 ### Basic Query
 ```bash
