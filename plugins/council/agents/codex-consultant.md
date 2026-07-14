@@ -20,24 +20,26 @@ You are a senior technical consultant who leverages the **Codex CLI** directly v
 
 The Codex CLI (`codex`) is invoked directly from the command line. Key patterns:
 
+- `--sandbox read-only` enforces this agent's Report-Only contract at the CLI level. Without it, `codex exec` falls back to the user's global sandbox config — which may permit `workspace-write` or `danger-full-access` — letting Codex write to disk during what is supposed to be a read-only consultation. Always pass it explicitly; never rely on the caller's config.
+
 ### Basic Query
 ```bash
-codex exec "Your prompt here"
+codex exec --sandbox read-only "Your prompt here"
 ```
 
 ### With File Context (using cat/pipe)
 ```bash
-cat src/auth/middleware.ts | codex exec "Review this code for security vulnerabilities"
+cat src/auth/middleware.ts | codex exec --sandbox read-only "Review this code for security vulnerabilities"
 ```
 
 ### Multiple Files
 ```bash
-cat src/auth/*.ts | codex exec "Review these authentication files for bugs and security issues"
+cat src/auth/*.ts | codex exec --sandbox read-only "Review these authentication files for bugs and security issues"
 ```
 
 ### PR/Diff Review
 ```bash
-git diff main...HEAD | codex exec "Review these PR changes for potential issues"
+git diff main...HEAD | codex exec --sandbox read-only "Review these PR changes for potential issues"
 ```
 
 ## Core Responsibilities
@@ -65,7 +67,7 @@ git diff main...HEAD | codex exec "Review these PR changes for potential issues"
 
 ### Code Review
 ```bash
-cat src/middleware/auth.ts | codex exec "Review this authentication middleware for:
+cat src/middleware/auth.ts | codex exec --sandbox read-only "Review this authentication middleware for:
 1. Security vulnerabilities
 2. Race conditions
 3. Proper error handling
@@ -76,7 +78,7 @@ Be specific and actionable."
 
 ### Plan Review
 ```bash
-codex exec "Review this implementation plan for a caching layer:
+codex exec --sandbox read-only "Review this implementation plan for a caching layer:
 
 Plan:
 1. Use Redis for session data (24h TTL)
@@ -92,7 +94,7 @@ What are the weaknesses, edge cases, or risks?"
 
 ### Solution Debate
 ```bash
-codex exec "Compare WebSockets vs Server-Sent Events for real-time notifications.
+codex exec --sandbox read-only "Compare WebSockets vs Server-Sent Events for real-time notifications.
 
 Context:
 - Browser clients only (no mobile native)
@@ -106,7 +108,7 @@ Provide objective tradeoff analysis and recommendation."
 
 ### Diff Review
 ```bash
-git diff main...HEAD | codex exec "Review these changes for:
+git diff main...HEAD | codex exec --sandbox read-only "Review these changes for:
 1. Breaking changes
 2. Security implications
 3. Performance regressions
@@ -117,7 +119,7 @@ Focus on critical issues only."
 
 ### Architecture Analysis
 ```bash
-cat src/events/**/*.ts | codex exec "Analyze this event handling architecture:
+cat src/events/**/*.ts | codex exec --sandbox read-only "Analyze this event handling architecture:
 1. Identify coupling issues
 2. Check for circular dependencies
 3. Evaluate error propagation

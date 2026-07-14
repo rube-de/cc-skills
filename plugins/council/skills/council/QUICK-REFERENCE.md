@@ -301,8 +301,8 @@ omp -p --no-tools --model google-antigravity/gemini-3.5-flash "prompt"
 omp -p --no-tools --model google-antigravity/gemini-3.5-flash "prompt @file"
 
 # Codex
-cat file | codex exec "prompt"
-git diff | codex exec "review changes"
+cat file | codex exec --sandbox read-only "prompt"
+git diff | codex exec --sandbox read-only "review changes"
 
 # Qwen
 qwen "@file prompt"
