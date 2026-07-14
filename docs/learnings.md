@@ -1351,3 +1351,15 @@ gh api --paginate repos/{owner}/{repo}/pulls/$PR/reviews \
 ```
 
 > Source: PR #233 babysit run; file: `plugins/dlc/skills/babysit/SKILL.md` (Step 0 extraction adds `PR_AUTHOR`; Step 3 re-request switches to REST `user.type`, paginates with `--paginate` + `jq -s '(add // [])'`, and folds the author exclusion into the `select`).
+
+### Verify external-CLI flags against the installed version, and don't pin a model the plugin doesn't own
+
+The council `codex-consultant` documented `codex "prompt"` and `codex --quiet "prompt"`. Both were wrong against the installed CLI: `--quiet` had been **removed** entirely, and bare `codex "prompt"` launches the *interactive* TUI — the wrong mode for a non-TTY subagent, where the non-interactive subcommand `codex exec "prompt"` is required (piped stdin + a prompt arg is then appended as a `<stdin>` block, so `cat file | codex exec "prompt"` works). The agent had drifted from the CLI because nobody re-checked `codex --help` after a CLI upgrade.
+
+**Rule:** Before writing or trusting a CLI invocation in an agent/skill, verify each subcommand and flag against the *installed* version (`<tool> --help`, `<tool> <sub> --help`) — CLIs remove flags and move features into subcommands between releases. For a subagent that shells out, use the tool's non-interactive/exec path, never the interactive default.
+
+**Corollary — don't force a model choice the plugin has no business owning.** It's tempting to pin `-m <model> -c model_reasoning_effort=<effort>` so the consultant "uses the good model." Prefer leaving model and effort **unset** so each user's global CLI default (`~/.codex/config.toml`) wins — the plugin ships behavior, not the user's model preference. Pin only when a specific model is essential to the feature's correctness, not as a default. (A corollary of this corollary: if you *don't* pin a model, don't annotate the visible label with one either — the bare `Codex` label stays honest.)
+
+**A second, sharper distinction surfaced by PR review on the same file: "don't force a choice" only applies to preference axes (model, effort). Safety contracts are not a preference axis.** `codex-consultant.md` promises "NEVER auto-fix or modify files," but the bare `codex exec` invocations didn't pass `--sandbox read-only` — so a caller whose global config defaults to `workspace-write` or `danger-full-access` would silently let Codex write to disk during a review the agent explicitly advertises as read-only. Leaving *model* unset respects the user's preference; leaving *sandbox* unset outsources a promise the agent file itself makes to the caller's unrelated config. Enforce contracts your own prompt states in prose at the CLI level too — prose-only enforcement is not enforcement.
+
+> Source: PR #235 (https://github.com/rube-de/cc-skills/pull/235); file: `plugins/council/agents/codex-consultant.md` (all invocations → `codex exec --sandbox read-only`, `--quiet` block removed, no model/effort pinned); cheat-sheet `plugins/council/skills/council/QUICK-REFERENCE.md`.
