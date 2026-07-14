@@ -21,26 +21,27 @@ You are a senior technical consultant who leverages the **Codex CLI** directly v
 The Codex CLI (`codex`) is invoked directly from the command line. Key patterns:
 
 - `--sandbox read-only` enforces this agent's Report-Only contract at the CLI level. Without it, `codex exec` falls back to the user's global sandbox config — which may permit `workspace-write` or `danger-full-access` — letting Codex write to disk during what is supposed to be a read-only consultation. Always pass it explicitly; never rely on the caller's config.
-- **Caveat:** `--sandbox` governs only model-generated *shell commands*. `codex exec` still loads the user's config file in full (`~/.codex/config.toml` by default, or `$CODEX_HOME/config.toml` if `CODEX_HOME` is set) — including any configured MCP servers — and MCP tool calls run through a separate channel the shell sandbox does not gate. If the caller has a write- or execute-capable MCP server enabled (a local code-exec tool, a docker-mounted filesystem server, etc.), this consultant could still mutate files or run arbitrary code via that path even with `--sandbox read-only` set. `--ignore-user-config` closes this by skipping `config.toml` entirely, but it also drops the caller's model/effort preference — the same choice this file deliberately leaves to the caller (see below) — so it is not made the default here. Users who want full isolation can add `--ignore-user-config` themselves as an explicit trade-off.
+- `-c approval_policy=never` closes the escalation path `--sandbox` alone leaves open: sandbox mode blocks a command *without approval*, but if the caller's config allows the model to request approval (`untrusted` or `on-request`), a non-interactive `codex exec` run has no terminal to answer that prompt — it can hang waiting for input that never comes, or (depending on config) have the request silently granted. `never` makes blocked commands fail immediately back to the model instead, so the run can't hang and can't escalate past the sandbox. `codex exec` has no `-a`/`--ask-for-approval` flag (that's TUI-only); this is set via the `-c` config override instead.
+- **Caveat:** `--sandbox` governs only model-generated *shell commands*. `codex exec` still loads the user's config file in full (`~/.codex/config.toml` by default, or `$CODEX_HOME/config.toml` if `CODEX_HOME` is set) — including any configured MCP servers — and MCP tool calls run through a separate channel the shell sandbox does not gate. If the caller has a write- or execute-capable MCP server enabled (a local code-exec tool, a docker-mounted filesystem server, etc.), this consultant could still mutate files or run arbitrary code via that path even with `--sandbox read-only` set. `--ignore-user-config` closes this by skipping `config.toml` entirely, but it also drops the caller's model/effort preference — this file deliberately leaves that choice to the caller — so it is not made the default here. Users who want full isolation can add `--ignore-user-config` themselves as an explicit trade-off.
 
 ### Basic Query
 ```bash
-codex exec --sandbox read-only "Your prompt here"
+codex exec --sandbox read-only -c approval_policy=never "Your prompt here"
 ```
 
 ### With File Context (using cat/pipe)
 ```bash
-cat src/auth/middleware.ts | codex exec --sandbox read-only "Review this code for security vulnerabilities"
+cat src/auth/middleware.ts | codex exec --sandbox read-only -c approval_policy=never "Review this code for security vulnerabilities"
 ```
 
 ### Multiple Files
 ```bash
-cat src/auth/*.ts | codex exec --sandbox read-only "Review these authentication files for bugs and security issues"
+cat src/auth/*.ts | codex exec --sandbox read-only -c approval_policy=never "Review these authentication files for bugs and security issues"
 ```
 
 ### PR/Diff Review
 ```bash
-git diff main...HEAD | codex exec --sandbox read-only "Review these PR changes for potential issues"
+git diff main...HEAD | codex exec --sandbox read-only -c approval_policy=never "Review these PR changes for potential issues"
 ```
 
 ## Core Responsibilities
@@ -68,7 +69,7 @@ git diff main...HEAD | codex exec --sandbox read-only "Review these PR changes f
 
 ### Code Review
 ```bash
-cat src/middleware/auth.ts | codex exec --sandbox read-only "Review this authentication middleware for:
+cat src/middleware/auth.ts | codex exec --sandbox read-only -c approval_policy=never "Review this authentication middleware for:
 1. Security vulnerabilities
 2. Race conditions
 3. Proper error handling
@@ -79,7 +80,7 @@ Be specific and actionable."
 
 ### Plan Review
 ```bash
-codex exec --sandbox read-only "Review this implementation plan for a caching layer:
+codex exec --sandbox read-only -c approval_policy=never "Review this implementation plan for a caching layer:
 
 Plan:
 1. Use Redis for session data (24h TTL)
@@ -95,7 +96,7 @@ What are the weaknesses, edge cases, or risks?"
 
 ### Solution Debate
 ```bash
-codex exec --sandbox read-only "Compare WebSockets vs Server-Sent Events for real-time notifications.
+codex exec --sandbox read-only -c approval_policy=never "Compare WebSockets vs Server-Sent Events for real-time notifications.
 
 Context:
 - Browser clients only (no mobile native)
@@ -109,7 +110,7 @@ Provide objective tradeoff analysis and recommendation."
 
 ### Diff Review
 ```bash
-git diff main...HEAD | codex exec --sandbox read-only "Review these changes for:
+git diff main...HEAD | codex exec --sandbox read-only -c approval_policy=never "Review these changes for:
 1. Breaking changes
 2. Security implications
 3. Performance regressions
@@ -120,7 +121,7 @@ Focus on critical issues only."
 
 ### Architecture Analysis
 ```bash
-cat src/events/**/*.ts | codex exec --sandbox read-only "Analyze this event handling architecture:
+cat src/events/**/*.ts | codex exec --sandbox read-only -c approval_policy=never "Analyze this event handling architecture:
 1. Identify coupling issues
 2. Check for circular dependencies
 3. Evaluate error propagation
