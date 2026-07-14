@@ -83,35 +83,35 @@ Built-in taxonomy auto-rejects:
 ## How It Works
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    /council review                        │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  1. Pre-flight — verify CLI availability                 │
-│                                                          │
-│  2. Layer 1: External Consultants (parallel, 120s)       │
-│     ├── omp -p --no-tools --model .../gemini-3.5-flash   │
-│     ├── codex exec --sandbox read-only "review ..."      │
-│     ├── qwen "review ..."                                │
-│     ├── omp -p --no-tools --model zai/glm-5.2 "..."      │
-│     └── opencode run -m opencode/kimi-k2.5-free "..."    │
-│                                                          │
-│  3. Layer 2: Claude Subagents (parallel)                 │
-│     ├── claude-deep-review (security, bugs, performance) │
-│     └── claude-codebase-context (quality, compliance,    │
-│         history, documentation)                          │
-│                                                          │
-│  4. Auto-Escalation — if high-severity found             │
-│                                                          │
-│  5. Layer 3: Scoring (Sonnet)                            │
-│     ├── Deduplicate across all agents                    │
-│     ├── Read actual code at referenced locations         │
-│     ├── Score each finding 0-100                         │
-│     └── Filter to findings >= 80                         │
-│                                                          │
-│  6. Synthesize — weighted consensus report               │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                               /council review                               │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  1. Pre-flight — verify CLI availability                                    │
+│                                                                             │
+│  2. Layer 1: External Consultants (parallel, 120s)                          │
+│     ├── omp -p --no-tools --model .../gemini-3.5-flash                      │
+│     ├── codex exec --sandbox read-only -c approval_policy=never "review ..."│
+│     ├── qwen "review ..."                                                   │
+│     ├── omp -p --no-tools --model zai/glm-5.2 "..."                         │
+│     └── opencode run -m opencode/kimi-k2.5-free "..."                       │
+│                                                                             │
+│  3. Layer 2: Claude Subagents (parallel)                                    │
+│     ├── claude-deep-review (security, bugs, performance)                    │
+│     └── claude-codebase-context (quality, compliance,                       │
+│         history, documentation)                                             │
+│                                                                             │
+│  4. Auto-Escalation — if high-severity found                                │
+│                                                                             │
+│  5. Layer 3: Scoring (Sonnet)                                               │
+│     ├── Deduplicate across all agents                                       │
+│     ├── Read actual code at referenced locations                            │
+│     ├── Score each finding 0-100                                            │
+│     └── Filter to findings >= 80                                            │
+│                                                                             │
+│  6. Synthesize — weighted consensus report                                  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ## Installation

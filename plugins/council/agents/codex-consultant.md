@@ -22,11 +22,12 @@ The Codex CLI (`codex`) is invoked directly from the command line. Key patterns:
 
 - `--sandbox read-only` enforces this agent's Report-Only contract at the CLI level. Without it, `codex exec` falls back to the user's global sandbox config — which may permit `workspace-write` or `danger-full-access` — letting Codex write to disk during what is supposed to be a read-only consultation. Always pass it explicitly; never rely on the caller's config.
 - `-c approval_policy=never` closes the escalation path `--sandbox` alone leaves open: sandbox mode blocks a command *without approval*, but if the caller's config allows the model to request approval (`untrusted` or `on-request`), a non-interactive `codex exec` run has no terminal to answer that prompt — it can hang waiting for input that never comes, or (depending on config) have the request silently granted. `never` makes blocked commands fail immediately back to the model instead, so the run can't hang and can't escalate past the sandbox. `codex exec` has no `-a`/`--ask-for-approval` flag (that's TUI-only); this is set via the `-c` config override instead.
+- **Prompt-only invocations must close stdin.** `codex exec "<prompt>"` reads stdin as a `<stdin>` block whenever it's a non-TTY pipe — including one that's open but has no writer, which is exactly what a spawning process (Claude Code, CI runners, other agent orchestrators) can leave behind (see [openai/codex#20919](https://github.com/openai/codex/issues/20919), open as of this writing). With no data and no EOF, the read blocks forever. Any example below with no piped input appends `</dev/null` to force an immediate EOF. Examples that already pipe file/diff content (`cat ... |`, `git diff ... |`) don't need it — their stdin already reaches EOF when the upstream command finishes.
 - **Caveat:** `--sandbox` governs only model-generated *shell commands*. `codex exec` still loads the user's config file in full (`~/.codex/config.toml` by default, or `$CODEX_HOME/config.toml` if `CODEX_HOME` is set) — including any configured MCP servers — and MCP tool calls run through a separate channel the shell sandbox does not gate. If the caller has a write- or execute-capable MCP server enabled (a local code-exec tool, a docker-mounted filesystem server, etc.), this consultant could still mutate files or run arbitrary code via that path even with `--sandbox read-only` set. `--ignore-user-config` closes this by skipping `config.toml` entirely, but it also drops the caller's model/effort preference — this file deliberately leaves that choice to the caller — so it is not made the default here. Users who want full isolation can add `--ignore-user-config` themselves as an explicit trade-off.
 
 ### Basic Query
 ```bash
-codex exec --sandbox read-only -c approval_policy=never "Your prompt here"
+codex exec --sandbox read-only -c approval_policy=never "Your prompt here" </dev/null
 ```
 
 ### With File Context (using cat/pipe)
@@ -91,7 +92,7 @@ Plan:
 Tech stack: Node.js, Express, PostgreSQL
 Requirements: <100ms latency, 10K RPM
 
-What are the weaknesses, edge cases, or risks?"
+What are the weaknesses, edge cases, or risks?" </dev/null
 ```
 
 ### Solution Debate
@@ -105,7 +106,7 @@ Context:
 - Behind nginx reverse proxy
 - Need reconnection handling
 
-Provide objective tradeoff analysis and recommendation."
+Provide objective tradeoff analysis and recommendation." </dev/null
 ```
 
 ### Diff Review
