@@ -1351,3 +1351,13 @@ gh api --paginate repos/{owner}/{repo}/pulls/$PR/reviews \
 ```
 
 > Source: PR #233 babysit run; file: `plugins/dlc/skills/babysit/SKILL.md` (Step 0 extraction adds `PR_AUTHOR`; Step 3 re-request switches to REST `user.type`, paginates with `--paginate` + `jq -s '(add // [])'`, and folds the author exclusion into the `select`).
+
+### Verify external-CLI flags against the installed version, and don't pin a model the plugin doesn't own
+
+The council `codex-consultant` documented `codex "prompt"` and `codex --quiet "prompt"`. Both were wrong against the installed CLI: `--quiet` had been **removed** entirely, and bare `codex "prompt"` launches the *interactive* TUI — the wrong mode for a non-TTY subagent, where the non-interactive subcommand `codex exec "prompt"` is required (piped stdin + a prompt arg is then appended as a `<stdin>` block, so `cat file | codex exec "prompt"` works). The agent had drifted from the CLI because nobody re-checked `codex --help` after a CLI upgrade.
+
+**Rule:** Before writing or trusting a CLI invocation in an agent/skill, verify each subcommand and flag against the *installed* version (`<tool> --help`, `<tool> <sub> --help`) — CLIs remove flags and move features into subcommands between releases. For a subagent that shells out, use the tool's non-interactive/exec path, never the interactive default.
+
+**Corollary — don't force a model choice the plugin has no business owning.** It's tempting to pin `-m <model> -c model_reasoning_effort=<effort>` so the consultant "uses the good model." Prefer leaving model and effort **unset** so each user's global CLI default (`~/.codex/config.toml`) wins — the plugin ships behavior, not the user's model preference. Pin only when a specific model is essential to the feature's correctness, not as a default. (A corollary of this corollary: if you *don't* pin a model, don't annotate the visible label with one either — the bare `Codex` label stays honest.)
+
+> Source: PR for `fix/codex-consultant-exec-invocation`; file: `plugins/council/agents/codex-consultant.md` (all invocations → `codex exec`, `--quiet` block removed, no model/effort pinned); cheat-sheet `plugins/council/skills/council/QUICK-REFERENCE.md`.

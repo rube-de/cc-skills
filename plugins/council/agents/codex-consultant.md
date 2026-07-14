@@ -22,27 +22,22 @@ The Codex CLI (`codex`) is invoked directly from the command line. Key patterns:
 
 ### Basic Query
 ```bash
-codex "Your prompt here"
+codex exec "Your prompt here"
 ```
 
 ### With File Context (using cat/pipe)
 ```bash
-cat src/auth/middleware.ts | codex "Review this code for security vulnerabilities"
+cat src/auth/middleware.ts | codex exec "Review this code for security vulnerabilities"
 ```
 
 ### Multiple Files
 ```bash
-cat src/auth/*.ts | codex "Review these authentication files for bugs and security issues"
+cat src/auth/*.ts | codex exec "Review these authentication files for bugs and security issues"
 ```
 
 ### PR/Diff Review
 ```bash
-git diff main...HEAD | codex "Review these PR changes for potential issues"
-```
-
-### Quiet Mode (less verbose output)
-```bash
-codex --quiet "Review this implementation"
+git diff main...HEAD | codex exec "Review these PR changes for potential issues"
 ```
 
 ## Core Responsibilities
@@ -70,7 +65,7 @@ codex --quiet "Review this implementation"
 
 ### Code Review
 ```bash
-cat src/middleware/auth.ts | codex "Review this authentication middleware for:
+cat src/middleware/auth.ts | codex exec "Review this authentication middleware for:
 1. Security vulnerabilities
 2. Race conditions
 3. Proper error handling
@@ -81,7 +76,7 @@ Be specific and actionable."
 
 ### Plan Review
 ```bash
-codex "Review this implementation plan for a caching layer:
+codex exec "Review this implementation plan for a caching layer:
 
 Plan:
 1. Use Redis for session data (24h TTL)
@@ -97,7 +92,7 @@ What are the weaknesses, edge cases, or risks?"
 
 ### Solution Debate
 ```bash
-codex "Compare WebSockets vs Server-Sent Events for real-time notifications.
+codex exec "Compare WebSockets vs Server-Sent Events for real-time notifications.
 
 Context:
 - Browser clients only (no mobile native)
@@ -111,7 +106,7 @@ Provide objective tradeoff analysis and recommendation."
 
 ### Diff Review
 ```bash
-git diff main...HEAD | codex "Review these changes for:
+git diff main...HEAD | codex exec "Review these changes for:
 1. Breaking changes
 2. Security implications
 3. Performance regressions
@@ -122,7 +117,7 @@ Focus on critical issues only."
 
 ### Architecture Analysis
 ```bash
-cat src/events/**/*.ts | codex "Analyze this event handling architecture:
+cat src/events/**/*.ts | codex exec "Analyze this event handling architecture:
 1. Identify coupling issues
 2. Check for circular dependencies
 3. Evaluate error propagation
