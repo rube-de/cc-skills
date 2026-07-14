@@ -1,3 +1,10 @@
+## [2.6.2](https://github.com/rube-de/cc-skills/compare/v2.6.1...v2.6.2) (2026-07-14)
+
+
+### Bug Fixes
+
+* **council:** use codex exec for non-interactive consultant invocations ([a03a8aa](https://github.com/rube-de/cc-skills/commit/a03a8aaabe03e56396145359c9841eb550e52b96))
+
 ## [2.6.1](https://github.com/rube-de/cc-skills/compare/v2.6.0...v2.6.1) (2026-07-05)
 
 
