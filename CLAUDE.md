@@ -16,6 +16,7 @@
 | ci-review | Code Review | `/ci-review` |
 | jules-review | Code Review | `/jules-review` |
 | dlc | Quality | `/dlc`, `/dlc:security`, `/dlc:quality`, `/dlc:perf`, `/dlc:test`, `/dlc:pr-check`, `/dlc:pr-validity`, `/dlc:git-ops`, `/dlc:babysit` |
+| feature-discovery | Productivity | `/feature-discovery` |
 
 ## Navigation
 

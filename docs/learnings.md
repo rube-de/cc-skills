@@ -1363,3 +1363,25 @@ The council `codex-consultant` documented `codex "prompt"` and `codex --quiet "p
 **A second, sharper distinction surfaced by PR review on the same file: "don't force a choice" only applies to preference axes (model, effort). Safety contracts are not a preference axis.** `codex-consultant.md` promises "NEVER auto-fix or modify files," but the bare `codex exec` invocations didn't pass `--sandbox read-only` — so a caller whose global config defaults to `workspace-write` or `danger-full-access` would silently let Codex write to disk during a review the agent explicitly advertises as read-only. Leaving *model* unset respects the user's preference; leaving *sandbox* unset outsources a promise the agent file itself makes to the caller's unrelated config. Enforce contracts your own prompt states in prose at the CLI level too — prose-only enforcement is not enforcement.
 
 > Source: PR #235 (https://github.com/rube-de/cc-skills/pull/235); file: `plugins/council/agents/codex-consultant.md` (all invocations → `codex exec --sandbox read-only`, `--quiet` block removed, no model/effort pinned); cheat-sheet `plugins/council/skills/council/QUICK-REFERENCE.md`.
+
+### Reference bundled scripts from a SKILL.md body with `${CLAUDE_SKILL_DIR}`, not `${CLAUDE_PLUGIN_ROOT}`
+
+The `feature-discovery` skill instructs the model to invoke the `Workflow` tool with the bundled engine's path: `Workflow({ scriptPath: "…/scripts/feature-discovery.workflow.js" })`. The first draft used `${CLAUDE_PLUGIN_ROOT}/skills/feature-discovery/scripts/…`, copying the pattern seen in `hooks.json` and agent frontmatter across the repo. That path never resolves from a skill body: `${CLAUDE_PLUGIN_ROOT}` is a **harness-config-only** substitution (documented for `hooks.json`/`.mcp.json` command values), and it is **absent** from the skill-body substitution set. The model would have emitted the literal unexpanded `${CLAUDE_PLUGIN_ROOT}/…` string as the tool argument, the file wouldn't be found, and the skill would be dead on first use for every installed user. Static gates miss this entirely — `validate-plugins.mjs` only checks frontmatter + marketplace structure, and `node --check` only validates the engine's own syntax.
+
+**Root pattern:** the two variables live in different substitution tables. `${CLAUDE_PLUGIN_ROOT}` is expanded by the harness inside config files it processes itself; a SKILL.md body is rendered with a *different* set — `$ARGUMENTS`, `${CLAUDE_SESSION_ID}`, `${CLAUDE_EFFORT}`, `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PROJECT_DIR}`. Render-time substitution happens *before* the SKILL.md text enters the conversation, so a variable from the skill-body table reaches even non-shell contexts (tool-call argument values, `allowed-tools` frontmatter) already resolved. A variable outside that table does not.
+
+**Rule:** To hand a bundled file's path to a tool (or a shell command) from a SKILL.md body, use `${CLAUDE_SKILL_DIR}` — the directory containing that `SKILL.md` (for plugin skills, the skill's subdirectory *within* the plugin, not the plugin root). Reserve `${CLAUDE_PLUGIN_ROOT}` for `hooks.json` and agent/MCP config. Because `${CLAUDE_SKILL_DIR}` already points at the skill dir, do not re-append the `skills/<name>/` segment.
+
+**Bad pattern (harness-config variable in a skill body — emitted literally, file not found):**
+```
+Workflow({ scriptPath: "${CLAUDE_PLUGIN_ROOT}/skills/feature-discovery/scripts/feature-discovery.workflow.js", … })
+```
+
+**Good pattern (skill-body variable, resolves at render time before the model emits the arg):**
+```
+Workflow({ scriptPath: "${CLAUDE_SKILL_DIR}/scripts/feature-discovery.workflow.js", … })
+```
+
+Corollary: `allowed-tools` is additive pre-approval, never a block — a misspelled tool name there triggers a permission prompt rather than silently failing, so it won't manifest as a "dead skill." The dead-skill failure mode comes from the path variable, not the tool list.
+
+> Source: `feature-discovery` plugin port (SKILL.md `scripts/feature-discovery.workflow.js` invocation); verified against Claude Code skills reference (`code.claude.com/docs/en/skills.md`, `plugins-reference.md`).

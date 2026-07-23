@@ -208,6 +208,26 @@
         "git-ops",
         "github-issues"
       ]
+    },
+    {
+      "name": "feature-discovery",
+      "description": "Discover what to build next: map the current product from its repo, research competitors, ideate across value lenses, dedup and shortlist, then spec and adversarially validate a ranked roadmap via a deterministic multi-agent Workflow pipeline",
+      "version": "2.6.2",
+      "source": "./plugins/feature-discovery",
+      "category": "productivity",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "feature-discovery",
+        "roadmap",
+        "product-strategy",
+        "competitor-analysis",
+        "gap-analysis",
+        "ideation",
+        "feature-spec"
+      ]
     }
   ]
 }
