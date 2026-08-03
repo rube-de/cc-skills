@@ -191,8 +191,8 @@ if (includeCompetitors) {
 
 const ground = await parallel(groundThunks)
 const inventory = ground[0]
-if (!inventory) {
-  log('Product mapping failed - cannot ground ideation. Aborting.')
+if (!inventory || !inventory.features || !inventory.features.length) {
+  log('Product mapping failed or returned no features - cannot ground ideation. Aborting.')
   return { error: 'product-mapping-failed' }
 }
 
@@ -241,7 +241,11 @@ const emphasis = !hasCompetitorData
 
 // ---- Phase 2: Ideate ------------------------------------------------------
 phase('Ideate')
-const groundContext = boundedJson({ inventory, competitors: competitorResults })
+// Bound inventory and competitor data independently, not as one combined
+// blob - a large inventory alone can exceed MAX_CONTEXT_CHARS and truncate
+// before the competitors key is ever serialized, silently zeroing out
+// competitor evidence even when hasCompetitorData is true.
+const groundContext = `Inventory: ${boundedJson(inventory)}\nCompetitor research: ${boundedJson(competitorResults)}`
 
 const ideaResults = await parallel(LENSES.map((lens) => () => agent(
   `${CONTEXT}\n\nGround truth (current-product inventory + competitor research):\n${groundContext}\n\nYou are a PRODUCT IDEATOR working the "${lens.name}" lens: ${lens.brief}\n\n${emphasis}\n\nPropose new, value-adding features or improvements through this lens. Rules: never propose anything the inventory shows already exists; ground every idea in either a concrete product gap or a named competitor precedent; prefer depth and specificity over a long list of shallow ideas. For each idea give: title, description, the lens, the user-value hypothesis, the evidence (the gap or competitor it comes from), and a rough effort estimate (S, M, or L).`,
