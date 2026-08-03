@@ -60,7 +60,7 @@ const PRODUCT = product
   ? `The product is: ${product}.`
   : 'The product is the one built in the current repository; infer what it is from the code, README, and docs.'
 
-const CONTEXT = `${PRODUCT} Its source code is the current working directory. Map what it does from the repo: entry points and routes, data models, content, services, config, and docs. If a connected MCP server or CLI exposes live product data, you may call it to inspect real usage.`
+const CONTEXT = `${PRODUCT} Its source code is the current working directory. Map what it does from the repo: entry points and routes, data models, content, services, config, and docs. If a connected MCP server or CLI exposes live product data, you may make read-only calls to inspect real usage - never call anything that creates, modifies, deletes, or sends.`
 
 const ALL_LENSES = [
   { key: 'discoverability', name: 'Discoverability & acquisition', brief: 'how people and AI agents find the product and its content: search, SEO, structured data, machine-readable surfaces, integrations, shareable and programmatic access.' },
@@ -75,6 +75,18 @@ const ALL_LENSES = [
 const LENSES = depth === 'quick' ? ALL_LENSES.slice(0, 4) : ALL_LENSES
 const SEGMENT_COUNT = depth === 'quick' ? 2 : 4
 const SHORTLIST_TARGET = depth === 'quick' ? '5-6' : '8-12'
+
+// Large collection payloads (inventory, competitor research, raw ideas, specced
+// results) get re-embedded into many downstream prompts - every ideator lens,
+// every spec/validate pipeline stage - so an unbounded JSON.stringify compounds
+// token cost across the fan-out. Cap each at a fixed character budget instead.
+const MAX_CONTEXT_CHARS = 12000
+const boundedJson = (value) => {
+  const json = JSON.stringify(value)
+  return json.length > MAX_CONTEXT_CHARS
+    ? `${json.slice(0, MAX_CONTEXT_CHARS)}\n...(truncated, ${json.length} chars total)`
+    : json
+}
 
 // ---- Schemas --------------------------------------------------------------
 const INVENTORY_SCHEMA = {
@@ -192,7 +204,7 @@ const competitorResults = segments.length
 
 // ---- Phase 2: Ideate ------------------------------------------------------
 phase('Ideate')
-const groundContext = JSON.stringify({ inventory, competitors: competitorResults })
+const groundContext = boundedJson({ inventory, competitors: competitorResults })
 
 const ideaResults = await parallel(LENSES.map((lens) => () => agent(
   `${CONTEXT}\n\nGround truth (current-product inventory + competitor research):\n${groundContext}\n\nYou are a PRODUCT IDEATOR working the "${lens.name}" lens: ${lens.brief}\n\n${emphasis}\n\nPropose new, value-adding features or improvements through this lens. Rules: never propose anything the inventory shows already exists; ground every idea in either a concrete product gap or a named competitor precedent; prefer depth and specificity over a long list of shallow ideas. For each idea give: title, description, the lens, the user-value hypothesis, the evidence (the gap or competitor it comes from), and a rough effort estimate (S, M, or L).`,
@@ -209,7 +221,7 @@ if (!allIdeas.length) {
 // ---- Phase 3: Shortlist (barrier: needs every idea at once to dedup) ------
 phase('Shortlist')
 const shortlist = await agent(
-  `${CONTEXT}\n\nHere are ${allIdeas.length} candidate ideas from parallel ideators across different lenses:\n${JSON.stringify(allIdeas)}\n\nCurrent-product inventory:\n${JSON.stringify(inventory)}\n\nYou are the CURATOR. Merge duplicate and near-duplicate ideas into single consolidated items. Remove anything that already exists or is trivial. Rank the survivors by value-to-effort and select the TOP ${SHORTLIST_TARGET} for full speccing. For each selected item return: a clear title, a merged description, why it matters (value), rough effort, and the supporting evidence (gaps and/or competitors).`,
+  `${CONTEXT}\n\nHere are ${allIdeas.length} candidate ideas from parallel ideators across different lenses:\n${boundedJson(allIdeas)}\n\nCurrent-product inventory:\n${boundedJson(inventory)}\n\nYou are the CURATOR. Merge duplicate and near-duplicate ideas into single consolidated items. Remove anything that already exists or is trivial. Rank the survivors by value-to-effort and select the TOP ${SHORTLIST_TARGET} for full speccing. For each selected item return: a clear title, a merged description, why it matters (value), rough effort, and the supporting evidence (gaps and/or competitors).`,
   { label: 'curate:shortlist', phase: 'Shortlist', schema: SHORTLIST_SCHEMA },
 )
 
@@ -222,7 +234,7 @@ log(`${features.length} features shortlisted for spec + validation`)
 
 // ---- Phase 4: Spec + adversarial validate (pipeline, per feature) --------
 phase('Spec & Validate')
-const invJson = JSON.stringify(inventory)
+const invJson = boundedJson(inventory)
 const specced = await pipeline(
   features,
   (f) => agent(
@@ -244,7 +256,7 @@ if (!clean.length) {
 // ---- Phase 5: Synthesize --------------------------------------------------
 phase('Synthesize')
 const report = await agent(
-  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${JSON.stringify(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) key gaps found, split into internal gaps and gaps versus competitors; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
+  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\nSpecced & validated features: ${boundedJson(clean)}\n\nStructure the report as: (1) a short executive summary; (2) key gaps found, split into internal gaps and gaps versus competitors; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
 

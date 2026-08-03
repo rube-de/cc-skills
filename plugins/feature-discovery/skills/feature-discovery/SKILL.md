@@ -22,7 +22,7 @@ allowed-tools:
   - AskUserQuestion
 metadata:
   author: rube-de
-  version: "1.0"
+  version: "1.0.0"
 ---
 
 # Feature discovery
