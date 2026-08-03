@@ -1385,3 +1385,36 @@ Workflow({ scriptPath: "${CLAUDE_SKILL_DIR}/scripts/feature-discovery.workflow.j
 Corollary: `allowed-tools` is additive pre-approval, never a block — a misspelled tool name there triggers a permission prompt rather than silently failing, so it won't manifest as a "dead skill." The dead-skill failure mode comes from the path variable, not the tool list.
 
 > Source: `feature-discovery` plugin port (SKILL.md `scripts/feature-discovery.workflow.js` invocation); verified against Claude Code skills reference (`code.claude.com/docs/en/skills.md`, `plugins-reference.md`).
+
+### Guard every fan-out result before the next phase consumes it - a happy-path return isn't proof the data is real
+
+`feature-discovery.workflow.js`'s 5-phase pipeline fans out N agents per phase (7 ideators, up to 12 spec+validate pairs) and feeds each phase's output into the next. Across three rounds of PR review, five distinct instances of the same root bug surfaced: a phase's output could be empty, falsy, or silently truncated, and the next phase would still run on it and still return a success-shaped `{ report, meta, counts }` object - no `error` key, just a degraded or invented result.
+
+- Empty ideation (`allIdeas.length === 0`) still invoked the curator, which could invent a shortlist from the inventory rather than report the failure.
+- A validator's `.then((v) => ({ feature: f, spec, verdict: v }))` wrapped even a falsy `v` in a truthy object, so `specced.filter(Boolean)` never dropped a failed validation - the `empty-validated-results` guard added to catch "every validator failed" couldn't fire, because the array was never actually empty.
+- A `scope: 'competitor'` run whose segment planner failed silently fell back to a mixed/internal-shaped run while still telling ideators to "focus on competitor capabilities" and the synthesizer to "report gaps versus competitors" - producing a report that either omits the requested analysis or invents unsupported competitor evidence.
+- A malformed-JSON `args` string was caught and coerced to `{}`, so both `scope` and `depth` silently took their valid defaults and bypassed the `invalid-args` contract built specifically to catch bad input.
+- A later fix that bounded large JSON payloads at a fixed character budget (to stop token cost compounding across the fan-out) was applied uniformly, including to the two collections whose *individual items* are the thing being ranked or selected (`allIdeas` for the curator, `clean` for the synthesizer). Since items are concatenated in deterministic order, truncating the JSON string silently dropped every candidate after the cut - while the reported count (`rawIdeas`, `shortlisted`) still reflected the untruncated total. An "exhaustive" ranking then depended on array order.
+
+**Root pattern:** in a multi-phase agent pipeline, any point where one phase's output feeds the next is a place where "the call returned" and "the call returned something real and complete" are different claims. A filter like `.filter(Boolean)` or a bounding helper like `boundedJson()` can be correctness-positive for one axis (dropping a null result, capping token cost) and correctness-negative for another (silently keeping a falsy wrapper as truthy; silently keeping only the first items of a ranked collection) if applied without checking how it interacts with what downstream code assumes about completeness.
+
+**Rule:** After every fan-out or pipeline stage, verify the *substance* of the result, not just its shape - `!!result` is not "this result is usable." When adding a bounding/truncation helper to control cost, apply it only to reference/grounding context, never to a collection whose individual items are enumerated, ranked, or selected downstream; those need per-item compaction or an explicit size-aware batching strategy instead, so item *count* stays truthful even when content shrinks. When a value coming out of user input, a parse, or an agent call could be genuinely absent, present-but-empty, or present-but-wrong-shape, branch on each case explicitly and return a distinct, honestly-named `error` code for it - resist the pull to catch-and-default, which trades a loud failure for a silent, more expensive one.
+
+**Bad pattern (fan-out result trusted by shape, not substance):**
+```js
+const specced = await pipeline(features, specStage, (spec, f) =>
+  validateAgent(...).then((v) => ({ feature: f, spec, verdict: v })) // truthy wrapper even if v is falsy
+)
+const clean = specced.filter(Boolean) // never drops a failed validation
+```
+
+**Good pattern (only construct the wrapper when the inner result is real):**
+```js
+const specced = await pipeline(features, specStage, (spec, f) =>
+  validateAgent(...).then((v) => (v ? { feature: f, spec, verdict: v } : null))
+)
+const clean = specced.filter(Boolean) // now actually drops failed validations
+if (!clean.length) return { error: 'empty-validated-results', shortlisted: features.length }
+```
+
+> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 2-4; file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js` (empty-ideation guard, empty-validated-results guard + validator null-fix, competitor-research-failed guard, invalid-args-on-malformed-JSON fix, and reverting `boundedJson()` on `allIdeas`/`clean`).

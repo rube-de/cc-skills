@@ -1,3 +1,8 @@
+// The Workflow harness statically extracts this `meta` object from source text
+// and executes the rest of this file's body inside its own async wrapper - it
+// does not load this file as a plain Node ES module. The `export` keyword above
+// and the top-level `await`/`return` further down are both legal only under
+// that harness-specific execution model, not under `node script.js`.
 export const meta = {
   name: 'feature-discovery',
   description:
@@ -24,12 +29,14 @@ export const meta = {
 // `args` can cross the Workflow tool boundary as an already-parsed object or as
 // a JSON string (harness-dependent). Normalize to an object so scope/depth are
 // honored rather than silently falling back to the expensive exhaustive default.
-const ARGS =
+const parsedArgs =
   typeof args === 'string'
-    ? (() => { try { return JSON.parse(args) || {} } catch { return {} } })()
-    : typeof args === 'undefined'
-      ? {}
-      : (args || {})
+    ? (() => { try { return { ok: true, value: JSON.parse(args) } } catch { return { ok: false } } })()
+    : { ok: true, value: typeof args === 'undefined' ? {} : (args || {}) }
+if (!parsedArgs.ok) {
+  return { error: 'invalid-args', reason: 'malformed-json-args' }
+}
+const ARGS = parsedArgs.value || {}
 const product = ARGS.product || ''
 
 const VALID_SCOPES = ['mixed', 'internal', 'competitor']
@@ -193,7 +200,13 @@ if (!inventory) {
 }
 
 const segments = includeCompetitors && ground[1] && ground[1].segments ? ground[1].segments : []
-if (includeCompetitors && !segments.length) log('Segment planner returned nothing - proceeding without competitor research.')
+if (includeCompetitors && !segments.length) {
+  if (scope === 'competitor') {
+    log('Segment planner returned nothing for a competitor-focused run - aborting rather than reporting on missing competitor data.')
+    return { error: 'competitor-research-failed' }
+  }
+  log('Segment planner returned nothing - proceeding without competitor research.')
+}
 
 const competitorResults = segments.length
   ? (await parallel(segments.map((seg) => () => agent(
@@ -201,6 +214,15 @@ const competitorResults = segments.length
       { label: `competitor:${seg.key}`, phase: 'Ground', schema: COMPETITOR_SCHEMA },
     )))).filter(Boolean)
   : []
+
+// Segments planned but every analyst still failed (e.g. WebSearch/WebFetch not
+// pre-approved in the session - Workflow sub-agents run in the background and
+// can't prompt for tool approval). Same failure mode as the segment-planning
+// guard above, just one step later in the pipeline.
+if (scope === 'competitor' && includeCompetitors && segments.length && !competitorResults.length) {
+  log('Competitor research produced no results for a competitor-focused run - aborting rather than reporting on missing data.')
+  return { error: 'competitor-research-failed' }
+}
 
 // ---- Phase 2: Ideate ------------------------------------------------------
 phase('Ideate')
@@ -221,7 +243,7 @@ if (!allIdeas.length) {
 // ---- Phase 3: Shortlist (barrier: needs every idea at once to dedup) ------
 phase('Shortlist')
 const shortlist = await agent(
-  `${CONTEXT}\n\nHere are ${allIdeas.length} candidate ideas from parallel ideators across different lenses:\n${boundedJson(allIdeas)}\n\nCurrent-product inventory:\n${boundedJson(inventory)}\n\nYou are the CURATOR. Merge duplicate and near-duplicate ideas into single consolidated items. Remove anything that already exists or is trivial. Rank the survivors by value-to-effort and select the TOP ${SHORTLIST_TARGET} for full speccing. For each selected item return: a clear title, a merged description, why it matters (value), rough effort, and the supporting evidence (gaps and/or competitors).`,
+  `${CONTEXT}\n\nHere are ${allIdeas.length} candidate ideas from parallel ideators across different lenses:\n${JSON.stringify(allIdeas)}\n\nCurrent-product inventory:\n${boundedJson(inventory)}\n\nYou are the CURATOR. Merge duplicate and near-duplicate ideas into single consolidated items. Remove anything that already exists or is trivial. Rank the survivors by value-to-effort and select the TOP ${SHORTLIST_TARGET} for full speccing. For each selected item return: a clear title, a merged description, why it matters (value), rough effort, and the supporting evidence (gaps and/or competitors).`,
   { label: 'curate:shortlist', phase: 'Shortlist', schema: SHORTLIST_SCHEMA },
 )
 
@@ -256,7 +278,7 @@ if (!clean.length) {
 // ---- Phase 5: Synthesize --------------------------------------------------
 phase('Synthesize')
 const report = await agent(
-  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\nSpecced & validated features: ${boundedJson(clean)}\n\nStructure the report as: (1) a short executive summary; (2) key gaps found, split into internal gaps and gaps versus competitors; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
+  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) key gaps found, split into internal gaps and gaps versus competitors; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
 

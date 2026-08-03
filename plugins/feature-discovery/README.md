@@ -17,7 +17,10 @@ idea traces to a concrete product gap or a named competitor feature.
 Requires the **Workflow** tool (multi-agent orchestration). Invoking the skill is
 your opt-in to a heavyweight fan-out of roughly 35-40 sub-agents at exhaustive
 depth. If the Workflow tool is unavailable in your environment, the skill cannot
-run.
+run. For `scope: competitor` or `mixed` runs, your session also needs `WebSearch`
+and `WebFetch` available - Workflow sub-agents run in the background and can't
+prompt for tool approval, so competitor research fails loudly (`competitor-research-failed`)
+rather than silently if those tools aren't pre-approved.
 
 ## Installation
 
