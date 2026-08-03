@@ -19,8 +19,11 @@ your opt-in to a heavyweight fan-out of roughly 35-40 sub-agents at exhaustive
 depth. If the Workflow tool is unavailable in your environment, the skill cannot
 run. For `scope: competitor` or `mixed` runs, your session also needs `WebSearch`
 and `WebFetch` available - Workflow sub-agents run in the background and can't
-prompt for tool approval, so competitor research fails loudly (`competitor-research-failed`)
-rather than silently if those tools aren't pre-approved.
+prompt for tool approval. A `competitor`-scoped run fails loudly
+(`competitor-research-failed`) if those tools aren't pre-approved, since it has
+no fallback without competitor data. A `mixed`-scoped run degrades gracefully
+instead, falling back to an internal-only framing rather than asking for
+competitor precedent that isn't there.
 
 ## Installation
 

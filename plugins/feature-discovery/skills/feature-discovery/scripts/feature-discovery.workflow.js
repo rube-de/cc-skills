@@ -29,14 +29,17 @@ export const meta = {
 // `args` can cross the Workflow tool boundary as an already-parsed object or as
 // a JSON string (harness-dependent). Normalize to an object so scope/depth are
 // honored rather than silently falling back to the expensive exhaustive default.
+const isPlainArgsObject = (v) => typeof v === 'object' && v !== null && !Array.isArray(v)
+
 const parsedArgs =
   typeof args === 'string'
     ? (() => { try { return { ok: true, value: JSON.parse(args) } } catch { return { ok: false } } })()
-    : { ok: true, value: typeof args === 'undefined' ? {} : (args || {}) }
-if (!parsedArgs.ok) {
+    : { ok: true, value: typeof args === 'undefined' ? {} : args }
+
+if (!parsedArgs.ok || !isPlainArgsObject(parsedArgs.value)) {
   return { error: 'invalid-args', reason: 'malformed-json-args' }
 }
-const ARGS = parsedArgs.value || {}
+const ARGS = parsedArgs.value
 const product = ARGS.product || ''
 
 const VALID_SCOPES = ['mixed', 'internal', 'competitor']
@@ -56,12 +59,6 @@ const scope = rawScope
 const depth = rawDepth
 
 const includeCompetitors = scope !== 'internal'
-const emphasis =
-  scope === 'internal'
-    ? 'Focus ideas on gaps in the existing product.'
-    : scope === 'competitor'
-      ? 'Focus ideas on capabilities competitors have that this product lacks.'
-      : 'Draw ideas from a balanced mix of internal gaps and competitor precedent.'
 
 const PRODUCT = product
   ? `The product is: ${product}.`
@@ -215,14 +212,32 @@ const competitorResults = segments.length
     )))).filter(Boolean)
   : []
 
-// Segments planned but every analyst still failed (e.g. WebSearch/WebFetch not
-// pre-approved in the session - Workflow sub-agents run in the background and
-// can't prompt for tool approval). Same failure mode as the segment-planning
-// guard above, just one step later in the pipeline.
-if (scope === 'competitor' && includeCompetitors && segments.length && !competitorResults.length) {
-  log('Competitor research produced no results for a competitor-focused run - aborting rather than reporting on missing data.')
+// A truthy per-segment result can still carry zero competitors (the schema
+// allows `{ competitors: [] }`), so count the flattened total rather than just
+// how many analyst calls returned something.
+const competitorCount = competitorResults.reduce((sum, r) => sum + ((r && r.competitors) || []).length, 0)
+const hasCompetitorData = competitorCount > 0
+
+// Segments planned but every analyst still failed or returned nothing usable
+// (e.g. WebSearch/WebFetch not pre-approved in the session - Workflow
+// sub-agents run in the background and can't prompt for tool approval). Same
+// failure mode as the segment-planning guard above, just one step later. Only
+// `competitor` scope hard-fails here - it has no fallback framing without
+// competitor data. `mixed` degrades gracefully via `emphasis` below instead.
+if (scope === 'competitor' && includeCompetitors && segments.length && !hasCompetitorData) {
+  log('Competitor research produced no usable results for a competitor-focused run - aborting rather than reporting on missing data.')
   return { error: 'competitor-research-failed' }
 }
+
+// Emphasis depends on whether competitor research actually produced data, not
+// just on the requested scope - a mixed run with no competitor data falls back
+// to internal-only framing instead of asking ideators for competitor precedent
+// that doesn't exist.
+const emphasis = !hasCompetitorData
+  ? 'Focus ideas on gaps in the existing product.'
+  : scope === 'competitor'
+    ? 'Focus ideas on capabilities competitors have that this product lacks.'
+    : 'Draw ideas from a balanced mix of internal gaps and competitor precedent.'
 
 // ---- Phase 2: Ideate ------------------------------------------------------
 phase('Ideate')
@@ -277,8 +292,11 @@ if (!clean.length) {
 
 // ---- Phase 5: Synthesize --------------------------------------------------
 phase('Synthesize')
+const gapsInstruction = hasCompetitorData
+  ? 'key gaps found, split into internal gaps and gaps versus competitors'
+  : 'key gaps found in the existing product (no competitor research was available for this run)'
 const report = await agent(
-  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) key gaps found, split into internal gaps and gaps versus competitors; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
+  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
 

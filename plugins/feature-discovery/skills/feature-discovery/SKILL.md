@@ -88,8 +88,9 @@ does (see
    It runs in the background and returns `{ report, meta, counts }`, where `report`
    is finished Markdown.
 3. If the result has an `error` key - currently `invalid-args`, `product-mapping-failed`,
-   `empty-ideation`, `empty-shortlist`, `empty-validated-results`, or `synthesis-failed`,
-   though the script may add others later - treat it as a failed run: say so plainly
+   `competitor-research-failed`, `empty-ideation`, `empty-shortlist`,
+   `empty-validated-results`, or `synthesis-failed`, though the script may add others
+   later - treat it as a failed run: say so plainly
    with the error code and offer to rerun. Any `error` key short-circuits processing;
    never extract `report` or `counts` from an error result, including codes not listed
    here.
