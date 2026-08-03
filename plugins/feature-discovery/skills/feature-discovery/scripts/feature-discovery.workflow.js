@@ -24,15 +24,20 @@ export const meta = {
 // `args` can cross the Workflow tool boundary as an already-parsed object or as
 // a JSON string (harness-dependent). Normalize to an object so scope/depth are
 // honored rather than silently falling back to the expensive exhaustive default.
-const ARGS = typeof args === 'string'
-  ? (() => { try { return JSON.parse(args) || {} } catch { return {} } })()
-  : (args || {})
+const ARGS =
+  typeof args === 'string'
+    ? (() => { try { return JSON.parse(args) || {} } catch { return {} } })()
+    : typeof args === 'undefined'
+      ? {}
+      : (args || {})
 const product = ARGS.product || ''
 
 const VALID_SCOPES = ['mixed', 'internal', 'competitor']
 const VALID_DEPTHS = ['exhaustive', 'quick']
-const rawScope = String(ARGS.scope || 'mixed').trim().toLowerCase()
-const rawDepth = String(ARGS.depth || 'exhaustive').trim().toLowerCase()
+const scopeInput = ARGS.scope === undefined ? 'mixed' : ARGS.scope
+const depthInput = ARGS.depth === undefined ? 'exhaustive' : ARGS.depth
+const rawScope = typeof scopeInput === 'string' ? scopeInput.trim().toLowerCase() : ''
+const rawDepth = typeof depthInput === 'string' ? depthInput.trim().toLowerCase() : ''
 if (!VALID_SCOPES.includes(rawScope) || !VALID_DEPTHS.includes(rawDepth)) {
   return {
     error: 'invalid-args',
@@ -196,6 +201,10 @@ const ideaResults = await parallel(LENSES.map((lens) => () => agent(
 
 const allIdeas = ideaResults.filter(Boolean).flatMap((r) => (r && r.ideas) || [])
 log(`${allIdeas.length} raw ideas from ${LENSES.length} lenses`)
+if (!allIdeas.length) {
+  log('No ideas survived ideation - cannot curate a shortlist. Aborting.')
+  return { error: 'empty-ideation' }
+}
 
 // ---- Phase 3: Shortlist (barrier: needs every idea at once to dedup) ------
 phase('Shortlist')
@@ -223,7 +232,7 @@ const specced = await pipeline(
   (spec, f) => agent(
     `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
     { label: `validate:${f.title}`, phase: 'Spec & Validate', schema: VERDICT_SCHEMA },
-  ).then((v) => ({ feature: f, spec, verdict: v })),
+  ).then((v) => (v ? { feature: f, spec, verdict: v } : null)),
 )
 
 const clean = specced.filter(Boolean)

@@ -87,8 +87,12 @@ does (see
    ```
    It runs in the background and returns `{ report, meta, counts }`, where `report`
    is finished Markdown.
-3. If an `error` is returned (`product-mapping-failed` or `empty-shortlist`), say so
-   plainly and offer to rerun - do not present a half-report.
+3. If the result has an `error` key - currently `invalid-args`, `product-mapping-failed`,
+   `empty-ideation`, `empty-shortlist`, `empty-validated-results`, or `synthesis-failed`,
+   though the script may add others later - treat it as a failed run: say so plainly
+   with the error code and offer to rerun. Any `error` key short-circuits processing;
+   never extract `report` or `counts` from an error result, including codes not listed
+   here.
 4. Lead in chat with the executive summary and the ranked roadmap table from
    `report`, then report the `counts` funnel (raw ideas / shortlisted / specced) so
    the user can see how the funnel narrowed.
