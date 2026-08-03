@@ -1,7 +1,7 @@
 # feature-discovery
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
+[![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)](https://docs.anthropic.com/en/docs/claude-code)
 
 Turns "what should we build next?" into a researched, ranked roadmap instead of one
 agent guessing. Fans out a deterministic multi-agent Workflow that maps the current

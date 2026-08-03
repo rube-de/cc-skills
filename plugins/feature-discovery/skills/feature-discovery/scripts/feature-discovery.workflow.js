@@ -28,8 +28,21 @@ const ARGS = typeof args === 'string'
   ? (() => { try { return JSON.parse(args) || {} } catch { return {} } })()
   : (args || {})
 const product = ARGS.product || ''
-const scope = ARGS.scope || 'mixed'
-const depth = ARGS.depth || 'exhaustive'
+
+const VALID_SCOPES = ['mixed', 'internal', 'competitor']
+const VALID_DEPTHS = ['exhaustive', 'quick']
+const rawScope = String(ARGS.scope || 'mixed').trim().toLowerCase()
+const rawDepth = String(ARGS.depth || 'exhaustive').trim().toLowerCase()
+if (!VALID_SCOPES.includes(rawScope) || !VALID_DEPTHS.includes(rawDepth)) {
+  return {
+    error: 'invalid-args',
+    allowed: { scope: VALID_SCOPES, depth: VALID_DEPTHS },
+    received: { scope: ARGS.scope, depth: ARGS.depth },
+  }
+}
+const scope = rawScope
+const depth = rawDepth
+
 const includeCompetitors = scope !== 'internal'
 const emphasis =
   scope === 'internal'
@@ -131,7 +144,7 @@ const VERDICT_SCHEMA = {
   type: 'object',
   properties: {
     verdict: { type: 'string', enum: ['build', 'maybe', 'drop'] },
-    confidence: { type: 'number' },
+    confidence: { type: 'number', minimum: 1, maximum: 10 },
     objections: { type: 'array', items: { type: 'string' } },
     refinements: { type: 'array', items: { type: 'string' } },
   },
@@ -214,6 +227,10 @@ const specced = await pipeline(
 )
 
 const clean = specced.filter(Boolean)
+if (!clean.length) {
+  log('No features survived spec + validation. Aborting before synthesis.')
+  return { error: 'empty-validated-results', shortlisted: features.length }
+}
 
 // ---- Phase 5: Synthesize --------------------------------------------------
 phase('Synthesize')
@@ -221,6 +238,11 @@ const report = await agent(
   `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${JSON.stringify(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) key gaps found, split into internal gaps and gaps versus competitors; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
+
+if (!report) {
+  log('Synthesizer failed to produce a report. Aborting.')
+  return { error: 'synthesis-failed', counts: { rawIdeas: allIdeas.length, shortlisted: features.length, specced: clean.length } }
+}
 
 return {
   report,
