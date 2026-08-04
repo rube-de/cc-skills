@@ -119,9 +119,14 @@ const MAX_CONTEXT_CHARS = 12000
 // realistic perSegmentBudget) instead of another size-dependent edge case.
 const MAX_FIELD_CHARS = 200
 const truncateField = (s) => (typeof s === 'string' && s.length > MAX_FIELD_CHARS ? `${s.slice(0, MAX_FIELD_CHARS)}...` : s)
+// Reconstructed explicitly from only the known COMPETITOR_SCHEMA item fields
+// (same reasoning as the segment wrapper below) - COMPETITOR_SCHEMA doesn't
+// forbid additional properties on a competitor, so spreading `...c` back in
+// would leave any oversized extra field completely uncapped regardless of
+// how well the known fields are truncated.
 const compactCompetitor = (c) => {
   const cap = (arr) => ((arr && arr.length > 3 ? arr.slice(0, 3) : arr) || []).map(truncateField)
-  return { ...c, name: truncateField(c.name), url: truncateField(c.url), whatItIs: truncateField(c.whatItIs), notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+  return { name: truncateField(c.name), url: truncateField(c.url), whatItIs: truncateField(c.whatItIs), notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
 }
 const boundedCompetitorJson = (results) => {
   if (!results.length) return '[]'
