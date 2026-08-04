@@ -125,7 +125,18 @@ const truncateField = (s) => (typeof s === 'string' && s.length > MAX_FIELD_CHAR
 // would leave any oversized extra field completely uncapped regardless of
 // how well the known fields are truncated.
 const compactCompetitor = (c) => {
-  const cap = (arr) => ((arr && arr.length > 3 ? arr.slice(0, 3) : arr) || []).map(truncateField)
+  // Blindly slicing the first 3 entries can drop the only nonblank one if it
+  // isn't among them (e.g. ["", " ", "", "actual capability"]) - the same
+  // hasSubstance check downstream still sees the full unbounded array and
+  // reports the track as usable, while compaction silently kept only filler.
+  // Prioritize nonblank entries so real evidence survives capping first.
+  const isSubstantive = (s) => typeof s === 'string' && s.trim().length > 0
+  const cap = (arr) => {
+    const list = arr || []
+    const substantive = list.filter(isSubstantive)
+    const filler = list.filter((s) => !isSubstantive(s))
+    return [...substantive, ...filler].slice(0, 3).map(truncateField)
+  }
   return { name: truncateField(c.name), url: truncateField(c.url), whatItIs: truncateField(c.whatItIs), notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
 }
 const boundedCompetitorJson = (results) => {
@@ -197,10 +208,17 @@ const COMPETITOR_SCHEMA = {
   required: ['competitors'],
 }
 
+// maxItems bounds ideas per lens at the source - unlike allIdeas/clean
+// (ranked/selected collections downstream that must never be
+// character-truncated, see docs/learnings.md), this caps how many ideas a
+// single ideator can generate in the first place, so the curator's prompt
+// can't be blown up by one over-eager lens without ever needing to drop an
+// already-generated candidate.
+const MAX_IDEAS_PER_LENS = 10
 const IDEAS_SCHEMA = {
   type: 'object',
   properties: {
-    ideas: { type: 'array', items: { type: 'object', properties: {
+    ideas: { type: 'array', maxItems: MAX_IDEAS_PER_LENS, items: { type: 'object', properties: {
       title: { type: 'string' }, description: { type: 'string' }, lens: { type: 'string' },
       valueHypothesis: { type: 'string' }, evidence: { type: 'string' }, effort: { type: 'string', enum: ['S', 'M', 'L'] },
     }, required: ['title', 'description', 'lens', 'valueHypothesis', 'evidence', 'effort'] } },
