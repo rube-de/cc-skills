@@ -174,15 +174,21 @@ const boundedCompetitorJson = (results) => {
 }
 
 // ---- Schemas --------------------------------------------------------------
+// No maxItems on any array here - features/dataTypes/interfaces/gaps entries
+// must never be dropped, or ideators would silently lose novelty-check
+// grounding (see the groundContext comment below). maxLength on individual
+// string fields is safe though: it bounds per-entry verbosity without
+// hiding any entry's existence, capping the cost this inventory adds across
+// the ~30 downstream agent calls it gets embedded into.
 const INVENTORY_SCHEMA = {
   type: 'object',
   properties: {
-    features: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, description: { type: 'string' }, files: { type: 'array', items: { type: 'string' } } }, required: ['name', 'description'] } },
-    dataTypes: { type: 'array', items: { type: 'object', properties: { name: { type: 'string' }, fields: { type: 'array', items: { type: 'string' } }, notes: { type: 'string' } }, required: ['name'] } },
-    interfaces: { type: 'array', items: { type: 'string' } },
-    gaps: { type: 'array', items: { type: 'string' } },
+    features: { type: 'array', items: { type: 'object', properties: { name: { type: 'string', maxLength: 100 }, description: { type: 'string', maxLength: 300 }, files: { type: 'array', items: { type: 'string', maxLength: 200 } } }, required: ['name', 'description'] } },
+    dataTypes: { type: 'array', items: { type: 'object', properties: { name: { type: 'string', maxLength: 100 }, fields: { type: 'array', items: { type: 'string', maxLength: 100 } }, notes: { type: 'string', maxLength: 300 } }, required: ['name'] } },
+    interfaces: { type: 'array', items: { type: 'string', maxLength: 200 } },
+    gaps: { type: 'array', items: { type: 'string', maxLength: 300 } },
   },
-  required: ['features', 'gaps'],
+  required: ['features', 'dataTypes', 'interfaces', 'gaps'],
 }
 
 const SEGMENTS_SCHEMA = {
@@ -235,8 +241,8 @@ const SHORTLIST_SCHEMA = {
   type: 'object',
   properties: {
     features: { type: 'array', maxItems: SHORTLIST_MAX, items: { type: 'object', properties: {
-      title: { type: 'string' }, description: { type: 'string' }, value: { type: 'string' },
-      effort: { type: 'string' }, evidence: { type: 'string' },
+      title: { type: 'string', pattern: '\\S' }, description: { type: 'string', pattern: '\\S' }, value: { type: 'string', pattern: '\\S' },
+      effort: { type: 'string', pattern: '\\S' }, evidence: { type: 'string', pattern: '\\S' },
     }, required: ['title', 'description', 'value', 'effort', 'evidence'] } },
   },
   required: ['features'],
@@ -348,10 +354,13 @@ const emphasis = !hasCompetitorData
 // ---- Phase 2: Ideate ------------------------------------------------------
 phase('Ideate')
 // Inventory is a single mapped object, reused as-is everywhere below - unlike
-// competitor/idea/feature collections it doesn't grow with fan-out, so it is
-// never bounded: truncating it would silently hide already-built features
-// from novelty checks in every downstream phase. Only competitor research
-// (which grows with segment count) gets a character budget here.
+// competitor/idea/feature collections it doesn't grow with fan-out, so its
+// entry count is never bounded post-hoc here: truncating the serialized
+// object would silently hide already-built features from novelty checks in
+// every downstream phase. Per-field verbosity IS bounded, at the source, via
+// INVENTORY_SCHEMA's maxLength constraints - that caps cost without dropping
+// any entry. Competitor research additionally gets a character budget here
+// since it also grows with fan-out (segment count), unlike inventory.
 const groundContext = `Inventory: ${JSON.stringify(inventory)}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}`
 
 const ideaResults = await parallel(LENSES.map((lens) => () => agent(
