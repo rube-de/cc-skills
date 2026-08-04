@@ -310,12 +310,16 @@ if (!allIdeas.length) {
   log('No ideas survived ideation - cannot curate a shortlist. Aborting.')
   return { error: 'empty-ideation' }
 }
-// A lens whose ideator call failed is indistinguishable downstream from a
-// lens that legitimately had nothing to add - both just contribute zero
-// ideas. Note the count so the synthesizer doesn't report full lens coverage
-// it didn't actually get.
-const lensCoverageNote = successfulLenses.length < LENSES.length
-  ? ` ${LENSES.length - successfulLenses.length} of ${LENSES.length} ideation lens(es) failed to return results and were skipped - mention this gap in the executive summary rather than silently omitting it.`
+// A lens whose ideator call failed outright is indistinguishable downstream
+// from one that completed but genuinely found nothing to propose - both just
+// contribute zero ideas. A truthy `{ ideas: [] }` response still counts
+// toward successfulLenses (the call didn't fail), so it doesn't by itself
+// mean the lens is missing - only lenses that contributed zero ideas overall
+// are worth flagging as a gap, same principle as the hasSubstance filter used
+// for competitor tracks above.
+const contributingLenses = successfulLenses.filter((r) => r.ideas && r.ideas.length)
+const lensCoverageNote = contributingLenses.length < LENSES.length
+  ? ` ${LENSES.length - contributingLenses.length} of ${LENSES.length} ideation lens(es) failed to return results or found nothing to propose and are not reflected below - mention this gap in the executive summary rather than silently omitting it.`
   : ''
 
 // ---- Phase 3: Shortlist (barrier: needs every idea at once to dedup) ------
@@ -391,6 +395,13 @@ if (!report) {
 
 return {
   report,
-  meta: { product: product || '(mapped from repo)', scope, depth, competitorSegments: competitorResults.length, lenses: successfulLenses.length },
+  meta: {
+    product: product || '(mapped from repo)',
+    scope,
+    depth,
+    competitorSegmentsPlanned: segments.length,
+    competitorSegmentsCompleted: usableTrackCount,
+    lenses: contributingLenses.length,
+  },
   counts: { rawIdeas: allIdeas.length, shortlisted: features.length, specced: clean.length },
 }
