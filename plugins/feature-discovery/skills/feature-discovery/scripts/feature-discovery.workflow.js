@@ -151,7 +151,7 @@ const SHORTLIST_SCHEMA = {
     features: { type: 'array', items: { type: 'object', properties: {
       title: { type: 'string' }, description: { type: 'string' }, value: { type: 'string' },
       effort: { type: 'string' }, evidence: { type: 'string' },
-    }, required: ['title', 'description'] } },
+    }, required: ['title', 'description', 'value', 'effort', 'evidence'] } },
   },
   required: ['features'],
 }
@@ -165,7 +165,7 @@ const SPEC_SCHEMA = {
     successMetrics: { type: 'array', items: { type: 'string' } },
     openQuestions: { type: 'array', items: { type: 'string' } },
   },
-  required: ['title', 'problem', 'solution'],
+  required: ['title', 'problem', 'solution', 'userValue', 'architectureFit', 'scope', 'successMetrics', 'openQuestions'],
 }
 
 const VERDICT_SCHEMA = {
@@ -292,7 +292,7 @@ const specced = await pipeline(
   ),
   (spec, f) => spec
     ? agent(
-        `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
+        `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative - check this against the competitor research above, not just the feature's own evidence claim? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
         { label: `validate:${f.title}`, phase: 'Spec & Validate', schema: VERDICT_SCHEMA },
       ).then((v) => (v ? { feature: f, spec, verdict: v } : null))
     : null,

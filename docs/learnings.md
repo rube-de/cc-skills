@@ -1423,26 +1423,29 @@ if (!clean.length) return { error: 'empty-validated-results', shortlisted: featu
 
 `feature-discovery.workflow.js` combines `export const meta = {...}` with several top-level early-return guards (`return { error: '...' }` outside any function). Three separate reviewers, across two review rounds, flagged this as an "illegal top-level return" bug, each time citing `node --check <file>` passing as the counter-evidence that the file was fine.
 
-`node --check` passing is not that evidence. An isolated repro combining `export const x = 1` with a later top-level `return` passes `node --check` silently, but running the *same file* with plain `node <file>.js` throws `SyntaxError: Illegal return statement` - the `export` keyword triggers Node's unflagged ESM auto-detection, and top-level `return` is illegal under ESM. `node --check` does not perform (or does not act on) that same auto-detection, so it misses a syntax error that real execution would hit.
+`node --check` passing is not that evidence - **but only in the specific config this repo actually has**: a plain `.js` file with no `"type": "module"` anywhere in its package.json chain, relying on Node's *auto-detection* of ESM syntax rather than an explicit declaration. In that config (verified on Node v22.23.1 and, per a reviewer's independent check, v24.15.0), an isolated repro combining `export const x = 1` with a later top-level `return` passes `node --check` silently, but running the *same file* with plain `node <file>.js` throws `SyntaxError: Illegal return statement`. Add an explicit `"type": "module"` to package.json, though, and the gap closes - `node --check` then throws the same `SyntaxError` that real execution does, because there's no auto-detection left to do. This repo's root `package.json` has no `type` field (defaults to CommonJS) and `feature-discovery.workflow.js` has no package.json of its own, so the auto-detection gap is real for this file - but the claim is config-dependent, not a general property of `node --check`.
 
 The actual reason `feature-discovery.workflow.js` is safe has nothing to do with `node --check`: the Workflow tool statically extracts the `meta` object from source text and executes the rest of the file's body inside its own async wrapper - it never loads the file as a real Node module, so Node's ESM top-level-return restriction never applies. That claim is corroborated by the file's own history of repeated successful live Workflow-tool runs, not by any static check.
 
-**Rule:** When a harness executes a script under different rules than plain `node <file>.js` (injected globals, top-level `await`/`return`, non-standard module semantics), do not cite `node --check` passing as proof the script is valid for that harness. Build an isolated repro of the specific syntax in question and run it with real `node` execution, not just `--check`, before trusting either the code or a reviewer's "invalid syntax" claim - then document *why* the harness accepts syntax plain Node would reject, so the next reviewer with the same instinct has a real answer instead of another round of the same false positive.
+**Rule:** When a harness executes a script under different rules than plain `node <file>.js` (injected globals, top-level `await`/`return`, non-standard module semantics), do not cite `node --check` passing as proof the script is valid for that harness - and when documenting a `node --check` gap, name the Node version and the module-type config it was observed under, since `--check`'s ESM auto-detection has changed across Node versions and a `"type": "module"` declaration changes the result entirely. Build an isolated repro of the specific syntax in question and run it with real `node` execution, not just `--check`, before trusting either the code or a reviewer's "invalid syntax" claim - then document *why* the harness accepts syntax plain Node would reject, so the next reviewer with the same instinct has a real answer instead of another round of the same false positive.
 
-**Bad pattern (treating a weaker check as proof):**
+**Bad pattern (treating a weaker check as proof, no config named):**
 ```bash
 node --check feature-discovery.workflow.js   # passes
 # ...therefore the top-level `return` statements must be fine.
 ```
 
-**Good pattern (verify against the thing that actually matters):**
+**Good pattern (verify against the thing that actually matters, config stated):**
 ```bash
-# Isolated repro of the exact construct in question:
+# Isolated repro of the exact construct, in this repo's actual config
+# (plain .js, no "type": "module" anywhere in the package.json chain):
 printf 'export const x = 1\nreturn 1\n' > /tmp/repro.js
-node --check /tmp/repro.js   # passes silently - proves nothing
+node --check /tmp/repro.js   # passes silently under auto-detection - proves nothing
 node /tmp/repro.js           # SyntaxError: Illegal return statement - the real signal
+# Note: with an explicit "type": "module" in package.json, `node --check`
+# throws the same error - the gap is auto-detection-specific, not general.
 # Then explain the harness's actual execution model (static meta-extraction,
 # no real Node module load) rather than leaning on the weaker check.
 ```
 
-> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 1 and 4 (chatgpt-codex-connector, copilot-pull-request-reviewer, qodo-code-review each raised a variant of this claim); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js` (top-of-file comment documents the harness's static-extraction execution model).
+> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 1, 4, and 6 (chatgpt-codex-connector, copilot-pull-request-reviewer, and qodo-code-review each raised a variant of the underlying "illegal top-level return" claim; coderabbitai independently re-ran the repro with an explicit `"type": "module"` package.json via its own sandbox and caught the version/config-dependence this entry now documents); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js` (top-of-file comment documents the harness's static-extraction execution model).
