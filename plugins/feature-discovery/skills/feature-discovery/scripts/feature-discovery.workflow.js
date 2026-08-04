@@ -105,15 +105,26 @@ const MAX_CONTEXT_CHARS = 12000
 // while hasCompetitorData/competitorCount are computed from the full,
 // untruncated data - silently reporting success while omitting whole tracks.
 // Split the budget evenly per segment instead, so every segment keeps at
-// least a proportional share of representation.
+// least a proportional share of representation. Within a segment that still
+// exceeds its share, drop whole competitor records from the tail rather than
+// slicing the JSON string, so every record that reaches the prompt is
+// complete and parseable instead of cut off mid-record.
 const boundedCompetitorJson = (results) => {
   if (!results.length) return '[]'
   const perSegmentBudget = Math.max(1, Math.floor(MAX_CONTEXT_CHARS / results.length))
   return `[${results.map((r) => {
-    const json = JSON.stringify(r)
-    return json.length > perSegmentBudget
-      ? `${json.slice(0, perSegmentBudget)}...(truncated)`
-      : json
+    const full = JSON.stringify(r)
+    if (full.length <= perSegmentBudget) return full
+    const competitors = (r && r.competitors) || []
+    const kept = []
+    let used = 0
+    for (const c of competitors) {
+      const size = JSON.stringify(c).length + 1
+      if (used + size > perSegmentBudget) break
+      kept.push(c)
+      used += size
+    }
+    return JSON.stringify({ ...r, competitors: kept })
   }).join(', ')}]`
 }
 
@@ -282,12 +293,20 @@ const ideaResults = await parallel(LENSES.map((lens) => () => agent(
   { label: `ideate:${lens.key}`, phase: 'Ideate', schema: IDEAS_SCHEMA },
 )))
 
-const allIdeas = ideaResults.filter(Boolean).flatMap((r) => (r && r.ideas) || [])
-log(`${allIdeas.length} raw ideas from ${LENSES.length} lenses`)
+const successfulLenses = ideaResults.filter(Boolean)
+const allIdeas = successfulLenses.flatMap((r) => (r && r.ideas) || [])
+log(`${allIdeas.length} raw ideas from ${successfulLenses.length}/${LENSES.length} lenses`)
 if (!allIdeas.length) {
   log('No ideas survived ideation - cannot curate a shortlist. Aborting.')
   return { error: 'empty-ideation' }
 }
+// A lens whose ideator call failed is indistinguishable downstream from a
+// lens that legitimately had nothing to add - both just contribute zero
+// ideas. Note the count so the synthesizer doesn't report full lens coverage
+// it didn't actually get.
+const lensCoverageNote = successfulLenses.length < LENSES.length
+  ? ` ${LENSES.length - successfulLenses.length} of ${LENSES.length} ideation lens(es) failed to return results and were skipped - mention this gap in the executive summary rather than silently omitting it.`
+  : ''
 
 // ---- Phase 3: Shortlist (barrier: needs every idea at once to dedup) ------
 phase('Shortlist')
@@ -338,15 +357,20 @@ phase('Synthesize')
 // A competitor-scoped run only hard-fails when every planned track comes back
 // empty - partial completion (e.g. 1 of 4 analysts succeeding) is treated as
 // a normal success today, with nothing telling the reader how much research
-// actually landed. Surface the gap in the report instead of hiding it.
-const competitorCoverageNote = segments.length && competitorResults.length < segments.length
-  ? ` (${competitorResults.length} of ${segments.length} planned competitor tracks completed - some analyst calls failed or returned nothing)`
+// actually landed. Surface the gap in the report instead of hiding it. A
+// track only counts as completed if it produced at least one competitor with
+// real substance (the same hasSubstance check used for competitorCount above)
+// - a track that came back truthy but empty, or name-only, is not "completed"
+// research even though the analyst call itself didn't fail.
+const usableTrackCount = competitorResults.filter((r) => ((r && r.competitors) || []).some(hasSubstance)).length
+const competitorCoverageNote = segments.length && usableTrackCount < segments.length
+  ? ` (${usableTrackCount} of ${segments.length} planned competitor tracks completed - some analyst calls failed, returned nothing, or returned no substantive competitors)`
   : ''
 const gapsInstruction = hasCompetitorData
   ? `key gaps found, split into internal gaps and gaps versus competitors${competitorCoverageNote}`
   : 'key gaps found in the existing product (no competitor research was available for this run)'
 const report = await agent(
-  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary${specCoverageNote}; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
+  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary${specCoverageNote}${lensCoverageNote}; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
 
@@ -357,6 +381,6 @@ if (!report) {
 
 return {
   report,
-  meta: { product: product || '(mapped from repo)', scope, depth, competitorSegments: competitorResults.length, lenses: LENSES.length },
+  meta: { product: product || '(mapped from repo)', scope, depth, competitorSegments: competitorResults.length, lenses: successfulLenses.length },
   counts: { rawIdeas: allIdeas.length, shortlisted: features.length, specced: clean.length },
 }
