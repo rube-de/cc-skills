@@ -147,7 +147,13 @@ const boundedCompetitorJson = (results) => {
       kept.push(candidate)
       used += size
     }
-    return JSON.stringify({ ...r, competitors: kept })
+    // Spreading `...r` back in preserves competitors' bound but leaves every
+    // OTHER field on the wrapper (e.g. `segment`, or any additional
+    // schema-allowed property) completely unbounded - a single oversized
+    // `segment` string alone can blow the budget regardless of how well
+    // `competitors` is capped. Rebuild explicitly from only the known,
+    // capped fields instead of spreading whatever the agent returned.
+    return JSON.stringify({ segment: truncateField(r && r.segment), competitors: kept })
   }).join(', ')}]`
 }
 
@@ -213,8 +219,8 @@ const SPEC_SCHEMA = {
   properties: {
     title: { type: 'string' }, problem: { type: 'string' }, solution: { type: 'string' },
     userValue: { type: 'string' }, architectureFit: { type: 'string' },
-    scope: { type: 'array', minItems: 1, items: { type: 'string' } },
-    successMetrics: { type: 'array', minItems: 1, items: { type: 'string' } },
+    scope: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
+    successMetrics: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
     openQuestions: { type: 'array', items: { type: 'string' } },
   },
   required: ['title', 'problem', 'solution', 'userValue', 'architectureFit', 'scope', 'successMetrics', 'openQuestions'],
