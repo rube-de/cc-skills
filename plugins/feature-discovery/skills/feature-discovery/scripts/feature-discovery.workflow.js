@@ -109,14 +109,19 @@ const MAX_CONTEXT_CHARS = 12000
 // exceeds its share, drop whole competitor records from the tail rather than
 // slicing the JSON string, so every record that reaches the prompt is
 // complete and parseable instead of cut off mid-record. A single competitor
-// with long notableFeatures/lessonsForUs arrays can still exceed the entire
-// per-segment budget on its own - compact it (cap those arrays) rather than
-// dropping it wholesale, so a genuinely substantive competitor doesn't vanish
-// from every downstream prompt while hasCompetitorData/coverage (computed
-// from the unbounded results) keep reporting the track as usable.
+// can still exceed the entire per-segment budget on its own - compact it
+// rather than dropping it wholesale, so a genuinely substantive competitor
+// doesn't vanish from every downstream prompt while hasCompetitorData/coverage
+// (computed from the unbounded results) keep reporting the track as usable.
+// Capping array length alone doesn't bound total size if individual strings
+// are long, so every string field is also capped - this gives a fixed,
+// calculable worst-case size per compacted competitor (well under any
+// realistic perSegmentBudget) instead of another size-dependent edge case.
+const MAX_FIELD_CHARS = 200
+const truncateField = (s) => (typeof s === 'string' && s.length > MAX_FIELD_CHARS ? `${s.slice(0, MAX_FIELD_CHARS)}...` : s)
 const compactCompetitor = (c) => {
-  const cap = (arr) => (arr && arr.length > 3 ? arr.slice(0, 3) : arr)
-  return { ...c, notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+  const cap = (arr) => ((arr && arr.length > 3 ? arr.slice(0, 3) : arr) || []).map(truncateField)
+  return { ...c, name: truncateField(c.name), url: truncateField(c.url), whatItIs: truncateField(c.whatItIs), notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
 }
 const boundedCompetitorJson = (results) => {
   if (!results.length) return '[]'
@@ -263,8 +268,12 @@ const competitorResults = segments.length
 // how many analyst calls returned something. Only `name`+`whatItIs` are
 // schema-required, so a competitor entry can be little more than a label
 // ("Rival: a tool") - count only entries with actual substance (notable
-// features or lessons), not just array presence.
-const hasSubstance = (c) => c && (((c.notableFeatures && c.notableFeatures.length) || 0) + ((c.lessonsForUs && c.lessonsForUs.length) || 0)) > 0
+// features or lessons), not just array presence. The schema doesn't enforce
+// nonblank strings, so a blank entry ("" in notableFeatures) would otherwise
+// pass this check with zero real information - require at least one entry
+// with actual (trimmed, nonempty) content.
+const hasContent = (arr) => (arr || []).some((s) => typeof s === 'string' && s.trim().length > 0)
+const hasSubstance = (c) => c && (hasContent(c.notableFeatures) || hasContent(c.lessonsForUs))
 const competitorCount = competitorResults.reduce((sum, r) => sum + ((r && r.competitors) || []).filter(hasSubstance).length, 0)
 const hasCompetitorData = competitorCount > 0
 

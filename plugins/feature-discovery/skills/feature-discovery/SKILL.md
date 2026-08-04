@@ -13,7 +13,7 @@ description: >-
   answer directly instead of invoking this.
 user-invocable: true
 argument-hint: "[product one-liner] [scope: internal|competitor|mixed] [depth: quick|exhaustive]"
-compatibility: "Requires the Workflow tool (multi-agent orchestration). Invoking this skill opts into a heavyweight fan-out of up to ~40 sub-agents at exhaustive depth."
+compatibility: "Requires the Workflow tool (multi-agent orchestration). Invoking this skill opts into a heavyweight fan-out of up to ~40 sub-agents at exhaustive depth. For scope: competitor or mixed runs, the session also needs WebSearch and WebFetch pre-approved - Workflow sub-agents run in the background and can't prompt for tool approval."
 allowed-tools:
   - Workflow
   - Artifact
