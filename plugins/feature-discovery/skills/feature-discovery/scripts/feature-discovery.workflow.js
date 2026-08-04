@@ -86,6 +86,7 @@ const ALL_LENSES = [
 const LENSES = depth === 'quick' ? ALL_LENSES.slice(0, 4) : ALL_LENSES
 const SEGMENT_COUNT = depth === 'quick' ? 2 : 4
 const SHORTLIST_TARGET = depth === 'quick' ? '5-6' : '8-12'
+const SHORTLIST_MAX = depth === 'quick' ? 6 : 12
 
 // Large collection payloads (inventory, competitor research, raw ideas, specced
 // results) get re-embedded into many downstream prompts - every ideator lens,
@@ -148,7 +149,7 @@ const IDEAS_SCHEMA = {
 const SHORTLIST_SCHEMA = {
   type: 'object',
   properties: {
-    features: { type: 'array', items: { type: 'object', properties: {
+    features: { type: 'array', maxItems: SHORTLIST_MAX, items: { type: 'object', properties: {
       title: { type: 'string' }, description: { type: 'string' }, value: { type: 'string' },
       effort: { type: 'string' }, evidence: { type: 'string' },
     }, required: ['title', 'description', 'value', 'effort', 'evidence'] } },
@@ -173,7 +174,7 @@ const VERDICT_SCHEMA = {
   properties: {
     verdict: { type: 'string', enum: ['build', 'maybe', 'drop'] },
     confidence: { type: 'number', minimum: 1, maximum: 10 },
-    objections: { type: 'array', items: { type: 'string' } },
+    objections: { type: 'array', minItems: 1, items: { type: 'string' } },
     refinements: { type: 'array', items: { type: 'string' } },
   },
   required: ['verdict', 'confidence', 'objections', 'refinements'],
