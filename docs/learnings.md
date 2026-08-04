@@ -1449,3 +1449,40 @@ node /tmp/repro.js           # SyntaxError: Illegal return statement - the real 
 ```
 
 > Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 1, 4, and 6 (chatgpt-codex-connector, copilot-pull-request-reviewer, and qodo-code-review each raised a variant of the underlying "illegal top-level return" claim; coderabbitai independently re-ran the repro with an explicit `"type": "module"` package.json via its own sandbox and caught the version/config-dependence this entry now documents); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js` (top-of-file comment documents the harness's static-extraction execution model).
+
+### A per-item compaction fix must bound every dimension that can grow, not just the one the current bug report names
+
+`boundedCompetitorJson`'s per-record compaction (added to stop a single oversized competitor from being dropped wholesale by the per-segment character budget) went through three separate review-cycle fixes in direct succession, each one closing a different dimension of the same underlying problem:
+
+1. First fix: split the character budget evenly across segments instead of one whole-array slice, so no segment was entirely excluded once an earlier one consumed the budget.
+2. Second fix: within a segment, stop char-slicing the serialized JSON (which could cut a competitor record mid-string) and instead drop whole trailing records - but a single record whose own JSON exceeded the *entire* per-segment budget still got dropped on the first loop iteration, leaving `competitors: []`.
+3. Third fix: compact an oversized record instead of dropping it, by capping `notableFeatures`/`lessonsForUs` to 3 entries each - but capping array *length* doesn't bound array *content*; a single long string entry (or a long `whatItIs`) could still push the compacted record over budget.
+4. Fourth fix (the one that actually closed the class): cap every string field individually to a fixed character length, not just array length. This gives a calculable worst-case size per compacted record independent of the input, which is the only way to guarantee termination - every prior fix bounded one growth dimension while leaving another unbounded.
+
+Each of the three intermediate fixes was individually correct and reviewer-verified against real code, but each was also incomplete in a way a reviewer caught on the very next cycle. In hindsight, the question "what are ALL the ways this data structure's serialized size can grow?" (item count AND per-item string length AND nesting) should have been asked once, up front, rather than being discovered one dimension at a time across three review rounds.
+
+**Rule:** When writing a compaction/truncation helper for arbitrary agent-generated data, enumerate every axis the structure can grow along (array length, individual string length, nested object depth) before implementing, and bound all of them in the same pass. A fix that closes only the axis the current bug report names is a strong signal there's a sibling axis still open - don't wait for the next review cycle to find it; ask "is this now a *provable*, input-independent bound, or does it just handle the specific shape the reviewer described?"
+
+**Bad pattern (bounds one axis, leaves size unbounded on another):**
+```js
+const compactCompetitor = (c) => {
+  const cap = (arr) => (arr && arr.length > 3 ? arr.slice(0, 3) : arr) // bounds count...
+  return { ...c, notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+  // ...but a single very long string in a kept entry, or in `whatItIs`/`name`/`url`,
+  // is completely unbounded - the record can still blow the budget.
+}
+```
+
+**Good pattern (every axis that can grow gets a fixed cap, giving a provable worst case):**
+```js
+const MAX_FIELD_CHARS = 200
+const truncateField = (s) => (typeof s === 'string' && s.length > MAX_FIELD_CHARS ? `${s.slice(0, MAX_FIELD_CHARS)}...` : s)
+const compactCompetitor = (c) => {
+  const cap = (arr) => ((arr && arr.length > 3 ? arr.slice(0, 3) : arr) || []).map(truncateField)
+  return { ...c, name: truncateField(c.name), url: truncateField(c.url), whatItIs: truncateField(c.whatItIs), notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+  // worst case is now ~5 fields x 200 chars + JSON overhead - fixed and calculable,
+  // independent of how verbose the original agent output was.
+}
+```
+
+> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 12-15 (chatgpt-codex-connector, three consecutive rounds each finding a deeper layer of the same `boundedCompetitorJson`/`compactCompetitor` bug); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js`.
