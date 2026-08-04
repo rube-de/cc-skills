@@ -1,6 +1,6 @@
 // The Workflow harness statically extracts this `meta` object from source text
 // and executes the rest of this file's body inside its own async wrapper - it
-// does not load this file as a plain Node ES module. The `export` keyword above
+// does not load this file as a plain Node ES module. The `export` keyword below
 // and the top-level `await`/`return` further down are both legal only under
 // that harness-specific execution model, not under `node script.js`.
 export const meta = {
@@ -162,8 +162,8 @@ const SPEC_SCHEMA = {
   properties: {
     title: { type: 'string' }, problem: { type: 'string' }, solution: { type: 'string' },
     userValue: { type: 'string' }, architectureFit: { type: 'string' },
-    scope: { type: 'array', items: { type: 'string' } },
-    successMetrics: { type: 'array', items: { type: 'string' } },
+    scope: { type: 'array', minItems: 1, items: { type: 'string' } },
+    successMetrics: { type: 'array', minItems: 1, items: { type: 'string' } },
     openQuestions: { type: 'array', items: { type: 'string' } },
   },
   required: ['title', 'problem', 'solution', 'userValue', 'architectureFit', 'scope', 'successMetrics', 'openQuestions'],
