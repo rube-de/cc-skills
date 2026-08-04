@@ -88,17 +88,15 @@ const SEGMENT_COUNT = depth === 'quick' ? 2 : 4
 const SHORTLIST_TARGET = depth === 'quick' ? '5-6' : '8-12'
 const SHORTLIST_MAX = depth === 'quick' ? 6 : 12
 
-// Large collection payloads (inventory, competitor research, raw ideas, specced
-// results) get re-embedded into many downstream prompts - every ideator lens,
-// every spec/validate pipeline stage - so an unbounded JSON.stringify compounds
-// token cost across the fan-out. Cap each at a fixed character budget instead.
+// Of the large collection payloads re-embedded into downstream prompts
+// (inventory, competitor research, raw ideas, specced results), only
+// competitor research is bounded. Inventory is a single reused object that
+// doesn't grow with fan-out (see below), and ideas/specced-features are
+// ranked/selected collections where character-slicing would silently drop
+// candidates - see docs/learnings.md. Competitor research is the one
+// collection that both grows with fan-out (segment count) and isn't itself a
+// ranked/selected output, so it's the one that needs a budget.
 const MAX_CONTEXT_CHARS = 12000
-const boundedJson = (value) => {
-  const json = JSON.stringify(value)
-  return json.length > MAX_CONTEXT_CHARS
-    ? `${json.slice(0, MAX_CONTEXT_CHARS)}\n...(truncated, ${json.length} chars total)`
-    : json
-}
 
 // competitorResults is one entry per researched segment - unlike inventory
 // (a single object), it genuinely grows with segment count, so it still needs
@@ -327,14 +325,28 @@ if (!clean.length) {
   log('No features survived spec + validation. Aborting before synthesis.')
   return { error: 'empty-validated-results', shortlisted: features.length }
 }
+// A feature whose spec or validator call failed partway is indistinguishable
+// from one the validator deliberately rejected - both are just absent from
+// `clean`. Note the count so the synthesizer doesn't conflate "evaluated and
+// passed" with "never got evaluated."
+const specCoverageNote = clean.length < features.length
+  ? ` ${features.length - clean.length} of ${features.length} shortlisted feature(s) could not be spec'd or validated due to an agent failure and are missing below - this is different from a deliberate "drop" verdict; mention it in the executive summary rather than silently omitting it.`
+  : ''
 
 // ---- Phase 5: Synthesize --------------------------------------------------
 phase('Synthesize')
+// A competitor-scoped run only hard-fails when every planned track comes back
+// empty - partial completion (e.g. 1 of 4 analysts succeeding) is treated as
+// a normal success today, with nothing telling the reader how much research
+// actually landed. Surface the gap in the report instead of hiding it.
+const competitorCoverageNote = segments.length && competitorResults.length < segments.length
+  ? ` (${competitorResults.length} of ${segments.length} planned competitor tracks completed - some analyst calls failed or returned nothing)`
+  : ''
 const gapsInstruction = hasCompetitorData
-  ? 'key gaps found, split into internal gaps and gaps versus competitors'
+  ? `key gaps found, split into internal gaps and gaps versus competitors${competitorCoverageNote}`
   : 'key gaps found in the existing product (no competitor research was available for this run)'
 const report = await agent(
-  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
+  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary${specCoverageNote}; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
 
