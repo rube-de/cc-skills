@@ -60,7 +60,8 @@ does (see
   inventory and competitor findings, each forbidden from proposing anything that
   already exists.
 - **Shortlist** - a single curator merges duplicates, drops the trivial and the
-  already-built, ranks by value-to-effort, and picks the top 8-12.
+  already-built, ranks by value-to-effort, and picks the top 8-12 (5-6 at
+  `depth: quick`).
 - **Spec & Validate** - a pipeline per feature: spec it, then an adversarial
   skeptic scores novelty, real value, feasibility in the current architecture,
   competitor precedent, and maintenance burden, returning build / maybe / drop with

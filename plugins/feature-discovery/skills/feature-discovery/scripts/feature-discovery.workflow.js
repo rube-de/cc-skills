@@ -114,7 +114,7 @@ const INVENTORY_SCHEMA = {
 const SEGMENTS_SCHEMA = {
   type: 'object',
   properties: {
-    segments: { type: 'array', items: { type: 'object', properties: {
+    segments: { type: 'array', maxItems: SEGMENT_COUNT, items: { type: 'object', properties: {
       key: { type: 'string' }, focus: { type: 'string' }, angle: { type: 'string' },
     }, required: ['key', 'focus'] } },
   },
@@ -140,7 +140,7 @@ const IDEAS_SCHEMA = {
     ideas: { type: 'array', items: { type: 'object', properties: {
       title: { type: 'string' }, description: { type: 'string' }, lens: { type: 'string' },
       valueHypothesis: { type: 'string' }, evidence: { type: 'string' }, effort: { type: 'string', enum: ['S', 'M', 'L'] },
-    }, required: ['title', 'description', 'valueHypothesis', 'evidence', 'effort'] } },
+    }, required: ['title', 'description', 'lens', 'valueHypothesis', 'evidence', 'effort'] } },
   },
   required: ['ideas'],
 }
@@ -176,7 +176,7 @@ const VERDICT_SCHEMA = {
     objections: { type: 'array', items: { type: 'string' } },
     refinements: { type: 'array', items: { type: 'string' } },
   },
-  required: ['verdict', 'confidence'],
+  required: ['verdict', 'confidence', 'objections', 'refinements'],
 }
 
 // ---- Phase 1: Ground ------------------------------------------------------
@@ -214,15 +214,19 @@ if (includeCompetitors && !segments.length) {
 
 const competitorResults = segments.length
   ? (await parallel(segments.map((seg) => () => agent(
-      `${CONTEXT}\n\nYou are a COMPETITOR ANALYST focused on: ${seg.focus}. Use web search and fetch to research real, current products and sites in this segment. For each, capture what it is, its URL, the notable features or content that make it valuable, how it handles ${seg.angle || 'its core job'}, and what this product could learn or adopt. Prioritize concrete, verifiable features over generic advice.`,
+      `${CONTEXT}\n\nYou are a COMPETITOR ANALYST focused on: ${seg.focus}. Use WebSearch and WebFetch to research real, current products and sites in this segment. For each, capture what it is, its URL, the notable features or content that make it valuable, how it handles ${seg.angle || 'its core job'}, and what this product could learn or adopt. Prioritize concrete, verifiable features over generic advice.`,
       { label: `competitor:${seg.key}`, phase: 'Ground', schema: COMPETITOR_SCHEMA },
     )))).filter(Boolean)
   : []
 
 // A truthy per-segment result can still carry zero competitors (the schema
 // allows `{ competitors: [] }`), so count the flattened total rather than just
-// how many analyst calls returned something.
-const competitorCount = competitorResults.reduce((sum, r) => sum + ((r && r.competitors) || []).length, 0)
+// how many analyst calls returned something. Only `name`+`whatItIs` are
+// schema-required, so a competitor entry can be little more than a label
+// ("Rival: a tool") - count only entries with actual substance (notable
+// features or lessons), not just array presence.
+const hasSubstance = (c) => c && (((c.notableFeatures && c.notableFeatures.length) || 0) + ((c.lessonsForUs && c.lessonsForUs.length) || 0)) > 0
+const competitorCount = competitorResults.reduce((sum, r) => sum + ((r && r.competitors) || []).filter(hasSubstance).length, 0)
 const hasCompetitorData = competitorCount > 0
 
 // Segments planned but every analyst still failed or returned nothing usable
