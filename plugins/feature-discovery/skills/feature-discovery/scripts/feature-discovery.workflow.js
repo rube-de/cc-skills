@@ -100,6 +100,25 @@ const boundedJson = (value) => {
     : json
 }
 
+// competitorResults is one entry per researched segment - unlike inventory
+// (a single object), it genuinely grows with segment count, so it still needs
+// a budget. But bounding the whole serialized array as one string means later
+// segments can be entirely excluded once earlier ones consume the budget,
+// while hasCompetitorData/competitorCount are computed from the full,
+// untruncated data - silently reporting success while omitting whole tracks.
+// Split the budget evenly per segment instead, so every segment keeps at
+// least a proportional share of representation.
+const boundedCompetitorJson = (results) => {
+  if (!results.length) return '[]'
+  const perSegmentBudget = Math.max(1, Math.floor(MAX_CONTEXT_CHARS / results.length))
+  return `[${results.map((r) => {
+    const json = JSON.stringify(r)
+    return json.length > perSegmentBudget
+      ? `${json.slice(0, perSegmentBudget)}...(truncated)`
+      : json
+  }).join(', ')}]`
+}
+
 // ---- Schemas --------------------------------------------------------------
 const INVENTORY_SCHEMA = {
   type: 'object',
@@ -115,7 +134,7 @@ const INVENTORY_SCHEMA = {
 const SEGMENTS_SCHEMA = {
   type: 'object',
   properties: {
-    segments: { type: 'array', maxItems: SEGMENT_COUNT, items: { type: 'object', properties: {
+    segments: { type: 'array', minItems: SEGMENT_COUNT, maxItems: SEGMENT_COUNT, items: { type: 'object', properties: {
       key: { type: 'string' }, focus: { type: 'string' }, angle: { type: 'string' },
     }, required: ['key', 'focus'] } },
   },
@@ -258,7 +277,7 @@ phase('Ideate')
 // never bounded: truncating it would silently hide already-built features
 // from novelty checks in every downstream phase. Only competitor research
 // (which grows with segment count) gets a character budget here.
-const groundContext = `Inventory: ${JSON.stringify(inventory)}\nCompetitor research: ${boundedJson(competitorResults)}`
+const groundContext = `Inventory: ${JSON.stringify(inventory)}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}`
 
 const ideaResults = await parallel(LENSES.map((lens) => () => agent(
   `${CONTEXT}\n\nGround truth (current-product inventory + competitor research):\n${groundContext}\n\nYou are a PRODUCT IDEATOR working the "${lens.name}" lens: ${lens.brief}\n\n${emphasis}\n\nPropose new, value-adding features or improvements through this lens. Rules: never propose anything the inventory shows already exists; ground every idea in either a concrete product gap or a named competitor precedent; prefer depth and specificity over a long list of shallow ideas. For each idea give: title, description, the lens, the user-value hypothesis, the evidence (the gap or competitor it comes from), and a rough effort estimate (S, M, or L).`,
@@ -297,7 +316,7 @@ const specced = await pipeline(
   ),
   (spec, f) => spec
     ? agent(
-        `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative - check this against the competitor research above, not just the feature's own evidence claim? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
+        `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative - check this against the competitor research above, not just the feature's own evidence claim? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
         { label: `validate:${f.title}`, phase: 'Spec & Validate', schema: VERDICT_SCHEMA },
       ).then((v) => (v ? { feature: f, spec, verdict: v } : null))
     : null,
@@ -315,7 +334,7 @@ const gapsInstruction = hasCompetitorData
   ? 'key gaps found, split into internal gaps and gaps versus competitors'
   : 'key gaps found in the existing product (no competitor research was available for this run)'
 const report = await agent(
-  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
+  `${CONTEXT}\n\nYou are the SYNTHESIZER. Produce the final report in polished Markdown for the product owner.\n\nInputs:\nCurrent-product inventory: ${invJson}\nCompetitor research: ${boundedCompetitorJson(competitorResults)}\nSpecced & validated features: ${JSON.stringify(clean)}\n\nStructure the report as: (1) a short executive summary; (2) ${gapsInstruction}; (3) a RANKED roadmap table (rank, feature, value, effort, verdict, confidence); (4) a full spec section per recommended feature (only those the validator rated build or maybe, strongest first), incorporating the validator's refinements; (5) a short list of dropped ideas with one-line reasons; (6) a "quick wins vs bigger bets" split. Write in plain, skimmable prose. Use plain dashes, never em dashes.`,
   { label: 'synthesize:report', phase: 'Synthesize' },
 )
 
