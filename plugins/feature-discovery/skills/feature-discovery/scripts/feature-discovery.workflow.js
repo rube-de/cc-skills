@@ -218,9 +218,14 @@ const MAX_IDEAS_PER_LENS = 10
 const IDEAS_SCHEMA = {
   type: 'object',
   properties: {
+    // maxItems bounds count; maxLength bounds each field so a handful of
+    // verbose ideators can't blow up the curator prompt even while staying
+    // under the item cap - source-side generation bounding, same as
+    // maxItems, so every candidate still survives (nothing is post-hoc
+    // truncated out of the curator's input).
     ideas: { type: 'array', maxItems: MAX_IDEAS_PER_LENS, items: { type: 'object', properties: {
-      title: { type: 'string' }, description: { type: 'string' }, lens: { type: 'string' },
-      valueHypothesis: { type: 'string' }, evidence: { type: 'string' }, effort: { type: 'string', enum: ['S', 'M', 'L'] },
+      title: { type: 'string', maxLength: 100 }, description: { type: 'string', maxLength: 400 }, lens: { type: 'string', maxLength: 50 },
+      valueHypothesis: { type: 'string', maxLength: 400 }, evidence: { type: 'string', maxLength: 400 }, effort: { type: 'string', enum: ['S', 'M', 'L'] },
     }, required: ['title', 'description', 'lens', 'valueHypothesis', 'evidence', 'effort'] } },
   },
   required: ['ideas'],
@@ -240,8 +245,8 @@ const SHORTLIST_SCHEMA = {
 const SPEC_SCHEMA = {
   type: 'object',
   properties: {
-    title: { type: 'string' }, problem: { type: 'string' }, solution: { type: 'string' },
-    userValue: { type: 'string' }, architectureFit: { type: 'string' },
+    title: { type: 'string' }, problem: { type: 'string', pattern: '\\S' }, solution: { type: 'string', pattern: '\\S' },
+    userValue: { type: 'string', pattern: '\\S' }, architectureFit: { type: 'string', pattern: '\\S' },
     scope: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
     successMetrics: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
     openQuestions: { type: 'array', items: { type: 'string' } },
