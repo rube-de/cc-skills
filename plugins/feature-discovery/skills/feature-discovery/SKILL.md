@@ -120,8 +120,13 @@ to change.
 
 ## Credit
 
-Ported from the open-source
+Adapted from the open-source
 [feature-discovery-skill](https://github.com/fabianhug/feature-discovery-skill) by
-Fabian Hug (0xfabs), MIT licensed. The Workflow engine
-(`scripts/feature-discovery.workflow.js`) is kept verbatim; only the packaging,
-frontmatter, script path, and result handling were adapted for this marketplace.
+Fabian Hug (0xfabs), MIT licensed, as a fork rather than a verbatim port. Beyond
+packaging, frontmatter, script path, and result handling, the bundled engine
+(`scripts/feature-discovery.workflow.js`) also adds: argument validation, schema
+bounds (min/max item counts, required fields) on the segment/shortlist/spec/verdict
+schemas, hard-fail guards for empty ground/ideation/shortlist/validation/synthesis
+results, character-budgeted (and per-record-compacted) competitor research, and
+partial-fan-out coverage reporting (competitor tracks, ideation lenses, spec/validate
+pairs) so silent data loss surfaces in the report instead of being hidden.

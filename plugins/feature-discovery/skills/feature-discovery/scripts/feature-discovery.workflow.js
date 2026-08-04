@@ -108,7 +108,16 @@ const MAX_CONTEXT_CHARS = 12000
 // least a proportional share of representation. Within a segment that still
 // exceeds its share, drop whole competitor records from the tail rather than
 // slicing the JSON string, so every record that reaches the prompt is
-// complete and parseable instead of cut off mid-record.
+// complete and parseable instead of cut off mid-record. A single competitor
+// with long notableFeatures/lessonsForUs arrays can still exceed the entire
+// per-segment budget on its own - compact it (cap those arrays) rather than
+// dropping it wholesale, so a genuinely substantive competitor doesn't vanish
+// from every downstream prompt while hasCompetitorData/coverage (computed
+// from the unbounded results) keep reporting the track as usable.
+const compactCompetitor = (c) => {
+  const cap = (arr) => (arr && arr.length > 3 ? arr.slice(0, 3) : arr)
+  return { ...c, notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+}
 const boundedCompetitorJson = (results) => {
   if (!results.length) return '[]'
   const perSegmentBudget = Math.max(1, Math.floor(MAX_CONTEXT_CHARS / results.length))
@@ -119,9 +128,10 @@ const boundedCompetitorJson = (results) => {
     const kept = []
     let used = 0
     for (const c of competitors) {
-      const size = JSON.stringify(c).length + 1
+      const candidate = JSON.stringify(c).length > perSegmentBudget ? compactCompetitor(c) : c
+      const size = JSON.stringify(candidate).length + 1
       if (used + size > perSegmentBudget) break
-      kept.push(c)
+      kept.push(candidate)
       used += size
     }
     return JSON.stringify({ ...r, competitors: kept })
