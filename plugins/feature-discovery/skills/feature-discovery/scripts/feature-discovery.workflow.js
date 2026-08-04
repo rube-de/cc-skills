@@ -242,14 +242,19 @@ const SHORTLIST_SCHEMA = {
   required: ['features'],
 }
 
+// maxLength/maxItems bound each spec at the source, same reasoning as
+// IDEAS_SCHEMA above - up to SHORTLIST_MAX specs get concatenated into one
+// synthesizer prompt via JSON.stringify(clean), so an unbounded scalar or
+// array field on even one spec can overflow that prompt regardless of how
+// many specs there are.
 const SPEC_SCHEMA = {
   type: 'object',
   properties: {
-    title: { type: 'string' }, problem: { type: 'string', pattern: '\\S' }, solution: { type: 'string', pattern: '\\S' },
-    userValue: { type: 'string', pattern: '\\S' }, architectureFit: { type: 'string', pattern: '\\S' },
-    scope: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
-    successMetrics: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
-    openQuestions: { type: 'array', items: { type: 'string' } },
+    title: { type: 'string', maxLength: 100 }, problem: { type: 'string', pattern: '\\S', maxLength: 500 }, solution: { type: 'string', pattern: '\\S', maxLength: 500 },
+    userValue: { type: 'string', pattern: '\\S', maxLength: 400 }, architectureFit: { type: 'string', pattern: '\\S', maxLength: 500 },
+    scope: { type: 'array', minItems: 1, maxItems: 10, items: { type: 'string', pattern: '\\S', maxLength: 150 } },
+    successMetrics: { type: 'array', minItems: 1, maxItems: 10, items: { type: 'string', pattern: '\\S', maxLength: 150 } },
+    openQuestions: { type: 'array', maxItems: 10, items: { type: 'string', maxLength: 200 } },
   },
   required: ['title', 'problem', 'solution', 'userValue', 'architectureFit', 'scope', 'successMetrics', 'openQuestions'],
 }
