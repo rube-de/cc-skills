@@ -130,9 +130,17 @@ const boundedCompetitorJson = (results) => {
     const full = JSON.stringify(r)
     if (full.length <= perSegmentBudget) return full
     const competitors = (r && r.competitors) || []
+    // Greedily filling in original order lets an early name-only record
+    // (hasSubstance below is defined later, but resolved at call time - safe
+    // since boundedCompetitorJson is only ever called after Ground) consume
+    // the budget before a later substantive one is reached, even though the
+    // track has real evidence. Pack substantive competitors first (stable
+    // sort preserves original order within each group) so a track that has
+    // any substance at all is more likely to actually surface some.
+    const ordered = [...competitors].sort((a, b) => (hasSubstance(b) ? 1 : 0) - (hasSubstance(a) ? 1 : 0))
     const kept = []
     let used = 0
-    for (const c of competitors) {
+    for (const c of ordered) {
       const candidate = JSON.stringify(c).length > perSegmentBudget ? compactCompetitor(c) : c
       const size = JSON.stringify(candidate).length + 1
       if (used + size > perSegmentBudget) break
@@ -217,7 +225,7 @@ const VERDICT_SCHEMA = {
   properties: {
     verdict: { type: 'string', enum: ['build', 'maybe', 'drop'] },
     confidence: { type: 'number', minimum: 1, maximum: 10 },
-    objections: { type: 'array', minItems: 1, items: { type: 'string' } },
+    objections: { type: 'array', minItems: 1, items: { type: 'string', pattern: '\\S' } },
     refinements: { type: 'array', items: { type: 'string' } },
   },
   required: ['verdict', 'confidence', 'objections', 'refinements'],
