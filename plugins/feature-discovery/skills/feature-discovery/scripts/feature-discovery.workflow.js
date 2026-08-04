@@ -36,11 +36,18 @@ const parsedArgs =
     ? (() => { try { return { ok: true, value: JSON.parse(args) } } catch { return { ok: false } } })()
     : { ok: true, value: typeof args === 'undefined' ? {} : args }
 
-if (!parsedArgs.ok || !isPlainArgsObject(parsedArgs.value)) {
+if (!parsedArgs.ok) {
   return { error: 'invalid-args', reason: 'malformed-json-args' }
 }
+if (!isPlainArgsObject(parsedArgs.value)) {
+  return { error: 'invalid-args', reason: 'args-not-an-object' }
+}
 const ARGS = parsedArgs.value
-const product = ARGS.product || ''
+const productInput = ARGS.product === undefined ? '' : ARGS.product
+if (typeof productInput !== 'string') {
+  return { error: 'invalid-args', reason: 'invalid-product' }
+}
+const product = productInput.trim()
 
 const VALID_SCOPES = ['mixed', 'internal', 'competitor']
 const VALID_DEPTHS = ['exhaustive', 'quick']
@@ -133,7 +140,7 @@ const IDEAS_SCHEMA = {
     ideas: { type: 'array', items: { type: 'object', properties: {
       title: { type: 'string' }, description: { type: 'string' }, lens: { type: 'string' },
       valueHypothesis: { type: 'string' }, evidence: { type: 'string' }, effort: { type: 'string', enum: ['S', 'M', 'L'] },
-    }, required: ['title', 'description', 'valueHypothesis'] } },
+    }, required: ['title', 'description', 'valueHypothesis', 'evidence', 'effort'] } },
   },
   required: ['ideas'],
 }
@@ -241,11 +248,12 @@ const emphasis = !hasCompetitorData
 
 // ---- Phase 2: Ideate ------------------------------------------------------
 phase('Ideate')
-// Bound inventory and competitor data independently, not as one combined
-// blob - a large inventory alone can exceed MAX_CONTEXT_CHARS and truncate
-// before the competitors key is ever serialized, silently zeroing out
-// competitor evidence even when hasCompetitorData is true.
-const groundContext = `Inventory: ${boundedJson(inventory)}\nCompetitor research: ${boundedJson(competitorResults)}`
+// Inventory is a single mapped object, reused as-is everywhere below - unlike
+// competitor/idea/feature collections it doesn't grow with fan-out, so it is
+// never bounded: truncating it would silently hide already-built features
+// from novelty checks in every downstream phase. Only competitor research
+// (which grows with segment count) gets a character budget here.
+const groundContext = `Inventory: ${JSON.stringify(inventory)}\nCompetitor research: ${boundedJson(competitorResults)}`
 
 const ideaResults = await parallel(LENSES.map((lens) => () => agent(
   `${CONTEXT}\n\nGround truth (current-product inventory + competitor research):\n${groundContext}\n\nYou are a PRODUCT IDEATOR working the "${lens.name}" lens: ${lens.brief}\n\n${emphasis}\n\nPropose new, value-adding features or improvements through this lens. Rules: never propose anything the inventory shows already exists; ground every idea in either a concrete product gap or a named competitor precedent; prefer depth and specificity over a long list of shallow ideas. For each idea give: title, description, the lens, the user-value hypothesis, the evidence (the gap or competitor it comes from), and a rough effort estimate (S, M, or L).`,
@@ -262,7 +270,7 @@ if (!allIdeas.length) {
 // ---- Phase 3: Shortlist (barrier: needs every idea at once to dedup) ------
 phase('Shortlist')
 const shortlist = await agent(
-  `${CONTEXT}\n\nHere are ${allIdeas.length} candidate ideas from parallel ideators across different lenses:\n${JSON.stringify(allIdeas)}\n\nCurrent-product inventory:\n${boundedJson(inventory)}\n\nYou are the CURATOR. Merge duplicate and near-duplicate ideas into single consolidated items. Remove anything that already exists or is trivial. Rank the survivors by value-to-effort and select the TOP ${SHORTLIST_TARGET} for full speccing. For each selected item return: a clear title, a merged description, why it matters (value), rough effort, and the supporting evidence (gaps and/or competitors).`,
+  `${CONTEXT}\n\nHere are ${allIdeas.length} candidate ideas from parallel ideators across different lenses:\n${JSON.stringify(allIdeas)}\n\nCurrent-product inventory:\n${JSON.stringify(inventory)}\n\nYou are the CURATOR. Merge duplicate and near-duplicate ideas into single consolidated items. Remove anything that already exists or is trivial. Rank the survivors by value-to-effort and select the TOP ${SHORTLIST_TARGET} for full speccing. For each selected item return: a clear title, a merged description, why it matters (value), rough effort, and the supporting evidence (gaps and/or competitors).`,
   { label: 'curate:shortlist', phase: 'Shortlist', schema: SHORTLIST_SCHEMA },
 )
 
@@ -275,17 +283,19 @@ log(`${features.length} features shortlisted for spec + validation`)
 
 // ---- Phase 4: Spec + adversarial validate (pipeline, per feature) --------
 phase('Spec & Validate')
-const invJson = boundedJson(inventory)
+const invJson = JSON.stringify(inventory)
 const specced = await pipeline(
   features,
   (f) => agent(
     `${CONTEXT}\n\nCurrent-product inventory (for feasibility grounding):\n${invJson}\n\nWrite a crisp product + engineering spec for this feature:\n${JSON.stringify(f)}\n\nInclude: problem statement, proposed solution, user value, how it fits the existing architecture and stack (data-model changes, new pages/components/endpoints, interface implications), rough scope/milestones, success metrics, and open questions/risks. Be concrete about implementation given the current codebase.`,
     { label: `spec:${f.title}`, phase: 'Spec & Validate', schema: SPEC_SCHEMA },
   ),
-  (spec, f) => agent(
-    `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
-    { label: `validate:${f.title}`, phase: 'Spec & Validate', schema: VERDICT_SCHEMA },
-  ).then((v) => (v ? { feature: f, spec, verdict: v } : null)),
+  (spec, f) => spec
+    ? agent(
+        `${CONTEXT}\n\nAdversarially validate this feature spec. Be a skeptic: your job is to find why it might NOT be worth building.\n\nFeature: ${JSON.stringify(f)}\nSpec: ${JSON.stringify(spec)}\nCurrent-product inventory: ${invJson}\n\nAssess: (1) is it genuinely NEW versus what already exists? (2) real, sizable user value or just nice-to-have? (3) feasible in the current architecture and stack? (4) real competitor precedent or user demand, or speculative? (5) maintenance burden. Return a verdict (build / maybe / drop), a 1-10 confidence score, the strongest objections, and concrete refinements that would make it stronger.`,
+        { label: `validate:${f.title}`, phase: 'Spec & Validate', schema: VERDICT_SCHEMA },
+      ).then((v) => (v ? { feature: f, spec, verdict: v } : null))
+    : null,
 )
 
 const clean = specced.filter(Boolean)
