@@ -2,15 +2,15 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/Skills-2-blue.svg)]()
-[![Agents](https://img.shields.io/badge/Agents-8-green.svg)]()
+[![Agents](https://img.shields.io/badge/Agents-7-green.svg)]()
 [![Hooks](https://img.shields.io/badge/Hooks-1-orange.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-Orchestrate multiple AI consultants (Gemini 3.5 Flash, Codex, Qwen, GLM-5.2, Kimi K2.5) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
+Orchestrate multiple AI consultants (Gemini 3.6 Flash, Codex, GLM-5.2, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
 > [!NOTE]
-> **Dual-Layer Architecture**: External consultants provide model diversity across 5 different AI providers, while internal Claude subagents provide deep, tool-assisted analysis — one for security/bugs/performance, one for quality/compliance/history/docs.
+> **Dual-Layer Architecture**: External consultants provide model diversity across 4 different AI providers, while internal Claude subagents provide deep, tool-assisted analysis — one for security/bugs/performance, one for quality/compliance/history/docs.
 
 ## Features
 
@@ -19,11 +19,10 @@ Orchestrate multiple AI consultants (Gemini 3.5 Flash, Codex, Qwen, GLM-5.2, Kim
 **Layer 1 — External Consultants** (model diversity, same prompt):
 | Consultant | CLI | Strength |
 |------------|-----|----------|
-| Gemini 3.5 Flash | `omp -p --no-tools --model google-antigravity/gemini-3.5-flash` | Architecture, security, fast analysis |
+| Gemini 3.6 Flash | `omp -p --no-tools --model google-antigravity/gemini-3.6-flash` | Architecture, security, fast analysis |
 | Codex | `codex` | PR review, bug detection, security |
-| Qwen | `qwen` | Code quality, brainstorming, explanations |
 | GLM-5.2 | `omp -p --no-tools --model zai/glm-5.2` | Alternative perspectives, algorithms |
-| Kimi K2.5 | `opencode run -m opencode/kimi-k2.5-free` | Long-context reasoning, creative solutions |
+| Kimi K3 | `omp -p --no-tools --model kimi-code/k3` | Long-context reasoning, creative solutions |
 
 **Layer 2 — Claude Subagents** (concern depth, tool access):
 | Subagent | Model | Focus |
@@ -90,11 +89,10 @@ Built-in taxonomy auto-rejects:
 │  1. Pre-flight — verify CLI availability                                    │
 │                                                                             │
 │  2. Layer 1: External Consultants (parallel, 120s)                          │
-│     ├── omp -p --no-tools --model .../gemini-3.5-flash                      │
+│     ├── omp -p --no-tools --model .../gemini-3.6-flash                      │
 │     ├── codex exec --sandbox read-only -c approval_policy=never "review ..."│
-│     ├── qwen "review ..."                                                   │
 │     ├── omp -p --no-tools --model zai/glm-5.2 "..."                         │
-│     └── opencode run -m opencode/kimi-k2.5-free "..."                       │
+│     └── omp -p --no-tools --model kimi-code/k3 "..."                        │
 │                                                                             │
 │  3. Layer 2: Claude Subagents (parallel)                                    │
 │     ├── claude-deep-review (security, bugs, performance)                    │
@@ -152,19 +150,17 @@ npx skills add rube-de/cc-skills --skill council
 At least one external CLI must be installed:
 
 ```bash
-# Check availability (prints ✓/✗ per CLI — any one is enough)
-for cli in codex qwen omp opencode; do
+# Check availability (prints ✓/✗ per CLI — omp covers 3 of 4 consultants, codex covers 1)
+for cli in codex omp; do
   command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
 done
 
 # Install as needed
 # codex   — https://github.com/openai/codex
-# qwen    — https://github.com/QwenLM/qwen-cli
-# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.5 Flash via antigravity, GLM-5.2)
-# opencode — https://github.com/opencode-ai/opencode (Kimi)
+# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.6 Flash via antigravity, GLM-5.2, Kimi K3)
 ```
 
-The plugin operates in partial-success mode — it proceeds with whichever consultants are available.
+The plugin operates in partial-success mode — it proceeds with whichever consultants are available. Note that `omp` is the dominant dependency: it gates three of the four external consultants (Gemini, GLM-5.2, Kimi), so a missing or broken `omp` install leaves Codex as the only external voice.
 
 ## Dependencies
 
@@ -172,20 +168,18 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
 | codex CLI | Recommended | Codex consultant |
-| qwen CLI | Recommended | Qwen consultant |
-| omp CLI | Recommended | Gemini and GLM-5.2 consultants |
-| opencode CLI | Recommended | Kimi consultant |
+| omp CLI | Recommended | Gemini, GLM-5.2, and Kimi consultants (3 of 4) |
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
-| "No consultants available" | No external CLIs installed | Install at least one: codex, qwen, omp, or opencode |
+| "No consultants available" | No external CLIs installed | Install at least one: codex or omp |
 | Consultant returns empty output | Rate limiting or timeout | Automatic retry with exponential backoff; check API quotas |
 | Low confidence scores | Vague review scope | Use concern-specific mode: `/council review security` |
 | Too many false positives | Broad review on large diff | Use `/council quick` for parallel triage (2-agent lightweight review) |
 | JSON validation warnings | Consultant output malformed | PostToolUse hook retries; check CLI version |
-| Pre-flight warning on start | CLI not in PATH | Verify installation: `which codex qwen omp opencode` |
+| Pre-flight warning on start | CLI not in PATH | Verify installation: `which codex omp` |
 
 ## References
 
