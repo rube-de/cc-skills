@@ -1,3 +1,10 @@
+# [2.7.0](https://github.com/rube-de/cc-skills/compare/v2.6.2...v2.7.0) (2026-08-05)
+
+
+### Features
+
+* **feature-discovery:** add multi-agent roadmap discovery plugin ([#236](https://github.com/rube-de/cc-skills/issues/236)) ([758d330](https://github.com/rube-de/cc-skills/commit/758d330a875905c924b59c76a784de07076ce902))
+
 ## [2.6.2](https://github.com/rube-de/cc-skills/compare/v2.6.1...v2.6.2) (2026-07-14)
 
 
