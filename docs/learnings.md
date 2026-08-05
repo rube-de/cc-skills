@@ -1363,3 +1363,126 @@ The council `codex-consultant` documented `codex "prompt"` and `codex --quiet "p
 **A second, sharper distinction surfaced by PR review on the same file: "don't force a choice" only applies to preference axes (model, effort). Safety contracts are not a preference axis.** `codex-consultant.md` promises "NEVER auto-fix or modify files," but the bare `codex exec` invocations didn't pass `--sandbox read-only` — so a caller whose global config defaults to `workspace-write` or `danger-full-access` would silently let Codex write to disk during a review the agent explicitly advertises as read-only. Leaving *model* unset respects the user's preference; leaving *sandbox* unset outsources a promise the agent file itself makes to the caller's unrelated config. Enforce contracts your own prompt states in prose at the CLI level too — prose-only enforcement is not enforcement.
 
 > Source: PR #235 (https://github.com/rube-de/cc-skills/pull/235); file: `plugins/council/agents/codex-consultant.md` (all invocations → `codex exec --sandbox read-only`, `--quiet` block removed, no model/effort pinned); cheat-sheet `plugins/council/skills/council/QUICK-REFERENCE.md`.
+
+### Reference bundled scripts from a SKILL.md body with `${CLAUDE_SKILL_DIR}`, not `${CLAUDE_PLUGIN_ROOT}`
+
+The `feature-discovery` skill instructs the model to invoke the `Workflow` tool with the bundled engine's path: `Workflow({ scriptPath: "…/scripts/feature-discovery.workflow.js" })`. The first draft used `${CLAUDE_PLUGIN_ROOT}/skills/feature-discovery/scripts/…`, copying the pattern seen in `hooks.json` and agent frontmatter across the repo. That path never resolves from a skill body: `${CLAUDE_PLUGIN_ROOT}` is a **harness-config-only** substitution (documented for `hooks.json`/`.mcp.json` command values), and it is **absent** from the skill-body substitution set. The model would have emitted the literal unexpanded `${CLAUDE_PLUGIN_ROOT}/…` string as the tool argument, the file wouldn't be found, and the skill would be dead on first use for every installed user. Static gates miss this entirely — `validate-plugins.mjs` only checks frontmatter + marketplace structure, and `node --check` only performs a parse-level syntax check (and, per the harness-execution-model entry below, not even a fully reliable one for this specific engine).
+
+**Root pattern:** the two variables live in different substitution tables. `${CLAUDE_PLUGIN_ROOT}` is expanded by the harness inside config files it processes itself; a SKILL.md body is rendered with a *different* set — `$ARGUMENTS`, `${CLAUDE_SESSION_ID}`, `${CLAUDE_EFFORT}`, `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PROJECT_DIR}`. Render-time substitution happens *before* the SKILL.md text enters the conversation, so a variable from the skill-body table reaches even non-shell contexts (tool-call argument values, `allowed-tools` frontmatter) already resolved. A variable outside that table does not.
+
+**Rule:** To hand a bundled file's path to a tool (or a shell command) from a SKILL.md body, use `${CLAUDE_SKILL_DIR}` — the directory containing that `SKILL.md` (for plugin skills, the skill's subdirectory *within* the plugin, not the plugin root). Reserve `${CLAUDE_PLUGIN_ROOT}` for `hooks.json` and agent/MCP config. Because `${CLAUDE_SKILL_DIR}` already points at the skill dir, do not re-append the `skills/<name>/` segment.
+
+**Bad pattern (harness-config variable in a skill body — emitted literally, file not found):**
+```
+Workflow({ scriptPath: "${CLAUDE_PLUGIN_ROOT}/skills/feature-discovery/scripts/feature-discovery.workflow.js", … })
+```
+
+**Good pattern (skill-body variable, resolves at render time before the model emits the arg):**
+```
+Workflow({ scriptPath: "${CLAUDE_SKILL_DIR}/scripts/feature-discovery.workflow.js", … })
+```
+
+Corollary: `allowed-tools` is additive pre-approval, never a block — a misspelled tool name there triggers a permission prompt rather than silently failing, so it won't manifest as a "dead skill." The dead-skill failure mode comes from the path variable, not the tool list.
+
+> Source: `feature-discovery` plugin port (SKILL.md `scripts/feature-discovery.workflow.js` invocation); verified against Claude Code skills reference (`code.claude.com/docs/en/skills.md`, `plugins-reference.md`).
+
+### Guard every fan-out result before the next phase consumes it - a happy-path return isn't proof the data is real
+
+`feature-discovery.workflow.js`'s 5-phase pipeline fans out N agents per phase (7 ideators, up to 12 spec+validate pairs) and feeds each phase's output into the next. Across three rounds of PR review, five distinct instances of the same root bug surfaced: a phase's output could be empty, falsy, or silently truncated, and the next phase would still run on it and still return a success-shaped `{ report, meta, counts }` object - no `error` key, just a degraded or invented result.
+
+- Empty ideation (`allIdeas.length === 0`) still invoked the curator, which could invent a shortlist from the inventory rather than report the failure.
+- A validator's `.then((v) => ({ feature: f, spec, verdict: v }))` wrapped even a falsy `v` in a truthy object, so `specced.filter(Boolean)` never dropped a failed validation - the `empty-validated-results` guard added to catch "every validator failed" couldn't fire, because the array was never actually empty.
+- A `scope: 'competitor'` run whose segment planner failed silently fell back to a mixed/internal-shaped run while still telling ideators to "focus on competitor capabilities" and the synthesizer to "report gaps versus competitors" - producing a report that either omits the requested analysis or invents unsupported competitor evidence.
+- A malformed-JSON `args` string was caught and coerced to `{}`, so both `scope` and `depth` silently took their valid defaults and bypassed the `invalid-args` contract built specifically to catch bad input.
+- A later fix that bounded large JSON payloads at a fixed character budget (to stop token cost compounding across the fan-out) was applied uniformly, including to the two collections whose *individual items* are the thing being ranked or selected (`allIdeas` for the curator, `clean` for the synthesizer). Since items are concatenated in deterministic order, truncating the JSON string silently dropped every candidate after the cut - while the reported count (`rawIdeas`, `shortlisted`) still reflected the untruncated total. An "exhaustive" ranking then depended on array order.
+
+**Root pattern:** in a multi-phase agent pipeline, any point where one phase's output feeds the next is a place where "the call returned" and "the call returned something real and complete" are different claims. A filter like `.filter(Boolean)` or a bounding helper like `boundedJson()` can be correctness-positive for one axis (dropping a null result, capping token cost) and correctness-negative for another (silently keeping a falsy wrapper as truthy; silently keeping only the first items of a ranked collection) if applied without checking how it interacts with what downstream code assumes about completeness.
+
+**Rule:** After every fan-out or pipeline stage, verify the *substance* of the result, not just its shape - `!!result` is not "this result is usable." When adding a bounding/truncation helper to control cost, apply it only to reference/grounding context, never to a collection whose individual items are enumerated, ranked, or selected downstream; those need per-item compaction or an explicit size-aware batching strategy instead, so item *count* stays truthful even when content shrinks. When a value coming out of user input, a parse, or an agent call could be genuinely absent, present-but-empty, or present-but-wrong-shape, branch on each case explicitly and return a distinct, honestly-named `error` code for it - resist the pull to catch-and-default, which trades a loud failure for a silent, more expensive one.
+
+**Bad pattern (fan-out result trusted by shape, not substance):**
+```js
+const specced = await pipeline(features, specStage, (spec, f) =>
+  validateAgent(...).then((v) => ({ feature: f, spec, verdict: v })) // truthy wrapper even if v is falsy
+)
+const clean = specced.filter(Boolean) // never drops a failed validation
+```
+
+**Good pattern (only construct the wrapper when the inner result is real):**
+```js
+const specced = await pipeline(features, specStage, (spec, f) =>
+  validateAgent(...).then((v) => (v ? { feature: f, spec, verdict: v } : null))
+)
+const clean = specced.filter(Boolean) // now actually drops failed validations
+if (!clean.length) return { error: 'empty-validated-results', shortlisted: features.length }
+```
+
+> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 2-4; file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js` (empty-ideation guard, empty-validated-results guard + validator null-fix, competitor-research-failed guard, invalid-args-on-malformed-JSON fix, and reverting `boundedJson()` on `allIdeas`/`clean`).
+
+### `node --check` passing is not proof a harness-executed script is safe - verify against real `node` execution
+
+`feature-discovery.workflow.js` combines `export const meta = {...}` with several top-level early-return guards (`return { error: '...' }` outside any function). Three separate reviewers, across two review rounds, flagged this as an "illegal top-level return" bug, each time citing `node --check <file>` passing as the counter-evidence that the file was fine.
+
+`node --check` passing is not that evidence - **but only in the specific config this repo actually has**: a plain `.js` file with no `"type": "module"` anywhere in its package.json chain, relying on Node's *auto-detection* of ESM syntax rather than an explicit declaration. In that config (verified on Node v22.23.1 and, per a reviewer's independent check, v24.15.0), an isolated repro combining `export const x = 1` with a later top-level `return` passes `node --check` silently, but running the *same file* with plain `node <file>.js` throws `SyntaxError: Illegal return statement`. Add an explicit `"type": "module"` to package.json, though, and the gap closes - `node --check` then throws the same `SyntaxError` that real execution does, because there's no auto-detection left to do. This repo's root `package.json` has no `type` field (defaults to CommonJS) and `feature-discovery.workflow.js` has no package.json of its own, so the auto-detection gap is real for this file - but the claim is config-dependent, not a general property of `node --check`.
+
+The actual reason `feature-discovery.workflow.js` is safe has nothing to do with `node --check`: the Workflow tool statically extracts the `meta` object from source text and executes the rest of the file's body inside its own async wrapper - it never loads the file as a real Node module, so Node's ESM top-level-return restriction never applies. That claim is corroborated by the file's own history of repeated successful live Workflow-tool runs, not by any static check.
+
+**Rule:** When a harness executes a script under different rules than plain `node <file>.js` (injected globals, top-level `await`/`return`, non-standard module semantics), do not cite `node --check` passing as proof the script is valid for that harness - and when documenting a `node --check` gap, name the Node version and the module-type config it was observed under, since `--check`'s ESM auto-detection has changed across Node versions and a `"type": "module"` declaration changes the result entirely. Build an isolated repro of the specific syntax in question and run it with real `node` execution, not just `--check`, before trusting either the code or a reviewer's "invalid syntax" claim - then document *why* the harness accepts syntax plain Node would reject, so the next reviewer with the same instinct has a real answer instead of another round of the same false positive.
+
+**Bad pattern (treating a weaker check as proof, no config named):**
+```bash
+node --check feature-discovery.workflow.js   # passes
+# ...therefore the top-level `return` statements must be fine.
+```
+
+**Good pattern (verify against the thing that actually matters, config stated):**
+```bash
+# Isolated repro of the exact construct, in this repo's actual config
+# (plain .js, no "type": "module" anywhere in the package.json chain):
+printf 'export const x = 1\nreturn 1\n' > /tmp/repro.js
+node --check /tmp/repro.js   # passes silently under auto-detection - proves nothing
+node /tmp/repro.js           # SyntaxError: Illegal return statement - the real signal
+# Note: with an explicit "type": "module" in package.json, `node --check`
+# throws the same error - the gap is auto-detection-specific, not general.
+# Then explain the harness's actual execution model (static meta-extraction,
+# no real Node module load) rather than leaning on the weaker check.
+```
+
+> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 1, 4, and 6 (chatgpt-codex-connector, copilot-pull-request-reviewer, and qodo-code-review each raised a variant of the underlying "illegal top-level return" claim; coderabbitai independently re-ran the repro with an explicit `"type": "module"` package.json via its own sandbox and caught the version/config-dependence this entry now documents); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js` (top-of-file comment documents the harness's static-extraction execution model).
+
+### A per-item compaction fix must bound every dimension that can grow, not just the one the current bug report names
+
+`boundedCompetitorJson`'s per-record compaction (added to stop a single oversized competitor from being dropped wholesale by the per-segment character budget) went through three separate review-cycle fixes in direct succession, each one closing a different dimension of the same underlying problem:
+
+1. First fix: split the character budget evenly across segments instead of one whole-array slice, so no segment was entirely excluded once an earlier one consumed the budget.
+2. Second fix: within a segment, stop char-slicing the serialized JSON (which could cut a competitor record mid-string) and instead drop whole trailing records - but a single record whose own JSON exceeded the *entire* per-segment budget still got dropped on the first loop iteration, leaving `competitors: []`.
+3. Third fix: compact an oversized record instead of dropping it, by capping `notableFeatures`/`lessonsForUs` to 3 entries each - but capping array *length* doesn't bound array *content*; a single long string entry (or a long `whatItIs`) could still push the compacted record over budget.
+4. Fourth fix (the one that actually closed the class): cap every string field individually to a fixed character length, not just array length. This gives a calculable worst-case size per compacted record independent of the input, which is the only way to guarantee termination - every prior fix bounded one growth dimension while leaving another unbounded.
+
+Each of the three intermediate fixes was individually correct and reviewer-verified against real code, but each was also incomplete in a way a reviewer caught on the very next cycle. In hindsight, the question "what are ALL the ways this data structure's serialized size can grow?" (item count AND per-item string length AND nesting) should have been asked once, up front, rather than being discovered one dimension at a time across three review rounds.
+
+**Rule:** When writing a compaction/truncation helper for arbitrary agent-generated data, enumerate every axis the structure can grow along (array length, individual string length, nested object depth) before implementing, and bound all of them in the same pass. A fix that closes only the axis the current bug report names is a strong signal there's a sibling axis still open - don't wait for the next review cycle to find it; ask "is this now a *provable*, input-independent bound, or does it just handle the specific shape the reviewer described?"
+
+**Bad pattern (bounds one axis, leaves size unbounded on another):**
+```js
+const compactCompetitor = (c) => {
+  const cap = (arr) => (arr && arr.length > 3 ? arr.slice(0, 3) : arr) // bounds count...
+  return { ...c, notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+  // ...but a single very long string in a kept entry, or in `whatItIs`/`name`/`url`,
+  // is completely unbounded - the record can still blow the budget.
+}
+```
+
+**Good pattern (every axis that can grow gets a fixed cap, giving a provable worst case):**
+```js
+const MAX_FIELD_CHARS = 200
+const truncateField = (s) => (typeof s === 'string' && s.length > MAX_FIELD_CHARS ? `${s.slice(0, MAX_FIELD_CHARS)}...` : s)
+const compactCompetitor = (c) => {
+  const cap = (arr) => ((arr && arr.length > 3 ? arr.slice(0, 3) : arr) || []).map(truncateField)
+  return { ...c, name: truncateField(c.name), url: truncateField(c.url), whatItIs: truncateField(c.whatItIs), notableFeatures: cap(c.notableFeatures), lessonsForUs: cap(c.lessonsForUs) }
+  // worst case is now ~5 fields x 200 chars + JSON overhead - fixed and calculable,
+  // independent of how verbose the original agent output was.
+}
+```
+
+> Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 12-15 (chatgpt-codex-connector, three consecutive rounds each finding a deeper layer of the same `boundedCompetitorJson`/`compactCompetitor` bug); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js`.
