@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/Skills-2-blue.svg)]()
 [![Agents](https://img.shields.io/badge/Agents-7-green.svg)]()
-[![Hooks](https://img.shields.io/badge/Hooks-1-orange.svg)]()
+[![Hooks](https://img.shields.io/badge/Hooks-2-orange.svg)]()
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 

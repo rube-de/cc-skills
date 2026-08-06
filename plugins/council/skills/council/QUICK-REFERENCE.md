@@ -54,7 +54,7 @@ for cli in codex omp; do
 done
 ```
 
-**Note**: `omp` gates 3 of the 4 external consultants (Gemini, GLM, Kimi). A missing `omp` drops you straight to 1/4 — not a single-consultant degradation.
+**Note**: `omp` gates 3 of the 4 external consultants (Gemini, GLM, Kimi). A missing `omp` is not a minor, single-consultant degradation — it drops you straight to 1/4 (Codex only).
 
 ## Expertise Weights
 
@@ -296,29 +296,23 @@ Weighted → CRITICAL (Gemini's expertise dominates)
 ## CLI Commands
 
 ```bash
-# Gemini (antigravity login; run from an isolated cwd for untrusted code — --no-tools does NOT block .omp/tools execution; see gemini-consultant.md "Report-Only Sandbox")
-omp -p --no-tools --model google-antigravity/gemini-3.6-flash "prompt"
-omp -p --no-tools --model google-antigravity/gemini-3.6-flash "prompt @file"
-
-# Codex
+# Codex — reads piped content directly, no sandbox needed
 cat file | codex exec --sandbox read-only -c approval_policy=never "prompt"
 git diff | codex exec --sandbox read-only -c approval_policy=never "review changes"
 
-# GLM (run from an isolated cwd for untrusted code — --no-tools does NOT block .omp/tools execution; see glm-consultant.md "Report-Only Sandbox")
-omp -p --no-tools --model zai/glm-5.2 "prompt"
-omp -p --no-tools --model zai/glm-5.2 "prompt @file"
-
-# Kimi (run from an isolated cwd for untrusted code — --no-tools does NOT block .omp/tools execution; see kimi-consultant.md)
-omp -p --no-tools --model kimi-code/k3 "prompt"
-omp -p --no-tools --model kimi-code/k3 "prompt @file"
-
-# omp does NOT read piped stdin — write the content to a file, then attach by absolute path
+# Gemini, GLM, Kimi (all omp-backed) — omp does NOT read piped stdin, and --no-tools
+# does NOT block .omp/tools/.claude/tools discovery. Always run from a throwaway
+# sandbox and attach content by absolute @path — see the consultant's own doc
+# (gemini-consultant.md / glm-consultant.md / kimi-consultant.md) "Report-Only Sandbox".
 (
   sandbox=$(mktemp -d)
   trap 'rm -rf "$sandbox"' EXIT
   git diff main...HEAD > "$sandbox/changes.diff"   # capture before cd
   cd "$sandbox"
-  omp -p --no-tools --model kimi-code/k3 "Review these PR changes @\"$sandbox/changes.diff\""
+
+  omp -p --no-tools --model google-antigravity/gemini-3.6-flash "prompt @\"$sandbox/changes.diff\""
+  omp -p --no-tools --model zai/glm-5.2 "prompt @\"$sandbox/changes.diff\""
+  omp -p --no-tools --model kimi-code/k3 "prompt @\"$sandbox/changes.diff\""
 )
 ```
 

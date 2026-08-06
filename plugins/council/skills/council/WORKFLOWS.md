@@ -313,7 +313,7 @@ fi
     ## Council Code Review: [PR Title]
 
     ### Reviewers
-    - External: Gemini ✓ | Codex ✓ | GLM ✗ (timeout)
+    - External: Gemini ✓ | Codex ✓ | GLM ✗ (timeout) | Kimi ✓
     - Claude: deep-review ✓ | codebase-context ✓
     - Scorer: review-scorer ✓
     ### Mode: [concern | broad] | Blind: [no | yes]
@@ -533,6 +533,7 @@ Task(all consultants):
 - Gemini chose [X] because [reason]
 - Codex chose [Y] because [reason]
 - GLM chose [W] because [reason]
+- Kimi chose [Z] because [reason]
 
 Review these perspectives:
 1. Which reasoning do you find most compelling?
@@ -564,7 +565,7 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 ## Consensus Result: [Topic]
 
 ### Final Recommendation: [Option X]
-- Confidence: 0.78 (2/3 agree after Round 2)
+- Confidence: 0.78 (3/4 agree after Round 2)
 
 ### Vote Distribution
 | Consultant | R1 | R2 | R3 | Final |
@@ -572,6 +573,7 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 | Gemini | A | A | - | A |
 | Codex | B | A | - | A |
 | GLM | C | C | - | C (dissent) |
+| Kimi | A | A | - | A |
 
 ### Dissenting View (GLM)
 [Capture their reasoning - it may reveal blind spots]
