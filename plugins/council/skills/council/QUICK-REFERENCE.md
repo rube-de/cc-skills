@@ -296,7 +296,7 @@ Weighted → CRITICAL (Gemini's expertise dominates)
 ## CLI Commands
 
 ```bash
-# Codex — reads piped content directly, no sandbox needed
+# Codex — reads piped content directly, no mktemp/@path sandbox needed (its own --sandbox flag is unrelated: that's Codex's filesystem-access mode, not tool-discovery isolation)
 cat file | codex exec --sandbox read-only -c approval_policy=never "prompt"
 git diff | codex exec --sandbox read-only -c approval_policy=never "review changes"
 
