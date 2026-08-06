@@ -86,6 +86,7 @@ fi
    - Gemini: 0.85
    - GLM: 0.80
    - Codex: 0.70
+   - Kimi: 0.75
    ```
 
 6. **Present Council Summary**
