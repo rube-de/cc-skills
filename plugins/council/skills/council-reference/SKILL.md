@@ -13,7 +13,7 @@ Every council agent MUST return this JSON structure:
 
 ```json
 {
-  "consultant": "gemini|codex|qwen|glm|kimi|claude-deep-review|claude-codebase-context",
+  "consultant": "gemini|codex|glm|kimi|claude-deep-review|claude-codebase-context",
   "success": true,
   "fallback": false,
   "confidence": 0.0-1.0,
@@ -36,15 +36,15 @@ Every council agent MUST return this JSON structure:
 ## Expertise Weight Matrix
 
 ```
-Task         Gemini  Codex   Qwen    GLM-5.2  Kimi K2.5
-Security     0.90    0.80    0.70    0.75     0.70
-PR Review    0.85    0.90    0.80    0.75     0.80
-Architecture 0.85    0.70    0.65    0.80     0.75
-Code Quality 0.70    0.80    0.90    0.70     0.80
-Performance  0.75    0.85    0.85    0.70     0.80
-Brainstorm   0.65    0.60    0.90    0.85     0.80
-Algorithms   0.70    0.75    0.85    0.85     0.80
-Debugging    0.75    0.90    0.80    0.75     0.80
+Task         Gemini  Codex   GLM-5.2  Kimi K3
+Security     0.90    0.80    0.75     0.70
+PR Review    0.85    0.90    0.75     0.80
+Architecture 0.85    0.70    0.80     0.75
+Code Quality 0.70    0.80    0.70     0.80
+Performance  0.75    0.85    0.70     0.80
+Brainstorm   0.65    0.60    0.85     0.80
+Algorithms   0.70    0.75    0.85     0.80
+Debugging    0.75    0.90    0.75     0.80
 ```
 
 ## Scoring Thresholds

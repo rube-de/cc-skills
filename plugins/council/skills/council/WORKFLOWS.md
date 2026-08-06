@@ -10,7 +10,7 @@ Before ANY workflow, execute:
 AVAILABLE=()
 MISSING=()
 
-for cli in codex qwen omp opencode; do
+for cli in codex omp; do
   if command -v "$cli" >/dev/null 2>&1; then
     AVAILABLE+=("$cli")
   else
@@ -66,9 +66,6 @@ fi
    Task(council:codex-consultant, timeout=120s):
    [Same structure]
 
-   Task(council:qwen-consultant, timeout=120s):
-   [Same structure]
-
    Task(council:glm-consultant, timeout=120s):
    [Same structure]
 
@@ -77,12 +74,11 @@ fi
    ```
 
 4. **Handle Partial Responses**
-   - 5/5: Full synthesis
-   - 4/5: Proceed with note: "[X] consultant unavailable"
-   - 3/5: Proceed with warning: "Limited council - only 3 responses"
-   - 2/5: Proceed with strong warning: "Limited council - only 2 responses"
-   - 1/5: Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation"
-   - 0/5: Abort with error: "Council unavailable - all consultants failed"
+   - 4/4: Full synthesis
+   - 3/4: Proceed with note: "[X] consultant unavailable"
+   - 2/4: Proceed with warning: "Limited council - only 2 responses"
+   - 1/4: Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation"
+   - 0/4: Abort with error: "Council unavailable - all consultants failed"
 
 5. **Apply Weighted Synthesis**
    ```
@@ -90,7 +86,7 @@ fi
    - Gemini: 0.85
    - GLM: 0.80
    - Codex: 0.70
-   - Qwen: 0.65
+   - Kimi: 0.75
    ```
 
 6. **Present Council Summary**
@@ -204,7 +200,6 @@ fi
    |------------|------------------|
    | Codex | 0.90 |
    | Gemini | 0.85 |
-   | Qwen | 0.80 |
    | GLM | 0.75 |
    | Kimi | 0.80 |
 
@@ -223,7 +218,7 @@ fi
    # No tool access, same constraints as external consultants
    ```
 
-   All 7 agents (5 external + 2 Claude) run simultaneously.
+   All 6 agents (4 external + 2 Claude) run simultaneously.
    Each MUST return findings with mandatory `location` field (`file:line`).
 
 8. **Auto-Escalation (Broad Pass Only)**
@@ -233,7 +228,7 @@ fi
    IF any finding has severity == "critical" or "high":
      → Identify the concern type (security, architecture, bug, quality)
      → Launch a focused concern-specific round for that type
-     → All 5 consultants re-review through that narrow lens
+     → All 4 consultants re-review through that narrow lens
    IF all findings are medium/low:
      → Skip escalation, proceed to scoring
    ```
@@ -319,7 +314,7 @@ fi
     ## Council Code Review: [PR Title]
 
     ### Reviewers
-    - External: Gemini ✓ | Codex ✓ | Qwen ✓ | GLM ✗ (timeout)
+    - External: Gemini ✓ | Codex ✓ | GLM ✗ (timeout) | Kimi ✓
     - Claude: deep-review ✓ | codebase-context ✓
     - Scorer: review-scorer ✓
     ### Mode: [concern | broad] | Blind: [no | yes]
@@ -329,7 +324,7 @@ fi
     - [finding] at `file:line` (score: 92, flagged by: Gemini, Codex, claude-deep-review)
 
     ### ⚠️ Should Fix (High, score >= 80, 2+ agree)
-    - [finding] at `file:line` (score: 85, flagged by: Qwen, GLM, Codex)
+    - [finding] at `file:line` (score: 85, flagged by: GLM, Codex)
 
     ### 💡 Consider (Medium, score >= 80)
     - [finding] at `file:line` (score: 81, flagged by: Gemini)
@@ -357,18 +352,18 @@ fi
    Quick mode runs exactly 2 agents. Log the selection at start:
    ```text
    "Quick mode: running council:gemini-consultant (Flash) + council:claude-codebase-context only.
-    Skipping 6 agents (codex, qwen, glm, kimi, claude-deep-review, review-scorer)."
+    Skipping 5 agents (codex, glm, kimi, claude-deep-review, review-scorer)."
    ```
 
    **Running:**
 
    | Agent | Model | Role |
    |-------|-------|------|
-   | `council:gemini-consultant` | Gemini 3.5 Flash (`google-antigravity/gemini-3.5-flash`) | Fast external perspective |
+   | `council:gemini-consultant` | Gemini 3.6 Flash (`google-antigravity/gemini-3.6-flash`) | Fast external perspective |
    | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
 
    **Skipped** (reserved for full council escalation):
-   - `council:codex-consultant`, `council:qwen-consultant`, `council:glm-consultant`, `council:kimi-consultant` — cost/time
+   - `council:codex-consultant`, `council:glm-consultant`, `council:kimi-consultant` — cost/time
    - `council:claude-deep-review` — opus cost, reserved for full review
    - `council:review-scorer` — not needed unless escalating
 
@@ -412,7 +407,7 @@ fi
 3. **Full Council (Rare)**
 
    ```text
-   → Launch full council (all 5 external + 2 Claude subagents + scoring)
+   → Launch full council (all 4 external + 2 Claude subagents + scoring)
    → Or escalate to human decision
    ```
 
@@ -463,7 +458,6 @@ fi
 
    **Advocates** (find reasons to APPROVE):
    - Gemini: Focus on architectural soundness
-   - Qwen: Focus on code quality benefits
    - Kimi: Focus on implementation correctness
 
    **Critics** (find reasons to REJECT):
@@ -489,7 +483,6 @@ fi
    | Point | Source | Strength |
    |-------|--------|----------|
    | [Benefit] | Gemini | Strong |
-   | [Benefit] | Qwen | Medium |
 
    ### 👎 Case AGAINST Approval
    | Point | Source | Strength |
@@ -540,8 +533,8 @@ Task(all consultants):
 "Round 1 results:
 - Gemini chose [X] because [reason]
 - Codex chose [Y] because [reason]
-- Qwen chose [Z] because [reason]
 - GLM chose [W] because [reason]
+- Kimi chose [Z] because [reason]
 
 Review these perspectives:
 1. Which reasoning do you find most compelling?
@@ -553,7 +546,7 @@ Review these perspectives:
 ### Round 3: Final Call (if needed)
 
 **Abort Criteria - Skip Round 3 if:**
-- 4/5 or 5/5 agree after Round 2
+- 3/4 or 4/4 agree after Round 2
 - Disagreement is on preferences, not facts
 - More rounds won't produce new information
 
@@ -580,8 +573,8 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 |------------|----|----|----| ------|
 | Gemini | A | A | - | A |
 | Codex | B | A | - | A |
-| Qwen | A | A | - | A |
 | GLM | C | C | - | C (dissent) |
+| Kimi | A | A | - | A |
 
 ### Dissenting View (GLM)
 [Capture their reasoning - it may reveal blind spots]
@@ -600,7 +593,7 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 
 ### How It Differs from Workflow B
 
-Workflow B (broad review) asks consultants to review for ALL concerns. Workflow F narrows the lens so ALL 5 consultants focus on ONE concern type. This produces deeper analysis and stronger consensus signals for that specific area.
+Workflow B (broad review) asks consultants to review for ALL concerns. Workflow F narrows the lens so ALL 4 consultants focus on ONE concern type. This produces deeper analysis and stronger consensus signals for that specific area.
 
 ### Concern Prompt Templates
 
@@ -690,7 +683,7 @@ Good: "Compare Redis vs Memcached for our use case."
 Disagreement often reveals important trade-offs. Don't just majority-vote it away.
 
 ### ❌ Skipping Synthesis
-Users want insights, not five reports. Always synthesize.
+Users want insights, not four reports. Always synthesize.
 
 ### ❌ Over-consulting
 80% of decisions need 1-2 consultants, not 4.

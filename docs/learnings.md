@@ -756,6 +756,18 @@ The transferable rule: when a tool offers a `--no-X` flag, confirm *which* X-loa
 
 > Source: [PR #231](https://github.com/rube-de/cc-skills/pull/231) — a later Codex P1 flagged that `--no-tools` leaves omp's custom-tool discovery active. Confirmed by source (`main.ts` `noTools` only empties `toolNames`; `sdk.ts` discovers custom tools unconditionally) **and** by executing a probe both ways. A follow-up Codex P2 then flagged that the cwd sandbox itself is partial — user-level tools (`~/.claude/tools`, `~/.omp/plugins/*`) are `$HOME`-keyed and survive it; confirmed against v16.1.7 source (`capability/index.ts` sets `ctx.home = os.homedir()`; `discovery/claude.ts` `loadTools` scans both roots). Fixed by sandboxing the consultant's omp invocations and documenting the user-level residual + OS-level isolation. Extends the entry above: the first omp P1 was wrong, the second was right, and the third sharpened the second — each adjudicated by reading/running the *current* installed version, not stale notes.
 
+### Migrating a consultant onto omp inherits its silent-stdin-drop and sandbox obligations, not just the CLI flag
+
+When swapping an external consultant's backing CLI onto `omp` (e.g. Kimi moving from `opencode` to `omp`), the model-flag swap is the easy part. `omp` does not read piped stdin at all — `cat file | omp -p ...` or `git diff | omp -p ...` silently returns a confident-sounding answer about nothing, no error, no timeout. Every piped example (`cat X | tool`, `git diff ... | tool`) inherited from the old CLI's docs has to become a temp-file-write + absolute `@path` attachment, and the consultant needs the same "Report-Only Sandbox" treatment (`mktemp -d`, `cd`, attach by absolute path) the other omp-backed consultants (gemini-consultant.md, glm-consultant.md) already carry — `--no-tools` alone doesn't stop omp's `.omp/tools/`/`.claude/tools/` custom-tool discovery from running at import time. Treat "move X onto omp" as "port X onto the omp consultant template," not "change one CLI invocation string."
+
+> Source: council plugin's Qwen-removal/Gemini-3.6/Kimi-K3 refresh (kimi-consultant.md rewrite) — advisor caught that a naive `opencode run ...` → `omp -p ...` swap would have shipped a Kimi consultant that silently reviewed empty context on every piped example.
+
+### Verify a CLI's exact provider/model string with its own catalog command before writing docs
+
+Don't guess an omp provider name from the model's marketing name. "Kimi K3" is not `moonshot/k3` or `kimi/k3` — the actual omp provider id is `kimi-code`, discovered via `omp models find kimi`. Vendor branding (Moonshot AI) and the CLI's internal provider slug (`kimi-code`) are frequently different strings; the same repo's `google-antigravity` provider bundles Gemini *and* Claude *and* GPT-OSS models under one non-obvious provider name. Run the CLI's own model-listing command (`omp models find <term>`, or equivalent) and do a live smoke-test invocation before documenting a `--model` string anywhere.
+
+> Source: same council refresh — verified `kimi-code/k3` and `google-antigravity/gemini-3.6-flash` via `omp models find` plus live `omp -p --no-tools --model ... "ping"` calls before writing any doc changes.
+
 ---
 
 ## Common Pitfalls

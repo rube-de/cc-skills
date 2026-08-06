@@ -1,6 +1,6 @@
 ---
 name: council
-description: Consult external AI council (Gemini 3.5 Flash, Codex, Qwen, GLM-5.2, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
+description: Consult external AI council (Gemini 3.6 Flash, Codex, GLM-5.2, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
 argument-hint: "[review|plan|adversarial|consensus|quick] [security|architecture|bugs|quality] [--blind]"
 allowed-tools: Task, Read, Grep, Glob, Bash, TodoWrite
 user-invocable: true
@@ -17,11 +17,10 @@ Orchestrate multiple external AI consultants to provide thorough, consensus-driv
 Before invoking any consultant, verify:
 
 ```bash
-# Check CLI availability (any subset works — a missing CLI just disables that consultant)
+# Check CLI availability — codex is independent, but omp now gates 3 of the 4
+# external consultants (Gemini, GLM, Kimi), not just one
 command -v codex >/dev/null 2>&1 || echo "WARN: codex CLI not found"
-command -v qwen >/dev/null 2>&1 || echo "WARN: qwen CLI not found"
-command -v omp >/dev/null 2>&1 || echo "WARN: omp CLI not found (needed for Gemini and GLM)"
-command -v opencode >/dev/null 2>&1 || echo "WARN: opencode CLI not found (needed for Kimi)"
+command -v omp >/dev/null 2>&1 || echo "WARN: omp CLI not found (needed for Gemini, GLM, and Kimi)"
 ```
 
 If any CLI is missing, inform user and proceed with available consultants only.
@@ -55,13 +54,12 @@ retry_with_backoff() {
 
 ### Staggered Launch (if rate limits frequent)
 
-Instead of all 5 simultaneously, stagger by 5 seconds:
+Instead of all 4 simultaneously, stagger by 5 seconds:
 ```
 t=0s:  Launch Gemini
 t=5s:  Launch Codex
-t=10s: Launch Qwen
-t=15s: Launch GLM
-t=20s: Launch Kimi
+t=10s: Launch GLM
+t=15s: Launch Kimi
 ```
 
 ## Available Consultants
@@ -72,11 +70,10 @@ Invoked via CLI. Each brings a different AI model's perspective. All receive the
 
 | Agent | CLI | Strength | Expertise Weight |
 |-------|-----|----------|------------------|
-| `council:gemini-consultant` | `omp -p --no-tools --model google-antigravity/gemini-3.5-flash` | Architecture, security | Security: 0.9, Architecture: 0.85 |
+| `council:gemini-consultant` | `omp -p --no-tools --model google-antigravity/gemini-3.6-flash` | Architecture, security | Security: 0.9, Architecture: 0.85 |
 | `council:codex-consultant` | `codex` | PR review, bugs | Debugging: 0.9, Security: 0.8 |
-| `council:qwen-consultant` | `qwen` | Quality, brainstorming | Quality: 0.9, Refactoring: 0.85 |
 | `council:glm-consultant` | `omp -p --no-tools --model zai/glm-5.2` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
-| `council:kimi-consultant` | `opencode run -m opencode/kimi-k2.5-free` | Code analysis, algorithms | Code Quality: 0.80, Algorithms: 0.80 |
+| `council:kimi-consultant` | `omp -p --no-tools --model kimi-code/k3` | Code analysis, algorithms | Code Quality: 0.80, Algorithms: 0.80 |
 
 ### Claude Subagents (Concern Depth — Review Workflows Only)
 
@@ -95,11 +92,11 @@ Invoked via Task tool. Each has a **different concern** and **native codebase ac
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  Layer 1: External Consultants (PARALLEL)                       │
-│  ┌──────────┬──────────┬──────────┬──────────┬──────────┐       │
-│  │ Gemini   │ Codex    │ Qwen     │ GLM      │ Kimi     │       │
-│  │ (same    │ (same    │ (same    │ (same    │ (same    │       │
-│  │  prompt) │  prompt) │  prompt) │  prompt) │  prompt) │       │
-│  └──────────┴──────────┴──────────┴──────────┴──────────┘       │
+│  ┌──────────┬──────────┬──────────┬──────────┐                  │
+│  │ Gemini   │ Codex    │ GLM      │ Kimi     │                  │
+│  │ (same    │ (same    │ (same    │ (same    │                  │
+│  │  prompt) │  prompt) │  prompt) │  prompt) │                  │
+│  └──────────┴──────────┴──────────┴──────────┘                  │
 │   ← Same prompt │ ← Model diversity │ ← Consensus               │
 │                                                                 │
 │  Layer 2: Claude Subagents (PARALLEL)                           │
@@ -122,7 +119,7 @@ Invoked via Task tool. Each has a **different concern** and **native codebase ac
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Both layers launch **simultaneously** — external consultants (5) and Claude subagents (2) run in parallel.
+Both layers launch **simultaneously** — external consultants (4) and Claude subagents (2) run in parallel.
 
 ### Blind Mode (`--blind`)
 
@@ -145,12 +142,11 @@ Use `--blind` when you want to compare Claude's blind opinion against its tool-a
 
 | Available | Action |
 |-----------|--------|
-| 5/5 | Full synthesis |
-| 4/5 | Proceed with note: "[X] consultant unavailable" |
-| 3/5 | Proceed with warning: "Limited council - only 3 responses" |
-| 2/5 | Proceed with strong warning: "Limited council - only 2 responses" |
-| 1/5 | Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation" |
-| 0/5 | Abort with error: "Council unavailable - all consultants failed" |
+| 4/4 | Full synthesis |
+| 3/4 | Proceed with note: "[X] consultant unavailable" |
+| 2/4 | Proceed with warning: "Limited council - only 2 responses" |
+| 1/4 | Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation" |
+| 0/4 | Abort with error: "Council unavailable - all consultants failed" |
 
 ### Structured Response Format
 
@@ -158,7 +154,7 @@ Each consultant MUST return structured output:
 
 ```json
 {
-  "consultant": "gemini|codex|qwen|glm|kimi|claude-deep-review|claude-codebase-context",
+  "consultant": "gemini|codex|glm|kimi|claude-deep-review|claude-codebase-context",
   "success": true|false,
   "fallback": false,
   "confidence": 0.0-1.0,
@@ -288,7 +284,7 @@ Do NOT flag the following as issues:
 
 ## Concern-Specific Review Modes
 
-`/council review` supports focused concern modes. All 5 consultants review through the **same lens** for consensus on that concern.
+`/council review` supports focused concern modes. All 4 consultants review through the **same lens** for consensus on that concern.
 
 ### Available Concern Modes
 
@@ -320,13 +316,13 @@ When no concern mode is selected, `/council review` runs a **broad pass**:
 
 ```
 Phase 1: Broad Review
-  - All 5 consultants review for ALL concerns in a single pass
+  - All 4 consultants review for ALL concerns in a single pass
   - Each returns findings tagged by type (security, architecture, bug, quality)
 
 Phase 2: Auto-Escalation
   - If any finding has severity == "critical" or "high":
     → Automatically launch a focused concern-specific round for that type
-    → All 5 consultants re-review through that narrow lens only
+    → All 4 consultants re-review through that narrow lens only
   - If all findings are medium/low:
     → No escalation, proceed to scoring
 
@@ -353,8 +349,8 @@ After consultants return findings (in any `/council review` workflow), a **Sonne
    100: Confirmed real. Will happen frequently. Evidence is conclusive.
 
 5. Consensus count from consultants INFORMS the score:
-   - 5/5 flagged → scorer starts from a higher baseline
-   - 1/5 flagged → scorer applies more scrutiny
+   - 4/4 flagged → scorer starts from a higher baseline
+   - 1/4 flagged → scorer applies more scrutiny
    - But consensus does NOT override the scorer's independent judgment
 
 6. Filter: Only findings scoring >= 80 appear in the final report
@@ -399,7 +395,7 @@ Return JSON: [{finding_id, score, reasoning}]
 ### Pattern B: Dual-Layer Code Review (Comprehensive)
 
 Full review with both layers running in parallel:
-- Layer 1: All 5 external consultants (same prompt, model diversity)
+- Layer 1: All 4 external consultants (same prompt, model diversity)
 - Layer 2: 2 Claude subagents (different concerns, native tool access)
 - Layer 3: Sonnet scoring agent (deduplicate, score 0-100, filter >= 80)
 
@@ -411,7 +407,7 @@ Quick mode runs **exactly these 2 agents**:
 
 | Agent | Model | Role | Why included |
 |-------|-------|------|--------------|
-| `council:gemini-consultant` | Gemini 3.5 Flash (`google-antigravity/gemini-3.5-flash`) | Fast external perspective | Fastest external model, broad coverage |
+| `council:gemini-consultant` | Gemini 3.6 Flash (`google-antigravity/gemini-3.6-flash`) | Fast external perspective | Fastest external model, broad coverage |
 | `council:claude-codebase-context` | Sonnet | Codebase-aware depth | Native tool access, CLAUDE.md compliance, git history |
 
 Quick mode **does NOT run** these agents:
@@ -419,7 +415,6 @@ Quick mode **does NOT run** these agents:
 | Agent | Why skipped |
 |-------|-------------|
 | `council:codex-consultant` | Cost/time — covered by escalation if needed |
-| `council:qwen-consultant` | Cost/time — covered by escalation if needed |
 | `council:glm-consultant` | Cost/time — covered by escalation if needed |
 | `council:kimi-consultant` | Cost/time — covered by escalation if needed |
 | `council:claude-deep-review` | Opus cost — reserved for full review |
@@ -428,10 +423,10 @@ Quick mode **does NOT run** these agents:
 ```text
 1. Log agent selection:
    "Quick mode: running council:gemini-consultant (Flash) + council:claude-codebase-context only.
-    Skipping 6 agents (codex, qwen, glm, kimi, claude-deep-review, review-scorer)."
+    Skipping 5 agents (codex, glm, kimi, claude-deep-review, review-scorer)."
 
 2. Launch BOTH in parallel:
-   - council:gemini-consultant (omp google-antigravity/gemini-3.5-flash) — fastest external model
+   - council:gemini-consultant (omp google-antigravity/gemini-3.6-flash) — fastest external model
    - council:claude-codebase-context (sonnet) — native codebase access
 
 3. Validate both responses (see Response Validation above)
@@ -442,7 +437,7 @@ Quick mode **does NOT run** these agents:
    → DONE (synthesize dual-perspective report)
 
 5. If either invalid, confidence < 0.7, disagreement, OR severity == "critical":
-   → Escalate to full council (all 5 external + 2 Claude subagents + scoring)
+   → Escalate to full council (all 4 external + 2 Claude subagents + scoring)
 ```
 
 **Use for**: Quick validations, cost-sensitive reviews, time-critical decisions
@@ -455,7 +450,7 @@ Quick mode **does NOT run** these agents:
    - Advocate: "Find every reason this SHOULD be approved"
    - Critic: "Find every reason this SHOULD NOT be approved"
 2. Pair consultants:
-   - Gemini + Qwen + Kimi as Advocates
+   - Gemini + Kimi as Advocates
    - Codex + GLM as Critics
 3. Present both perspectives
 4. User decides based on trade-offs
@@ -487,7 +482,6 @@ For each finding:
 Example for security finding:
   Gemini (security=0.9, confidence=0.85): CRITICAL
   Codex (security=0.8, confidence=0.9): HIGH
-  Qwen (security=0.7, confidence=0.7): MEDIUM
   GLM (security=0.75, confidence=0.8): HIGH
   Kimi (security=0.7, confidence=0.75): HIGH
 
@@ -502,8 +496,7 @@ Example for security finding:
 ### Pre-Flight Status
 - Gemini: ✓ Available
 - Codex: ✓ Available
-- Qwen: ✓ Available
-- GLM: ✗ Timeout (proceeded with 4/5)
+- GLM: ✗ Timeout (proceeded with 3/4)
 - Kimi: ✓ Available
 
 ### Consensus (All Available Agree)
@@ -513,9 +506,9 @@ Example for security finding:
 - [Findings with strong weighted agreement]
 
 ### Divergent Views
-| Finding | Gemini | Codex | Qwen | GLM | Kimi | Weighted |
-|---------|--------|-------|------|-----|------|----------|
-| [Issue] | [View] | [View] | [View] | N/A | [View] | [Score] |
+| Finding | Gemini | Codex | GLM | Kimi | Weighted |
+|---------|--------|-------|-----|------|----------|
+| [Issue] | [View] | [View] | N/A | [View] | [Score] |
 
 ### Critical Issues (Any Consultant, severity=critical)
 - [Always include - err on caution]
@@ -525,9 +518,9 @@ Example for security finding:
 2. [Include dissenting rationale for user decision]
 
 ### Confidence Level
-- High (5/5 available, weighted agreement > 0.8): ✓
-- Medium (3-4/5 available OR agreement 0.6-0.8): ~
-- Low (2/5 available OR agreement < 0.6): User must decide
+- High (4/4 available, weighted agreement > 0.8): ✓
+- Medium (2-3/4 available OR agreement 0.6-0.8): ~
+- Low (1/4 available OR agreement < 0.6): User must decide
 
 ### Rate Limit Status
 - Retries: 0
@@ -546,7 +539,7 @@ Don't bias: "Don't you think X is better?"
 Disagreement often reveals important trade-offs.
 
 ### ❌ Skipping Synthesis
-Users want insights, not five reports.
+Users want insights, not four reports.
 
 ### ❌ Over-consulting
 Not every decision needs full council.
