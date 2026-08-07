@@ -1,3 +1,10 @@
+## [2.7.2](https://github.com/rube-de/cc-skills/compare/v2.7.1...v2.7.2) (2026-08-07)
+
+
+### Bug Fixes
+
+* **dlc:** strip @-mentions from pr-check posted comments ([#244](https://github.com/rube-de/cc-skills/issues/244)) ([624fc67](https://github.com/rube-de/cc-skills/commit/624fc67d9f22be66e2ab8c8ea186d5ac249cc039)), closes [#172](https://github.com/rube-de/cc-skills/issues/172) [#173](https://github.com/rube-de/cc-skills/issues/173)
+
 ## [2.7.1](https://github.com/rube-de/cc-skills/compare/v2.7.0...v2.7.1) (2026-08-06)
 
 # [2.7.0](https://github.com/rube-de/cc-skills/compare/v2.6.2...v2.7.0) (2026-08-05)
