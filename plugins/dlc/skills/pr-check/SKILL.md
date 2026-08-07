@@ -239,6 +239,7 @@ REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
 
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
 elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -F body=@"$REPLY_FILE" \
@@ -254,6 +255,7 @@ elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   fi
 else
   echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect an existing reply and skip re-posting." >&2
+  exit 1
 fi
 ```
 
@@ -279,10 +281,12 @@ REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
 
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
 elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
   echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
+  exit 1
 fi
 ```
 
@@ -315,10 +319,12 @@ REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
 
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
 elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
   echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
+  exit 1
 fi
 ```
 
