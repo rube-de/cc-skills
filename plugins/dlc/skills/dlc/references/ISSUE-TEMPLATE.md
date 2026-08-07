@@ -95,25 +95,47 @@ REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 # Compute and print the body file path
 TIMESTAMP=$(date +%s)
 BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
+rm -f "$BODY_FILE"   # clear content preserved from an earlier failed attempt
 echo "$BODY_FILE"
 ```
 
-The `Write` tool call that follows is not a shell command and can't see `$BODY_FILE` — use the absolute path just printed. Write the formatted body to that exact path following the template above, then in a separate Bash tool call create the issue using that same literal path:
+Write the formatted body to that exact printed path, following the template above:
+
+- **If your skill's `allowed-tools` includes `Write`** (e.g. `pr-check`): the `Write` tool call is not a shell command and can't see `$BODY_FILE` — pass the absolute path just printed as `file_path`.
+- **If it doesn't** (`security`, `quality`, `perf`, `test`, `pr-validity` are Bash-only): compose the file with a heredoc, quoting the delimiter so the shell does no expansion inside the body (a `$(...)` in a raw tool-output excerpt must stay inert text, not execute). Use a distinctive delimiter — not `EOF` — so an unlucky line of tool output can't terminate the heredoc early. **This is a separate Bash tool call from the prep block above — recompute `BODY_FILE` first:**
+
+```bash
+BODY_FILE="/tmp/dlc-issue-{the printed timestamp}.md"
+cat <<'DLC_ISSUE_BODY_c8f3a1' > "$BODY_FILE"
+{formatted issue body}
+DLC_ISSUE_BODY_c8f3a1
+```
+
+Then, in a separate Bash tool call, validate the file is non-empty and create the issue using that same literal path — **do not recompute `TIMESTAMP`**, a fresh `$(date +%s)` produces a different, nonexistent path:
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+BODY_FILE="/tmp/dlc-issue-{the printed timestamp}.md"
 
-gh issue create \
+if [ ! -s "$BODY_FILE" ]; then
+  echo "ERROR: issue body missing or empty at $BODY_FILE — the write step may have failed" >&2
+  exit 1
+elif gh issue create \
   --repo "$REPO" \
   --title "[DLC] {Type}: {summary}" \
-  --body-file "/tmp/dlc-issue-{the printed timestamp}.md" \
-  --label "dlc-{type}"
+  --body-file "$BODY_FILE" \
+  --label "dlc-{type}"; then
+  rm -f "$BODY_FILE"
+else
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE" >&2
+  exit 1
+fi
 ```
 
 ## Failure Fallback
 
-If `gh issue create` fails (auth, network, missing repo):
+If `gh issue create` fails (auth, network, missing repo) — the block above already preserves `$BODY_FILE` on failure instead of deleting it:
 
-1. Save the draft to `/tmp/dlc-draft-{the same printed timestamp}.md` — **do not recompute the timestamp**, a fresh `$(date +%s)` produces a different, nonexistent path
+1. Save (or reuse) the draft at `/tmp/dlc-draft-{the same printed timestamp}.md`
 2. Print the full path to the user
 3. Print the `gh issue create` command they can run manually
