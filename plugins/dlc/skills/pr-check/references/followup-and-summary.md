@@ -176,7 +176,7 @@ if [ ! -s "$REPLY_FILE" ]; then
 elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file. This is an Acknowledged-type reply, which Step 2's already-replied detection does NOT recognize (Acknowledged threads intentionally stay Unresolved) — a blind retry from Step 1 can post a duplicate acknowledgement if the POST actually succeeded server-side despite this error. Before retrying, check this thread's existing replies (e.g. via the GitHub UI or \`gh api\`) to confirm no Acknowledged reply is already present." >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a literal duplicate comment. Re-running pr-check from Step 1 IS safe here, unlike for inline threads: review-body 'already-replied' detection is sentinel-based (\`<!-- dlc-reply:{database_id} -->\` in ISSUE_COMMENTS), so it recognizes a successfully-posted reply regardless of its Fixed/Dismissed/Answered/Acknowledged prefix and Step 2 will correctly skip re-posting." >&2
   exit 1
 fi
 ```
@@ -212,7 +212,7 @@ if [ ! -s "$REPLY_FILE" ]; then
 elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file. This is an Acknowledged-type reply, which Step 2's already-replied detection does NOT recognize (Acknowledged threads intentionally stay Unresolved) — a blind retry from Step 1 can post a duplicate acknowledgement if the POST actually succeeded server-side despite this error. Before retrying, check this thread's existing replies (e.g. via the GitHub UI or \`gh api\`) to confirm no Acknowledged reply is already present." >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a literal duplicate comment. Re-running pr-check from Step 1 IS safe here, unlike for inline threads: issue-comment 'already-replied' detection is sentinel-based (\`<!-- dlc-reply:{database_id} -->\` in ISSUE_COMMENTS), so it recognizes a successfully-posted reply regardless of its Fixed/Dismissed/Answered/Acknowledged prefix and Step 2 will correctly skip re-posting." >&2
   exit 1
 fi
 ```
