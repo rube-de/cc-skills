@@ -1544,3 +1544,19 @@ fi
 ```
 
 > Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), review round following the stale-file-freshness fix (chatgpt-codex-connector); files: `plugins/dlc/skills/pr-check/SKILL.md`, `plugins/dlc/skills/pr-check/references/followup-and-summary.md`.
+
+### Mandating a tool in a shared reference file breaks consumers whose allowed-tools omits it
+
+`ISSUE-TEMPLATE.md` is read by six DLC skills (`pr-check`, `security`, `quality`, `perf`, `test`, `pr-validity`), but only `pr-check`'s frontmatter lists `Write` in `allowed-tools` — the other five are Bash-only. A fix that changed the template's issue-creation instructions to explicitly say "use the `Write` tool" (aimed at closing a gap specific to `pr-check`'s reply-posting mechanism) silently broke those five: either an unexpected permission prompt on a noninteractive run, or the agent falling back to the older, contradictory Bash-only instructions still present in each skill's own Step 4/5.
+
+**Rule:** Before adding an instruction that names a specific tool to a reference file with more than one consumer, `rg -l "path/to/that/reference.md"` to find every consumer, then check each one's `allowed-tools` frontmatter. If any consumer lacks the tool, either scope the instruction to the consumers that have it (with an explicit fallback for the ones that don't) or don't put it in the shared file at all.
+
+> Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), chatgpt-codex-connector rest_id=3737996989; file: `plugins/dlc/skills/dlc/references/ISSUE-TEMPLATE.md`.
+
+### "The file is already in this PR's diff" is not a scope test for whether a new change belongs in it
+
+Fixing one reviewer finding in a shared file led to also "fixing" adjacent, unrelated ambiguities in the same file and its siblings — new Write-vs-Bash branching, path-freshness handling, and validation for issue-creation and PR-summary scratch files that had nothing to do with the PR's actual subject (stripping `@`-mentions from posted text). Each of those additions was itself new reviewable surface, and each round of review found something wrong with it — the PR's unresolved-thread count went 18 → 19 → 21 across three consecutive review cycles instead of converging, because every fix was generating the next finding.
+
+**Rule:** When a reviewer flags something in a file the PR already touches, fix that finding — don't also fix everything else in the file that looks similarly rough. Apply a scope test per hunk: does this change serve the PR's actual stated purpose, or just happen to live near code that does? "It's in the diff already" answers neither question. If a fix keeps spawning same-shaped findings on its own prior fixes (the treadmill signature), stop adding and revert the accretion rather than iterating forward — a growing thread count across cycles is the signal to check for this, not to fix faster.
+
+> Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), self-identified via `advisor()` after three consecutive review rounds each targeting the previous round's own additions; files: `plugins/dlc/skills/dlc/references/ISSUE-TEMPLATE.md`, `plugins/dlc/skills/pr-check/references/followup-and-summary.md`.
