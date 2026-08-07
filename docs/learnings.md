@@ -813,8 +813,12 @@ Don't guess an omp provider name from the model's marketing name. "Kimi K3" is n
 | Terminology mismatches across workflow steps | LLM treats the same concept as two different things (e.g., "plan" in Step 1 vs "specification" in Step 4), causing missed references or contradictory actions | Audit all workflow steps for consistent term usage; define key terms once at the top and use them identically throughout — never synonym-swap mid-prompt |
 | Hard-gate prohibition phrased without scope leaks into post-confirmation territory | A skill correctly refuses to invoke downstream skills before approval, but the same blanket "do NOT invoke any downstream skill" instruction also blocks the post-confirmation hand-off — forcing the user to manually re-type the slash command after they have already chosen | Scope the prohibition to its actual precondition ("before Step N approval"); after the gate clears, define the exact downstream invocation in an action table mapping each user choice to a concrete `Skill` call (or explicit "tell the user to run X"). Never phrase the gate as a global no-invoke rule when it is really a pre-confirmation rule. |
 | Documenting external-CLI behavior from source-reading | Examples silently attach nothing / model hallucinates output at runtime | Execute the CLI to verify; for agent-CLIs, isolate the channel under test (`--no-tools`) with a negative control |
+| Cross-step behavioral rule placed only in a progressively-disclosed `references/*.md` | Rule is not in context at an earlier step that needs it — a skill explicitly told "do not preload references" only loads each reference at its trigger step, so a rule scoped to an earlier step silently has no effect there | Put constraints that must hold across the whole skill run in the main `SKILL.md` preamble (loaded once, stays resident); reference-file copies are defense-in-depth reinforcement at the call site, never the sole location |
+| Console-only output template primes posted-output formatting | An `@{name}`-style idiom shown in a printed (non-posted) inventory teaches the model that shape, which then leaks into GitHub-posted text even though the printed line itself was never posted | Audit *all* occurrences of a risky format across a skill, not just the ones that are literally posted — strip the idiom everywhere it appears, console output included, so the skill doesn't contradict its own posted-text rule by example |
+| Heredoc with a fixed, documented delimiter embeds attacker-controlled text | Reviewer-controlled text that happens to contain a line matching the delimiter terminates the heredoc early — everything after it is parsed as shell, not data. A quoted delimiter (`<<'EOF'`) only disables *expansion* inside the heredoc, it does not stop *delimiter collision* | Never heredoc untrusted/reviewer-controlled text, even with a quoted delimiter. Compose the body with the `Write` tool to a scratch file, then post with `--body-file "$FILE"` / `-F field=@"$FILE"` — the shell parser never sees the content at all |
+| Markdown-mention linkification used as a proxy for "will trigger a bot" | Some bots (GitHub Copilot's coding agent among them) react to a raw substring scan of the comment body, not to the rendered `user-mention` HTML class — so a fix that only stops markdown linkification (fencing, blockquoting) can look verified (renderer test passes) while leaving the actual bot-trigger path completely open | Don't infer "won't trigger the bot" from "doesn't render as a link." The only reliable defense against a mention-triggered bot action is not emitting the `@name` substring in posted text at all |
 
-> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59), [Issue #115](https://github.com/rube-de/cc-skills/issues/115), [PR #157](https://github.com/rube-de/cc-skills/pull/157), [PR #210](https://github.com/rube-de/cc-skills/pull/210), [PR #222](https://github.com/rube-de/cc-skills/pull/222)
+> Sources for pitfalls table: [AGENTS.md](../AGENTS.md) (conventions section), [Plugin Authoring guide](PLUGIN-AUTHORING.md), [Claude Code Skills docs](https://code.claude.com/docs/en/skills), [PR #40](https://github.com/rube-de/cc-skills/pull/40), [PR #41](https://github.com/rube-de/cc-skills/pull/41), [PR #43](https://github.com/rube-de/cc-skills/pull/43), [Issue #59](https://github.com/rube-de/cc-skills/issues/59), [Issue #115](https://github.com/rube-de/cc-skills/issues/115), [PR #157](https://github.com/rube-de/cc-skills/pull/157), [PR #210](https://github.com/rube-de/cc-skills/pull/210), [PR #222](https://github.com/rube-de/cc-skills/pull/222), [Issue #173](https://github.com/rube-de/cc-skills/issues/173)
 
 ---
 
@@ -1498,3 +1502,61 @@ const compactCompetitor = (c) => {
 ```
 
 > Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 12-15 (chatgpt-codex-connector, three consecutive rounds each finding a deeper layer of the same `boundedCompetitorJson`/`compactCompetitor` bug); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js`.
+
+### Splitting a bash block across two tool calls drops any shell variable it computed - every block must recompute its own state
+
+A prior fix in this same PR (closing a "stale preserved file" finding) split each reply-posting step from one combined bash block into two: a small "prep" block that computed `DLC_TMPDIR`/`REPLY_FILE` and cleared any stale file, followed by the `Write` tool call, followed by a second bash block that checked freshness and posted. The second block used `$REPLY_FILE` without recomputing it - relying on the variable assigned in the first block to still be set.
+
+This is the exact bug the skill's own preamble warns against: Claude Code's Bash tool starts a fresh shell process per tool call, so no variable, function, or trap set in one call survives into the next. With `$REPLY_FILE` unset, the second block's `[ ! -s "$REPLY_FILE" ]` check evaluates against an empty path, always takes the "missing file" branch, and exits before ever posting - silently breaking every reply this skill posts, in a PR whose entire purpose was hardening how this skill posts replies. A reviewer (chatgpt-codex-connector) caught it by pointing at the exact "Bash tool state does not persist across calls" sentence already documented elsewhere in the repo, which the author of the split had internalized as an abstract rule but didn't apply when writing new multi-block instructions.
+
+**Rule:** Whenever a skill's instructions describe a variable computed in one bash block and consumed in a later one, check whether those two blocks are meant to run as *separate* tool calls (with a `Write` tool step, an `AskUserQuestion`, or other non-bash action between them). If so, every later block must recompute the variable from the same deterministic inputs (e.g. `$PR_NUMBER`, a comment ID) - never assume it "carries over." A single combined bash block is always safe; a split one needs the computation repeated in each half.
+
+**Bad pattern (variable set in block 1, used unset in block 2 - silently no-ops):**
+```bash
+# Block 1 (one Bash tool call)
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"
+```
+*(Write tool call happens here, in between)*
+```bash
+# Block 2 (a separate Bash tool call) - $REPLY_FILE is unset here, not empty-checked-and-caught
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: missing" >&2; exit 1   # always fires - REPLY_FILE expands to ""
+fi
+```
+
+**Good pattern (each block is self-sufficient):**
+```bash
+# Block 1
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"
+```
+*(Write tool call happens here)*
+```bash
+# Block 2 - recomputes the same deterministic path from scratch
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: missing" >&2; exit 1
+fi
+```
+
+> Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), review round following the stale-file-freshness fix (chatgpt-codex-connector); files: `plugins/dlc/skills/pr-check/SKILL.md`, `plugins/dlc/skills/pr-check/references/followup-and-summary.md`.
+
+### Mandating a tool in a shared reference file breaks consumers whose allowed-tools omits it
+
+`ISSUE-TEMPLATE.md` is read by six DLC skills (`pr-check`, `security`, `quality`, `perf`, `test`, `pr-validity`), but only `pr-check`'s frontmatter lists `Write` in `allowed-tools` — the other five are Bash-only. A fix that changed the template's issue-creation instructions to explicitly say "use the `Write` tool" (aimed at closing a gap specific to `pr-check`'s reply-posting mechanism) silently broke those five: either an unexpected permission prompt on a noninteractive run, or the agent falling back to the older, contradictory Bash-only instructions still present in each skill's own Step 4/5.
+
+**Rule:** Before adding an instruction that names a specific tool to a reference file with more than one consumer, `rg -l "path/to/that/reference.md"` to find every consumer, then check each one's `allowed-tools` frontmatter. If any consumer lacks the tool, either scope the instruction to the consumers that have it (with an explicit fallback for the ones that don't) or don't put it in the shared file at all.
+
+> Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), chatgpt-codex-connector rest_id=3737996989; file: `plugins/dlc/skills/dlc/references/ISSUE-TEMPLATE.md`.
+
+### "The file is already in this PR's diff" is not a scope test for whether a new change belongs in it
+
+Fixing one reviewer finding in a shared file led to also "fixing" adjacent, unrelated ambiguities in the same file and its siblings — new Write-vs-Bash branching, path-freshness handling, and validation for issue-creation and PR-summary scratch files that had nothing to do with the PR's actual subject (stripping `@`-mentions from posted text). Each of those additions was itself new reviewable surface, and each round of review found something wrong with it — the PR's unresolved-thread count went 18 → 19 → 21 across three consecutive review cycles instead of converging, because every fix was generating the next finding.
+
+**Rule:** When a reviewer flags something in a file the PR already touches, fix that finding — don't also fix everything else in the file that looks similarly rough. Apply a scope test per hunk: does this change serve the PR's actual stated purpose, or just happen to live near code that does? "It's in the diff already" answers neither question. If a fix keeps spawning same-shaped findings on its own prior fixes (the treadmill signature), stop adding and revert the accretion rather than iterating forward — a growing thread count across cycles is the signal to check for this, not to fix faster.
+
+> Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), self-identified via `advisor()` after three consecutive review rounds each targeting the previous round's own additions; files: `plugins/dlc/skills/dlc/references/ISSUE-TEMPLATE.md`, `plugins/dlc/skills/pr-check/references/followup-and-summary.md`.

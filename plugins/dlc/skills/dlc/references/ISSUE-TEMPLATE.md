@@ -25,6 +25,11 @@ All labels are lowercase and prefixed with `dlc-`.
 
 ## Issue Body Structure
 
+> **No GitHub mentions:** an unneutralized `@`-prefixed token anywhere in an issue body notifies GitHub, regardless of whether the surrounding text is fenced. Two distinct cases, two distinct treatments:
+>
+> - When *you* are naming a reviewer, bot, or tool in prose you're composing yourself, just don't use an `@` prefix — the bare name reads fine on its own.
+> - When a field quotes or copies technical content that legitimately contains an `@` character — a scoped package name, a decorator, an email address, a reviewer's own words carried into a Recommended Action or Finding — don't delete the `@`; insert a space immediately after it instead. Deleting it outright silently turns the token into different, misleading text (e.g. a broken remediation command a reader might copy-paste). The inserted space breaks GitHub's mention-linkification and any raw-substring mention scan just as effectively as deletion, while keeping the token recognizable. This applies everywhere in the body, not only the Raw Output field.
+
 Use this template exactly — agents and dashboards parse these section headers:
 
 ````markdown
@@ -75,7 +80,7 @@ Use this template exactly — agents and dashboards parse these section headers:
 <summary>Full tool output</summary>
 
 ```
-{raw CLI output, truncated to 500 lines max}
+{raw CLI output, truncated to 500 lines max, with a space inserted immediately after every @ character}
 ```
 
 </details>

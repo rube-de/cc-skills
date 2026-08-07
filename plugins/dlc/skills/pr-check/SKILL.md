@@ -23,6 +23,48 @@ This skill uses progressive disclosure. The orchestration skeleton (fetch, categ
 
 Do **not** preload these references — each Step pointer below names its file and its skip condition.
 
+> **No GitHub mentions in posted text:** Any text this skill posts to GitHub —
+> inline replies, review-body replies, issue-comment replies, follow-up issue
+> bodies, and the PR summary — MUST NOT contain an `@`-prefixed username or bot
+> name. Write the bare login instead. This applies to bots (`copilot`,
+> `coderabbitai`, `gemini-code-assist`, `greptile-apps`, `qodo-code-review`)
+> and humans alike — GitHub turns an `@`-prefixed username into a live
+> mention notification even for bot accounts, which can trigger unwanted
+> bot actions such as an auto-generated duplicate PR.
+>
+> - Wrong: attributing a fix to a reviewer with an `@`-prefixed name
+> - Right: `Fixed: constrained values to exact literals (copilot)`
+>
+> This applies even when quoting a reviewer's own words: when embedding an
+> excerpt of the original comment (e.g. Step 4's `{first 100 chars of
+> original body}`), neutralize every `@` character in the excerpt before
+> writing it — insert a space immediately after it, don't delete it — so a
+> reviewer's own self-mention or tag can't resurrect a live notification
+> when re-posted, while the excerpt still reads recognizably close to the
+> original (an email address or scoped package name the reviewer quoted
+> stays legible instead of turning into different text). Note that not
+> every bot mention goes through GitHub's markdown renderer — some bots
+> (Copilot's coding agent among them) react to a raw substring scan of the
+> comment body, not to rendered links. Neutralizing the `@` character is
+> the only reliable defense against both; code-fencing or blockquoting an
+> excerpt is not sufficient on its own.
+>
+> This applies just as much to `{reply text}` itself — the description the
+> agent composes to explain a fix, dismissal, or answer — not only to the
+> quoted excerpt. A composed reply describing a fix can legitimately contain
+> an `@`-prefixed technical token (a scoped package bumped as part of the
+> fix, a decorator added, an email in a config example): insert a space
+> after the `@` there too, the same as in a quoted excerpt. The only case
+> that uses the bare-name form instead of space-insertion is the agent
+> naming a reviewer or bot itself, as in the `(copilot)` example above.
+>
+> No text that gets posted to GitHub may pass through shell-string
+> interpolation or a heredoc — a heredoc's delimiter only disables
+> *expansion* inside it, not *collision* with reviewer-controlled text that
+> happens to match the delimiter itself. See each Step's reply-routing block
+> below for the file-based mechanism (`Write` tool + `--body-file` /
+> `-F body=@file`) that enforces this.
+
 ## Step 1: Fetch PR Data
 
 ### Parse arguments
@@ -70,7 +112,7 @@ sh ../../scripts/pr-comments.sh
 
 ```text
 Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads, {summary.total_review_bodies} review bodies, {summary.total_issue_comments} issue comments):
-  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies, {reviewer.issue_comments} issue comments)
+  - {reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies, {reviewer.issue_comments} issue comments)
 ```
 
 Store each reviewer's `top_level_threads`, `review_bodies`, and `issue_comments` counts as the coverage targets for Step 4b.
@@ -201,14 +243,30 @@ For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a r
 
 Use the `reply_type` field from the comment data to determine the reply mechanism. Note: threads have two ID fields — `rest_id` (integer, used for REST API `in_reply_to`) and `id` (GraphQL node ID like `PRRT_kwDORKvRbs510iY6`, used for `resolveReviewThread`). Use the correct one for each call.
 
-- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub:
+- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub. Clear any stale file at this path, write `{reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file — never interpolate composed text into a shell string or a heredoc (see No GitHub mentions note above):
 
 ```bash
-# Post the reply (uses rest_id for the REST API)
-if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
+```
+
+The `Write` tool call is not a shell command — it never sees the `$REPLY_FILE` variable. Read the absolute path this block printed and pass that literal string as the `file_path`, with `{reply text}` as the content, then post it. **Posting is a separate Bash tool call from the one above — shell variables don't persist across calls, so recompute the path first (it will match what was just printed, since `DLC_TMPDIR`/`REPLY_FILE` are computed the same way both times):**
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
-  -f body="{reply text}" \
+  -F body=@"$REPLY_FILE" \
   -F in_reply_to={rest_id}; then
+  rm -f "$REPLY_FILE"
   # Resolve the thread on GitHub (uses GraphQL node id, only after successful reply)
   if ! gh api graphql -f query='mutation($threadId: ID!) {
     resolveReviewThread(input: {threadId: $threadId}) {
@@ -217,27 +275,99 @@ if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   }' -f threadId="{id}" >/dev/null; then
     echo "Warning: Failed to resolve thread {id} — reply was posted successfully" >&2
   fi
+else
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect an existing reply and skip re-posting." >&2
+  exit 1
 fi
 ```
 
+The scratch directory is scoped per-PR (not a single shared `/tmp` path across every run), and the filename carries a reply-type prefix — `reply-inline-` here, `reply-review-` for review-body replies, `reply-issue-` for issue-comment replies below — so `rest_id`, a review body's `database_id`, and an issue comment's `database_id` can never collide with each other even if any two of the integers coincide. They're not guaranteed to come from independent counters — GitHub's REST/GraphQL `databaseId` values are drawn from a shared internal ID space across resource types, so a review body and an issue comment (or an inline comment) can end up with the same numeric ID by chance. This scoping is per-PR, not per-run: two `pr-check` invocations running concurrently against the *same* PR (e.g. a manual attended run overlapping a `babysit` cycle) share the same file paths and can cross-contaminate each other's staged replies. Don't run `pr-check` concurrently against the same PR.
+
 > **Thread resolution**: Only inline threads (`reply_type == "inline"`) are resolved — review bodies and issue comments have no GitHub resolve mechanism. If `resolveReviewThread` fails (permissions, rate limit), log a warning and continue — the reply is the primary deliverable, resolution is a UX enhancement. The mutation is idempotent, so calling it on an already-resolved thread is a harmless no-op.
 
-- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel:
+- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel. Clear any stale file at this path first:
 
 ```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
-
-{reply text}
-<!-- dlc-reply:{database_id} -->"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel:
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
-```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+```text
+> {first 100 chars of original body}...
 
 {reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
+```
+
+Then post from the file. **This is a separate Bash tool call — recompute the path first:**
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
+  exit 1
+fi
+```
+
+> The excerpt is reviewer-controlled text and could contain anything —
+> backticks, `` $(...) ``, quotes, embedded newlines, even a forged
+> `<!-- dlc-reply: -->` sentinel. Writing it to a file with the `Write` tool
+> and posting via `--body-file` means none of that ever reaches a shell
+> parser. The three excerpt transforms each close a specific hole:
+> neutralizing `@` (inserting a space after it) stops a resurrected mention
+> regardless of how the comment renders, while keeping the excerpt legible
+> instead of deleting meaningful characters; collapsing newlines stops the
+> blockquote from breaking out into unquoted markdown after the first line;
+> stripping `<!--`/`-->` stops a reviewer from forging the sentinel below
+> and tricking a future run into classifying a *different* comment as
+> already-replied.
+
+- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel. Same content shape, same transforms, same freshness handling, same reasoning as the review-body block above. Clear any stale file at this path first:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
+```
+
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool as:
+
+```text
+> {first 100 chars of original body}...
+
+{reply text}
+<!-- dlc-reply:{database_id} -->
+```
+
+Then post from the file. **This is a separate Bash tool call — recompute the path first:**
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
+  exit 1
+fi
 ```
 
 > **Why the sentinel?** Issue comments are a flat array with no parent-child links. The `<!-- dlc-reply:{database_id} -->` HTML comment embeds the original comment's identifier so that (1) "already replied" detection is reliable and (2) the script can filter DLC's own replies from the reviewer inventory on re-runs.
@@ -292,7 +422,7 @@ Do **not** proceed to Step 5. Print the error:
 
 ```text
 ERROR: Coverage verification failed.
-  Reviewer @{name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized. Expected {expected_issue_comments} issue comments, found {actual_issue_comments} categorized.
+  Reviewer {name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized. Expected {expected_issue_comments} issue comments, found {actual_issue_comments} categorized.
   Missing IDs: {id1}, {id2}, ...
   Recovery: re-processing missed items through Steps 2-3.
 ```
@@ -305,7 +435,7 @@ ERROR: Coverage verification failed.
 
 ```text
 FATAL: Coverage verification failed after retry.
-  Reviewer @{name}: still missing {n} items.
+  Reviewer {name}: still missing {n} items.
   Missing IDs: {id1}, {id2}, ...
   Manual audit required — cannot proceed.
 ```
@@ -360,9 +490,9 @@ PR review compliance check complete.
   - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked, {pending_human} pending-human), Blocked: {n}, Dismissed: {n}
   - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment; babysit parses this exact line shape]
+      {reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      {reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment, with a space inserted immediately after every @ character (not deleted — a scoped package name or similar stays recognizable in the notification instead of turning into a different, misleading one); babysit parses this exact line shape]
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

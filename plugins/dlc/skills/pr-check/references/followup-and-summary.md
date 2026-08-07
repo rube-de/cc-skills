@@ -115,30 +115,119 @@ For each **Skipped (user decision)** item — Fixable comments where the user ch
 
 Use the same reply routing as SKILL.md Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.
 
-- **Inline** (`reply_type == "inline"`):
+- **Inline** (`reply_type == "inline"`): Do NOT resolve the thread (work is pending). Clear any stale file at this path, write `{decision-aware reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file:
+
 ```bash
-# Post the reply only — do NOT resolve the thread (work is pending)
-gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
+```
+
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`, then post it. **Posting is a separate Bash tool call — recompute the path first:**
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
-  -f body="{decision-aware reply text}" \
-  -F in_reply_to={rest_id}
+  -F body=@"$REPLY_FILE" \
+  -F in_reply_to={rest_id}; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file. This is an Acknowledged-type reply, which Step 2's already-replied detection does NOT recognize (Acknowledged threads intentionally stay Unresolved) — a blind retry from Step 1 can post a duplicate acknowledgement if the POST actually succeeded server-side despite this error. Before retrying, check this thread's existing replies (e.g. via the GitHub UI or \`gh api\`) to confirm no Acknowledged reply is already present." >&2
+  exit 1
+fi
 ```
 
-- **Review body** (`reply_type == "pr_comment"`):
+- **Review body** (`reply_type == "pr_comment"`): Clear any stale file at this path first:
+
 ```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
+```
+
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+
+```text
+> {first 100 chars of original body}...
 
 {decision-aware reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
 ```
 
-- **Issue comment** (`reply_type == "issue_comment"`):
+Then post from the file. **This is a separate Bash tool call — recompute the path first:**
+
 ```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a literal duplicate comment. Re-running pr-check from Step 1 IS safe here, unlike for inline threads: review-body 'already-replied' detection is sentinel-based (\`<!-- dlc-reply:{database_id} -->\` in ISSUE_COMMENTS), so it recognizes a successfully-posted reply regardless of its Fixed/Dismissed/Answered/Acknowledged prefix and Step 2 will correctly skip re-posting." >&2
+  exit 1
+fi
+```
+
+- **Issue comment** (`reply_type == "issue_comment"`): Same content shape, transforms, and freshness handling as the review-body block above. Clear any stale file at this path first:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
+```
+
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool as:
+
+```text
+> {first 100 chars of original body}...
 
 {decision-aware reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
 ```
+
+Then post from the file. **This is a separate Bash tool call — recompute the path first:**
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a literal duplicate comment. Re-running pr-check from Step 1 IS safe here, unlike for inline threads: issue-comment 'already-replied' detection is sentinel-based (\`<!-- dlc-reply:{database_id} -->\` in ISSUE_COMMENTS), so it recognizes a successfully-posted reply regardless of its Fixed/Dismissed/Answered/Acknowledged prefix and Step 2 will correctly skip re-posting." >&2
+  exit 1
+fi
+```
+
+> All three reply bodies are composed with the `Write` tool and posted from a
+> file, never shell-interpolated — the quoted excerpt is reviewer-controlled
+> text that could contain anything. The scratch directory is per-PR and each
+> filename carries a reply-type prefix (`reply-inline-`, `reply-review-`, or
+> `reply-issue-`), so an inline thread's `rest_id`, a review body's
+> `database_id`, and an issue comment's `database_id` can never collide with
+> each other even though GitHub draws these IDs from a shared internal space
+> where any two of them could otherwise coincide. See SKILL.md's Step 4
+> reply-routing section for the full reasoning behind each excerpt transform
+> (mention neutralization, newline collapsing, sentinel-forgery prevention) —
+> identical here.
 
 ## Step 5c: PR Summary Comment
 
@@ -147,6 +236,16 @@ If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, user
 > **Unattended-mode conditional suppression:** In unattended runs (`UNATTENDED=true`), if the ONLY remaining items are Pending-Human — no Fixed, Answered, Deferred, Tracked, Blocked, or Skipped items to report — do NOT post this summary comment. The halt signal comes from the `PushNotification` fired by babysit, not from a PR-level comment. When auto-handled items coexist with Pending-Human items (e.g., 3 fixed + 2 pending), post the summary as normal with the Pending-Human row included.
 
 Post a PR-level summary comment containing the overall status and decisions.
+
+> **No `@`-mentions in the Decisions section:** the fenced template below is
+> the literal posted comment body — do not write instruction prose inside it.
+> This note covers `{brief description}` too — the same two-case split from
+> the no-mentions rule at the top of SKILL.md applies: if the original
+> comment tagged a person or bot and you're carrying that reference over,
+> drop the `@` entirely (bare name). If it contained an `@`-prefixed
+> technical token instead — a scoped package, decorator, or email address —
+> insert a space right after the `@` instead of deleting it, so the token
+> stays recognizable rather than turning into a different, misleading one.
 
 Build the summary with these sections:
 

@@ -105,7 +105,7 @@ When all four pass → auto-draft the reply without asking. Print: `Auto-replyin
 > **In unattended mode, skip this menu entirely and classify the item as Pending-Human per the mode split above.** Do not invoke `AskUserQuestion` on an unattended run — the tool has no user surface to render to, and empty returns silently produced `Acknowledged` replies under the old behavior.
 
 ```text
-Discussion item {n}/{total}: @{reviewer} at {location}
+Discussion item {n}/{total}: {reviewer} at {location}
 > "{first 100 chars of comment}..."
 
 Classification: {Implementable Fix | Clarification Answer | Design Decision | Out-of-PR-Scope}
