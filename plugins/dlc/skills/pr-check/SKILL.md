@@ -23,6 +23,36 @@ This skill uses progressive disclosure. The orchestration skeleton (fetch, categ
 
 Do **not** preload these references — each Step pointer below names its file and its skip condition.
 
+> **No GitHub mentions in posted text:** Any text this skill posts to GitHub —
+> inline replies, review-body replies, issue-comment replies, follow-up issue
+> bodies, and the PR summary — MUST NOT contain an `@`-prefixed username or bot
+> name. Write the bare login instead. This applies to bots (`copilot`,
+> `coderabbitai`, `gemini-code-assist`, `greptile-apps`, `qodo-code-review`)
+> and humans alike — GitHub turns `@name` into a live mention notification
+> even for bot accounts, which can trigger unwanted bot actions such as an
+> auto-generated duplicate PR.
+>
+> - Wrong: `Fixed: constrained values to exact literals (@copilot)`
+> - Right: `Fixed: constrained values to exact literals (copilot)`
+>
+> This applies even when quoting a reviewer's own words: when embedding an
+> excerpt of the original comment (e.g. Step 4's `{first 100 chars of
+> original body}`), strip every `@` character from the excerpt before writing
+> it, so a reviewer's own self-mention or tag can't resurrect a live
+> notification when re-posted. Note that not every bot mention goes through
+> GitHub's markdown renderer — some bots (Copilot's coding agent among them)
+> react to a raw substring scan of the comment body, not to rendered links.
+> Removing the `@` character is the only reliable defense; code-fencing or
+> blockquoting an excerpt is not sufficient on its own.
+>
+> Compose every posted body with the `Write` tool to a scratch file first,
+> then post with `--body-file "$FILE"` (`gh pr comment`) or `-F body=@"$FILE"`
+> (`gh api`) — never interpolate composed or quoted text directly into a
+> shell string or a heredoc. A heredoc's delimiter only disables *expansion*
+> inside it; it does not stop reviewer-controlled text from containing a line
+> that matches the delimiter itself and terminates it early, letting
+> subsequent lines be parsed as shell.
+
 ## Step 1: Fetch PR Data
 
 ### Parse arguments
@@ -70,7 +100,7 @@ sh ../../scripts/pr-comments.sh
 
 ```text
 Reviewer inventory ({summary.reviewer_count} reviewers, {summary.total_comments} total comments, {summary.total_threads} threads, {summary.total_review_bodies} review bodies, {summary.total_issue_comments} issue comments):
-  - @{reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies, {reviewer.issue_comments} issue comments)
+  - {reviewer.login}: {reviewer.total_comments} comments ({reviewer.top_level_threads} threads, {reviewer.review_bodies} review bodies, {reviewer.issue_comments} issue comments)
 ```
 
 Store each reviewer's `top_level_threads`, `review_bodies`, and `issue_comments` counts as the coverage targets for Step 4b.
@@ -201,14 +231,16 @@ For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a r
 
 Use the `reply_type` field from the comment data to determine the reply mechanism. Note: threads have two ID fields — `rest_id` (integer, used for REST API `in_reply_to`) and `id` (GraphQL node ID like `PRRT_kwDORKvRbs510iY6`, used for `resolveReviewThread`). Use the correct one for each call.
 
-- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub:
+- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub. Write `{reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file — never interpolate composed text into a shell string or a heredoc (see No GitHub mentions note above):
 
 ```bash
-# Post the reply (uses rest_id for the REST API)
+REPLY_FILE="/tmp/dlc-reply-{rest_id}.md"
+
 if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
-  -f body="{reply text}" \
+  -F body=@"$REPLY_FILE" \
   -F in_reply_to={rest_id}; then
+  rm -f "$REPLY_FILE"
   # Resolve the thread on GitHub (uses GraphQL node id, only after successful reply)
   if ! gh api graphql -f query='mutation($threadId: ID!) {
     resolveReviewThread(input: {threadId: $threadId}) {
@@ -217,27 +249,66 @@ if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   }' -f threadId="{id}" >/dev/null; then
     echo "Warning: Failed to resolve thread {id} — reply was posted successfully" >&2
   fi
+else
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE for retry" >&2
 fi
 ```
 
+The filename is keyed by the thread's `rest_id` rather than a timestamp, so a same-second reply can't overwrite another's scratch file mid-flight.
+
 > **Thread resolution**: Only inline threads (`reply_type == "inline"`) are resolved — review bodies and issue comments have no GitHub resolve mechanism. If `resolveReviewThread` fails (permissions, rate limit), log a warning and continue — the reply is the primary deliverable, resolution is a UX enhancement. The mutation is idempotent, so calling it on an already-resolved thread is a harmless no-op.
 
-- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel:
+- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel. Write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
-```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+```text
+> {first 100 chars of original body}...
 
 {reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
 ```
 
-- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel:
+Then post from the file:
 
 ```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+
+if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+fi
+```
+
+> The excerpt is reviewer-controlled text and could contain anything —
+> backticks, `` $(...) ``, quotes, embedded newlines, even a forged
+> `<!-- dlc-reply: -->` sentinel. Writing it to a file with the `Write` tool
+> and posting via `--body-file` means none of that ever reaches a shell
+> parser. The three excerpt transforms each close a specific hole: stripping
+> `@` stops a resurrected mention regardless of how the comment renders;
+> collapsing newlines stops the blockquote from breaking out into unquoted
+> markdown after the first line; stripping `<!--`/`-->` stops a reviewer from
+> forging the sentinel below and tricking a future run into classifying a
+> *different* comment as already-replied.
+
+- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel. Same content shape, same transforms, same reasoning as the review-body block above — write `REPLY_FILE` with the `Write` tool as:
+
+```text
+> {first 100 chars of original body}...
 
 {reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
+```
+
+Then post from the file:
+
+```bash
+REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+
+if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+fi
 ```
 
 > **Why the sentinel?** Issue comments are a flat array with no parent-child links. The `<!-- dlc-reply:{database_id} -->` HTML comment embeds the original comment's identifier so that (1) "already replied" detection is reliable and (2) the script can filter DLC's own replies from the reviewer inventory on re-runs.
@@ -292,7 +363,7 @@ Do **not** proceed to Step 5. Print the error:
 
 ```text
 ERROR: Coverage verification failed.
-  Reviewer @{name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized. Expected {expected_issue_comments} issue comments, found {actual_issue_comments} categorized.
+  Reviewer {name}: expected {expected_threads} threads, found {actual_threads} categorized. Expected {expected_bodies} review bodies, found {actual_bodies} categorized. Expected {expected_issue_comments} issue comments, found {actual_issue_comments} categorized.
   Missing IDs: {id1}, {id2}, ...
   Recovery: re-processing missed items through Steps 2-3.
 ```
@@ -305,7 +376,7 @@ ERROR: Coverage verification failed.
 
 ```text
 FATAL: Coverage verification failed after retry.
-  Reviewer @{name}: still missing {n} items.
+  Reviewer {name}: still missing {n} items.
   Missing IDs: {id1}, {id2}, ...
   Manual audit required — cannot proceed.
 ```
@@ -360,8 +431,8 @@ PR review compliance check complete.
   - Resolved: {n}, Fixed by DLC: {n}, Answered by DLC: {n}, Skipped (user decision): {n}, Discussion: {n} ({deferred} deferred, {tracked} tracked, {pending_human} pending-human), Blocked: {n}, Dismissed: {n}
   - Coverage: {verified_items}/{total_items} items verified ({thread_count} threads + {body_count} review bodies + {issue_comment_count} issue comments) (Step 4b passed)
   - Per-reviewer breakdown:
-      @{reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-      @{reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      {reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
+      {reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
   - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment; babysit parses this exact line shape]
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]

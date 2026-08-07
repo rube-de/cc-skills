@@ -115,30 +115,70 @@ For each **Skipped (user decision)** item — Fixable comments where the user ch
 
 Use the same reply routing as SKILL.md Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.
 
-- **Inline** (`reply_type == "inline"`):
+- **Inline** (`reply_type == "inline"`): Do NOT resolve the thread (work is pending). Write `{decision-aware reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file:
+
 ```bash
-# Post the reply only — do NOT resolve the thread (work is pending)
-gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
+REPLY_FILE="/tmp/dlc-reply-{rest_id}.md"
+
+if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
-  -f body="{decision-aware reply text}" \
-  -F in_reply_to={rest_id}
+  -F body=@"$REPLY_FILE" \
+  -F in_reply_to={rest_id}; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE for retry" >&2
+fi
 ```
 
-- **Review body** (`reply_type == "pr_comment"`):
-```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+- **Review body** (`reply_type == "pr_comment"`): Write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+
+```text
+> {first 100 chars of original body}...
 
 {decision-aware reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
 ```
 
-- **Issue comment** (`reply_type == "issue_comment"`):
+Then post from the file:
+
 ```bash
-gh pr comment $PR_NUMBER --body "> {first 100 chars of original body}...
+REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+
+if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+fi
+```
+
+- **Issue comment** (`reply_type == "issue_comment"`): Same content shape and transforms as the review-body block above — write `REPLY_FILE` with the `Write` tool as:
+
+```text
+> {first 100 chars of original body}...
 
 {decision-aware reply text}
-<!-- dlc-reply:{database_id} -->"
+<!-- dlc-reply:{database_id} -->
 ```
+
+Then post from the file:
+
+```bash
+REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+
+if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+  rm -f "$REPLY_FILE"
+else
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+fi
+```
+
+> All three reply bodies are composed with the `Write` tool and posted from a
+> file, never shell-interpolated — the quoted excerpt is reviewer-controlled
+> text that could contain anything. Filenames are keyed by the comment ID
+> rather than a timestamp, so a same-second reply can't overwrite another's
+> scratch file mid-flight. See SKILL.md's Step 4 reply-routing section for
+> the full reasoning behind each excerpt transform (mention stripping,
+> newline collapsing, sentinel-forgery prevention) — identical here.
 
 ## Step 5c: PR Summary Comment
 
@@ -147,6 +187,13 @@ If there are no remaining Discussion-Deferred, Discussion-Tracked, Blocked, user
 > **Unattended-mode conditional suppression:** In unattended runs (`UNATTENDED=true`), if the ONLY remaining items are Pending-Human — no Fixed, Answered, Deferred, Tracked, Blocked, or Skipped items to report — do NOT post this summary comment. The halt signal comes from the `PushNotification` fired by babysit, not from a PR-level comment. When auto-handled items coexist with Pending-Human items (e.g., 3 fixed + 2 pending), post the summary as normal with the Pending-Human row included.
 
 Post a PR-level summary comment containing the overall status and decisions.
+
+> **No `@`-mentions in the Decisions section:** the fenced template below is
+> the literal posted comment body — do not write instruction prose inside it.
+> This note covers `{brief description}` too: if you're paraphrasing or
+> quoting a reviewer's own words and their comment contained an `@name`,
+> drop the `@` when you carry it into that line. See the no-mentions rule at
+> the top of SKILL.md.
 
 Build the summary with these sections:
 

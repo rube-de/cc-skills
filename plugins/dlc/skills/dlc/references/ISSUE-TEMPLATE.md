@@ -25,6 +25,8 @@ All labels are lowercase and prefixed with `dlc-`.
 
 ## Issue Body Structure
 
+> **No GitHub mentions:** Reference reviewers, bots, or tools by bare name — never an `@`-prefixed one. GitHub notifies on `@name` inside an issue body too.
+
 Use this template exactly — agents and dashboards parse these section headers:
 
 ````markdown
