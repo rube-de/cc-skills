@@ -153,7 +153,7 @@ REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
 ```
 
-Now write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+Now write `REPLY_FILE` with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
 ```text
 > {first 100 chars of original body}...
@@ -223,7 +223,7 @@ fi
 > each other even though GitHub draws these IDs from a shared internal space
 > where any two of them could otherwise coincide. See SKILL.md's Step 4
 > reply-routing section for the full reasoning behind each excerpt transform
-> (mention stripping, newline collapsing, sentinel-forgery prevention) —
+> (mention neutralization, newline collapsing, sentinel-forgery prevention) —
 > identical here.
 
 ## Step 5c: PR Summary Comment
@@ -237,9 +237,9 @@ Post a PR-level summary comment containing the overall status and decisions.
 > **No `@`-mentions in the Decisions section:** the fenced template below is
 > the literal posted comment body — do not write instruction prose inside it.
 > This note covers `{brief description}` too: if you're paraphrasing or
-> quoting a reviewer's own words and their comment contained an `@name`,
-> drop the `@` when you carry it into that line. See the no-mentions rule at
-> the top of SKILL.md.
+> quoting a reviewer's own words and their comment contained an
+> `@`-prefixed mention, drop the `@` when you carry it into that line. See
+> the no-mentions rule at the top of SKILL.md.
 
 Build the summary with these sections:
 

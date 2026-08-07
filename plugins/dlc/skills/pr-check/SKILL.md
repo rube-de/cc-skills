@@ -28,22 +28,26 @@ Do **not** preload these references — each Step pointer below names its file a
 > bodies, and the PR summary — MUST NOT contain an `@`-prefixed username or bot
 > name. Write the bare login instead. This applies to bots (`copilot`,
 > `coderabbitai`, `gemini-code-assist`, `greptile-apps`, `qodo-code-review`)
-> and humans alike — GitHub turns `@name` into a live mention notification
-> even for bot accounts, which can trigger unwanted bot actions such as an
-> auto-generated duplicate PR.
+> and humans alike — GitHub turns an `@`-prefixed username into a live
+> mention notification even for bot accounts, which can trigger unwanted
+> bot actions such as an auto-generated duplicate PR.
 >
 > - Wrong: attributing a fix to a reviewer with an `@`-prefixed name
 > - Right: `Fixed: constrained values to exact literals (copilot)`
 >
 > This applies even when quoting a reviewer's own words: when embedding an
 > excerpt of the original comment (e.g. Step 4's `{first 100 chars of
-> original body}`), strip every `@` character from the excerpt before writing
-> it, so a reviewer's own self-mention or tag can't resurrect a live
-> notification when re-posted. Note that not every bot mention goes through
-> GitHub's markdown renderer — some bots (Copilot's coding agent among them)
-> react to a raw substring scan of the comment body, not to rendered links.
-> Removing the `@` character is the only reliable defense; code-fencing or
-> blockquoting an excerpt is not sufficient on its own.
+> original body}`), neutralize every `@` character in the excerpt before
+> writing it — insert a space immediately after it, don't delete it — so a
+> reviewer's own self-mention or tag can't resurrect a live notification
+> when re-posted, while the excerpt still reads recognizably close to the
+> original (an email address or scoped package name the reviewer quoted
+> stays legible instead of turning into different text). Note that not
+> every bot mention goes through GitHub's markdown renderer — some bots
+> (Copilot's coding agent among them) react to a raw substring scan of the
+> comment body, not to rendered links. Neutralizing the `@` character is
+> the only reliable defense against both; code-fencing or blockquoting an
+> excerpt is not sufficient on its own.
 >
 > No text that gets posted to GitHub may pass through shell-string
 > interpolation or a heredoc — a heredoc's delimiter only disables
@@ -280,7 +284,7 @@ REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
 ```
 
-Now write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+Now write `REPLY_FILE` with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
 ```text
 > {first 100 chars of original body}...
@@ -310,12 +314,14 @@ fi
 > backticks, `` $(...) ``, quotes, embedded newlines, even a forged
 > `<!-- dlc-reply: -->` sentinel. Writing it to a file with the `Write` tool
 > and posting via `--body-file` means none of that ever reaches a shell
-> parser. The three excerpt transforms each close a specific hole: stripping
-> `@` stops a resurrected mention regardless of how the comment renders;
-> collapsing newlines stops the blockquote from breaking out into unquoted
-> markdown after the first line; stripping `<!--`/`-->` stops a reviewer from
-> forging the sentinel below and tricking a future run into classifying a
-> *different* comment as already-replied.
+> parser. The three excerpt transforms each close a specific hole:
+> neutralizing `@` (inserting a space after it) stops a resurrected mention
+> regardless of how the comment renders, while keeping the excerpt legible
+> instead of deleting meaningful characters; collapsing newlines stops the
+> blockquote from breaking out into unquoted markdown after the first line;
+> stripping `<!--`/`-->` stops a reviewer from forging the sentinel below
+> and tricking a future run into classifying a *different* comment as
+> already-replied.
 
 - **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel. Same content shape, same transforms, same freshness handling, same reasoning as the review-body block above. Clear any stale file at this path first:
 
