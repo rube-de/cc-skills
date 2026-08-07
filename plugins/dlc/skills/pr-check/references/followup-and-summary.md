@@ -236,10 +236,13 @@ Post a PR-level summary comment containing the overall status and decisions.
 
 > **No `@`-mentions in the Decisions section:** the fenced template below is
 > the literal posted comment body — do not write instruction prose inside it.
-> This note covers `{brief description}` too: if you're paraphrasing or
-> quoting a reviewer's own words and their comment contained an
-> `@`-prefixed mention, drop the `@` when you carry it into that line. See
-> the no-mentions rule at the top of SKILL.md.
+> This note covers `{brief description}` too — the same two-case split from
+> the no-mentions rule at the top of SKILL.md applies: if the original
+> comment tagged a person or bot and you're carrying that reference over,
+> drop the `@` entirely (bare name). If it contained an `@`-prefixed
+> technical token instead — a scoped package, decorator, or email address —
+> insert a space right after the `@` instead of deleting it, so the token
+> stays recognizable rather than turning into a different, misleading one.
 
 Build the summary with these sections:
 

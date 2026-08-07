@@ -49,6 +49,15 @@ Do **not** preload these references — each Step pointer below names its file a
 > the only reliable defense against both; code-fencing or blockquoting an
 > excerpt is not sufficient on its own.
 >
+> This applies just as much to `{reply text}` itself — the description the
+> agent composes to explain a fix, dismissal, or answer — not only to the
+> quoted excerpt. A composed reply describing a fix can legitimately contain
+> an `@`-prefixed technical token (a scoped package bumped as part of the
+> fix, a decorator added, an email in a config example): insert a space
+> after the `@` there too, the same as in a quoted excerpt. The only case
+> that uses the bare-name form instead of space-insertion is the agent
+> naming a reviewer or bot itself, as in the `(copilot)` example above.
+>
 > No text that gets posted to GitHub may pass through shell-string
 > interpolation or a heredoc — a heredoc's delimiter only disables
 > *expansion* inside it, not *collision* with reviewer-controlled text that
@@ -480,7 +489,7 @@ PR review compliance check complete.
   - Per-reviewer breakdown:
       {reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
       {reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment with every @ character removed; babysit parses this exact line shape]
+  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment, with a space inserted immediately after every @ character (not deleted — a scoped package name or similar stays recognizable in the notification instead of turning into a different, misleading one); babysit parses this exact line shape]
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]
