@@ -64,16 +64,22 @@ If the user selects "Show me details first", display each undecided item with yo
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 TIMESTAMP=$(date +%s)
 BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# Write the formatted issue body to BODY_FILE following ISSUE-TEMPLATE.md structure
+echo "$BODY_FILE"
+```
+
+Use the `Write` tool to create the issue body at the exact path just printed, following ISSUE-TEMPLATE.md structure. Then, in a separate Bash tool call, create the issue using that same literal path — **do not recompute it with a fresh `$(date +%s)`**, that produces a different timestamp and a different, nonexistent path:
+
+```bash
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
 gh issue create \
   --repo "$REPO" \
   --title "[DLC] PR Review: {n} unresolved comments on PR #{number}" \
-  --body-file "$BODY_FILE" \
+  --body-file "/tmp/dlc-issue-{the printed timestamp}.md" \
   --label "dlc-pr-check"
 ```
 
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
+If issue creation fails, save draft to `/tmp/dlc-draft-{the same printed timestamp}.md` and print the path.
 
 **If the user chooses "No, I'll handle manually":**
 - **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
@@ -122,9 +128,10 @@ DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-Now use the `Write` tool to create `$REPLY_FILE`, then post it. **This is a separate Bash tool call — recompute the path first:**
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`, then post it. **Posting is a separate Bash tool call — recompute the path first:**
 
 ```bash
 DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
@@ -151,9 +158,10 @@ DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-Now write `REPLY_FILE` with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
 ```text
 > {first 100 chars of original body}...
@@ -186,9 +194,10 @@ DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-Now write `REPLY_FILE` with the `Write` tool as:
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool as:
 
 ```text
 > {first 100 chars of original body}...
@@ -281,12 +290,16 @@ Author will address some remaining items manually.
 Some remaining items deferred — out of scope for this PR.
 ```
 
-Write the summary and post it:
+Compute the path and print it — the `Write` tool call that follows is not a shell command and can't see `$SUMMARY_FILE`:
 
 ```bash
 TIMESTAMP=$(date +%s)
 SUMMARY_FILE="/tmp/dlc-pr-summary-${TIMESTAMP}.md"
-# Write the summary content to SUMMARY_FILE
+echo "$SUMMARY_FILE"
+```
 
-gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"
+Use the `Write` tool to create the summary content at the exact path just printed. Then, in a separate Bash tool call, post using that same literal path — **do not recompute it with a fresh `$(date +%s)`**, that produces a different timestamp and a different, nonexistent path; paste the printed path as a literal string:
+
+```bash
+gh pr comment $PR_NUMBER --body-file "/tmp/dlc-pr-summary-{the printed timestamp}.md"
 ```

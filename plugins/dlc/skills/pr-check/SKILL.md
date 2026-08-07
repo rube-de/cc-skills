@@ -250,9 +250,10 @@ DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-Now use the `Write` tool to create `$REPLY_FILE` with `{reply text}` at the exact path above, then post it. **This is a separate Bash tool call from the one above — shell variables don't persist across calls, so recompute the path first:**
+The `Write` tool call is not a shell command — it never sees the `$REPLY_FILE` variable. Read the absolute path this block printed and pass that literal string as the `file_path`, with `{reply text}` as the content, then post it. **Posting is a separate Bash tool call from the one above — shell variables don't persist across calls, so recompute the path first (it will match what was just printed, since `DLC_TMPDIR`/`REPLY_FILE` are computed the same way both times):**
 
 ```bash
 DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
@@ -291,9 +292,10 @@ DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-Now write `REPLY_FILE` with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool — first neutralize every `@` character in the excerpt (insert a space immediately after it, don't delete it), then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
 ```text
 > {first 100 chars of original body}...
@@ -339,9 +341,10 @@ DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$REPLY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $REPLY_FILE itself
 ```
 
-Now write `REPLY_FILE` with the `Write` tool as:
+The `Write` tool call is not a shell command and can't see `$REPLY_FILE` — use the absolute path this block printed as the `file_path`. Write it with the `Write` tool as:
 
 ```text
 > {first 100 chars of original body}...

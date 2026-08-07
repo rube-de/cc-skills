@@ -92,16 +92,21 @@ Use this template exactly — agents and dashboards parse these section headers:
 # Detect repo
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
-# Write body to temp file
+# Compute and print the body file path
 TIMESTAMP=$(date +%s)
 BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# ... write formatted body to $BODY_FILE ...
+echo "$BODY_FILE"
+```
 
-# Create issue
+The `Write` tool call that follows is not a shell command and can't see `$BODY_FILE` — use the absolute path just printed. Write the formatted body to that exact path following the template above, then in a separate Bash tool call create the issue using that same literal path:
+
+```bash
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+
 gh issue create \
   --repo "$REPO" \
   --title "[DLC] {Type}: {summary}" \
-  --body-file "$BODY_FILE" \
+  --body-file "/tmp/dlc-issue-{the printed timestamp}.md" \
   --label "dlc-{type}"
 ```
 
@@ -109,6 +114,6 @@ gh issue create \
 
 If `gh issue create` fails (auth, network, missing repo):
 
-1. Save the draft to `/tmp/dlc-draft-{timestamp}.md`
+1. Save the draft to `/tmp/dlc-draft-{the same printed timestamp}.md` — **do not recompute the timestamp**, a fresh `$(date +%s)` produces a different, nonexistent path
 2. Print the full path to the user
 3. Print the `gh issue create` command they can run manually
