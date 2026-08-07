@@ -1502,3 +1502,45 @@ const compactCompetitor = (c) => {
 ```
 
 > Source: PR #236 (https://github.com/rube-de/cc-skills/pull/236), review rounds 12-15 (chatgpt-codex-connector, three consecutive rounds each finding a deeper layer of the same `boundedCompetitorJson`/`compactCompetitor` bug); file: `plugins/feature-discovery/skills/feature-discovery/scripts/feature-discovery.workflow.js`.
+
+### Splitting a bash block across two tool calls drops any shell variable it computed - every block must recompute its own state
+
+A prior fix in this same PR (closing a "stale preserved file" finding) split each reply-posting step from one combined bash block into two: a small "prep" block that computed `DLC_TMPDIR`/`REPLY_FILE` and cleared any stale file, followed by the `Write` tool call, followed by a second bash block that checked freshness and posted. The second block used `$REPLY_FILE` without recomputing it - relying on the variable assigned in the first block to still be set.
+
+This is the exact bug the skill's own preamble warns against: Claude Code's Bash tool starts a fresh shell process per tool call, so no variable, function, or trap set in one call survives into the next. With `$REPLY_FILE` unset, the second block's `[ ! -s "$REPLY_FILE" ]` check evaluates against an empty path, always takes the "missing file" branch, and exits before ever posting - silently breaking every reply this skill posts, in a PR whose entire purpose was hardening how this skill posts replies. A reviewer (chatgpt-codex-connector) caught it by pointing at the exact "Bash tool state does not persist across calls" sentence already documented elsewhere in the repo, which the author of the split had internalized as an abstract rule but didn't apply when writing new multi-block instructions.
+
+**Rule:** Whenever a skill's instructions describe a variable computed in one bash block and consumed in a later one, check whether those two blocks are meant to run as *separate* tool calls (with a `Write` tool step, an `AskUserQuestion`, or other non-bash action between them). If so, every later block must recompute the variable from the same deterministic inputs (e.g. `$PR_NUMBER`, a comment ID) - never assume it "carries over." A single combined bash block is always safe; a split one needs the computation repeated in each half.
+
+**Bad pattern (variable set in block 1, used unset in block 2 - silently no-ops):**
+```bash
+# Block 1 (one Bash tool call)
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"
+```
+*(Write tool call happens here, in between)*
+```bash
+# Block 2 (a separate Bash tool call) - $REPLY_FILE is unset here, not empty-checked-and-caught
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: missing" >&2; exit 1   # always fires - REPLY_FILE expands to ""
+fi
+```
+
+**Good pattern (each block is self-sufficient):**
+```bash
+# Block 1
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"
+```
+*(Write tool call happens here)*
+```bash
+# Block 2 - recomputes the same deterministic path from scratch
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: missing" >&2; exit 1
+fi
+```
+
+> Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), review round following the stale-file-freshness fix (chatgpt-codex-connector); files: `plugins/dlc/skills/pr-check/SKILL.md`, `plugins/dlc/skills/pr-check/references/followup-and-summary.md`.

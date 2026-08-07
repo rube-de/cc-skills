@@ -124,9 +124,12 @@ REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
 rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
 ```
 
-Now use the `Write` tool to create `$REPLY_FILE`, then post it:
+Now use the `Write` tool to create `$REPLY_FILE`, then post it. **This is a separate Bash tool call — recompute the path first:**
 
 ```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
@@ -136,7 +139,7 @@ elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   -F in_reply_to={rest_id}; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect an existing reply and skip re-posting." >&2
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file. This is an Acknowledged-type reply, which Step 2's already-replied detection does NOT recognize (Acknowledged threads intentionally stay Unresolved) — a blind retry from Step 1 can post a duplicate acknowledgement if the POST actually succeeded server-side despite this error. Before retrying, check this thread's existing replies (e.g. via the GitHub UI or \`gh api\`) to confirm no Acknowledged reply is already present." >&2
   exit 1
 fi
 ```
@@ -159,16 +162,19 @@ Now write `REPLY_FILE` with the `Write` tool — first strip every `@` character
 <!-- dlc-reply:{database_id} -->
 ```
 
-Then post from the file:
+Then post from the file. **This is a separate Bash tool call — recompute the path first:**
 
 ```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
 elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file. This is an Acknowledged-type reply, which Step 2's already-replied detection does NOT recognize (Acknowledged threads intentionally stay Unresolved) — a blind retry from Step 1 can post a duplicate acknowledgement if the POST actually succeeded server-side despite this error. Before retrying, check this thread's existing replies (e.g. via the GitHub UI or \`gh api\`) to confirm no Acknowledged reply is already present." >&2
   exit 1
 fi
 ```
@@ -191,16 +197,19 @@ Now write `REPLY_FILE` with the `Write` tool as:
 <!-- dlc-reply:{database_id} -->
 ```
 
-Then post from the file:
+Then post from the file. **This is a separate Bash tool call — recompute the path first:**
 
 ```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
 elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file. This is an Acknowledged-type reply, which Step 2's already-replied detection does NOT recognize (Acknowledged threads intentionally stay Unresolved) — a blind retry from Step 1 can post a duplicate acknowledgement if the POST actually succeeded server-side despite this error. Before retrying, check this thread's existing replies (e.g. via the GitHub UI or \`gh api\`) to confirm no Acknowledged reply is already present." >&2
   exit 1
 fi
 ```
