@@ -230,13 +230,18 @@ For each **Fixed**, **Dismissed**, and **Discussion-Answered** comment, post a r
 
 Use the `reply_type` field from the comment data to determine the reply mechanism. Note: threads have two ID fields — `rest_id` (integer, used for REST API `in_reply_to`) and `id` (GraphQL node ID like `PRRT_kwDORKvRbs510iY6`, used for `resolveReviewThread`). Use the correct one for each call.
 
-- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub. Write `{reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file — never interpolate composed text into a shell string or a heredoc (see No GitHub mentions note above):
+- **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub. Clear any stale file at this path, write `{reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file — never interpolate composed text into a shell string or a heredoc (see No GitHub mentions note above):
 
 ```bash
 DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+```
 
+Now use the `Write` tool to create `$REPLY_FILE` with `{reply text}` at the exact path above, then post it:
+
+```bash
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
@@ -259,11 +264,20 @@ else
 fi
 ```
 
-The scratch directory is scoped per-PR (not a single shared `/tmp` path across every run), and the filename carries a reply-type prefix — `reply-inline-` here, `reply-comment-` for review-body/issue-comment replies below — so an inline thread's `rest_id` can never collide with a review body's `database_id` even if the two integers coincide (they're drawn from different GitHub ID namespaces).
+The scratch directory is scoped per-PR (not a single shared `/tmp` path across every run), and the filename carries a reply-type prefix — `reply-inline-` here, `reply-review-` for review-body replies, `reply-issue-` for issue-comment replies below — so `rest_id`, a review body's `database_id`, and an issue comment's `database_id` can never collide with each other even if any two of the integers coincide. They're not guaranteed to come from independent counters — GitHub's REST/GraphQL `databaseId` values are drawn from a shared internal ID space across resource types, so a review body and an issue comment (or an inline comment) can end up with the same numeric ID by chance. This scoping is per-PR, not per-run: two `pr-check` invocations running concurrently against the *same* PR (e.g. a manual attended run overlapping a `babysit` cycle) share the same file paths and can cross-contaminate each other's staged replies. Don't run `pr-check` concurrently against the same PR.
 
 > **Thread resolution**: Only inline threads (`reply_type == "inline"`) are resolved — review bodies and issue comments have no GitHub resolve mechanism. If `resolveReviewThread` fails (permissions, rate limit), log a warning and continue — the reply is the primary deliverable, resolution is a UX enhancement. The mutation is idempotent, so calling it on an already-resolved thread is a harmless no-op.
 
-- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel. Write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+- **Review body** (`reply_type == "pr_comment"`): Reply to a top-level review body using `gh pr comment` with quoted original and DLC sentinel. Clear any stale file at this path first:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+```
+
+Now write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
 ```text
 > {first 100 chars of original body}...
@@ -275,10 +289,6 @@ The scratch directory is scoped per-PR (not a single shared `/tmp` path across e
 Then post from the file:
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-mkdir -p "$DLC_TMPDIR"
-REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
-
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
@@ -301,7 +311,16 @@ fi
 > forging the sentinel below and tricking a future run into classifying a
 > *different* comment as already-replied.
 
-- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel. Same content shape, same transforms, same reasoning as the review-body block above — write `REPLY_FILE` with the `Write` tool as:
+- **Issue comment** (`reply_type == "issue_comment"`): Reply to a general PR-level issue comment using `gh pr comment` with quoted original and DLC sentinel. Same content shape, same transforms, same freshness handling, same reasoning as the review-body block above. Clear any stale file at this path first:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+```
+
+Now write `REPLY_FILE` with the `Write` tool as:
 
 ```text
 > {first 100 chars of original body}...
@@ -313,10 +332,6 @@ fi
 Then post from the file:
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-mkdir -p "$DLC_TMPDIR"
-REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
-
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1

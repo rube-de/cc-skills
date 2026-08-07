@@ -115,13 +115,18 @@ For each **Skipped (user decision)** item — Fixable comments where the user ch
 
 Use the same reply routing as SKILL.md Step 4 — route based on the item's `reply_type`. **Do NOT call `resolveReviewThread`** for these replies — Acknowledged threads remain unresolved because the underlying work is pending (deferred, tracked, or skipped). Only Step 4 replies (Fixed, Dismissed, Answered) resolve threads.
 
-- **Inline** (`reply_type == "inline"`): Do NOT resolve the thread (work is pending). Write `{decision-aware reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file:
+- **Inline** (`reply_type == "inline"`): Do NOT resolve the thread (work is pending). Clear any stale file at this path, write `{decision-aware reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file:
 
 ```bash
 DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
 mkdir -p "$DLC_TMPDIR"
 REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+```
 
+Now use the `Write` tool to create `$REPLY_FILE`, then post it:
+
+```bash
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
@@ -136,7 +141,16 @@ else
 fi
 ```
 
-- **Review body** (`reply_type == "pr_comment"`): Write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
+- **Review body** (`reply_type == "pr_comment"`): Clear any stale file at this path first:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-review-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+```
+
+Now write `REPLY_FILE` with the `Write` tool — first strip every `@` character from the excerpt, then collapse every newline in it to a single space, then strip any `<!--` / `-->` sequence — as:
 
 ```text
 > {first 100 chars of original body}...
@@ -148,10 +162,6 @@ fi
 Then post from the file:
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-mkdir -p "$DLC_TMPDIR"
-REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
-
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
@@ -163,7 +173,16 @@ else
 fi
 ```
 
-- **Issue comment** (`reply_type == "issue_comment"`): Same content shape and transforms as the review-body block above — write `REPLY_FILE` with the `Write` tool as:
+- **Issue comment** (`reply_type == "issue_comment"`): Same content shape, transforms, and freshness handling as the review-body block above. Clear any stale file at this path first:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-issue-{database_id}.md"
+rm -f "$REPLY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+```
+
+Now write `REPLY_FILE` with the `Write` tool as:
 
 ```text
 > {first 100 chars of original body}...
@@ -175,10 +194,6 @@ fi
 Then post from the file:
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-mkdir -p "$DLC_TMPDIR"
-REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
-
 if [ ! -s "$REPLY_FILE" ]; then
   echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
   exit 1
@@ -193,9 +208,11 @@ fi
 > All three reply bodies are composed with the `Write` tool and posted from a
 > file, never shell-interpolated — the quoted excerpt is reviewer-controlled
 > text that could contain anything. The scratch directory is per-PR and each
-> filename carries a reply-type prefix (`reply-inline-` vs. `reply-comment-`),
-> so `rest_id` and `database_id` — different GitHub ID namespaces — can never
-> collide even if the two integers coincide. See SKILL.md's Step 4
+> filename carries a reply-type prefix (`reply-inline-`, `reply-review-`, or
+> `reply-issue-`), so an inline thread's `rest_id`, a review body's
+> `database_id`, and an issue comment's `database_id` can never collide with
+> each other even though GitHub draws these IDs from a shared internal space
+> where any two of them could otherwise coincide. See SKILL.md's Step 4
 > reply-routing section for the full reasoning behind each excerpt transform
 > (mention stripping, newline collapsing, sentinel-forgery prevention) —
 > identical here.
