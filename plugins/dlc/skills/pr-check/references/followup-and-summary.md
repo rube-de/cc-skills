@@ -64,32 +64,16 @@ If the user selects "Show me details first", display each undecided item with yo
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 TIMESTAMP=$(date +%s)
 BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-rm -f "$BODY_FILE"   # clear content preserved from an earlier failed attempt
-echo "$BODY_FILE"
-```
+# Write the formatted issue body to BODY_FILE following ISSUE-TEMPLATE.md structure
 
-Use the `Write` tool to create the issue body at the exact path just printed, following ISSUE-TEMPLATE.md structure. Then, in a separate Bash tool call, validate the file is non-empty and create the issue using that same literal path — **do not recompute it with a fresh `$(date +%s)`**, that produces a different timestamp and a different, nonexistent path:
-
-```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-BODY_FILE="/tmp/dlc-issue-{the printed timestamp}.md"
-
-if [ ! -s "$BODY_FILE" ]; then
-  echo "ERROR: issue body missing or empty at $BODY_FILE — the Write step may have failed" >&2
-  exit 1
-elif gh issue create \
+gh issue create \
   --repo "$REPO" \
   --title "[DLC] PR Review: {n} unresolved comments on PR #{number}" \
   --body-file "$BODY_FILE" \
-  --label "dlc-pr-check"; then
-  rm -f "$BODY_FILE"
-else
-  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE" >&2
-  exit 1
-fi
+  --label "dlc-pr-check"
 ```
 
-If issue creation fails, the block above preserves `$BODY_FILE` instead of deleting it — reuse it as the draft, or save it to `/tmp/dlc-draft-{the same printed timestamp}.md`, and print the path.
+If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
 **If the user chooses "No, I'll handle manually":**
 - **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
@@ -300,27 +284,12 @@ Author will address some remaining items manually.
 Some remaining items deferred — out of scope for this PR.
 ```
 
-Compute the path and print it — the `Write` tool call that follows is not a shell command and can't see `$SUMMARY_FILE`:
+Write the summary and post it:
 
 ```bash
 TIMESTAMP=$(date +%s)
 SUMMARY_FILE="/tmp/dlc-pr-summary-${TIMESTAMP}.md"
-rm -f "$SUMMARY_FILE"   # clear content preserved from an earlier failed attempt
-echo "$SUMMARY_FILE"
-```
+# Write the summary content to SUMMARY_FILE
 
-Use the `Write` tool to create the summary content at the exact path just printed. Then, in a separate Bash tool call, validate the file is non-empty and post using that same literal path — **do not recompute it with a fresh `$(date +%s)`**, that produces a different timestamp and a different, nonexistent path; paste the printed path as a literal string:
-
-```bash
-SUMMARY_FILE="/tmp/dlc-pr-summary-{the printed timestamp}.md"
-
-if [ ! -s "$SUMMARY_FILE" ]; then
-  echo "ERROR: summary body missing or empty at $SUMMARY_FILE — the Write step may have failed" >&2
-  exit 1
-elif gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"; then
-  rm -f "$SUMMARY_FILE"
-else
-  echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE" >&2
-  exit 1
-fi
+gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"
 ```
