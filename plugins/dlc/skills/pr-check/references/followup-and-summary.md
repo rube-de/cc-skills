@@ -118,15 +118,19 @@ Use the same reply routing as SKILL.md Step 4 — route based on the item's `rep
 - **Inline** (`reply_type == "inline"`): Do NOT resolve the thread (work is pending). Write `{decision-aware reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file:
 
 ```bash
-REPLY_FILE="/tmp/dlc-reply-{rest_id}.md"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
 
-if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -F body=@"$REPLY_FILE" \
   -F in_reply_to={rest_id}; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE for retry" >&2
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect an existing reply and skip re-posting." >&2
 fi
 ```
 
@@ -142,12 +146,16 @@ fi
 Then post from the file:
 
 ```bash
-REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
 
-if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
 fi
 ```
 
@@ -163,22 +171,28 @@ fi
 Then post from the file:
 
 ```bash
-REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
 
-if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
 fi
 ```
 
 > All three reply bodies are composed with the `Write` tool and posted from a
 > file, never shell-interpolated — the quoted excerpt is reviewer-controlled
-> text that could contain anything. Filenames are keyed by the comment ID
-> rather than a timestamp, so a same-second reply can't overwrite another's
-> scratch file mid-flight. See SKILL.md's Step 4 reply-routing section for
-> the full reasoning behind each excerpt transform (mention stripping,
-> newline collapsing, sentinel-forgery prevention) — identical here.
+> text that could contain anything. The scratch directory is per-PR and each
+> filename carries a reply-type prefix (`reply-inline-` vs. `reply-comment-`),
+> so `rest_id` and `database_id` — different GitHub ID namespaces — can never
+> collide even if the two integers coincide. See SKILL.md's Step 4
+> reply-routing section for the full reasoning behind each excerpt transform
+> (mention stripping, newline collapsing, sentinel-forgery prevention) —
+> identical here.
 
 ## Step 5c: PR Summary Comment
 

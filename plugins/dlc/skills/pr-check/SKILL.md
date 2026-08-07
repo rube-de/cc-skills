@@ -32,7 +32,7 @@ Do **not** preload these references — each Step pointer below names its file a
 > even for bot accounts, which can trigger unwanted bot actions such as an
 > auto-generated duplicate PR.
 >
-> - Wrong: `Fixed: constrained values to exact literals (@copilot)`
+> - Wrong: attributing a fix to a reviewer with an `@`-prefixed name
 > - Right: `Fixed: constrained values to exact literals (copilot)`
 >
 > This applies even when quoting a reviewer's own words: when embedding an
@@ -45,13 +45,12 @@ Do **not** preload these references — each Step pointer below names its file a
 > Removing the `@` character is the only reliable defense; code-fencing or
 > blockquoting an excerpt is not sufficient on its own.
 >
-> Compose every posted body with the `Write` tool to a scratch file first,
-> then post with `--body-file "$FILE"` (`gh pr comment`) or `-F body=@"$FILE"`
-> (`gh api`) — never interpolate composed or quoted text directly into a
-> shell string or a heredoc. A heredoc's delimiter only disables *expansion*
-> inside it; it does not stop reviewer-controlled text from containing a line
-> that matches the delimiter itself and terminates it early, letting
-> subsequent lines be parsed as shell.
+> No text that gets posted to GitHub may pass through shell-string
+> interpolation or a heredoc — a heredoc's delimiter only disables
+> *expansion* inside it, not *collision* with reviewer-controlled text that
+> happens to match the delimiter itself. See each Step's reply-routing block
+> below for the file-based mechanism (`Write` tool + `--body-file` /
+> `-F body=@file`) that enforces this.
 
 ## Step 1: Fetch PR Data
 
@@ -234,9 +233,13 @@ Use the `reply_type` field from the comment data to determine the reply mechanis
 - **Inline** (`reply_type == "inline"`): Reply to an inline review thread using `in_reply_to`, then resolve the thread on GitHub. Write `{reply text}` to `REPLY_FILE` with the `Write` tool, then post from the file — never interpolate composed text into a shell string or a heredoc (see No GitHub mentions note above):
 
 ```bash
-REPLY_FILE="/tmp/dlc-reply-{rest_id}.md"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-inline-{rest_id}.md"
 
-if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+elif gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
   --method POST \
   -F body=@"$REPLY_FILE" \
   -F in_reply_to={rest_id}; then
@@ -250,11 +253,11 @@ if gh api repos/$PR_OWNER/$PR_REPO/pulls/$PR_NUMBER/comments \
     echo "Warning: Failed to resolve thread {id} — reply was posted successfully" >&2
   fi
 else
-  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE for retry" >&2
+  echo "ERROR: Failed to post reply for thread {rest_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect an existing reply and skip re-posting." >&2
 fi
 ```
 
-The filename is keyed by the thread's `rest_id` rather than a timestamp, so a same-second reply can't overwrite another's scratch file mid-flight.
+The scratch directory is scoped per-PR (not a single shared `/tmp` path across every run), and the filename carries a reply-type prefix — `reply-inline-` here, `reply-comment-` for review-body/issue-comment replies below — so an inline thread's `rest_id` can never collide with a review body's `database_id` even if the two integers coincide (they're drawn from different GitHub ID namespaces).
 
 > **Thread resolution**: Only inline threads (`reply_type == "inline"`) are resolved — review bodies and issue comments have no GitHub resolve mechanism. If `resolveReviewThread` fails (permissions, rate limit), log a warning and continue — the reply is the primary deliverable, resolution is a UX enhancement. The mutation is idempotent, so calling it on an already-resolved thread is a harmless no-op.
 
@@ -270,12 +273,16 @@ The filename is keyed by the thread's `rest_id` rather than a timestamp, so a sa
 Then post from the file:
 
 ```bash
-REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
 
-if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
 fi
 ```
 
@@ -302,12 +309,16 @@ fi
 Then post from the file:
 
 ```bash
-REPLY_FILE="/tmp/dlc-reply-{database_id}.md"
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+REPLY_FILE="$DLC_TMPDIR/reply-comment-{database_id}.md"
 
-if gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
+if [ ! -s "$REPLY_FILE" ]; then
+  echo "ERROR: reply body missing or empty at $REPLY_FILE — the Write step may have failed" >&2
+elif gh pr comment $PR_NUMBER --body-file "$REPLY_FILE"; then
   rm -f "$REPLY_FILE"
 else
-  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE for retry" >&2
+  echo "ERROR: Failed to post reply for comment {database_id} — reply body preserved at $REPLY_FILE. Do NOT re-run this command with the preserved file — the POST may have already succeeded server-side despite this error. Re-run pr-check from Step 1 instead; its fresh fetch will detect the sentinel and skip re-posting." >&2
 fi
 ```
 
@@ -433,7 +444,7 @@ PR review compliance check complete.
   - Per-reviewer breakdown:
       {reviewer1}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
       {reviewer2}: {top_level_threads} threads + {review_bodies} review bodies + {issue_comments} issue comments — Resolved={resolved_count}, Fixed={fixed_count}, Answered={answered_count}, Skipped={skipped_count}, Discussion={discussion_count} ({deferred_count} deferred, {tracked_count} tracked, {pending_human_count} pending-human), Blocked={blocked_count}, Dismissed={dismissed_count} — 0 missed
-  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment; babysit parses this exact line shape]
+  - Pending-Human: {n} — {item1_short}; {item2_short}; ...  [only when n > 0; each short is the first 80 chars of the reviewer comment with every @ character removed; babysit parses this exact line shape]
   - Push: {Pushed {sha} to origin/{branch}}  [if push succeeded]
   - Push: Push failed: {reason}  [if push failed]
   - Follow-up issue: #{number} ({url})  [only if user approved creation]

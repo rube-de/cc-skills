@@ -25,7 +25,7 @@ All labels are lowercase and prefixed with `dlc-`.
 
 ## Issue Body Structure
 
-> **No GitHub mentions:** Reference reviewers, bots, or tools by bare name — never an `@`-prefixed one. GitHub notifies on `@name` inside an issue body too.
+> **No GitHub mentions:** Reference reviewers, bots, or tools by bare name — never an `@`-prefixed one. This applies to composed prose *and* to any dynamic/copied field (raw tool output, quoted comment text) — strip `@` characters from those too before inserting them, since GitHub notifies on `@name` inside an issue body regardless of whether the surrounding text is fenced.
 
 Use this template exactly — agents and dashboards parse these section headers:
 
@@ -77,7 +77,7 @@ Use this template exactly — agents and dashboards parse these section headers:
 <summary>Full tool output</summary>
 
 ```
-{raw CLI output, truncated to 500 lines max}
+{raw CLI output, truncated to 500 lines max, with every @ character removed}
 ```
 
 </details>
