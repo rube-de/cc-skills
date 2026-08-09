@@ -4,7 +4,7 @@ description: >-
   Security scan: dependency audits, SAST analysis, and secret detection.
   Detects project type, runs available security tools, classifies findings
   by severity, and creates a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob, Task]
+allowed-tools: [Bash, Read, Grep, Glob, Task, Write]
 ---
 
 # DLC: Security Scan
@@ -132,21 +132,11 @@ Deduplicate findings that appear in multiple tools. Prefer the source with more 
 - Label: `dlc-security`
 - Body must contain: Scan Metadata table, Findings Summary table (severity x count), Findings Detail grouped by severity, Recommended Actions, Raw Output in collapsed details
 
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `security`, `{Type}` = `Security`, `{type}` = `security`:
+
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 BRANCH=$(git branch --show-current)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# ... write formatted body to $BODY_FILE ...
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] Security: {summary}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-security"
 ```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path with a manual command.
 
 ## Step 5: Report
 

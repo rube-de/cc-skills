@@ -60,20 +60,39 @@ If the user selects "Show me details first", display each undecided item with yo
 | Unresolved — Fixable (unfixed due to error) | **Medium** |
 | Dismissed | **Info** |
 
+Never heredoc the issue body — it embeds reviewer-controlled findings text. Clear any stale file at this path, write it with the `Write` tool, then post from the file — same lifecycle as `REPLY_FILE` above. This is deliberately not ISSUE-TEMPLATE.md's Issue Creation Command pattern: the title here is `{n}`/`{number}` — provably numeric, never agent-composed free text — so it doesn't need a separate `TITLE_FILE`, and the scratch path is scoped by `$PR_NUMBER` rather than repo+checkout since that's the discriminator that actually matters for a PR-specific follow-up:
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+BODY_FILE="$DLC_TMPDIR/followup-issue.md"
+rm -f "$BODY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$BODY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $BODY_FILE itself
+```
+
+The `Write` tool call is not a shell command and can't see `$BODY_FILE` — use the absolute path this block printed as the `file_path`, and write the formatted issue body there following ISSUE-TEMPLATE.md structure. **Posting is a separate Bash tool call — recompute the path first:**
+
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# Write the formatted issue body to BODY_FILE following ISSUE-TEMPLATE.md structure
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+BODY_FILE="$DLC_TMPDIR/followup-issue.md"
 
-gh issue create \
+if [ ! -s "$BODY_FILE" ]; then
+  echo "ERROR: issue body missing or empty at $BODY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh issue create \
   --repo "$REPO" \
   --title "[DLC] PR Review: {n} unresolved comments on PR #{number}" \
   --body-file "$BODY_FILE" \
-  --label "dlc-pr-check"
+  --label "dlc-pr-check"; then
+  rm -f "$BODY_FILE"
+else
+  DRAFT_FILE="$DLC_TMPDIR/draft-$(date +%s).md"
+  mv "$BODY_FILE" "$DRAFT_FILE"
+  echo "ERROR: gh issue create failed — body preserved at $DRAFT_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print $DRAFT_FILE and the gh issue create command above to the user so they can inspect and run it manually." >&2
+  exit 1
+fi
 ```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
 **If the user chooses "No, I'll handle manually":**
 - **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
@@ -284,12 +303,29 @@ Author will address some remaining items manually.
 Some remaining items deferred — out of scope for this PR.
 ```
 
-Write the summary and post it:
+The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Clear any stale file at this path, write it with the `Write` tool, then post from the file — same lifecycle as `REPLY_FILE` in SKILL.md Step 4:
 
 ```bash
-TIMESTAMP=$(date +%s)
-SUMMARY_FILE="/tmp/dlc-pr-summary-${TIMESTAMP}.md"
-# Write the summary content to SUMMARY_FILE
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+mkdir -p "$DLC_TMPDIR"
+SUMMARY_FILE="$DLC_TMPDIR/summary.md"
+rm -f "$SUMMARY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "$SUMMARY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $SUMMARY_FILE itself
+```
 
-gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"
+The `Write` tool call is not a shell command and can't see `$SUMMARY_FILE` — use the absolute path this block printed as the `file_path`, and write the summary content there. **Posting is a separate Bash tool call — recompute the path first:**
+
+```bash
+DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
+SUMMARY_FILE="$DLC_TMPDIR/summary.md"
+
+if [ ! -s "$SUMMARY_FILE" ]; then
+  echo "ERROR: summary body missing or empty at $SUMMARY_FILE — the Write step may have failed" >&2
+  exit 1
+elif gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"; then
+  rm -f "$SUMMARY_FILE"
+else
+  echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment." >&2
+  exit 1
+fi
 ```

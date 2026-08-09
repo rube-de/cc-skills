@@ -4,7 +4,7 @@ description: >-
   PR validity analysis: fetch PR diff, extract new code additions,
   search existing codebase for duplicate or overlapping implementations,
   classify changes, and create a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob, Task, AskUserQuestion]
+allowed-tools: [Bash, Read, Grep, Glob, Task, AskUserQuestion, Write]
 ---
 
 # DLC: PR Validity Analysis
@@ -23,9 +23,6 @@ PR_JSON=$(gh pr view <PR_NUMBER> --json number,title,url,headRefName,state,addit
 
 # If no argument — detect from current branch
 PR_JSON=$(gh pr view --json number,title,url,headRefName,state,additions,changedFiles,files,body)
-
-# Fetch repo identifier (used in Step 6 for issue creation)
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 
 # Display PR summary
 echo "$PR_JSON" | jq '{number, title, url, headRefName, state, additions, changedFiles}'
@@ -165,7 +162,8 @@ If **no issue references are found**, produce a finding:
 Deduplicate the extracted issue references before fetching (a PR body may reference the same issue multiple times). Preserve both the `owner/repo` and the issue number from each matched reference. For each unique referenced issue:
 
 ```bash
-# For plain #N references, default to the current repo ($REPO from Step 1)
+# This is a separate Bash tool call from Step 1 — REPO doesn't persist, re-fetch it
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 gh issue view <ISSUE_NUMBER> --repo <OWNER/REPO> --json number,title,state,labels,body
 ```
 
@@ -270,19 +268,7 @@ If the threshold is met, use `AskUserQuestion`:
 
 **Raw Output**: This skill has no CLI tool output to capture. Omit the Raw Output section from the issue body.
 
-```bash
-# $REPO was fetched in Step 1
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] PR Validity: {n} redundancies in PR #{number}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-pr-validity"
-```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
+Follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — it acquires `REPO` itself, and this skill has no `BRANCH` to supply — substitute `{skill-name}` = `pr-validity`, `{Type}` = `PR Validity`, `{type}` = `pr-validity`, and the title with the `{n}`/`{number}` counts from this skill's findings.
 
 **If the user declines**, skip issue creation and proceed to Step 7.
 

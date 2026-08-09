@@ -4,7 +4,7 @@ description: >-
   Code quality check: linting, complexity analysis, duplication detection,
   and dead code identification. Detects project linting config, runs
   appropriate tools, and creates a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob, Task]
+allowed-tools: [Bash, Read, Grep, Glob, Task, Write]
 ---
 
 # DLC: Code Quality Check
@@ -124,20 +124,11 @@ Map tool output to the findings format from REPORT-FORMAT.md.
 - Label: `dlc-quality`
 - Body must contain: Scan Metadata table, Findings Summary table (severity x count), Findings Detail grouped by severity, Recommended Actions, Raw Output in collapsed details
 
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `quality`, `{Type}` = `Quality`, `{type}` = `quality`:
+
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 BRANCH=$(git branch --show-current)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] Quality: {summary}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-quality"
 ```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
 ## Step 5: Report
 
