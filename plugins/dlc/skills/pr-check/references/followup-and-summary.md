@@ -332,7 +332,7 @@ Author will address some remaining items manually.
 Some remaining items deferred — out of scope for this PR.
 ```
 
-The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Write it with the `Write` tool, then post from the file. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, guaranteed unique) for the same reason as the follow-up issue body above — its path is threaded forward as a literal, not recomputed:
+The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Write it with the `Write` tool, then post from the file. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, unique at creation time) for the same reason as the follow-up issue body above — its path is threaded forward as a literal, not recomputed:
 
 ```bash
 # Check the result explicitly — same reasoning as the follow-up issue body above.

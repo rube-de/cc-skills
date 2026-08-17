@@ -236,10 +236,12 @@ requires.
 `REPO` is acquired by this shared pattern itself, in both the prep and post
 steps — it feeds both the Scan Metadata table (via the prep step's echo, since
 only the `Write` step needs the value) and the `--repo` flag (recomputed fresh
-in post, since that step runs its own `gh` call anyway). `BRANCH` — where a
-skill's Scan Metadata table needs it — is acquired and printed locally by the
-consumer instead, since not every scan type uses it (e.g. `pr-validity` has
-none).
+in post, since that step runs its own `gh` call anyway). `BRANCH` is acquired
+and printed locally by each consumer instead, since its *source* varies by
+scan type: `perf`/`quality`/`security`/`test` scan the local checkout, so
+`git branch --show-current` is correct; `pr-validity` analyzes a PR's diff
+rather than the working tree, so it needs the PR's own head branch
+(`gh pr view --json headRefName`) instead.
 
 ## Failure Fallback
 

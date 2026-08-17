@@ -272,7 +272,14 @@ If the threshold is met, use `AskUserQuestion`:
 
 **Raw Output**: This skill has no CLI tool output to capture. Omit the Raw Output section from the issue body.
 
-Follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — it acquires `REPO` itself, and this skill has no `BRANCH` to supply — substitute `{skill-name}` = `pr-validity`, `{Type}` = `PR Validity`, `{type}` = `pr-validity`, and the title with the `{n}`/`{number}` counts from this skill's findings. Delete the `{additional-required-sections}` token entirely from the `for section in ...` line — do not paste any text in its place — since this skill's body has no Raw Output section.
+Acquire `BRANCH` for the Scan Metadata table — the PR's own head branch, not the local checkout's, since this skill analyzes a PR's diff rather than scanning the working tree. Step 1 already fetched `headRefName`, but that value doesn't survive into this separate Bash tool call, so re-fetch it here:
+
+```bash
+BRANCH=$(gh pr view <PR_NUMBER> --json headRefName -q .headRefName)
+echo "BRANCH=$BRANCH"   # the Write step below is a separate tool call and can't see this shell's variables
+```
+
+Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — it acquires `REPO` itself — substitute `{skill-name}` = `pr-validity`, `{Type}` = `PR Validity`, `{type}` = `pr-validity`, and the title with the `{n}`/`{number}` counts from this skill's findings. Delete the `{additional-required-sections}` token entirely from the `for section in ...` line — do not paste any text in its place — since this skill's body has no Raw Output section.
 
 **If the user declines**, skip issue creation and proceed to Step 7.
 
