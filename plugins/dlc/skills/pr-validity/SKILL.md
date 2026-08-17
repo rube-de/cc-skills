@@ -268,7 +268,7 @@ If the threshold is met, use `AskUserQuestion`:
 
 **Raw Output**: This skill has no CLI tool output to capture. Omit the Raw Output section from the issue body.
 
-Follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — it acquires `REPO` itself, and this skill has no `BRANCH` to supply — substitute `{skill-name}` = `pr-validity`, `{Type}` = `PR Validity`, `{type}` = `pr-validity`, `{additional-required-sections}` = *(nothing — this skill's body has no Raw Output section)*, and the title with the `{n}`/`{number}` counts from this skill's findings.
+Follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — it acquires `REPO` itself, and this skill has no `BRANCH` to supply — substitute `{skill-name}` = `pr-validity`, `{Type}` = `PR Validity`, `{type}` = `pr-validity`, and the title with the `{n}`/`{number}` counts from this skill's findings. Delete the `{additional-required-sections}` token entirely from the `for section in ...` line — do not paste any text in its place — since this skill's body has no Raw Output section.
 
 **If the user declines**, skip issue creation and proceed to Step 7.
 

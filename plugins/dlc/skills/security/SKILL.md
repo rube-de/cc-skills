@@ -92,8 +92,9 @@ Try in order — use the first available:
 # Try gitleaks first
 gitleaks detect --source . --no-git --report-format json 2>/dev/null
 
-# Fallback: grep for common patterns (GNU/BSD grep — -r and -o are widely
-# supported extensions, not POSIX). -o prints only the
+# Fallback: grep for common patterns. Not POSIX grep — -r, -o, and the
+# --include long option are all GNU/BSD extensions this command relies on.
+# -o prints only the
 # matched token itself — never the surrounding line — so the actual secret
 # value never reaches output. This scan's findings end up in the issue's Raw
 # Output section, which gets posted verbatim to a public GitHub issue.

@@ -86,6 +86,10 @@ The `Write` tool call is not a shell command and can't see `$BODY_FILE` — use 
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+if [ -z "$REPO" ]; then
+  echo "ERROR: gh repo view returned no repository — check gh auth status." >&2
+  exit 1
+fi
 BODY_FILE="{literal path printed by prep}"
 
 if [ ! -s "$BODY_FILE" ]; then

@@ -132,6 +132,10 @@ wrong file and post someone else's draft.
 # successfully creating their own issue — that's a separate problem this
 # doesn't attempt to solve.
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+if [ -z "$REPO" ]; then
+  echo "ERROR: gh repo view returned no repository — check gh auth status. Aborting before composing a body with a blank Repository field." >&2
+  exit 1
+fi
 # Check the result explicitly — an unchecked `mktemp -d` that fails (missing/
 # unwritable TMPDIR) leaves DLC_TMPDIR empty, silently turning BODY_FILE/
 # TITLE_FILE into root-level paths ("/issue-body.md"). A relative $TMPDIR
@@ -212,8 +216,11 @@ fi
 
 `{additional-required-sections}` is a per-skill substitution: `security`,
 `quality`, `perf`, and `test` supply `'## Raw Output'` (their body template above
-includes it); `pr-validity` supplies nothing — its own "Body must contain" list
-in its `SKILL.md` has no Raw Output section, so the baseline four are all it
+includes it); `pr-validity` supplies nothing — delete the `{additional-required-sections}`
+token entirely from the `for section in ...` line, don't paste a description of
+why it's empty in its place, or the loop will grep for a literal section header
+that can never exist and always abort issue creation. Its own "Body must
+contain" list in its `SKILL.md` has no Raw Output section, so the baseline four are all it
 requires.
 
 `REPO` is acquired by this shared pattern itself, in both the prep and post
