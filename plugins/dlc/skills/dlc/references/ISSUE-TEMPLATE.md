@@ -173,6 +173,10 @@ echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Wri
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+if [ -z "$REPO" ]; then
+  echo "ERROR: gh repo view returned no repository — check gh auth status." >&2
+  exit 1
+fi
 BODY_FILE="{literal path printed by prep}"
 TITLE_FILE="{literal path printed by prep}"
 

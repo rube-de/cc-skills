@@ -903,10 +903,10 @@ If out-of-scope items remain, use `AskUserQuestion` to ask:
 
 When a DLC sub-skill only analyzes code (no modifications), exclude `Write` and `Edit` from `allowed-tools`. This makes the skill's intent unambiguous and prevents accidental code modifications. Compare:
 
-- **Read-only** (`pr-validity`): `allowed-tools: [Bash, Read, Grep, Glob, Task, AskUserQuestion, Write]` — `Write` was added back per the Issue #245 exception below, scoped to composing its own scratch files; it still excludes `Edit`, so it can never modify an existing repo file
-- **Read-write** (`pr-check`): `allowed-tools: [Bash, Read, Grep, Glob, Write, Edit, AskUserQuestion]` — `Edit` is what actually signals it can change existing files
+- **Read-only** (`pr-validity`): `allowed-tools: [Bash, Read, Grep, Glob, Task, AskUserQuestion, Write]` — `Write` was added back per the Issue #245 exception below; the *instructions* scope it to composing its own scratch files only
+- **Read-write** (`pr-check`): `allowed-tools: [Bash, Read, Grep, Glob, Write, Edit, AskUserQuestion]` — `Edit` is present because modifying existing repo files (implementing review fixes) is this skill's actual job, not a scratch-only side effect
 
-`Edit`, not `Write`, is the tool that now signals whether a skill can change files — see the exception immediately below for why.
+Neither `Write` nor `Edit` is an enforced capability boundary here — the same "additive pre-approval, not a capability boundary" point applies to both (see the exception immediately below): a skill with unrestricted `Bash` can already overwrite any file via shell redirection, and the `Write` tool itself can overwrite an existing file just as easily as create a new one — nothing in `allowed-tools` technically stops `pr-validity`'s `Write` from targeting a repo file instead of its scratch path. The `Write`/`Edit` split is a documented **intent** signal, honored by instructions and code review, not a permission wall.
 
 > Source: [Issue #47](https://github.com/rube-de/cc-skills/issues/47) — `pr-validity` sub-skill is read-only analysis; intentionally excludes `Write`/`Edit` to match the scan-only pattern of `security`/`quality`/`perf`/`test`.
 > Source: [`plugins/dlc/skills/pr-validity/SKILL.md`](../plugins/dlc/skills/pr-validity/SKILL.md) — compare `allowed-tools` with [`pr-check/SKILL.md`](../plugins/dlc/skills/pr-check/SKILL.md)

@@ -94,10 +94,10 @@ gitleaks detect --source . --no-git --report-format json 2>/dev/null
 
 # Fallback: grep for common patterns. Not POSIX grep — -r, -o, and the
 # --include long option are all GNU/BSD extensions this command relies on.
-# -o prints only the
-# matched token itself — never the surrounding line — so the actual secret
-# value never reaches output. This scan's findings end up in the issue's Raw
-# Output section, which gets posted verbatim to a public GitHub issue.
+# -o prints only the matched token itself — never the surrounding line — so
+# the actual secret value never reaches output. This scan's findings end up
+# in the issue's Raw Output section, which gets posted verbatim to a public
+# GitHub issue.
 #
 # A prior version of this fix tried to strip the line content in a separate
 # sed pass keyed on "first two colon-delimited fields = path:line". That
