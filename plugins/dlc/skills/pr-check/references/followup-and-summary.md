@@ -66,7 +66,7 @@ Never heredoc the issue body — it embeds reviewer-controlled findings text. Wr
 # Check the result explicitly — an unchecked mktemp that fails, or a relative
 # $TMPDIR that makes it return a relative path, would otherwise silently
 # produce a wrong or unsafe BODY_FILE. Only an absolute path passes.
-DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX") || DLC_TMPDIR=""
+DLC_TMPDIR=$(mktemp -d -- "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX") || DLC_TMPDIR=""
 case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
@@ -125,6 +125,8 @@ else
   exit 1
 fi
 ```
+
+**This `exit 1` ends the Bash tool call, not the skill.** On this failure path, do not abort the rest of `dlc:pr-check` — record `$BODY_FILE` as `{draft_path}`, surface the error to the user as printed above, and continue to Step 5b below, which has a reply template for exactly this outcome (`Discussion-Tracked (issue creation failed)`). Skip Step 5c's `#ISSUE_NUMBER` reference for this run since no issue exists.
 
 **If the user chooses "No, I'll handle manually":**
 - **Branch 2** (only Blocked/skipped items, no Discussion-Tracked): skip issue creation entirely and proceed to Step 5b.
@@ -339,7 +341,7 @@ The summary embeds decision descriptions carried over from reviewer comments —
 
 ```bash
 # Check the result explicitly — same reasoning as the follow-up issue body above.
-DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX") || DLC_TMPDIR=""
+DLC_TMPDIR=$(mktemp -d -- "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX") || DLC_TMPDIR=""
 case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;

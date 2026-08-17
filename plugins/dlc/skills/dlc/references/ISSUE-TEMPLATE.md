@@ -146,8 +146,11 @@ fi
 # produces the same danger via a different route: mktemp then returns a
 # relative path, which the Write step and this Bash call could resolve
 # against different working directories. The `case` below catches both —
-# only an absolute path passes.
-DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-{skill-name}.XXXXXXXX") || DLC_TMPDIR=""
+# only an absolute path passes. The `--` before the template stops a
+# $TMPDIR value starting with `-`/`--` from being parsed as a mktemp
+# option instead of template content — verified empirically that
+# "--tmpdir=..." otherwise gets consumed as a flag, not literal text.
+DLC_TMPDIR=$(mktemp -d -- "${TMPDIR:-/tmp}/dlc-{skill-name}.XXXXXXXX") || DLC_TMPDIR=""
 case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
