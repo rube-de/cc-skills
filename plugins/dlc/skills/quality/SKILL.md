@@ -124,10 +124,11 @@ Map tool output to the findings format from REPORT-FORMAT.md.
 - Label: `dlc-quality`
 - Body must contain: Scan Metadata table, Findings Summary table (severity x count), Findings Detail grouped by severity, Recommended Actions, Raw Output in collapsed details
 
-Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `quality`, `{Type}` = `Quality`, `{type}` = `quality`:
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `quality`, `{Type}` = `Quality`, `{type}` = `quality`, `{additional-required-sections}` = `'## Raw Output'`:
 
 ```bash
 BRANCH=$(git branch --show-current)
+echo "BRANCH=$BRANCH"   # the Write step below is a separate tool call and can't see this shell's variables
 ```
 
 ## Step 5: Report

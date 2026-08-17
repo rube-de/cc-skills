@@ -60,36 +60,46 @@ If the user selects "Show me details first", display each undecided item with yo
 | Unresolved — Fixable (unfixed due to error) | **Medium** |
 | Dismissed | **Info** |
 
-Never heredoc the issue body — it embeds reviewer-controlled findings text. Clear any stale file at this path, write it with the `Write` tool, then post from the file — same lifecycle as `REPLY_FILE` above. This is deliberately not ISSUE-TEMPLATE.md's Issue Creation Command pattern: the title here is `{n}`/`{number}` — provably numeric, never agent-composed free text — so it doesn't need a separate `TITLE_FILE`, and the scratch path is scoped by `$PR_NUMBER` rather than repo+checkout since that's the discriminator that actually matters for a PR-specific follow-up:
+Never heredoc the issue body — it embeds reviewer-controlled findings text. Write it with the `Write` tool, then post from the file. This is deliberately not ISSUE-TEMPLATE.md's Issue Creation Command pattern: the title here is `{n}`/`{number}` — provably numeric, never agent-composed free text — so it doesn't need a separate `TITLE_FILE`. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, guaranteed unique — no other run, PR-scoped or not, can ever be handed the same directory), so — like ISSUE-TEMPLATE.md's own lifecycle — its path can't be recomputed in the post step below; the prep step's printed path is threaded forward as a literal instead. The `$PR_NUMBER` prefix is kept only so a human scanning `/tmp` can tell which PR a leftover directory belongs to — it does no uniqueness work itself:
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-mkdir -p "$DLC_TMPDIR"
+DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX")
 BODY_FILE="$DLC_TMPDIR/followup-issue.md"
-rm -f "$BODY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
-echo "$BODY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $BODY_FILE itself
+echo "$BODY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $BODY_FILE itself, and this mktemp suffix can't be regenerated in the next Bash call
 ```
 
-The `Write` tool call is not a shell command and can't see `$BODY_FILE` — use the absolute path this block printed as the `file_path`, and write the formatted issue body there following ISSUE-TEMPLATE.md structure. **Posting is a separate Bash tool call — recompute the path first:**
+The `Write` tool call is not a shell command and can't see `$BODY_FILE` — use the absolute path this block printed as the `file_path`, and write the formatted issue body there following ISSUE-TEMPLATE.md structure. **Posting is a separate Bash tool call — `REPO` is cheap and deterministic so it's recomputed; `BODY_FILE` is the literal path the prep step printed:**
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-BODY_FILE="$DLC_TMPDIR/followup-issue.md"
+BODY_FILE="{literal path printed by prep}"
 
 if [ ! -s "$BODY_FILE" ]; then
   echo "ERROR: issue body missing or empty at $BODY_FILE — the Write step may have failed" >&2
   exit 1
-elif gh issue create \
+fi
+
+if grep -qE '@[[:alnum:]_-]' "$BODY_FILE"; then
+  echo "ERROR: unneutralized @ mention found in $BODY_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+
+# Capture the post result before cleanup, so a failing `rm -f` can never flip a
+# successful post into a reported failure and invite a duplicate-creating retry.
+if gh issue create \
   --repo "$REPO" \
   --title "[DLC] PR Review: {n} unresolved comments on PR #{number}" \
   --body-file "$BODY_FILE" \
   --label "dlc-pr-check"; then
-  rm -f "$BODY_FILE"
+  POST_OK=1
 else
-  DRAFT_FILE="$DLC_TMPDIR/draft-$(date +%s).md"
-  mv "$BODY_FILE" "$DRAFT_FILE"
-  echo "ERROR: gh issue create failed — body preserved at $DRAFT_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print $DRAFT_FILE and the gh issue create command above to the user so they can inspect and run it manually." >&2
+  POST_OK=0
+fi
+
+if [ "$POST_OK" = 1 ]; then
+  rm -f "$BODY_FILE" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup at $BODY_FILE failed (non-fatal, nothing to retry)." >&2
+else
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print $BODY_FILE and the gh issue create command above to the user so they can inspect and run it manually." >&2
   exit 1
 fi
 ```
@@ -303,27 +313,37 @@ Author will address some remaining items manually.
 Some remaining items deferred — out of scope for this PR.
 ```
 
-The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Clear any stale file at this path, write it with the `Write` tool, then post from the file — same lifecycle as `REPLY_FILE` in SKILL.md Step 4:
+The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Write it with the `Write` tool, then post from the file. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, guaranteed unique) for the same reason as the follow-up issue body above — its path is threaded forward as a literal, not recomputed:
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-mkdir -p "$DLC_TMPDIR"
+DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX")
 SUMMARY_FILE="$DLC_TMPDIR/summary.md"
-rm -f "$SUMMARY_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
-echo "$SUMMARY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $SUMMARY_FILE itself
+echo "$SUMMARY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $SUMMARY_FILE itself, and this mktemp suffix can't be regenerated in the next Bash call
 ```
 
-The `Write` tool call is not a shell command and can't see `$SUMMARY_FILE` — use the absolute path this block printed as the `file_path`, and write the summary content there. **Posting is a separate Bash tool call — recompute the path first:**
+The `Write` tool call is not a shell command and can't see `$SUMMARY_FILE` — use the absolute path this block printed as the `file_path`, and write the summary content there. **Posting is a separate Bash tool call — `SUMMARY_FILE` is the literal path the prep step printed:**
 
 ```bash
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER"
-SUMMARY_FILE="$DLC_TMPDIR/summary.md"
+SUMMARY_FILE="{literal path printed by prep}"
 
 if [ ! -s "$SUMMARY_FILE" ]; then
   echo "ERROR: summary body missing or empty at $SUMMARY_FILE — the Write step may have failed" >&2
   exit 1
-elif gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"; then
-  rm -f "$SUMMARY_FILE"
+fi
+
+if grep -qE '@[[:alnum:]_-]' "$SUMMARY_FILE"; then
+  echo "ERROR: unneutralized @ mention found in $SUMMARY_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+
+if gh pr comment $PR_NUMBER --body-file "$SUMMARY_FILE"; then
+  POST_OK=1
+else
+  POST_OK=0
+fi
+
+if [ "$POST_OK" = 1 ]; then
+  rm -f "$SUMMARY_FILE" 2>/dev/null || echo "Note: summary posted successfully; scratch cleanup at $SUMMARY_FILE failed (non-fatal, nothing to retry)." >&2
 else
   echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment." >&2
   exit 1

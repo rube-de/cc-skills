@@ -157,10 +157,11 @@ Map results to the findings format from REPORT-FORMAT.md.
 | Files with 0% | {n} | 0 |
 ```
 
-Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `test`, `{Type}` = `Testing`, `{type}` = `test`:
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `test`, `{Type}` = `Testing`, `{type}` = `test`, `{additional-required-sections}` = `'## Raw Output'`:
 
 ```bash
 BRANCH=$(git branch --show-current)
+echo "BRANCH=$BRANCH"   # the Write step below is a separate tool call and can't see this shell's variables
 ```
 
 ## Step 6: Report

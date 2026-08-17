@@ -108,29 +108,34 @@ this is safe even if `{summary}` still contains shell metacharacters after
 stripping.
 
 This lifecycle is identical in spirit to `pr-check`'s `REPLY_FILE` mechanism (see
-`pr-check/SKILL.md` Step 4), extended to two files: a `Write` tool call is not a
-shell command and can't see variables from a prior Bash call, and shell
-variables don't persist across separate Bash calls either — every step below
-that needs `$BODY_FILE`/`$TITLE_FILE`/`$REPO` recomputes it locally.
+`pr-check/SKILL.md` Step 4): a `Write` tool call is not a shell command and can't
+see variables from a prior Bash call, and shell variables don't persist across
+separate Bash calls either. `$REPO` is cheap and deterministic, so the post step
+below just recomputes it. `$DLC_TMPDIR` is not — it's created with `mktemp -d`
+precisely so it can't be recomputed (predictability is the bug, not a feature to
+preserve) — so it crosses the Bash → Write → Bash boundary the same way `{rest_id}`
+already does in `pr-check/SKILL.md` Step 4: the prep step prints the literal
+resolved paths, and both the `Write` calls and the post step use that literal
+text, not a re-derived expression. If the printed path gets mistyped or dropped,
+the post step's `[ ! -s ... ]` check just aborts — it can never point at the
+wrong file and post someone else's draft.
 
 **Bash — prep:**
 
 ```bash
-# Resolve a path unique to this repo AND this checkout, so two worktrees of the
-# same remote don't collide. $REPO alone isn't enough — it's the git remote
-# identity (from `gh repo view`), not the local checkout, so two worktrees of
-# the same remote would otherwise resolve the identical path. (Two concurrent
-# sessions in the SAME checkout still share a CHECKOUT_ID — the `[ ! -s ... ]`
-# check in the posting step below turns that race into a clean abort, not a
-# bad post.) $$ (PID) doesn't help either — each Bash tool call is a fresh
-# process, so it would differ between this call and the posting call below.
+# mktemp -d creates a directory no other process — concurrent or not, same
+# checkout or a different one — can ever be handed, and (verified on both GNU
+# coreutils and BSD/macOS mktemp) it's mode 0700 regardless of umask, so it
+# needs no separate `umask 077` call. This is what actually prevents scratch-file
+# cross-contamination between runs; earlier deterministic repo+checkout-scoped
+# paths could not. It does NOT prevent two concurrent runs from each
+# successfully creating their own issue — that's a separate problem this
+# doesn't attempt to solve.
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-CHECKOUT_ID=$(git rev-parse --show-toplevel | cksum | cut -d' ' -f1)
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-{skill-name}-$(printf '%s' "$REPO" | tr '/' '-')-$CHECKOUT_ID"
-mkdir -p "$DLC_TMPDIR"
+DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-{skill-name}.XXXXXXXX")
 BODY_FILE="$DLC_TMPDIR/issue-body.md"
 TITLE_FILE="$DLC_TMPDIR/issue-title.txt"
-rm -f "$BODY_FILE" "$TITLE_FILE"   # clear content preserved from an earlier failed attempt before the Write tool runs
+echo "REPO=$REPO"       # the Write step below needs this for the Scan Metadata Repository row and can't see this shell
 echo "BODY_FILE=$BODY_FILE"
 echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Write tool is not a shell and can't expand them itself
 ```
@@ -139,45 +144,69 @@ echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Wri
 - `$BODY_FILE` ← the formatted issue body, following the template above.
 - `$TITLE_FILE` ← a single line, exactly `[DLC] {Type}: {summary}`, with any newline, `` ` ``, `$`, or `"` characters in `{summary}` stripped first.
 
-**Bash — post** (a separate tool call from the prep step, so recompute the paths first — they resolve the same way every time):
+**Bash — post** (a separate tool call from the prep step — `REPO` is recomputed since it's deterministic; `BODY_FILE`/`TITLE_FILE` are the literal paths the prep step printed, substituted in as-is since `$DLC_TMPDIR`'s random suffix cannot be regenerated):
 
 ```bash
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-CHECKOUT_ID=$(git rev-parse --show-toplevel | cksum | cut -d' ' -f1)
-DLC_TMPDIR="${TMPDIR:-/tmp}/dlc-{skill-name}-$(printf '%s' "$REPO" | tr '/' '-')-$CHECKOUT_ID"
-BODY_FILE="$DLC_TMPDIR/issue-body.md"
-TITLE_FILE="$DLC_TMPDIR/issue-title.txt"
+BODY_FILE="{literal path printed by prep}"
+TITLE_FILE="{literal path printed by prep}"
 
 if [ ! -s "$BODY_FILE" ] || [ ! -s "$TITLE_FILE" ]; then
-  echo "ERROR: issue body or title missing/empty under $DLC_TMPDIR — the Write step may have failed" >&2
+  echo "ERROR: issue body or title missing/empty at $BODY_FILE / $TITLE_FILE — the Write step may have failed" >&2
   exit 1
-elif gh issue create \
+fi
+
+# Fail closed on content the Write step should already have handled: an
+# unneutralized @ (immediately followed by a username character, so a
+# space-neutralized "@ " does not match) means a live mention could reach
+# GitHub; a missing required section means the body is truncated or malformed.
+if grep -qE '@[[:alnum:]_-]' "$BODY_FILE" "$TITLE_FILE"; then
+  echo "ERROR: unneutralized @ mention found in $BODY_FILE or $TITLE_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+for section in '## Scan Metadata' '## Findings Summary' '## Findings Detail' '## Recommended Actions' {additional-required-sections}; do
+  grep -qF "$section" "$BODY_FILE" || { echo "ERROR: required section '$section' missing from $BODY_FILE — the Write step produced an incomplete body. Fix it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2; exit 1; }
+done
+
+# Capture the post result before cleanup runs, so a failing `rm -f` (e.g. the
+# directory was already removed out-of-band) can never flip a successful post
+# into a reported failure and invite a duplicate-creating retry.
+if gh issue create \
   --repo "$REPO" \
   --title "$(cat "$TITLE_FILE")" \
   --body-file "$BODY_FILE" \
   --label "dlc-{type}"; then
-  rm -f "$BODY_FILE" "$TITLE_FILE"
+  POST_OK=1
 else
-  DRAFT_TS=$(date +%s)
-  mv "$BODY_FILE" "$DLC_TMPDIR/draft-$DRAFT_TS-body.md"
-  mv "$TITLE_FILE" "$DLC_TMPDIR/draft-$DRAFT_TS-title.txt"
-  echo "ERROR: gh issue create failed — body preserved at $DLC_TMPDIR/draft-$DRAFT_TS-body.md, title at $DLC_TMPDIR/draft-$DRAFT_TS-title.txt. Do NOT re-run this exact posting command directly with the preserved files — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print both paths and the gh issue create command above to the user so they can inspect and run it manually." >&2
+  POST_OK=0
+fi
+
+if [ "$POST_OK" = 1 ]; then
+  rm -f "$BODY_FILE" "$TITLE_FILE" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup of $BODY_FILE / $TITLE_FILE failed (non-fatal, nothing to retry)." >&2
+else
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE, title at $TITLE_FILE. Do NOT re-run this exact posting command directly with the preserved files — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print both paths and the gh issue create command above to the user so they can inspect and run it manually." >&2
   exit 1
 fi
 ```
 
+`{additional-required-sections}` is a per-skill substitution: `security`,
+`quality`, `perf`, and `test` supply `'## Raw Output'` (their body template above
+includes it); `pr-validity` supplies nothing — its own "Body must contain" list
+in its `SKILL.md` has no Raw Output section, so the baseline four are all it
+requires.
+
 `REPO` is acquired by this shared pattern itself, in both the prep and post
-steps — it feeds both the scratch path and the `--repo` flag. `BRANCH` —
-where a skill's Scan Metadata table needs it — is acquired locally by the
+steps — it feeds both the Scan Metadata table (via the prep step's echo, since
+only the `Write` step needs the value) and the `--repo` flag (recomputed fresh
+in post, since that step runs its own `gh` call anyway). `BRANCH` — where a
+skill's Scan Metadata table needs it — is acquired and printed locally by the
 consumer instead, since not every scan type uses it (e.g. `pr-validity` has
 none).
 
 ## Failure Fallback
 
-If `gh issue create` fails, the error path above already renamed the
-preserved body and title into `$DLC_TMPDIR/draft-{timestamp}-body.md` and
-`-title.txt` — scoped by repo and checkout, so two failing runs in different
-checkouts can't collide (two failures in the *same* checkout within the same
-second still can; this narrows the window, it doesn't eliminate it) — and
-printed both paths. Nothing further to do beyond surfacing them and the
-manual `gh issue create` command to the user.
+If `gh issue create` fails, the body and title stay exactly where the prep step
+put them — under a `mktemp -d` directory nothing else will ever be handed, so
+there is no same-second collision window and nothing to rename. The error
+message above already prints both paths. Nothing further to do beyond
+surfacing them and the manual `gh issue create` command to the user.
