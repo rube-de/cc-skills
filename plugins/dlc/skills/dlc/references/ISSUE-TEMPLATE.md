@@ -132,7 +132,18 @@ wrong file and post someone else's draft.
 # successfully creating their own issue — that's a separate problem this
 # doesn't attempt to solve.
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-{skill-name}.XXXXXXXX")
+# Check the result explicitly — an unchecked `mktemp -d` that fails (missing/
+# unwritable TMPDIR) leaves DLC_TMPDIR empty, silently turning BODY_FILE/
+# TITLE_FILE into root-level paths ("/issue-body.md"). A relative $TMPDIR
+# produces the same danger via a different route: mktemp then returns a
+# relative path, which the Write step and this Bash call could resolve
+# against different working directories. The `case` below catches both —
+# only an absolute path passes.
+DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-{skill-name}.XXXXXXXX") || DLC_TMPDIR=""
+case "$DLC_TMPDIR" in
+  /*) : ;;
+  *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
+esac
 BODY_FILE="$DLC_TMPDIR/issue-body.md"
 TITLE_FILE="$DLC_TMPDIR/issue-title.txt"
 echo "REPO=$REPO"       # the Write step below needs this for the Scan Metadata Repository row and can't see this shell
@@ -182,7 +193,7 @@ else
 fi
 
 if [ "$POST_OK" = 1 ]; then
-  rm -f "$BODY_FILE" "$TITLE_FILE" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup of $BODY_FILE / $TITLE_FILE failed (non-fatal, nothing to retry)." >&2
+  rm -f "$BODY_FILE" "$TITLE_FILE" 2>/dev/null && rmdir "$(dirname "$BODY_FILE")" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup of $BODY_FILE / $TITLE_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
   echo "ERROR: gh issue create failed — body preserved at $BODY_FILE, title at $TITLE_FILE. Do NOT re-run this exact posting command directly with the preserved files — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print both paths and the gh issue create command above to the user so they can inspect and run it manually." >&2
   exit 1

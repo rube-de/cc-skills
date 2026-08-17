@@ -92,10 +92,16 @@ Try in order — use the first available:
 # Try gitleaks first
 gitleaks detect --source . --no-git --report-format json 2>/dev/null
 
-# Fallback: grep for common patterns (POSIX-compatible)
+# Fallback: grep for common patterns (POSIX-compatible). Report file:line
+# locations only — never the matched line itself. For the AKIA/sk-/ghp_
+# prefixes, the match IS the credential; for password/secret=, the value sits
+# immediately adjacent. This scan's findings end up in the issue's Raw Output
+# section, which gets posted verbatim to a public GitHub issue — printing the
+# raw line would leak the secret it just detected.
 grep -rnE "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" \
   --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
-  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" .
+  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" . \
+  | sed -E 's/^([^:]+:[0-9]+):.*/\1: potential secret pattern match (value redacted)/'
 ```
 
 If **no specialized security tools are available**, use the Explore agent to discover security-sensitive areas across the codebase. Use repomix-explorer (if available) for large codebases to get a structural overview. Then use targeted Grep and Read for detailed analysis:

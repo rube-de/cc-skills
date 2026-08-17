@@ -63,7 +63,14 @@ If the user selects "Show me details first", display each undecided item with yo
 Never heredoc the issue body — it embeds reviewer-controlled findings text. Write it with the `Write` tool, then post from the file. This is deliberately not ISSUE-TEMPLATE.md's Issue Creation Command pattern: the title here is `{n}`/`{number}` — provably numeric, never agent-composed free text — so it doesn't need a separate `TITLE_FILE`. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, guaranteed unique — no other run, PR-scoped or not, can ever be handed the same directory), so — like ISSUE-TEMPLATE.md's own lifecycle — its path can't be recomputed in the post step below; the prep step's printed path is threaded forward as a literal instead. The `$PR_NUMBER` prefix is kept only so a human scanning `/tmp` can tell which PR a leftover directory belongs to — it does no uniqueness work itself:
 
 ```bash
-DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX")
+# Check the result explicitly — an unchecked mktemp that fails, or a relative
+# $TMPDIR that makes it return a relative path, would otherwise silently
+# produce a wrong or unsafe BODY_FILE. Only an absolute path passes.
+DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX") || DLC_TMPDIR=""
+case "$DLC_TMPDIR" in
+  /*) : ;;
+  *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
+esac
 BODY_FILE="$DLC_TMPDIR/followup-issue.md"
 echo "$BODY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $BODY_FILE itself, and this mktemp suffix can't be regenerated in the next Bash call
 ```
@@ -97,7 +104,7 @@ else
 fi
 
 if [ "$POST_OK" = 1 ]; then
-  rm -f "$BODY_FILE" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup at $BODY_FILE failed (non-fatal, nothing to retry)." >&2
+  rm -f "$BODY_FILE" 2>/dev/null && rmdir "$(dirname "$BODY_FILE")" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup at $BODY_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
   echo "ERROR: gh issue create failed — body preserved at $BODY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print $BODY_FILE and the gh issue create command above to the user so they can inspect and run it manually." >&2
   exit 1
@@ -316,7 +323,12 @@ Some remaining items deferred — out of scope for this PR.
 The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Write it with the `Write` tool, then post from the file. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, guaranteed unique) for the same reason as the follow-up issue body above — its path is threaded forward as a literal, not recomputed:
 
 ```bash
-DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX")
+# Check the result explicitly — same reasoning as the follow-up issue body above.
+DLC_TMPDIR=$(mktemp -d "${TMPDIR:-/tmp}/dlc-pr-check-$PR_NUMBER.XXXXXXXX") || DLC_TMPDIR=""
+case "$DLC_TMPDIR" in
+  /*) : ;;
+  *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
+esac
 SUMMARY_FILE="$DLC_TMPDIR/summary.md"
 echo "$SUMMARY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $SUMMARY_FILE itself, and this mktemp suffix can't be regenerated in the next Bash call
 ```
@@ -343,7 +355,7 @@ else
 fi
 
 if [ "$POST_OK" = 1 ]; then
-  rm -f "$SUMMARY_FILE" 2>/dev/null || echo "Note: summary posted successfully; scratch cleanup at $SUMMARY_FILE failed (non-fatal, nothing to retry)." >&2
+  rm -f "$SUMMARY_FILE" 2>/dev/null && rmdir "$(dirname "$SUMMARY_FILE")" 2>/dev/null || echo "Note: summary posted successfully; scratch cleanup at $SUMMARY_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
   echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment." >&2
   exit 1
