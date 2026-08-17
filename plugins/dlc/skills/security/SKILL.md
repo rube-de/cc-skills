@@ -108,6 +108,11 @@ gitleaks detect --source . --no-git --report-format json 2>/dev/null
 # captures a value, only a short fixed prefix/keyword (AKIA, sk-, ghp_,
 # "password =", "secret ="), so there's nothing sensitive left to leak either
 # way the line is parsed downstream.
+#
+# Do NOT widen any pattern to capture the secret body itself (e.g.
+# AKIA[A-Z0-9]{16} instead of bare AKIA) — -o's safety depends entirely on
+# every pattern staying prefix/keyword-only. A body-matching pattern would
+# print the actual secret value straight into the public issue.
 grep -rnoE "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" \
   --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
   --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" .
