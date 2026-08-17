@@ -175,7 +175,7 @@ echo "BODY_FILE=$BODY_FILE"
 echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Write tool is not a shell and can't expand them itself
 ```
 
-**Write — compose** (two separate `Write` tool calls, using the paths just printed as `file_path`):
+**Write — compose** (two separate `Write` tool calls; use the absolute path *after* each `BODY_FILE=`/`TITLE_FILE=` prefix printed above as `file_path` — not the whole `KEY=value` line):
 - `$BODY_FILE` ← the formatted issue body, following the template above.
 - `$TITLE_FILE` ← a single line, exactly `[DLC] {Type}: {summary}`, with any newline, `` ` ``, `$`, or `"` characters in `{summary}` stripped first, and every `@` in `{summary}` neutralized (space inserted immediately after it) per the No GitHub Mentions rule above — the post step's validation rejects an unneutralized `@` in the title exactly as it does in the body.
 
