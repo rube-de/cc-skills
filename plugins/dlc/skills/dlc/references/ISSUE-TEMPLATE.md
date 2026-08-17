@@ -123,10 +123,13 @@ wrong file and post someone else's draft.
 **Bash — prep:**
 
 ```bash
-# mktemp -d creates a directory no other process — concurrent or not, same
-# checkout or a different one — can ever be handed, and (verified on both GNU
-# coreutils and BSD/macOS mktemp) it's mode 0700 regardless of umask, so it
-# needs no separate `umask 077` call. This is what actually prevents scratch-file
+# mktemp -d creates a directory unique at creation time — drawn from a large
+# random namespace, so collision with any concurrent process (same checkout
+# or a different one) is not a practical concern, though not a structural
+# impossibility the way it would be after the directory is later deleted and
+# the same name theoretically regenerated. Verified on both GNU coreutils
+# and BSD/macOS mktemp: it's mode 0700 regardless of umask, so it needs no
+# separate `umask 077` call. This is what actually prevents scratch-file
 # cross-contamination between runs; earlier deterministic repo+checkout-scoped
 # paths could not. It does NOT prevent two concurrent runs from each
 # successfully creating their own issue — that's a separate problem this

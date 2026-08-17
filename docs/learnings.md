@@ -899,9 +899,9 @@ If out-of-scope items remain, use `AskUserQuestion` to ask:
 
 > Source: [Issue #44](https://github.com/rube-de/cc-skills/issues/44) — DLC `pr-check` auto-created tracking issues without consent. Fixed to match the user-gated pattern used by the PM plugin.
 
-### Read-only analysis skills omit `Write`/`Edit` from allowed-tools
+### Read-only analysis skills omit `Edit` (and, outside a narrow exception, `Write`) from allowed-tools
 
-When a DLC sub-skill only analyzes code (no modifications), exclude `Write` and `Edit` from `allowed-tools`. This makes the skill's intent unambiguous and prevents accidental code modifications. Compare:
+When a DLC sub-skill only analyzes code (no modifications), exclude `Edit` from `allowed-tools` always, and exclude `Write` too unless it's narrowly needed for scratch-file composition of untrusted content — see the Issue #245 exception below, which the `pr-validity` example immediately below already reflects. This makes the skill's read-only intent unambiguous. Compare:
 
 - **Read-only** (`pr-validity`): `allowed-tools: [Bash, Read, Grep, Glob, Task, AskUserQuestion, Write]` — `Write` was added back per the Issue #245 exception below; the *instructions* scope it to composing its own scratch files only
 - **Read-write** (`pr-check`): `allowed-tools: [Bash, Read, Grep, Glob, Write, Edit, AskUserQuestion]` — `Edit` is present because modifying existing repo files (implementing review fixes) is this skill's actual job, not a scratch-only side effect
