@@ -153,7 +153,10 @@ esac
 # path gets threaded forward as literal source text into a later Bash call's
 # double-quoted assignment — which WOULD re-expand them at that point. Reject
 # anything outside a safe path-character allowlist before it's ever printed.
-UNSAFE=$(printf '%s' "$DLC_TMPDIR" | tr -d 'A-Za-z0-9/._-')
+# LC_ALL=C forces byte-value comparison for the A-Za-z0-9 ranges — under
+# other locales, collation rules can make POSIX bracket-expression ranges
+# match unexpected characters, weakening the check.
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | LC_ALL=C tr -d 'A-Za-z0-9/._-')
 if [ -n "$UNSAFE" ]; then
   echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
   exit 1
@@ -213,7 +216,7 @@ fi
 if [ "$POST_OK" = 1 ]; then
   rm -f "$BODY_FILE" "$TITLE_FILE" 2>/dev/null && rmdir "$(dirname "$BODY_FILE")" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup of $BODY_FILE / $TITLE_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
-  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE, title at $TITLE_FILE. Do NOT re-run this exact posting command directly with the preserved files — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print both paths and the gh issue create command above to the user so they can inspect and run it manually." >&2
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE, title at $TITLE_FILE. Do NOT re-run this exact posting command directly with the preserved files — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Before retrying manually, run 'gh issue list --repo \"$REPO\" --label dlc-{type} --search \"\$(cat \"$TITLE_FILE\")\"' to check whether it was already created. Print both paths and the gh issue create command above to the user so they can inspect, verify, and run it manually." >&2
   exit 1
 fi
 ```

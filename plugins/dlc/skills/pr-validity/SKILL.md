@@ -164,6 +164,10 @@ Deduplicate the extracted issue references before fetching (a PR body may refere
 ```bash
 # This is a separate Bash tool call from Step 1 — REPO doesn't persist, re-fetch it
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+if [ -z "$REPO" ]; then
+  echo "ERROR: gh repo view returned no repository — check gh auth status." >&2
+  exit 1
+fi
 gh issue view <ISSUE_NUMBER> --repo <OWNER/REPO> --json number,title,state,labels,body
 ```
 

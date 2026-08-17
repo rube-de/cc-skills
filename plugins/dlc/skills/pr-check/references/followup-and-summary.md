@@ -73,7 +73,8 @@ case "$DLC_TMPDIR" in
 esac
 # An absolute path isn't enough on its own — see ISSUE-TEMPLATE.md's Bash —
 # prep block for why $TMPDIR could still carry shell metacharacters through.
-UNSAFE=$(printf '%s' "$DLC_TMPDIR" | tr -d 'A-Za-z0-9/._-')
+# LC_ALL=C keeps the A-Za-z0-9 ranges locale-independent.
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | LC_ALL=C tr -d 'A-Za-z0-9/._-')
 if [ -n "$UNSAFE" ]; then
   echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
   exit 1
@@ -117,7 +118,7 @@ fi
 if [ "$POST_OK" = 1 ]; then
   rm -f "$BODY_FILE" 2>/dev/null && rmdir "$(dirname "$BODY_FILE")" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup at $BODY_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
-  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Print $BODY_FILE and the gh issue create command above to the user so they can inspect and run it manually." >&2
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Before retrying manually, run 'gh issue list --repo \"$REPO\" --label dlc-pr-check --search \"PR #$PR_NUMBER\"' to check whether it was already created. Print $BODY_FILE and the gh issue create command above to the user so they can inspect, verify, and run it manually." >&2
   exit 1
 fi
 ```
@@ -340,7 +341,7 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
-UNSAFE=$(printf '%s' "$DLC_TMPDIR" | tr -d 'A-Za-z0-9/._-')
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | LC_ALL=C tr -d 'A-Za-z0-9/._-')
 if [ -n "$UNSAFE" ]; then
   echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
   exit 1
@@ -373,7 +374,7 @@ fi
 if [ "$POST_OK" = 1 ]; then
   rm -f "$SUMMARY_FILE" 2>/dev/null && rmdir "$(dirname "$SUMMARY_FILE")" 2>/dev/null || echo "Note: summary posted successfully; scratch cleanup at $SUMMARY_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
-  echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment." >&2
+  echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment. Before retrying manually, run 'gh pr view $PR_NUMBER --json comments --jq \".comments[-3:]\"' to check whether it already went through." >&2
   exit 1
 fi
 ```
