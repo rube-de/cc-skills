@@ -60,7 +60,7 @@ If the user selects "Show me details first", display each undecided item with yo
 | Unresolved — Fixable (unfixed due to error) | **Medium** |
 | Dismissed | **Info** |
 
-Never heredoc the issue body — it embeds reviewer-controlled findings text. Write it with the `Write` tool, then post from the file. This is deliberately not ISSUE-TEMPLATE.md's Issue Creation Command pattern: the title here is `{n}`/`{number}` — provably numeric, never agent-composed free text — so it doesn't need a separate `TITLE_FILE`. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, unique at creation time — drawn from a large random namespace, so collision with any concurrent or prior run is not a practical concern, though not a structural impossibility the way it would be after the directory is later deleted and the same name theoretically regenerated), so — like ISSUE-TEMPLATE.md's own lifecycle — its path can't be recomputed in the post step below; the prep step's printed path is threaded forward as a literal instead. The `$PR_NUMBER` prefix is kept only so a human scanning `/tmp` can tell which PR a leftover directory belongs to — it does no uniqueness work itself:
+Never heredoc the issue body — it embeds reviewer-controlled findings text. Write it with the `Write` tool, then post from the file. This is deliberately not ISSUE-TEMPLATE.md's Issue Creation Command pattern: the title here is `{n}`/`{number}` — provably numeric, never agent-composed free text — so it doesn't need a separate `TITLE_FILE`. `DLC_TMPDIR` is created with `mktemp -d` (unique at creation time — drawn from a large random namespace, so collision with any concurrent or prior run is not a practical concern, though not a structural impossibility the way it would be after the directory is later deleted and the same name theoretically regenerated; the `chmod 700` below forces 0700 independent of the caller's umask, since mktemp's requested 0700 is otherwise still masked by it), so — like ISSUE-TEMPLATE.md's own lifecycle — its path can't be recomputed in the post step below; the prep step's printed path is threaded forward as a literal instead. The `$PR_NUMBER` prefix is kept only so a human scanning `/tmp` can tell which PR a leftover directory belongs to — it does no uniqueness work itself:
 
 ```bash
 # Check the result explicitly — an unchecked mktemp that fails, or a relative
@@ -71,6 +71,9 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
+# mktemp's requested 0700 is masked by the caller's umask like any mkdir —
+# force it explicitly rather than trusting mktemp alone.
+chmod 700 "$DLC_TMPDIR" || { echo "ERROR: failed to set permissions on scratch directory $DLC_TMPDIR" >&2; exit 1; }
 # An absolute path isn't enough on its own — see ISSUE-TEMPLATE.md's Bash —
 # prep block for why $TMPDIR could still carry shell metacharacters through.
 # LC_ALL=C keeps the A-Za-z0-9 ranges locale-independent.
@@ -99,7 +102,7 @@ if [ ! -s "$BODY_FILE" ]; then
 fi
 
 if grep -qE '@[[:alnum:]_-]' "$BODY_FILE"; then
-  echo "ERROR: unneutralized @ mention found in $BODY_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  echo "ERROR: unneutralized @ mention found in $BODY_FILE — insert a space immediately after every @ in the Write step per SKILL.md's No GitHub mentions rule, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
   exit 1
 fi
 
@@ -118,7 +121,7 @@ fi
 if [ "$POST_OK" = 1 ]; then
   rm -f "$BODY_FILE" 2>/dev/null && rmdir "$(dirname "$BODY_FILE")" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup at $BODY_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
-  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Before retrying manually, run 'gh issue list --repo \"$REPO\" --label dlc-pr-check --search \"PR #$PR_NUMBER\"' to check whether it was already created. Print $BODY_FILE and the gh issue create command above to the user so they can inspect, verify, and run it manually." >&2
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Before retrying manually, run 'gh issue list --repo \"$REPO\" --label dlc-pr-check --search \"PR #{number}\"' to check whether it was already created. Print $BODY_FILE and the gh issue create command above to the user so they can inspect, verify, and run it manually." >&2
   exit 1
 fi
 ```
@@ -332,7 +335,7 @@ Author will address some remaining items manually.
 Some remaining items deferred — out of scope for this PR.
 ```
 
-The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Write it with the `Write` tool, then post from the file. `DLC_TMPDIR` is created with `mktemp -d` (mode 0700, unique at creation time) for the same reason as the follow-up issue body above — its path is threaded forward as a literal, not recomputed:
+The summary embeds decision descriptions carried over from reviewer comments — never heredoc it. Write it with the `Write` tool, then post from the file. `DLC_TMPDIR` is created with `mktemp -d` (unique at creation time; `chmod 700` below forces the mode, since mktemp's requested 0700 is otherwise masked by the caller's umask) for the same reason as the follow-up issue body above — its path is threaded forward as a literal, not recomputed:
 
 ```bash
 # Check the result explicitly — same reasoning as the follow-up issue body above.
@@ -341,6 +344,7 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
+chmod 700 "$DLC_TMPDIR" || { echo "ERROR: failed to set permissions on scratch directory $DLC_TMPDIR" >&2; exit 1; }
 UNSAFE=$(printf '%s' "$DLC_TMPDIR" | LC_ALL=C tr -d 'A-Za-z0-9/._-')
 if [ -n "$UNSAFE" ]; then
   echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
@@ -361,7 +365,7 @@ if [ ! -s "$SUMMARY_FILE" ]; then
 fi
 
 if grep -qE '@[[:alnum:]_-]' "$SUMMARY_FILE"; then
-  echo "ERROR: unneutralized @ mention found in $SUMMARY_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  echo "ERROR: unneutralized @ mention found in $SUMMARY_FILE — insert a space immediately after every @ in the Write step per SKILL.md's No GitHub mentions rule, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
   exit 1
 fi
 
@@ -374,7 +378,7 @@ fi
 if [ "$POST_OK" = 1 ]; then
   rm -f "$SUMMARY_FILE" 2>/dev/null && rmdir "$(dirname "$SUMMARY_FILE")" 2>/dev/null || echo "Note: summary posted successfully; scratch cleanup at $SUMMARY_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
 else
-  echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment. Before retrying manually, run 'gh pr view $PR_NUMBER --json comments --jq \".comments[-3:]\"' to check whether it already went through." >&2
+  echo "ERROR: Failed to post PR summary — body preserved at $SUMMARY_FILE. Do NOT re-run this exact posting command directly with the preserved file — if the POST actually succeeded server-side despite this error, that would post a duplicate summary comment. Before retrying manually, run 'gh pr view {number} --json comments --jq \".comments[-3:]\"' to check whether it already went through." >&2
   exit 1
 fi
 ```

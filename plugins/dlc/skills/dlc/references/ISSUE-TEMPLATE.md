@@ -127,13 +127,14 @@ wrong file and post someone else's draft.
 # random namespace, so collision with any concurrent process (same checkout
 # or a different one) is not a practical concern, though not a structural
 # impossibility the way it would be after the directory is later deleted and
-# the same name theoretically regenerated. Verified on both GNU coreutils
-# and BSD/macOS mktemp: it's mode 0700 regardless of umask, so it needs no
-# separate `umask 077` call. This is what actually prevents scratch-file
-# cross-contamination between runs; earlier deterministic repo+checkout-scoped
-# paths could not. It does NOT prevent two concurrent runs from each
-# successfully creating their own issue — that's a separate problem this
-# doesn't attempt to solve.
+# the same name theoretically regenerated. mktemp requests u+rwx (0700), but
+# that request is still masked by the caller's umask like any other mkdir —
+# verified empirically: under `umask 777` (or any umask overlapping owner
+# bits, e.g. `umask 700`), the resulting directory comes back mode 000, not
+# 0700. The explicit `chmod 700` below is what actually guarantees the mode
+# regardless of the caller's umask; mktemp alone does not. It does NOT
+# prevent two concurrent runs from each successfully creating their own
+# issue — that's a separate problem this doesn't attempt to solve.
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 if [ -z "$REPO" ]; then
   echo "ERROR: gh repo view returned no repository — check gh auth status. Aborting before composing a body with a blank Repository field." >&2
@@ -151,6 +152,9 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
+# mktemp's requested 0700 is masked by the caller's umask like any mkdir —
+# force it explicitly instead of trusting mktemp alone (see comment above).
+chmod 700 "$DLC_TMPDIR" || { echo "ERROR: failed to set permissions on scratch directory $DLC_TMPDIR" >&2; exit 1; }
 # An absolute path isn't enough on its own: if $TMPDIR contains shell
 # metacharacters ($(), backticks), mktemp preserves them verbatim, and this
 # path gets threaded forward as literal source text into a later Bash call's
