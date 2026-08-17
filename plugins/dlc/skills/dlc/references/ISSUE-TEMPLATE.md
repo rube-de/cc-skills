@@ -144,6 +144,16 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
+# An absolute path isn't enough on its own: if $TMPDIR contains shell
+# metacharacters ($(), backticks), mktemp preserves them verbatim, and this
+# path gets threaded forward as literal source text into a later Bash call's
+# double-quoted assignment — which WOULD re-expand them at that point. Reject
+# anything outside a safe path-character allowlist before it's ever printed.
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | tr -d 'A-Za-z0-9/._-')
+if [ -n "$UNSAFE" ]; then
+  echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
+  exit 1
+fi
 BODY_FILE="$DLC_TMPDIR/issue-body.md"
 TITLE_FILE="$DLC_TMPDIR/issue-title.txt"
 echo "REPO=$REPO"       # the Write step below needs this for the Scan Metadata Repository row and can't see this shell
@@ -153,7 +163,7 @@ echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Wri
 
 **Write — compose** (two separate `Write` tool calls, using the paths just printed as `file_path`):
 - `$BODY_FILE` ← the formatted issue body, following the template above.
-- `$TITLE_FILE` ← a single line, exactly `[DLC] {Type}: {summary}`, with any newline, `` ` ``, `$`, or `"` characters in `{summary}` stripped first.
+- `$TITLE_FILE` ← a single line, exactly `[DLC] {Type}: {summary}`, with any newline, `` ` ``, `$`, or `"` characters in `{summary}` stripped first, and every `@` in `{summary}` neutralized (space inserted immediately after it) per the No GitHub Mentions rule above — the post step's validation rejects an unneutralized `@` in the title exactly as it does in the body.
 
 **Bash — post** (a separate tool call from the prep step — `REPO` is recomputed since it's deterministic; `BODY_FILE`/`TITLE_FILE` are the literal paths the prep step printed, substituted in as-is since `$DLC_TMPDIR`'s random suffix cannot be regenerated):
 

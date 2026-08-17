@@ -92,16 +92,24 @@ Try in order — use the first available:
 # Try gitleaks first
 gitleaks detect --source . --no-git --report-format json 2>/dev/null
 
-# Fallback: grep for common patterns (POSIX-compatible). Report file:line
-# locations only — never the matched line itself. For the AKIA/sk-/ghp_
-# prefixes, the match IS the credential; for password/secret=, the value sits
-# immediately adjacent. This scan's findings end up in the issue's Raw Output
-# section, which gets posted verbatim to a public GitHub issue — printing the
-# raw line would leak the secret it just detected.
-grep -rnE "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" \
+# Fallback: grep for common patterns (GNU/BSD grep — -r and -o are widely
+# supported extensions, not POSIX). -o prints only the
+# matched token itself — never the surrounding line — so the actual secret
+# value never reaches output. This scan's findings end up in the issue's Raw
+# Output section, which gets posted verbatim to a public GitHub issue.
+#
+# A prior version of this fix tried to strip the line content in a separate
+# sed pass keyed on "first two colon-delimited fields = path:line". That
+# breaks on any filename containing a colon (valid on Linux/macOS): grep's
+# own "path:line:" prefix becomes ambiguous, the substitution silently fails
+# to match, and the raw secret-containing line passes through unredacted —
+# verified empirically. -o has no such ambiguity: none of these five patterns
+# captures a value, only a short fixed prefix/keyword (AKIA, sk-, ghp_,
+# "password =", "secret ="), so there's nothing sensitive left to leak either
+# way the line is parsed downstream.
+grep -rnoE "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" \
   --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
-  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" . \
-  | sed -E 's/^([^:]+:[0-9]+):.*/\1: potential secret pattern match (value redacted)/'
+  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" .
 ```
 
 If **no specialized security tools are available**, use the Explore agent to discover security-sensitive areas across the codebase. Use repomix-explorer (if available) for large codebases to get a structural overview. Then use targeted Grep and Read for detailed analysis:

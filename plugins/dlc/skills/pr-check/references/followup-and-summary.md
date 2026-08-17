@@ -71,6 +71,13 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
+# An absolute path isn't enough on its own — see ISSUE-TEMPLATE.md's Bash —
+# prep block for why $TMPDIR could still carry shell metacharacters through.
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | tr -d 'A-Za-z0-9/._-')
+if [ -n "$UNSAFE" ]; then
+  echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
+  exit 1
+fi
 BODY_FILE="$DLC_TMPDIR/followup-issue.md"
 echo "$BODY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $BODY_FILE itself, and this mktemp suffix can't be regenerated in the next Bash call
 ```
@@ -329,6 +336,11 @@ case "$DLC_TMPDIR" in
   /*) : ;;
   *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
 esac
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | tr -d 'A-Za-z0-9/._-')
+if [ -n "$UNSAFE" ]; then
+  echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
+  exit 1
+fi
 SUMMARY_FILE="$DLC_TMPDIR/summary.md"
 echo "$SUMMARY_FILE"    # print the resolved absolute path — the Write tool is not a shell and can't expand $SUMMARY_FILE itself, and this mktemp suffix can't be regenerated in the next Bash call
 ```
