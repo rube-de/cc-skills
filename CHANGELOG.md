@@ -1,3 +1,10 @@
+## [2.7.3](https://github.com/rube-de/cc-skills/compare/v2.7.2...v2.7.3) (2026-08-18)
+
+
+### Bug Fixes
+
+* **dlc:** eliminate heredoc injection risk in issue-creation scratch files ([#246](https://github.com/rube-de/cc-skills/issues/246)) ([efc7b35](https://github.com/rube-de/cc-skills/commit/efc7b35f0f3cfb3d58ecb7066178bf69087edf89)), closes [#245](https://github.com/rube-de/cc-skills/issues/245) [#245](https://github.com/rube-de/cc-skills/issues/245)
+
 ## [2.7.2](https://github.com/rube-de/cc-skills/compare/v2.7.1...v2.7.2) (2026-08-07)
 
 
