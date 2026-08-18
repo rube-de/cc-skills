@@ -210,6 +210,16 @@ Teammate tool:
     - Inconsistencies with existing codebase patterns
     Your job is to find real problems. If everything is genuinely clean, approve — but never rubber-stamp.
 
+    Review checklist — check each for every changed file:
+    - Silent failures: No .get()/dict.get() fallbacks masking genuine missing keys
+    - Error handling: Exception handlers catch specific types, not bare except/catch
+    - Null safety: null/undefined/empty values don't pass through filters to overwrite existing data
+    - Trust boundaries: Client-provided IDs can't modify resources the user doesn't own
+    - Data integrity: Upsert operations don't reset timestamps or create duplicates
+    - Error paths: Error handling code is inside the try block, not after it
+    - State consistency: Error paths release locks, invalidate caches, clean up partial state
+    - Doc accuracy: Docstrings reference fields that exist; README describes implemented behavior
+
     3. Use /council to validate your review (quick quality for routine, review security or review architecture for critical concerns)
     4. Scan for stubs: rg "TODO|FIXME|HACK|XXX|stub"
     5. Blocking issues → message developer with file:line + fix suggestion
