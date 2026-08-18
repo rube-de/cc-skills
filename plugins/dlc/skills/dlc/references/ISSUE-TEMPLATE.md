@@ -206,6 +206,20 @@ if grep -qE '@[[:alnum:]_-]' "$BODY_FILE" "$TITLE_FILE"; then
   echo "ERROR: unneutralized @ mention found in $BODY_FILE or $TITLE_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
   exit 1
 fi
+# grep -c '' counts logical lines regardless of trailing-newline presence —
+# `wc -l` undercounts a file missing its final newline, which would let a
+# 2-line title with no trailing newline slip past a wc-based check. A
+# multi-line or CR-containing TITLE_FILE would otherwise pass silently
+# through `--title "$(cat "$TITLE_FILE")"` below into gh issue create.
+if [ "$(grep -c '' "$TITLE_FILE")" != "1" ]; then
+  echo "ERROR: $TITLE_FILE is not exactly one line — the Write step should have stripped newlines from {summary} already. Fix it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+CR=$(printf '\r')
+if grep -q "$CR" "$TITLE_FILE"; then
+  echo "ERROR: $TITLE_FILE contains a carriage return — strip it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
 for section in '## Scan Metadata' '## Findings Summary' '## Findings Detail' '## Recommended Actions' {additional-required-sections}; do
   grep -qF "$section" "$BODY_FILE" || { echo "ERROR: required section '$section' missing from $BODY_FILE — the Write step produced an incomplete body. Fix it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2; exit 1; }
 done

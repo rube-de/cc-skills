@@ -119,9 +119,13 @@ gitleaks detect --source . --no-git --report-format json 2>/dev/null
 # and some non-GNU grep builds by default), --include after the pattern gets
 # consumed as a positional filename argument instead of a flag, producing
 # "No such file or directory" for every --include and a nonzero exit code.
+# *.env* (not *.env) so .env.local / .env.production match too — verified
+# a leading * in --include isn't shell-glob-style hidden-file-exclusive,
+# it already matches dotfiles like .env.local without a separate .env*
+# pattern.
 grep -rnoE \
   --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
-  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" \
+  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env*" \
   "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" .
 ```
 
