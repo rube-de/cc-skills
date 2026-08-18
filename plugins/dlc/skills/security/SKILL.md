@@ -113,9 +113,16 @@ gitleaks detect --source . --no-git --report-format json 2>/dev/null
 # AKIA[A-Z0-9]{16} instead of bare AKIA) — -o's safety depends entirely on
 # every pattern staying prefix/keyword-only. A body-matching pattern would
 # print the actual secret value straight into the public issue.
-grep -rnoE "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" \
+#
+# --include flags come before the pattern and the pattern comes before `.` —
+# verified empirically that with option permutation disabled (POSIXLY_CORRECT=1,
+# and some non-GNU grep builds by default), --include after the pattern gets
+# consumed as a positional filename argument instead of a flag, producing
+# "No such file or directory" for every --include and a nonzero exit code.
+grep -rnoE \
   --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
-  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" .
+  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" \
+  "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" .
 ```
 
 If **no specialized security tools are available**, use the Explore agent to discover security-sensitive areas across the codebase. Use repomix-explorer (if available) for large codebases to get a structural overview. Then use targeted Grep and Read for detailed analysis:
