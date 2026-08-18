@@ -1,3 +1,10 @@
+## [2.9.1](https://github.com/rube-de/cc-skills/compare/v2.9.0...v2.9.1) (2026-08-18)
+
+
+### Bug Fixes
+
+* **council:** refine test quality concurrency heuristic and codeblock formatting ([#249](https://github.com/rube-de/cc-skills/issues/249)) ([b576dd1](https://github.com/rube-de/cc-skills/commit/b576dd19f52114b015260754f138819fd30ab166))
+
 # [2.9.0](https://github.com/rube-de/cc-skills/compare/v2.8.0...v2.9.0) (2026-08-18)
 
 
