@@ -179,7 +179,7 @@ echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Wri
 ```
 
 **Write — compose** (two separate `Write` tool calls; use the absolute path *after* each `BODY_FILE=`/`TITLE_FILE=` prefix printed above as `file_path` — not the whole `KEY=value` line):
-- `$BODY_FILE` ← the formatted issue body, following the template above.
+- `$BODY_FILE` ← the formatted issue body, following the template above. Use the value *after* the `REPO=` prefix printed above (same rule — not the whole `KEY=value` line) to fill the Scan Metadata table's `Repository` row (`| Repository | `{owner/repo}` |`).
 - `$TITLE_FILE` ← a single line, exactly `[DLC] {Type}: {summary}`, with any newline, `` ` ``, `$`, or `"` characters in `{summary}` stripped first, and every `@` in `{summary}` neutralized (space inserted immediately after it) per the No GitHub Mentions rule above — the post step's validation rejects an unneutralized `@` in the title exactly as it does in the body.
 
 **Bash — post** (a separate tool call from the prep step — `REPO` is recomputed since it's deterministic; `BODY_FILE`/`TITLE_FILE` are the literal paths the prep step printed, substituted in as-is since `$DLC_TMPDIR`'s random suffix cannot be regenerated):
