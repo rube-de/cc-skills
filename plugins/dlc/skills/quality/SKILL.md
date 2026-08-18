@@ -128,7 +128,7 @@ Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifec
 
 ```bash
 BRANCH=$(git branch --show-current)
-echo "BRANCH=$BRANCH"   # the Write step below is a separate tool call and can't see this shell's variables
+echo "BRANCH=$BRANCH"   # ISSUE-TEMPLATE.md's Write step is a separate tool call and can't see this shell's variables
 ```
 
 ## Step 5: Report

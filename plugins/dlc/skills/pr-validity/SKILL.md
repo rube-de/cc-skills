@@ -162,7 +162,8 @@ If **no issue references are found**, produce a finding:
 Deduplicate the extracted issue references before fetching (a PR body may reference the same issue multiple times). Preserve both the `owner/repo` and the issue number from each matched reference. For each unique referenced issue:
 
 ```bash
-# This is a separate Bash tool call from Step 1 — REPO doesn't persist, re-fetch it
+# Shell variables don't persist across separate Bash tool calls — REPO is
+# fetched fresh here (Step 1 never set it).
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 if [ -z "$REPO" ]; then
   echo "ERROR: gh repo view returned no repository — check gh auth status." >&2
