@@ -1,3 +1,5 @@
+## [2.7.4](https://github.com/rube-de/cc-skills/compare/v2.7.3...v2.7.4) (2026-08-18)
+
 ## [2.7.3](https://github.com/rube-de/cc-skills/compare/v2.7.2...v2.7.3) (2026-08-18)
 
 
