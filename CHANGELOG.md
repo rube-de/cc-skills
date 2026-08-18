@@ -1,3 +1,10 @@
+# [2.9.0](https://github.com/rube-de/cc-skills/compare/v2.8.0...v2.9.0) (2026-08-18)
+
+
+### Features
+
+* **council:** add test quality heuristics to codebase-context ([#248](https://github.com/rube-de/cc-skills/issues/248)) ([378c2a2](https://github.com/rube-de/cc-skills/commit/378c2a297c52ff24f43a58bf83eba535cdd22832))
+
 # [2.8.0](https://github.com/rube-de/cc-skills/compare/v2.7.4...v2.8.0) (2026-08-18)
 
 
