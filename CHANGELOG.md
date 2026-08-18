@@ -1,3 +1,10 @@
+# [2.10.0](https://github.com/rube-de/cc-skills/compare/v2.9.1...v2.10.0) (2026-08-18)
+
+
+### Features
+
+* **cdt:** strengthen reviewer teammate prompt with concrete checklist ([#250](https://github.com/rube-de/cc-skills/issues/250)) ([00666d4](https://github.com/rube-de/cc-skills/commit/00666d46b5ba140289e62fb1a46fd9c1d4cf0e97))
+
 ## [2.9.1](https://github.com/rube-de/cc-skills/compare/v2.9.0...v2.9.1) (2026-08-18)
 
 
