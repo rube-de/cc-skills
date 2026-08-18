@@ -1,3 +1,10 @@
+# [2.8.0](https://github.com/rube-de/cc-skills/compare/v2.7.4...v2.8.0) (2026-08-18)
+
+
+### Features
+
+* **council:** upgrade consultants to gemini-3.7-flash and glm-5.3 max ([#247](https://github.com/rube-de/cc-skills/issues/247)) ([a7a8a74](https://github.com/rube-de/cc-skills/commit/a7a8a74f961ab1f2bfdc37e4b9a7b6f169875bbb))
+
 ## [2.7.4](https://github.com/rube-de/cc-skills/compare/v2.7.3...v2.7.4) (2026-08-18)
 
 ## [2.7.3](https://github.com/rube-de/cc-skills/compare/v2.7.2...v2.7.3) (2026-08-18)
