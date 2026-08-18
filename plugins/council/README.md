@@ -7,7 +7,7 @@
 [![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
 [![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
-Orchestrate multiple AI consultants (Gemini 3.6 Flash, Codex, GLM-5.2, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
+Orchestrate multiple AI consultants (Gemini 3.7 Flash, Codex, GLM-5.3, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
 > [!NOTE]
 > **Dual-Layer Architecture**: External consultants provide model diversity across 4 different AI providers, while internal Claude subagents provide deep, tool-assisted analysis — one for security/bugs/performance, one for quality/compliance/history/docs.
@@ -19,9 +19,9 @@ Orchestrate multiple AI consultants (Gemini 3.6 Flash, Codex, GLM-5.2, Kimi K3) 
 **Layer 1 — External Consultants** (model diversity, same prompt):
 | Consultant | CLI | Strength |
 |------------|-----|----------|
-| Gemini 3.6 Flash | `omp -p --no-tools --model google-antigravity/gemini-3.6-flash` | Architecture, security, fast analysis |
+| Gemini 3.7 Flash | `omp -p --no-tools --model google-antigravity/gemini-3.7-flash` | Architecture, security, fast analysis |
 | Codex | `codex` | PR review, bug detection, security |
-| GLM-5.2 | `omp -p --no-tools --model zai/glm-5.2` | Alternative perspectives, algorithms |
+| GLM-5.3 | `omp -p --no-tools --model zai/glm-5.3:max` | Alternative perspectives, algorithms |
 | Kimi K3 | `omp -p --no-tools --model kimi-code/k3` | Long-context reasoning, creative solutions |
 
 **Layer 2 — Claude Subagents** (concern depth, tool access):
@@ -89,9 +89,9 @@ Built-in taxonomy auto-rejects:
 │  1. Pre-flight — verify CLI availability                                    │
 │                                                                             │
 │  2. Layer 1: External Consultants (parallel, 120s)                          │
-│     ├── omp -p --no-tools --model .../gemini-3.6-flash                      │
+│     ├── omp -p --no-tools --model .../gemini-3.7-flash                      │
 │     ├── codex exec --sandbox read-only -c approval_policy=never "review ..."│
-│     ├── omp -p --no-tools --model zai/glm-5.2 "..."                         │
+│     ├── omp -p --no-tools --model zai/glm-5.3:max "..."                     │
 │     └── omp -p --no-tools --model kimi-code/k3 "..."                        │
 │                                                                             │
 │  3. Layer 2: Claude Subagents (parallel)                                    │
@@ -157,10 +157,10 @@ done
 
 # Install as needed
 # codex   — https://github.com/openai/codex
-# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.6 Flash via antigravity, GLM-5.2, Kimi K3)
+# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.7 Flash via antigravity, GLM-5.3, Kimi K3)
 ```
 
-The plugin operates in partial-success mode — it proceeds with whichever consultants are available. Note that `omp` is the dominant dependency: it gates three of the four external consultants (Gemini, GLM-5.2, Kimi), so a missing or broken `omp` install leaves Codex as the only external voice.
+The plugin operates in partial-success mode — it proceeds with whichever consultants are available. Note that `omp` is the dominant dependency: it gates three of the four external consultants (Gemini, GLM-5.3, Kimi), so a missing or broken `omp` install leaves Codex as the only external voice.
 
 ## Dependencies
 
@@ -168,7 +168,7 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
 | codex CLI | Recommended | Codex consultant |
-| omp CLI | Recommended | Gemini, GLM-5.2, and Kimi consultants (3 of 4) |
+| omp CLI | Recommended | Gemini, GLM-5.3, and Kimi consultants (3 of 4) |
 
 ## Troubleshooting
 
