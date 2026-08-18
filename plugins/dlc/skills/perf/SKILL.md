@@ -4,7 +4,7 @@ description: >-
   Performance analysis: bundle size checks, profiling, benchmarks,
   and algorithmic complexity review. Identifies performance-sensitive
   areas and creates a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob, Task]
+allowed-tools: [Bash, Read, Grep, Glob, Task, Write]
 ---
 
 # DLC: Performance Analysis
@@ -111,20 +111,12 @@ Map results to the findings format from REPORT-FORMAT.md.
 - Label: `dlc-perf`
 - Body must contain: Scan Metadata table, Findings Summary table (severity x count), Findings Detail grouped by severity, Recommended Actions, Raw Output in collapsed details
 
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `perf`, `{Type}` = `Performance`, `{type}` = `perf`, `{additional-required-sections}` = `'## Raw Output'`:
+
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 BRANCH=$(git branch --show-current)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] Performance: {summary}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-perf"
+echo "BRANCH=$BRANCH"   # ISSUE-TEMPLATE.md's Write step is a separate tool call and can't see this shell's variables
 ```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
 ## Step 5: Report
 

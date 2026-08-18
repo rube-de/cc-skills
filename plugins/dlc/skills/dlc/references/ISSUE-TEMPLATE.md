@@ -5,14 +5,14 @@ GitHub issues created by DLC skills follow this exact format.
 ## Title Format
 
 ```text
-[DLC] {type}: {summary}
+[DLC] {Type}: {summary}
 ```
 
-Where `{type}` is one of: `Security`, `Quality`, `Performance`, `Testing`, `PR Review`, `PR Validity`.
+Where `{Type}` is one of: `Security`, `Quality`, `Performance`, `Testing`, `PR Review`, `PR Validity`.
 
 ## Label
 
-Apply the label corresponding to the `{type}`:
+Apply the label corresponding to `{Type}` — the label uses the lowercase `{type}` slug shown on the right of each row:
 
 - `Security` → `dlc-security`
 - `Quality` → `dlc-quality`
@@ -21,7 +21,7 @@ Apply the label corresponding to the `{type}`:
 - `PR Review` → `dlc-pr-check`
 - `PR Validity` → `dlc-pr-validity`
 
-All labels are lowercase and prefixed with `dlc-`.
+All labels are lowercase and prefixed with `dlc-`. `{Type}` and `{type}` are two distinct placeholders throughout this document — capitalized for the title, lowercase for the label slug — never the same token in different case.
 
 ## Issue Body Structure
 
@@ -88,27 +88,186 @@ Use this template exactly — agents and dashboards parse these section headers:
 
 ## Issue Creation Command
 
+The issue body embeds raw tool output that can be attacker- or repo-controlled (a
+malicious dependency name, a crafted lint message). **Never heredoc it** — a
+heredoc delimiter, even a randomly generated one, is a line the untrusted content
+could theoretically contain, and shell-parsing untrusted text at all is the risk,
+not just delimiter collision. Compose the body with the `Write` tool instead — it
+writes bytes to disk without the shell ever parsing them. This is why
+`security`/`quality`/`perf`/`test`/`pr-validity` carry `Write` in `allowed-tools`
+alongside `pr-check` (see `docs/learnings.md` for why that doesn't loosen what
+those otherwise-read-only skills can actually do).
+
+The title has the same exposure as the body — a `--title "[DLC] {Type}: {summary}"`
+shell argument is exactly as exposed as a heredoc, since `{summary}` is
+agent-composed from the same scan output as the body and a double-quoted argument
+does not stop `$(...)`/backtick expansion. Compose the title into its own file
+too, and read it back with a command substitution: `"$(cat "$FILE")"` runs
+command substitution exactly once and never re-parses its own captured output, so
+this is safe even if `{summary}` still contains shell metacharacters after
+stripping.
+
+This lifecycle is identical in spirit to `pr-check`'s `REPLY_FILE` mechanism (see
+`pr-check/SKILL.md` Step 4): a `Write` tool call is not a shell command and can't
+see variables from a prior Bash call, and shell variables don't persist across
+separate Bash calls either. `$REPO` is cheap and deterministic, so the post step
+below just recomputes it. `$DLC_TMPDIR` is not — it's created with `mktemp -d`
+precisely so it can't be recomputed (predictability is the bug, not a feature to
+preserve) — so it crosses the Bash → Write → Bash boundary the same way `{rest_id}`
+already does in `pr-check/SKILL.md` Step 4: the prep step prints the literal
+resolved paths, and both the `Write` calls and the post step use that literal
+text, not a re-derived expression. If the printed path gets mistyped or dropped,
+the post step's `[ ! -s ... ]` check just aborts — it can never point at the
+wrong file and post someone else's draft.
+
+**Bash — prep:**
+
 ```bash
-# Detect repo
+# mktemp -d creates a directory unique at creation time — drawn from a large
+# random namespace, so collision with any concurrent process (same checkout
+# or a different one) is not a practical concern, though not a structural
+# impossibility the way it would be after the directory is later deleted and
+# the same name theoretically regenerated. mktemp requests u+rwx (0700), but
+# that request is still masked by the caller's umask like any other mkdir —
+# verified empirically: under `umask 777` (or any umask overlapping owner
+# bits, e.g. `umask 700`), the resulting directory comes back mode 000, not
+# 0700. The explicit `chmod 700` below is what actually guarantees the mode
+# regardless of the caller's umask; mktemp alone does not. It does NOT
+# prevent two concurrent runs from each successfully creating their own
+# issue — that's a separate problem this doesn't attempt to solve.
 REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
-
-# Write body to temp file
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# ... write formatted body to $BODY_FILE ...
-
-# Create issue
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] {Type}: {summary}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-{type}"
+if [ -z "$REPO" ]; then
+  echo "ERROR: gh repo view returned no repository — check gh auth status. Aborting before composing a body with a blank Repository field." >&2
+  exit 1
+fi
+# Check the result explicitly — an unchecked `mktemp -d` that fails (missing/
+# unwritable TMPDIR) leaves DLC_TMPDIR empty, silently turning BODY_FILE/
+# TITLE_FILE into root-level paths ("/issue-body.md"). A relative $TMPDIR
+# produces the same danger via a different route: mktemp then returns a
+# relative path, which the Write step and this Bash call could resolve
+# against different working directories. The `case` below catches both —
+# only an absolute path passes. The `--` before the template stops a
+# $TMPDIR value starting with `-`/`--` from being parsed as a mktemp
+# option instead of template content — verified empirically that
+# "--tmpdir=..." otherwise gets consumed as a flag, not literal text.
+DLC_TMPDIR=$(mktemp -d -- "${TMPDIR:-/tmp}/dlc-{skill-name}.XXXXXXXX") || DLC_TMPDIR=""
+case "$DLC_TMPDIR" in
+  /*) : ;;
+  *) echo "ERROR: failed to create a private scratch directory — mktemp failed, or TMPDIR resolved to a non-absolute path ('$DLC_TMPDIR')" >&2; exit 1 ;;
+esac
+# mktemp's requested 0700 is masked by the caller's umask like any mkdir —
+# force it explicitly instead of trusting mktemp alone (see comment above).
+chmod 700 "$DLC_TMPDIR" || { echo "ERROR: failed to set permissions on scratch directory $DLC_TMPDIR" >&2; exit 1; }
+# An absolute path isn't enough on its own: if $TMPDIR contains shell
+# metacharacters ($(), backticks), mktemp preserves them verbatim, and this
+# path gets threaded forward as literal source text into a later Bash call's
+# double-quoted assignment — which WOULD re-expand them at that point. Reject
+# anything outside a safe path-character allowlist before it's ever printed.
+# LC_ALL=C forces byte-value comparison for the A-Za-z0-9 ranges — under
+# other locales, collation rules can make POSIX bracket-expression ranges
+# match unexpected characters, weakening the check.
+UNSAFE=$(printf '%s' "$DLC_TMPDIR" | LC_ALL=C tr -d 'A-Za-z0-9/._-')
+if [ -n "$UNSAFE" ]; then
+  echo "ERROR: scratch directory path contains unexpected characters — refusing to use it: '$DLC_TMPDIR'" >&2
+  exit 1
+fi
+BODY_FILE="$DLC_TMPDIR/issue-body.md"
+TITLE_FILE="$DLC_TMPDIR/issue-title.txt"
+echo "REPO=$REPO"       # the Write step below needs this for the Scan Metadata Repository row and can't see this shell
+echo "BODY_FILE=$BODY_FILE"
+echo "TITLE_FILE=$TITLE_FILE"   # print both resolved absolute paths — the Write tool is not a shell and can't expand them itself
 ```
+
+**Write — compose** (two separate `Write` tool calls; use the absolute path *after* each `BODY_FILE=`/`TITLE_FILE=` prefix printed above as `file_path` — not the whole `KEY=value` line):
+- `$BODY_FILE` ← the formatted issue body, following the template above. Use the value *after* the `REPO=` prefix printed above (same rule — not the whole `KEY=value` line) to fill the Scan Metadata table's `Repository` row (`| Repository | `{owner/repo}` |`).
+- `$TITLE_FILE` ← a single line, exactly `[DLC] {Type}: {summary}`, with any newline, `` ` ``, `$`, or `"` characters in `{summary}` stripped first, and every `@` in `{summary}` neutralized (space inserted immediately after it) per the No GitHub Mentions rule above — the post step's validation rejects an unneutralized `@` in the title exactly as it does in the body.
+
+**Bash — post** (a separate tool call from the prep step — `REPO` is recomputed since it's deterministic; `BODY_FILE`/`TITLE_FILE` are the literal paths the prep step printed, substituted in as-is since `$DLC_TMPDIR`'s random suffix cannot be regenerated):
+
+```bash
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+if [ -z "$REPO" ]; then
+  echo "ERROR: gh repo view returned no repository — check gh auth status." >&2
+  exit 1
+fi
+BODY_FILE="{literal path printed by prep}"
+TITLE_FILE="{literal path printed by prep}"
+
+if [ ! -s "$BODY_FILE" ] || [ ! -s "$TITLE_FILE" ]; then
+  echo "ERROR: issue body or title missing/empty at $BODY_FILE / $TITLE_FILE — the Write step may have failed" >&2
+  exit 1
+fi
+
+# Fail closed on content the Write step should already have handled: an
+# unneutralized @ (immediately followed by a username character, so a
+# space-neutralized "@ " does not match) means a live mention could reach
+# GitHub; a missing required section means the body is truncated or malformed.
+if grep -qE '@[[:alnum:]_-]' "$BODY_FILE" "$TITLE_FILE"; then
+  echo "ERROR: unneutralized @ mention found in $BODY_FILE or $TITLE_FILE — insert a space immediately after every @ in the Write step per the No GitHub mentions rule above, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+# grep -c '' counts logical lines regardless of trailing-newline presence —
+# `wc -l` undercounts a file missing its final newline, which would let a
+# 2-line title with no trailing newline slip past a wc-based check. A
+# multi-line or CR-containing TITLE_FILE would otherwise pass silently
+# through `--title "$(cat "$TITLE_FILE")"` below into gh issue create.
+if [ "$(grep -c '' "$TITLE_FILE")" != "1" ]; then
+  echo "ERROR: $TITLE_FILE is not exactly one line — the Write step should have stripped newlines from {summary} already. Fix it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+CR=$(printf '\r')
+if grep -q "$CR" "$TITLE_FILE"; then
+  echo "ERROR: $TITLE_FILE contains a carriage return — strip it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2
+  exit 1
+fi
+for section in '## Scan Metadata' '## Findings Summary' '## Findings Detail' '## Recommended Actions' {additional-required-sections}; do
+  grep -qF "$section" "$BODY_FILE" || { echo "ERROR: required section '$section' missing from $BODY_FILE — the Write step produced an incomplete body. Fix it in the Write step, then re-run this block. Nothing has been posted yet; this is safe to retry." >&2; exit 1; }
+done
+
+# Capture the post result before cleanup runs, so a failing `rm -f` (e.g. the
+# directory was already removed out-of-band) can never flip a successful post
+# into a reported failure and invite a duplicate-creating retry.
+if gh issue create \
+  --repo "$REPO" \
+  --title "$(cat "$TITLE_FILE")" \
+  --body-file "$BODY_FILE" \
+  --label "dlc-{type}"; then
+  POST_OK=1
+else
+  POST_OK=0
+fi
+
+if [ "$POST_OK" = 1 ]; then
+  rm -f "$BODY_FILE" "$TITLE_FILE" 2>/dev/null && rmdir "$(dirname "$BODY_FILE")" 2>/dev/null || echo "Note: issue created successfully; scratch cleanup of $BODY_FILE / $TITLE_FILE (or its now-empty directory) failed (non-fatal, nothing to retry)." >&2
+else
+  echo "ERROR: gh issue create failed — body preserved at $BODY_FILE, title at $TITLE_FILE. Do NOT re-run this exact posting command directly with the preserved files — if the POST actually succeeded server-side despite this error, that would create a duplicate issue. Before retrying manually, run 'gh issue list --repo \"$REPO\" --label dlc-{type} --search \"\$(cat \"$TITLE_FILE\")\"' to check whether it was already created. Print both paths and the gh issue create command above to the user so they can inspect, verify, and run it manually." >&2
+  exit 1
+fi
+```
+
+`{additional-required-sections}` is a per-skill substitution: `security`,
+`quality`, `perf`, and `test` supply `'## Raw Output'` (their body template above
+includes it); `pr-validity` supplies nothing — delete the `{additional-required-sections}`
+token entirely from the `for section in ...` line, don't paste a description of
+why it's empty in its place, or the loop will grep for a literal section header
+that can never exist and always abort issue creation. Its own "Body must
+contain" list in its `SKILL.md` has no Raw Output section, so the baseline four are all it
+requires.
+
+`REPO` is acquired by this shared pattern itself, in both the prep and post
+steps — it feeds both the Scan Metadata table (via the prep step's echo, since
+only the `Write` step needs the value) and the `--repo` flag (recomputed fresh
+in post, since that step runs its own `gh` call anyway). `BRANCH` is acquired
+and printed locally by each consumer instead, since its *source* varies by
+scan type: `perf`/`quality`/`security`/`test` scan the local checkout, so
+`git branch --show-current` is correct; `pr-validity` analyzes a PR's diff
+rather than the working tree, so it needs the PR's own head branch
+(`gh pr view --json headRefName`) instead.
 
 ## Failure Fallback
 
-If `gh issue create` fails (auth, network, missing repo):
-
-1. Save the draft to `/tmp/dlc-draft-{timestamp}.md`
-2. Print the full path to the user
-3. Print the `gh issue create` command they can run manually
+If `gh issue create` fails, the body and title stay exactly where the prep step
+put them — under a `mktemp -d` directory nothing else will ever be handed, so
+there is no same-second collision window and nothing to rename. The error
+message above already prints both paths. Nothing further to do beyond
+surfacing them and the manual `gh issue create` command to the user.

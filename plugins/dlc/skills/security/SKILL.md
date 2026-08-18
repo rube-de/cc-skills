@@ -4,7 +4,7 @@ description: >-
   Security scan: dependency audits, SAST analysis, and secret detection.
   Detects project type, runs available security tools, classifies findings
   by severity, and creates a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob, Task]
+allowed-tools: [Bash, Read, Grep, Glob, Task, Write]
 ---
 
 # DLC: Security Scan
@@ -92,10 +92,41 @@ Try in order — use the first available:
 # Try gitleaks first
 gitleaks detect --source . --no-git --report-format json 2>/dev/null
 
-# Fallback: grep for common patterns (POSIX-compatible)
-grep -rnE "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" \
+# Fallback: grep for common patterns. Not POSIX grep — -r, -o, and the
+# --include long option are all GNU/BSD extensions this command relies on.
+# -o prints only the matched token itself — never the surrounding line — so
+# the actual secret value never reaches output. This scan's findings end up
+# in the issue's Raw Output section, which gets posted verbatim to a public
+# GitHub issue.
+#
+# A prior version of this fix tried to strip the line content in a separate
+# sed pass keyed on "first two colon-delimited fields = path:line". That
+# breaks on any filename containing a colon (valid on Linux/macOS): grep's
+# own "path:line:" prefix becomes ambiguous, the substitution silently fails
+# to match, and the raw secret-containing line passes through unredacted —
+# verified empirically. -o has no such ambiguity: none of these five patterns
+# captures a value, only a short fixed prefix/keyword (AKIA, sk-, ghp_,
+# "password =", "secret ="), so there's nothing sensitive left to leak either
+# way the line is parsed downstream.
+#
+# Do NOT widen any pattern to capture the secret body itself (e.g.
+# AKIA[A-Z0-9]{16} instead of bare AKIA) — -o's safety depends entirely on
+# every pattern staying prefix/keyword-only. A body-matching pattern would
+# print the actual secret value straight into the public issue.
+#
+# --include flags come before the pattern and the pattern comes before `.` —
+# verified empirically that with option permutation disabled (POSIXLY_CORRECT=1,
+# and some non-GNU grep builds by default), --include after the pattern gets
+# consumed as a positional filename argument instead of a flag, producing
+# "No such file or directory" for every --include and a nonzero exit code.
+# *.env* (not *.env) so .env.local / .env.production match too — verified
+# a leading * in --include isn't shell-glob-style hidden-file-exclusive,
+# it already matches dotfiles like .env.local without a separate .env*
+# pattern.
+grep -rnoE \
   --include="*.ts" --include="*.js" --include="*.py" --include="*.go" \
-  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env" .
+  --include="*.rs" --include="*.java" --include="*.rb" --include="*.env*" \
+  "AKIA|sk-|ghp_|password[[:space:]]*=|secret[[:space:]]*=" .
 ```
 
 If **no specialized security tools are available**, use the Explore agent to discover security-sensitive areas across the codebase. Use repomix-explorer (if available) for large codebases to get a structural overview. Then use targeted Grep and Read for detailed analysis:
@@ -132,21 +163,12 @@ Deduplicate findings that appear in multiple tools. Prefer the source with more 
 - Label: `dlc-security`
 - Body must contain: Scan Metadata table, Findings Summary table (severity x count), Findings Detail grouped by severity, Recommended Actions, Raw Output in collapsed details
 
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `security`, `{Type}` = `Security`, `{type}` = `security`, `{additional-required-sections}` = `'## Raw Output'`:
+
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 BRANCH=$(git branch --show-current)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-# ... write formatted body to $BODY_FILE ...
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] Security: {summary}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-security"
+echo "BRANCH=$BRANCH"   # ISSUE-TEMPLATE.md's Write step is a separate tool call and can't see this shell's variables
 ```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path with a manual command.
 
 ## Step 5: Report
 

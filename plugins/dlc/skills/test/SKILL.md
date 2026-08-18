@@ -4,7 +4,7 @@ description: >-
   Test coverage analysis: detect test framework, run test suite,
   capture failures and coverage metrics, identify coverage gaps
   in recent changes, and create a structured GitHub issue.
-allowed-tools: [Bash, Read, Grep, Glob]
+allowed-tools: [Bash, Read, Grep, Glob, Write]
 ---
 
 # DLC: Test Coverage Analysis
@@ -157,20 +157,12 @@ Map results to the findings format from REPORT-FORMAT.md.
 | Files with 0% | {n} | 0 |
 ```
 
+Acquire `BRANCH` for the Scan Metadata table above — ISSUE-TEMPLATE.md's lifecycle acquires `REPO` itself. Then follow ISSUE-TEMPLATE.md's **Issue Creation Command** lifecycle exactly — substitute `{skill-name}` = `test`, `{Type}` = `Testing`, `{type}` = `test`, `{additional-required-sections}` = `'## Raw Output'`:
+
 ```bash
-REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
 BRANCH=$(git branch --show-current)
-TIMESTAMP=$(date +%s)
-BODY_FILE="/tmp/dlc-issue-${TIMESTAMP}.md"
-
-gh issue create \
-  --repo "$REPO" \
-  --title "[DLC] Testing: {summary}" \
-  --body-file "$BODY_FILE" \
-  --label "dlc-test"
+echo "BRANCH=$BRANCH"   # ISSUE-TEMPLATE.md's Write step is a separate tool call and can't see this shell's variables
 ```
-
-If issue creation fails, save draft to `/tmp/dlc-draft-${TIMESTAMP}.md` and print the path.
 
 ## Step 6: Report
 
