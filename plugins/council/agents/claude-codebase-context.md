@@ -57,6 +57,24 @@ Focus on **quality**, **compliance**, **history**, and **documentation**. These 
 - Functions that lost their last caller
 - Imports that are no longer used (only if obvious, not linter territory)
 
+#### Test Quality
+
+Don't just check if tests exist — verify they actually prove something:
+
+1. For each new test in the diff:
+   a. Read the test assertions
+   b. Ask: would this test pass even WITHOUT the implementation change?
+   c. If the test would pass trivially (e.g., `getPending()` asserted empty when it was already empty), flag as "test passes trivially — doesn't prove the new behavior"
+2. For code that uses locks, mutexes, or synchronization:
+   a. Check if there's a concurrency test verifying the lock mechanism
+   b. Multiple concurrent calls for the same resource should only produce one side effect (e.g., one topic created, not N)
+3. For test mocks:
+   a. Flag mock chains deeper than 3 levels (e.g., `mockInsert.mock.results[0].value.values.mock.calls[0][0]`)
+   b. Deep mock chains are fragile — they break on any internal refactor and test implementation details rather than behavior
+4. For negative tests (tests that verify something is rejected/blocked):
+   a. Verify the test would actually FAIL if the guard were removed
+   b. Common trap: auth test sends unauthenticated request, but the test would pass even without the auth middleware because the route returns 401 by default
+
 ### Compliance
 
 #### CLAUDE.md Compliance
