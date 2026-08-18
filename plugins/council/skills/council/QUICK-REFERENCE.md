@@ -62,7 +62,7 @@ done
 ┌────────────────────────────────────────────────────────────────────┐
 │                    CONSULTANT EXPERTISE MATRIX                     │
 ├─────────────┬─────────┬─────────┬─────────┬────────────────────────┤
-│ Task        │ Gemini  │ Codex   │ GLM-5.2 │ Kimi K3                │
+│ Task        │ Gemini  │ Codex   │ GLM-5.3 │ Kimi K3                │
 ├─────────────┼─────────┼─────────┼─────────┼────────────────────────┤
 │ Security    │ 0.90    │ 0.80    │ 0.75    │ 0.70                   │
 │ PR Review   │ 0.85    │ 0.90    │ 0.75    │ 0.80                   │
@@ -107,7 +107,7 @@ Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
 
 | Agent | Model | Role |
 |-------|-------|------|
-| `council:gemini-consultant` | Gemini 3.6 Flash | Fast external perspective |
+| `council:gemini-consultant` | Gemini 3.7 Flash | Fast external perspective |
 | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
 
 **Skipped in quick mode** (only run if escalating to full council):
@@ -310,8 +310,8 @@ git diff | codex exec --sandbox read-only -c approval_policy=never "review chang
   git diff main...HEAD > "$sandbox/changes.diff"   # capture before cd
   cd "$sandbox"
 
-  omp -p --no-tools --model google-antigravity/gemini-3.6-flash "prompt @\"$sandbox/changes.diff\""
-  omp -p --no-tools --model zai/glm-5.2 "prompt @\"$sandbox/changes.diff\""
+  omp -p --no-tools --model google-antigravity/gemini-3.7-flash "prompt @\"$sandbox/changes.diff\""
+  omp -p --no-tools --model zai/glm-5.3:max "prompt @\"$sandbox/changes.diff\""
   omp -p --no-tools --model kimi-code/k3 "prompt @\"$sandbox/changes.diff\""
 )
 ```

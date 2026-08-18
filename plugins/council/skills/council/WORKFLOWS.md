@@ -359,7 +359,7 @@ fi
 
    | Agent | Model | Role |
    |-------|-------|------|
-   | `council:gemini-consultant` | Gemini 3.6 Flash (`google-antigravity/gemini-3.6-flash`) | Fast external perspective |
+   | `council:gemini-consultant` | Gemini 3.7 Flash (`google-antigravity/gemini-3.7-flash`) | Fast external perspective |
    | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
 
    **Skipped** (reserved for full council escalation):

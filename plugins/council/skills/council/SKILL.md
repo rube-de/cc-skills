@@ -1,6 +1,6 @@
 ---
 name: council
-description: Consult external AI council (Gemini 3.6 Flash, Codex, GLM-5.2, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
+description: Consult external AI council (Gemini 3.7 Flash, Codex, GLM-5.3, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
 argument-hint: "[review|plan|adversarial|consensus|quick] [security|architecture|bugs|quality] [--blind]"
 allowed-tools: Task, Read, Grep, Glob, Bash, TodoWrite
 user-invocable: true
@@ -70,9 +70,9 @@ Invoked via CLI. Each brings a different AI model's perspective. All receive the
 
 | Agent | CLI | Strength | Expertise Weight |
 |-------|-----|----------|------------------|
-| `council:gemini-consultant` | `omp -p --no-tools --model google-antigravity/gemini-3.6-flash` | Architecture, security | Security: 0.9, Architecture: 0.85 |
+| `council:gemini-consultant` | `omp -p --no-tools --model google-antigravity/gemini-3.7-flash` | Architecture, security | Security: 0.9, Architecture: 0.85 |
 | `council:codex-consultant` | `codex` | PR review, bugs | Debugging: 0.9, Security: 0.8 |
-| `council:glm-consultant` | `omp -p --no-tools --model zai/glm-5.2` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
+| `council:glm-consultant` | `omp -p --no-tools --model zai/glm-5.3:max` | Alternative views, algorithms | Algorithms: 0.85, Architecture: 0.80 |
 | `council:kimi-consultant` | `omp -p --no-tools --model kimi-code/k3` | Code analysis, algorithms | Code Quality: 0.80, Algorithms: 0.80 |
 
 ### Claude Subagents (Concern Depth — Review Workflows Only)
@@ -407,7 +407,7 @@ Quick mode runs **exactly these 2 agents**:
 
 | Agent | Model | Role | Why included |
 |-------|-------|------|--------------|
-| `council:gemini-consultant` | Gemini 3.6 Flash (`google-antigravity/gemini-3.6-flash`) | Fast external perspective | Fastest external model, broad coverage |
+| `council:gemini-consultant` | Gemini 3.7 Flash (`google-antigravity/gemini-3.7-flash`) | Fast external perspective | Fastest external model, broad coverage |
 | `council:claude-codebase-context` | Sonnet | Codebase-aware depth | Native tool access, CLAUDE.md compliance, git history |
 
 Quick mode **does NOT run** these agents:
@@ -426,7 +426,7 @@ Quick mode **does NOT run** these agents:
     Skipping 5 agents (codex, glm, kimi, claude-deep-review, review-scorer)."
 
 2. Launch BOTH in parallel:
-   - council:gemini-consultant (omp google-antigravity/gemini-3.6-flash) — fastest external model
+   - council:gemini-consultant (omp google-antigravity/gemini-3.7-flash) — fastest external model
    - council:claude-codebase-context (sonnet) — native codebase access
 
 3. Validate both responses (see Response Validation above)
