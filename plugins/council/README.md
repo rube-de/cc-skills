@@ -91,7 +91,7 @@ Built-in taxonomy auto-rejects:
 │  2. Layer 1: External Consultants (parallel, 120s)                          │
 │     ├── omp -p --no-tools --model .../gemini-3.7-flash                      │
 │     ├── codex exec --sandbox read-only -c approval_policy=never "review ..."│
-│     ├── omp -p --no-tools --model zai/glm-5.3:max "..."                         │
+│     ├── omp -p --no-tools --model zai/glm-5.3:max "..."                     │
 │     └── omp -p --no-tools --model kimi-code/k3 "..."                        │
 │                                                                             │
 │  3. Layer 2: Claude Subagents (parallel)                                    │
