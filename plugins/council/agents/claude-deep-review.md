@@ -28,8 +28,15 @@ Focus on **security**, **bugs**, and **performance**. These are your three domai
 - **Secrets exposure**: Hardcoded credentials, API keys, tokens in code or config
 - **Access control**: Privilege escalation, missing authorization on endpoints, IDOR
 - **Cryptographic issues**: Weak algorithms, improper key management, missing encryption
-- **Input validation**: Unsanitized input at trust boundaries, missing validation
 - **CSRF/path traversal**: Request forgery, file access outside intended scope
+
+#### Input Validation & Protocol Compliance
+
+- **Unsanitized input at trust boundaries**: Missing validation on user/client input before use
+- **String length constraints**: Does the code enforce protocol-specified length limits? Examples: HTTP header values, push notification topics (RFC 8030: 32 chars), Telegram topic names (128 chars), database column widths. Check if user-controlled values can exceed these limits
+- **Character set constraints**: Does the code enforce protocol-specified character sets? Example: RFC 8030 Topic must be URL-safe base64 (`[A-Za-z0-9\-_]`). Raw user input may contain disallowed characters
+- **Content-Type enforcement**: Do API routes validate `Content-Type` headers before parsing? Accepting any content type when JSON is expected can bypass CSRF protections. Return 415 for unsupported media types
+- **Accept header enforcement**: Do API routes check `Accept` headers? Return 406 if the client requests an unsupported format
 
 #### Trust Boundary / Ownership Verification
 
