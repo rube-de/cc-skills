@@ -1,3 +1,10 @@
+# [2.11.0](https://github.com/rube-de/cc-skills/compare/v2.10.0...v2.11.0) (2026-08-19)
+
+
+### Features
+
+* **council:** add RFC/protocol compliance checks to deep-review ([#251](https://github.com/rube-de/cc-skills/issues/251)) ([2b82759](https://github.com/rube-de/cc-skills/commit/2b82759ebcf52002ae1519e03a1f8c12f0ef7514))
+
 # [2.10.0](https://github.com/rube-de/cc-skills/compare/v2.9.1...v2.10.0) (2026-08-18)
 
 
