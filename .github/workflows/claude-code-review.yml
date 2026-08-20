@@ -3,27 +3,36 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+      profile:
+        description: 'Review profile'
+        required: false
+        default: 'lean'
+        type: choice
+        options:
+          - lean
+          - full
 
 jobs:
   claude-review:
     if: |
+      github.event_name == 'workflow_dispatch' ||
       github.event.pull_request.user.login == 'rube-de' ||
       github.event.pull_request.user.login == 'funny-otter'
 
     concurrency:
-      group: claude-review-${{ github.event.pull_request.number }}
+      group: claude-review-${{ github.event.pull_request.number || inputs.pr_number }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
       pull-requests: write
-      issues: read
+      issues: write
       id-token: write
 
     steps:
@@ -37,9 +46,9 @@ jobs:
         uses: anthropics/claude-code-action@491e5eb471f4008dc0db76dfec54c56ff9f88bba # v1.0.70
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
+          plugin_marketplaces: 'https://github.com/rube-de/cc-skills.git'
+          plugins: 'ci-review@rube-cc-skills'
+          prompt: '/ci-review ${{ github.event.pull_request.number || inputs.pr_number }} ${{ inputs.profile == ''full'' && ''--full'' || ''--lean'' }}'
+          allowed_tools: 'Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr comment:*),Bash(gh pr checkout:*),Bash(gh api:*),Bash(gh auth:*),Bash(git:*),Bash(jq:*),Bash(sh:*),Read,Grep,Glob,Agent'
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           # or https://code.claude.com/docs/en/cli-reference for available options
-
