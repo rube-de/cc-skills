@@ -43,11 +43,12 @@ jobs:
         env:
           PR_NUMBER_INPUT: ${{ inputs.pr_number }}
         run: |
-          [[ "$PR_NUMBER_INPUT" =~ ^[0-9]+$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
+          [[ "$PR_NUMBER_INPUT" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0 # full history — ci-review agents run git blame
+          persist-credentials: false # Claude gets cat access; don't leave the token in .git/config
 
       - name: Run Claude Code Review
         id: claude-review
