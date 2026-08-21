@@ -42,6 +42,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           PR_NUMBER_INPUT: ${{ inputs.pr_number }}
+        shell: bash
         run: |
           [[ "$PR_NUMBER_INPUT" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
 
@@ -50,12 +51,14 @@ jobs:
         env:
           PR_NUMBER_INPUT: ${{ inputs.pr_number }}
           PROFILE_INPUT: ${{ inputs.profile }}
+          PR_NUMBER_EVENT: ${{ github.event.pull_request.number }}
+        shell: bash
         run: |
           if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
             echo "pr=$PR_NUMBER_INPUT" >> "$GITHUB_OUTPUT"
             echo "flag=$([ "$PROFILE_INPUT" = "full" ] && echo --full || echo --lean)" >> "$GITHUB_OUTPUT"
           else
-            echo "pr=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "pr=$PR_NUMBER_EVENT" >> "$GITHUB_OUTPUT"
             echo "flag=--lean" >> "$GITHUB_OUTPUT"
           fi
 
