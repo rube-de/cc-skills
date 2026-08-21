@@ -28,7 +28,7 @@ jobs:
       github.event.pull_request.user.login == 'funny-otter'
 
     concurrency:
-      group: claude-review-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
+      group: claude-review-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }} # duplicates the Resolve step (concurrency supports neither env nor steps contexts)
       cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
@@ -44,6 +44,21 @@ jobs:
           PR_NUMBER_INPUT: ${{ inputs.pr_number }}
         run: |
           [[ "$PR_NUMBER_INPUT" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
+
+      - name: Resolve inputs
+        id: resolve
+        env:
+          PR_NUMBER_INPUT: ${{ inputs.pr_number }}
+          PROFILE_INPUT: ${{ inputs.profile }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "pr=$PR_NUMBER_INPUT" >> "$GITHUB_OUTPUT"
+            echo "flag=$([ "$PROFILE_INPUT" = "full" ] && echo --full || echo --lean)" >> "$GITHUB_OUTPUT"
+          else
+            echo "pr=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+            echo "flag=--lean" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -57,10 +72,13 @@ jobs:
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
-          # The workspace IS the marketplace at the reviewed commit — no remote clone
+          # Self-bootstrap tradeoff (deliberate): the workspace IS the marketplace, so a PR
+          # touching plugins/ci-review is reviewed by its own modified plugin. The author
+          # allowlist restricts PR events to trusted logins, and testing plugin changes in
+          # CI is the point of this workflow. A main-pinned checkout would defeat that.
           plugin_marketplaces: './'
           plugins: 'ci-review@rube-cc-skills'
-          prompt: "/ci-review ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }} ${{ github.event_name == 'workflow_dispatch' && (inputs.profile == 'full' && '--full' || '--lean') || '--lean' }}"
+          prompt: "/ci-review ${{ steps.resolve.outputs.pr }} ${{ steps.resolve.outputs.flag }}"
           # gh api is scoped broadly (not per-endpoint): the plugin's posting layer
           # builds review URLs from shell variables, which prefix patterns cannot match
           claude_args: >-
