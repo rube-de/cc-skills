@@ -20,37 +20,46 @@ on:
 
 jobs:
   claude-review:
+    # PR events: only allowlisted PR authors. Dispatch: GitHub already requires
+    # write access to dispatch; the actor check keeps the intent explicit.
     if: |
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' && (github.actor == 'rube-de' || github.actor == 'funny-otter')) ||
       github.event.pull_request.user.login == 'rube-de' ||
       github.event.pull_request.user.login == 'funny-otter'
 
     concurrency:
-      group: claude-review-${{ github.event.pull_request.number || inputs.pr_number }}
+      group: claude-review-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
-      issues: write
+      pull-requests: write # covers review posts, inline comments, and PR conversation comments
+      issues: read
       id-token: write
 
-
     steps:
+      - name: Validate dispatch input
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          [[ "${{ inputs.pr_number }}" =~ ^[0-9]+$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 1
+          fetch-depth: 0 # full history — ci-review agents run git blame
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@491e5eb471f4008dc0db76dfec54c56ff9f88bba # v1.0.70
+        # 26ec0412 is the v1.0.70 commit — 491e5eb is the annotated tag object
+        uses: anthropics/claude-code-action@26ec041249acb0a944c0a47b6c0c13f05dbc5b44 # v1.0.70
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
-          plugin_marketplaces: 'https://github.com/rube-de/cc-skills.git'
+          # The workspace IS the marketplace at the reviewed commit — no remote clone
+          plugin_marketplaces: './'
           plugins: 'ci-review@rube-cc-skills'
-          prompt: '/ci-review ${{ github.event.pull_request.number || inputs.pr_number }} ${{ inputs.profile == ''full'' && ''--full'' || ''--lean'' }}'
-          allowed_tools: 'Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr comment:*),Bash(gh pr checkout:*),Bash(gh api:*),Bash(gh auth:*),Bash(git:*),Bash(jq:*),Bash(sh:*),Read,Grep,Glob,Agent'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          prompt: "/ci-review ${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }} ${{ github.event_name == 'workflow_dispatch' && (inputs.profile == 'full' && '--full' || '--lean') || '--lean' }}"
+          # gh api is scoped broadly (not per-endpoint): the plugin's posting layer
+          # builds review URLs from shell variables, which prefix patterns cannot match
+          claude_args: >-
+            --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api:*),Bash(sh *fetch-pr-comments.sh:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*),Bash(date:*)"
