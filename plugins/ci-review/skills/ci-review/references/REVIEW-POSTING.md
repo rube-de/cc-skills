@@ -126,7 +126,7 @@ The script automates the complete retry and fallback chain:
 
 | Error | Recovery (handled by `post-review.sh`) |
 |-------|----------------------------------------|
-| Invalid inline comment (line not in diff) | Remove that comment, retry with remaining |
+| Invalid inline comment (not in diff) | Prune invalid comments, retry with remaining |
 | All inline comments invalid | Post body-only review (inline findings moved to body) |
 | Review API 403/401 | Fall back to PR issue comment |
 | `gh` CLI not found | Abort with install instructions |

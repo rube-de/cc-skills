@@ -416,8 +416,8 @@ Construct the review body markdown and inline comments according to the findings
      **Profile**: <profile>
      ```
   2. Set inline comments to empty array `[]`.
-4. **Construct review payload file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
-   Write the review body markdown to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` and inline comments to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`, then use `jq` to safely encode the payload (preventing invalid JSON from multi-paragraph markdown or special characters):
+**Construct review payload file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
+Write the review body markdown to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` and inline comments to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`, then use `jq` to safely encode the payload (preventing invalid JSON from multi-paragraph markdown or special characters):
    ```bash
    cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
    <REVIEW_BODY>
