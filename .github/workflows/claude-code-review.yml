@@ -3,43 +3,153 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize, ready_for_review, reopened]
-    # Optional: Only run on specific file changes
-    # paths:
-    #   - "src/**/*.ts"
-    #   - "src/**/*.tsx"
-    #   - "src/**/*.js"
-    #   - "src/**/*.jsx"
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to review'
+        required: true
+        type: number
+      profile:
+        description: 'Review profile'
+        required: false
+        default: 'lean'
+        type: choice
+        options:
+          - lean
+          - full
 
 jobs:
   claude-review:
+    # PR events: only allowlisted PR authors. Dispatch: GitHub already requires
+    # write access to dispatch; the actor check keeps the intent explicit.
+    # Keep in sync with the trusted-login allowlist in claude.yml — no shared source
+    # exists until the composite action (#170)
     if: |
+      (github.event_name == 'workflow_dispatch' && (github.actor == 'rube-de' || github.actor == 'funny-otter')) ||
       github.event.pull_request.user.login == 'rube-de' ||
       github.event.pull_request.user.login == 'funny-otter'
 
     concurrency:
-      group: claude-review-${{ github.event.pull_request.number }}
+      group: claude-review-${{ github.event_name == 'workflow_dispatch' && inputs.pr_number || github.event.pull_request.number }} # duplicates the Resolve step (concurrency supports neither env nor steps contexts)
       cancel-in-progress: true
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      pull-requests: write
+      pull-requests: write # covers review posts, inline comments, and PR conversation comments
       issues: read
       id-token: write
 
     steps:
+      - name: Validate dispatch input
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          PR_NUMBER_INPUT: ${{ inputs.pr_number }}
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          [[ "$PR_NUMBER_INPUT" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
+          # Target PR author must be in the same allowlist as the if: block above
+          AUTHOR=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER_INPUT" --jq .user.login) || { echo "Could not read PR #$PR_NUMBER_INPUT"; exit 1; }
+          case "$AUTHOR" in
+            rube-de|funny-otter) ;;
+            *) echo "PR #$PR_NUMBER_INPUT author ($AUTHOR) is not in the review allowlist"; exit 1 ;;
+          esac
+
+      - name: Resolve inputs
+        id: resolve
+        env:
+          PR_NUMBER_INPUT: ${{ inputs.pr_number }}
+          PROFILE_INPUT: ${{ inputs.profile }}
+          PR_NUMBER_EVENT: ${{ github.event.pull_request.number }}
+        shell: bash
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "pr=$PR_NUMBER_INPUT" >> "$GITHUB_OUTPUT"
+            echo "flag=$([ "$PROFILE_INPUT" = "full" ] && echo --full || echo --lean)" >> "$GITHUB_OUTPUT"
+          else
+            echo "pr=$PR_NUMBER_EVENT" >> "$GITHUB_OUTPUT"
+            echo "flag=--lean" >> "$GITHUB_OUTPUT"
+          fi
+          echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
-          fetch-depth: 1
+          # Dispatch: check out the target PR's head ref — always available and
+          # never stale (refs/pull/N/merge may be missing or outdated for
+          # conflicted PRs). pull_request events keep their default merge ref.
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/head', inputs.pr_number) || github.ref }}
+          fetch-depth: 0 # full history — ci-review agents run git blame
+          persist-credentials: false # Claude gets cat access; don't leave the token in .git/config
 
       - name: Run Claude Code Review
         id: claude-review
-        uses: anthropics/claude-code-action@491e5eb471f4008dc0db76dfec54c56ff9f88bba # v1.0.70
+        # 24dcd50 is the v1.0.200 commit; the bundled SDK (^0.3.240) installs a
+        # current Claude Code CLI so the `sonnet` alias resolves to claude-sonnet-5
+        uses: anthropics/claude-code-action@24dcd50c0568f0fc9e9211213a4fd2d9eb15c4e0 # v1.0.200
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          plugin_marketplaces: 'https://github.com/anthropics/claude-code.git'
-          plugins: 'code-review@claude-code-plugins'
-          prompt: '/code-review:code-review ${{ github.repository }}/pull/${{ github.event.pull_request.number }} --comment'
-          # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
-          # or https://code.claude.com/docs/en/cli-reference for available options
+          github_token: ${{ github.token }}
+          # Self-bootstrap tradeoff (deliberate): the workspace IS the marketplace, so a PR
+          # touching plugins/ci-review is reviewed by its own modified plugin. The author
+          # allowlist restricts PR events to trusted logins, and testing plugin changes in
+          # CI is the point of this workflow. A main-pinned checkout would defeat that.
+          plugin_marketplaces: './'
+          plugins: 'ci-review@rube-cc-skills'
+          prompt: "/ci-review ${{ steps.resolve.outputs.pr }} ${{ steps.resolve.outputs.flag }}"
+          # AskUserQuestion is deliberately omitted — interactive tools are
+          # suppressed in CI even though the skill frontmatter lists it
+          # gh api is scoped broadly (not per-endpoint): the plugin's posting layer
+          # builds review URLs from shell variables, which prefix patterns cannot match
+          claude_args: >-
+            --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api:*),Bash(sh:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*),Bash(date:*)"
 
+      - name: Verify review posted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.resolve.outputs.pr }}
+          STARTED: ${{ steps.resolve.outputs.started }}
+        shell: bash
+        run: |
+          count_posts() {
+            local posted comments
+            # --paginate --slurp returns one JSON array of all pages; external jq
+            # aggregates across pages (gh's --jq runs per page, which would emit
+            # one length per page and break the arithmetic below). Pipefail makes
+            # a gh or jq failure nonzero so the caller can distinguish transport
+            # errors from a verified zero.
+            posted=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
+              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .submitted_at > $started and ((.body // "") | startswith("## CI Review")))] | length') || return 2
+            comments=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .created_at > $started and ((.body // "") | startswith("## CI Review")))] | length') || return 2
+            echo $((posted + comments))
+          }
+          API_FAILS=0
+          ZERO_VERIFIED=0
+          for attempt in 1 2 3 4 5 6; do
+            if ! RESULT=$(count_posts); then
+              API_FAILS=$((API_FAILS + 1))
+              echo "Attempt $attempt: API query failed; retrying in 10s"
+            elif [ "$RESULT" -gt 0 ]; then
+              echo "$RESULT review(s)/comment(s) posted since $STARTED (attempt $attempt)"
+              exit 0
+            else
+              ZERO_VERIFIED=1
+              echo "Attempt $attempt: nothing visible yet; retrying in 10s (eventual consistency)"
+            fi
+            sleep 10
+          done
+          # Distinguish transport failure from a verified contract violation.
+          # A green SDK exit proves neither review completion nor zero findings,
+          # so no synthetic review is ever posted here — a clean verdict may only
+          # come from the review session itself.
+          if [ "$API_FAILS" -eq 6 ]; then
+            echo "::error::could not verify posting — all 6 API queries failed (transport). Nothing assumed about the review session."
+            exit 1
+          fi
+          if [ "$ZERO_VERIFIED" -eq 1 ]; then
+            echo "::error::review session posted no review or comment (verified after retries) — contract violation; a body-only review is required even with zero findings. Known agent skip: #255"
+            exit 1
+          fi
+          echo "::error::verification loop ended without a verdict — this should be unreachable"
+          exit 1

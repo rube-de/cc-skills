@@ -1571,3 +1571,20 @@ Fixing one reviewer finding in a shared file led to also "fixing" adjacent, unre
 **Rule:** When a reviewer flags something in a file the PR already touches, fix that finding — don't also fix everything else in the file that looks similarly rough. Apply a scope test per hunk: does this change serve the PR's actual stated purpose, or just happen to live near code that does? "It's in the diff already" answers neither question. If a fix keeps spawning same-shaped findings on its own prior fixes (the treadmill signature), stop adding and revert the accretion rather than iterating forward — a growing thread count across cycles is the signal to check for this, not to fix faster.
 
 > Source: PR #244 (https://github.com/rube-de/cc-skills/pull/244), self-identified via `advisor()` after three consecutive review rounds each targeting the previous round's own additions; files: `plugins/dlc/skills/dlc/references/ISSUE-TEMPLATE.md`, `plugins/dlc/skills/pr-check/references/followup-and-summary.md`.
+
+## Wiring a skill plugin into claude-code-action (PR #253, issue #169)
+
+**Verified against action v1.0.70→v1.0.200 source, not docs:**
+
+- `allowed_tools` is **not** a claude-code-action input — tool allowlists go via `claude_args: --allowedTools "..."`. An unknown input is silently ignored, so the run proceeds on the action's default permission behavior and the mistake is invisible until audited.
+- Pinned SHAs that look like commits may be **annotated tag objects** — `491e5eb` (v1.0.70) was a tag object pointing at commit `26ec0412`. Always resolve via `git/matching-refs` + `git/tags/{sha}` before pinning.
+- The action's `setupGitHubToken()` exchanges the repo OIDC token for an Anthropic-minted GitHub App token **unless** `github_token` is passed — the only way to run without the Claude GitHub App installed. Works on personal repos.
+- `plugin_marketplaces` accepts **local paths** (`install-plugins.ts` `isLocalPath()`): `'./'` makes the checked-out workspace — the exact reviewed commit — the marketplace. No remote clone, no fragment-pinning needed. Tradeoff: a PR touching the plugin is reviewed by its own modified code (acceptable when PR events are author-allowlisted; it's the dogfood).
+- Bash prefix rules (`Bash(prefix:*)`) do **not** glob mid-prefix: `Bash(sh *script.sh:*)` never matches `sh /home/runner/.claude/.../script.sh`. Only leading prefixes work.
+- `pull-requests: write` alone covers PR conversation comments (`POST /issues/{n}/comments` on PRs), reviews, and inline replies — `issues: write` is unnecessary for a review-only workflow (GitHub's "Permissions required for GitHub Apps" table is the authoritative mapping; blog-level guidance claiming issues:write is wrong for PRs).
+- Job-level `concurrency` supports neither `env` nor `steps` contexts (docs context-availability table) — expressions there cannot be deduplicated through a step.
+- `${{ inputs.* }}` inside a `run:` body is template-expanded **before** the shell parses it — route user-reachable inputs through step `env` indirection. Server-generated values (`github.event.pull_request.number`) have no injection surface but routing them costs nothing.
+- gh API list endpoints default to 30/100 items and return **oldest-first** — `tail`-style "latest" checks silently miss new items on busy PRs (this bit twice in one day). Use `--paginate`.
+- CLI version travels with the action pin (bundled agent-sdk installs it): v1.0.70 → CLI 2.1.70 (sonnet→4.6); v1.0.200 → CLI 2.1.240 (sonnet→5). Full model IDs in agent frontmatter were silently ignored before CLI 2.1.74.
+- **Prompt-level "always post" rules do not bind**: the sonnet-5 agent skipped the mandatory body-only review on 5 consecutive zero-findings runs despite three inlined rules. Deterministic behavior needs scripted posting, not instructions (#255).
+- Never synthesize a "no findings" verdict from a green SDK exit — it proves neither completion nor zero findings, and an API outage in the verifier must not reach a clean-verdict branch either. Fail red on verified no-post and on un-verifiable states (#255 correction of record in PR #253).
