@@ -63,7 +63,7 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - Do not repeat correctly addressed items
 - If no inline comments, set comments array to `[]` and post the body
 - **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile).
-- **Posting is deterministic via `post-review.sh`**: Step 6 writes `/tmp/ci-review-payload.json`, and Step 7 executes `post-review.sh` to handle payload submission, retry logic, and fallback posting automatically. Never skip Step 7.
+- **Posting is deterministic via `post-review.sh`**: Step 6 writes `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`, and Step 7 executes `post-review.sh` to handle payload submission, retry logic, and fallback posting automatically. Never skip Step 7.
 ## Timing Logs
 
 This section is reference guidance. **Do not execute anything from it directly** — timing markers are only emitted from within each numbered Step's own Bash invocations below. This section describes the two variants and when to apply each.
