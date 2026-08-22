@@ -269,23 +269,14 @@ Changed files: {count} ({additions}+ / {deletions}-)
 
 **Agent failure handling:** If an agent fails, times out, or returns unparseable output, log the failure and continue with findings from the remaining agents. Do not abort the review because one agent failed. Record the failure in the Step 8 summary (e.g., "Agents: 8 launched, 7 completed, 1 failed").
 
-After all agents have returned (or been recorded as failed):
+After all agents have returned (or been recorded as failed), emit the Step-4 phase-end marker (substitute the remembered epoch):
 
-1. **If zero findings collected across all agents (clean PR):**
-   Emit the Step-4 phase-end marker, skip Steps 5 and 6, and **immediately execute `post-review.sh` to submit the clean review**:
-   ```bash
-   echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
-   echo "::endgroup::"
-   sh plugins/ci-review/scripts/post-review.sh <PR#>
-   ```
-   Capture the review URL from the output, then proceed directly to Step 8. Do NOT end the session without executing `post-review.sh`.
+```bash
+echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
+echo "::endgroup::"
+```
 
-2. **If findings were found:** Emit the Step-4 phase-end marker:
-   ```bash
-   echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
-   echo "::endgroup::"
-   ```
-   Then proceed to Step 5 (Confidence Scoring).
+Then proceed to Step 5 (Confidence Scoring).
 ### Step 5: Confidence Scoring
 
 Multi-call timing variant. Emit the phase-start marker in a dedicated Bash call **before** launching scorers:
@@ -361,22 +352,13 @@ A single generic signal (severity tag alone or type keyword alone) is NOT suffic
 - String matching is case-insensitive
 
 Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
+After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
 
-**If zero findings survive filtering:**
-Emit the Step-5 phase-end marker, skip Step 6, and **immediately execute `post-review.sh` to submit the clean review**:
-```bash
-echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
-echo "::endgroup::"
-sh plugins/ci-review/scripts/post-review.sh <PR#>
-```
-Capture the review URL, then proceed directly to Step 8.
-
-**If findings survived filtering:**
-Emit the Step-5 phase-end marker:
 ```bash
 echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
 echo "::endgroup::"
 ```
+
 Then proceed to Step 6 to construct the review payload.
 
 ### Step 6: Build Review Payload
@@ -461,9 +443,12 @@ Single-call timing variant. Step 7 deterministically posts the review payload by
 echo "::group::[ci-review] Step 7: Post Review"
 START=$(date +%s)
 sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+STATUS=$?
 echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - START ))s"
 echo "::endgroup::"
+exit $STATUS
 ```
+
 The script outputs `Review posted: <URL>` on success (exit 0) or `POSTING FAILED: <reason>` to stderr (exit 1). Capture the review URL from the output for the Step 8 summary.
 
 **Zero findings is NOT an exit, and posting must NEVER be skipped** — a posted review on GitHub is required on every run. Step 7 must always be executed before proceeding to Step 8.
