@@ -96,7 +96,7 @@ jobs:
           # CI is the point of this workflow. A main-pinned checkout would defeat that.
           plugin_marketplaces: './'
           plugins: 'ci-review@rube-cc-skills'
-          prompt: "/ci-review ${{ steps.resolve.outputs.pr }} ${{ steps.resolve.outputs.flag }}"
+          prompt: "/ci-review ${{ steps.resolve.outputs.pr }} ${{ steps.resolve.outputs.flag }} -- You must execute the Step 6 and Step 7 Bash commands to post the review to GitHub before completing."
           # AskUserQuestion is deliberately omitted — interactive tools are
           # suppressed in CI even though the skill frontmatter lists it
           # gh api is scoped broadly (not per-endpoint): the plugin's posting layer
