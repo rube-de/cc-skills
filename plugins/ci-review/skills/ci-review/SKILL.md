@@ -429,17 +429,16 @@ Single-call timing variant. Step 7 deterministically posts the review payload bu
 echo "::group::[ci-review] Step 7: Post Review"
 START=$(date +%s)
 
-# Locate post-review.sh (plugin root, repo path, or plugin cache)
+# Locate post-review.sh (plugin root or repo path)
 POST_SCRIPT=""
 if [ -n "$CLAUDE_PLUGIN_ROOT" ] && [ -f "$CLAUDE_PLUGIN_ROOT/scripts/post-review.sh" ]; then
   POST_SCRIPT="$CLAUDE_PLUGIN_ROOT/scripts/post-review.sh"
 elif [ -f "plugins/ci-review/scripts/post-review.sh" ]; then
   POST_SCRIPT="plugins/ci-review/scripts/post-review.sh"
 else
-  POST_SCRIPT="$(find ~/.claude/plugins -name post-review.sh 2>/dev/null | head -1)"
+  echo "::error::post-review.sh not found (neither CLAUDE_PLUGIN_ROOT nor repo path exists)" >&2
+  exit 1
 fi
-[ -n "$POST_SCRIPT" ] && [ -f "$POST_SCRIPT" ] || POST_SCRIPT="post-review.sh"
-
 sh "$POST_SCRIPT" <PR#> /tmp/ci-review-payload.json
 STATUS=$?
 
