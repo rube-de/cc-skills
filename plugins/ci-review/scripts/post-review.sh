@@ -41,11 +41,11 @@ PAYLOAD_FILE=""
 OWNER_REPO=""
 
 if [ $# -eq 0 ]; then
-  PAYLOAD_FILE="-"
+  PAYLOAD_FILE=""
 elif [ $# -eq 1 ]; then
   if printf '%s\n' "$1" | grep -qE '^[1-9][0-9]*$'; then
     PR_NUMBER="$1"
-    PAYLOAD_FILE="-"
+    PAYLOAD_FILE=""
   else
     PAYLOAD_FILE="$1"
   fi
@@ -83,14 +83,15 @@ RAW_PAYLOAD_FILE="$_tmpdir/raw_payload.json"
 
 if [ -n "$PAYLOAD_FILE" ] && [ "$PAYLOAD_FILE" != "-" ]; then
   if [ ! -f "$PAYLOAD_FILE" ]; then
-    die "Payload file not found: $PAYLOAD_FILE"
+    echo "{}" > "$RAW_PAYLOAD_FILE"
+  else
+    cp "$PAYLOAD_FILE" "$RAW_PAYLOAD_FILE" || echo "{}" > "$RAW_PAYLOAD_FILE"
   fi
-  cp "$PAYLOAD_FILE" "$RAW_PAYLOAD_FILE" || die "Failed to copy payload file: $PAYLOAD_FILE"
+elif [ "$PAYLOAD_FILE" = "-" ]; then
+  cat > "$RAW_PAYLOAD_FILE" || echo "{}" > "$RAW_PAYLOAD_FILE"
 else
-  # Read from stdin if no file given or "-" specified
-  cat > "$RAW_PAYLOAD_FILE" || die "Failed to read payload from stdin"
+  echo "{}" > "$RAW_PAYLOAD_FILE"
 fi
-
 # Ensure valid JSON
 if ! jq empty "$RAW_PAYLOAD_FILE" 2>/dev/null; then
   die "Invalid JSON in review payload file"
