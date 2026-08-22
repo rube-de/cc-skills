@@ -405,12 +405,14 @@ For each surviving finding:
    - List any body-only findings (not in diff) under "### Findings Not in Diff"
    - If no findings survived: use the "No Findings" template (`## CI Review\n\nNo actionable issues found. Reviewed <N> files across <M> changed lines.\n\n**Profile**: <profile>`)
 
-4. **Write review payload to file** `/tmp/ci-review-payload.json`:
-   ```json
+4. **Write review payload to file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
+   ```bash
+   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
    {
      "body": "<REVIEW_BODY>",
      "comments": [ ...inline comments... ]
    }
+   EOF
    ```
    If there are no inline comments, set `"comments": []`.
 
@@ -439,7 +441,7 @@ else
   echo "::error::post-review.sh not found (neither CLAUDE_PLUGIN_ROOT nor repo path exists)" >&2
   exit 1
 fi
-sh "$POST_SCRIPT" <PR#> /tmp/ci-review-payload.json
+sh "$POST_SCRIPT" <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 STATUS=$?
 
 echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - START ))s"
@@ -449,8 +451,7 @@ exit $STATUS
 
 The script outputs `Review posted: <URL>` on success and exits 0, or outputs `POSTING FAILED: <reason>` to stderr and exits 1.
 
-**Zero findings is NOT an exit, and posting must NEVER be skipped** — the payload file `/tmp/ci-review-payload.json` is always created (with `"comments": []` when clean) and posted via `post-review.sh`.
-
+**Zero findings is NOT an exit, and posting must NEVER be skipped** — the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json` is always created (with `"comments": []` when clean) and posted via `post-review.sh`.
 ### Step 8: Summary
 
 No `::group::` wrapper for this step — the summary should be visible at the top level of the log. Still include the total elapsed time.

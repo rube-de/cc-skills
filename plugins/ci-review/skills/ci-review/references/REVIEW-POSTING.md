@@ -81,7 +81,7 @@ No actionable issues found. Reviewed <N> files across <M> changed lines.
 
 ## 4. Construct the JSON Payload
 
-Write the review payload as a structured JSON file (e.g. `/tmp/ci-review-payload.json`):
+Write the review payload as a structured JSON file (e.g. `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`):
 
 ```json
 {
@@ -111,7 +111,7 @@ If there are no inline comments (or zero findings), set `"comments": []`:
 Posting is performed deterministically by `scripts/post-review.sh`:
 
 ```bash
-sh plugins/ci-review/scripts/post-review.sh <PR#> /tmp/ci-review-payload.json
+sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 ```
 
 The script automates the complete retry and fallback chain:

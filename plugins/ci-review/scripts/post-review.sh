@@ -173,16 +173,16 @@ POSTED_URL=""
 
 # Helper function to post review via API
 post_review_api() {
-  local payload_file="$1"
-  local response_file="$_tmpdir/api_response.json"
-  local error_file="$_tmpdir/api_error.txt"
+  _pra_payload_file="$1"
+  _pra_response_file="$_tmpdir/api_response.json"
+  _pra_error_file="$_tmpdir/api_error.txt"
 
-  rm -f "$response_file" "$error_file"
+  rm -f "$_pra_response_file" "$_pra_error_file"
   if gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/reviews" \
       --method POST \
-      --input "$payload_file" \
-      > "$response_file" 2> "$error_file"; then
-    POSTED_URL=$(jq -r '.html_url // empty' "$response_file" 2>/dev/null || true)
+      --input "$_pra_payload_file" \
+      > "$_pra_response_file" 2> "$_pra_error_file"; then
+    POSTED_URL=$(jq -r '.html_url // empty' "$_pra_response_file" 2>/dev/null || true)
     if [ -n "$POSTED_URL" ] && [ "$POSTED_URL" != "null" ]; then
       return 0
     fi
@@ -192,16 +192,16 @@ post_review_api() {
 
 # Helper function to post general PR comment
 post_pr_comment() {
-  local body_file="$1"
-  local response_file="$_tmpdir/comment_response.json"
-  local error_file="$_tmpdir/comment_error.txt"
+  _ppc_body_file="$1"
+  _ppc_response_file="$_tmpdir/comment_response.json"
+  _ppc_error_file="$_tmpdir/comment_error.txt"
 
-  rm -f "$response_file" "$error_file"
+  rm -f "$_ppc_response_file" "$_ppc_error_file"
   if gh api "repos/${OWNER}/${REPO}/issues/${PR_NUMBER}/comments" \
       --method POST \
-      -F "body=@${body_file}" \
-      > "$response_file" 2> "$error_file"; then
-    POSTED_URL=$(jq -r '.html_url // empty' "$response_file" 2>/dev/null || true)
+      -F "body=@${_ppc_body_file}" \
+      > "$_ppc_response_file" 2> "$_ppc_error_file"; then
+    POSTED_URL=$(jq -r '.html_url // empty' "$_ppc_response_file" 2>/dev/null || true)
     if [ -n "$POSTED_URL" ] && [ "$POSTED_URL" != "null" ]; then
       return 0
     fi
@@ -211,39 +211,37 @@ post_pr_comment() {
 
 # Helper to construct review payload JSON
 build_review_payload() {
-  local body_file="$1"
-  local comments_file="$2"
-  local out_file="$3"
+  _brp_body_file="$1"
+  _brp_comments_file="$2"
+  _brp_out_file="$3"
 
-  local num_comments
-  num_comments=$(jq 'length' "$comments_file")
+  _brp_num_comments=$(jq 'length' "$_brp_comments_file")
 
-  if [ "$num_comments" -gt 0 ]; then
+  if [ "$_brp_num_comments" -gt 0 ]; then
     jq -n \
       --arg event "COMMENT" \
-      --rawfile body "$body_file" \
-      --slurpfile comments "$comments_file" \
-      '{event: $event, body: $body, comments: $comments[0]}' > "$out_file"
+      --rawfile body "$_brp_body_file" \
+      --slurpfile comments "$_brp_comments_file" \
+      '{event: $event, body: $body, comments: $comments[0]}' > "$_brp_out_file"
   else
     jq -n \
       --arg event "COMMENT" \
-      --rawfile body "$body_file" \
-      '{event: $event, body: $body}' > "$out_file"
+      --rawfile body "$_brp_body_file" \
+      '{event: $event, body: $body}' > "$_brp_out_file"
   fi
 }
 
 # Helper to build body with all inline comments appended
 build_body_with_inline_comments() {
-  local body_file="$1"
-  local comments_file="$2"
-  local out_file="$3"
+  _bbi_body_file="$1"
+  _bbi_comments_file="$2"
+  _bbi_out_file="$3"
 
-  cp "$body_file" "$out_file"
-  local num_comments
-  num_comments=$(jq 'length' "$comments_file")
-  if [ "$num_comments" -gt 0 ]; then
-    printf '\n\n### Inline Findings (Moved to Body)\n\n' >> "$out_file"
-    jq -r '.[] | "- **`" + .path + ":" + (.line | tostring) + "`**\n\n" + .body + "\n"' "$comments_file" >> "$out_file"
+  cp "$_bbi_body_file" "$_bbi_out_file"
+  _bbi_num_comments=$(jq 'length' "$_bbi_comments_file")
+  if [ "$_bbi_num_comments" -gt 0 ]; then
+    printf '\n\n### Inline Findings (Moved to Body)\n\n' >> "$_bbi_out_file"
+    jq -r '.[] | "- **`" + .path + ":" + (.line | tostring) + "`**\n\n" + .body + "\n"' "$_bbi_comments_file" >> "$_bbi_out_file"
   fi
 }
 
@@ -265,14 +263,27 @@ echo "Initial review POST failed: $API_ERROR" >&2
 # Attempt 1.1: If comments existed and error mentions line/comment issues, retry with invalid comment pruning
 if [ "$COMMENTS_COUNT" -gt 0 ]; then
   echo "Attempting recovery: checking for invalid inline comments..." >&2
-  # Prune any comment where path or line might be invalid if identifiable, or try single-comment pruning
-  # If error response contains errors array with field details, parse them
-  if jq -e '.errors' "$_tmpdir/api_response.json" >/dev/null 2>&1; then
-    # Try filtering out comments that failed validation
-    jq '
-      # Keep comments that are valid
-      .
+  PR_DIFF_FILES=$(gh pr diff "$PR_NUMBER" --name-only 2>/dev/null || true)
+  if [ -n "$PR_DIFF_FILES" ]; then
+    jq --arg diff_files "$PR_DIFF_FILES" '
+      ($diff_files | split("\n")) as $valid_files |
+      [ .[] | select(.path as $p | $valid_files | index($p)) ]
     ' "$CURRENT_COMMENTS" > "$_tmpdir/comments_pruned.json"
+  else
+    cp "$CURRENT_COMMENTS" "$_tmpdir/comments_pruned.json"
+  fi
+
+  PRUNED_COUNT=$(jq 'length' "$_tmpdir/comments_pruned.json" 2>/dev/null || echo 0)
+  if [ "$PRUNED_COUNT" -lt "$COMMENTS_COUNT" ] && [ "$PRUNED_COUNT" -gt 0 ]; then
+    echo "Pruned $((COMMENTS_COUNT - PRUNED_COUNT)) comments not in PR diff; retrying review POST with $PRUNED_COUNT comments..." >&2
+    PRUNED_PAYLOAD="$_tmpdir/payload_pruned.json"
+    build_review_payload "$_tmpdir/body.md" "$_tmpdir/comments_pruned.json" "$PRUNED_PAYLOAD"
+    if post_review_api "$PRUNED_PAYLOAD"; then
+      echo "Review posted: $POSTED_URL"
+      exit 0
+    fi
+    API_ERROR=$(cat "$_tmpdir/api_error.txt" 2>/dev/null || echo "Unknown error")
+    echo "Pruned review POST failed: $API_ERROR" >&2
   fi
 fi
 
