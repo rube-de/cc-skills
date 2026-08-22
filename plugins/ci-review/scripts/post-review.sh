@@ -52,7 +52,12 @@ elif [ $# -eq 1 ]; then
 elif [ $# -eq 2 ]; then
   if printf '%s\n' "$1" | grep -qE '^[1-9][0-9]*$'; then
     PR_NUMBER="$1"
-    PAYLOAD_FILE="$2"
+    if printf '%s\n' "$2" | grep -qE '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$' && [ ! -f "$2" ]; then
+      OWNER_REPO="$2"
+      PAYLOAD_FILE=""
+    else
+      PAYLOAD_FILE="$2"
+    fi
   else
     PAYLOAD_FILE="$1"
     if printf '%s\n' "$2" | grep -qE '^[1-9][0-9]*$'; then
