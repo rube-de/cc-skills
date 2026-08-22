@@ -387,58 +387,58 @@ date +%s   # remember this epoch for the phase-end call
 | comment-analyzer | comment-accuracy |
 | type-analyzer | type-design |
 
-Construct the review body markdown and inline comments according to the findings status:
+You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
-- **When surviving findings exist (findings > 0):**
+- **For clean runs with zero findings (findings == 0)**, execute this exact Bash command:
+  ```bash
+  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+  ## CI Review
+
+  No actionable issues found. Reviewed <N> files across <M> changed lines.
+
+  **Profile**: <profile>
+  EOF
+
+  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+  []
+  EOF
+
+  jq -n \
+    --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+    --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+    '{body: $body, comments: ($comments[0] // [])}' \
+    > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+
+  echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+  echo "::endgroup::"
+  ```
+
+- **For runs with surviving findings (findings > 0)**:
   1. **Determine inline eligibility**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
-  2. **Build inline comment objects**:
-     ```json
-     {
-       "path": "<file>",
-       "line": <line_number>,
-       "side": "RIGHT",
-       "body": "**[<severity>] <type>**\n\n<description>\n\n**Recommendation:** <recommendation>\n\n`Found by: <agent-name>`"
-     }
+  2. **Build inline comment objects** in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`, then encode with `jq`:
+     ```bash
+     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+     <REVIEW_BODY>
+     EOF
+
+     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+     [ ...inline comments... ]
+     EOF
+
+     jq -n \
+       --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+       --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+       '{body: $body, comments: ($comments[0] // [])}' \
+       > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+
+     echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+     echo "::endgroup::"
      ```
-  3. **Build review body**: Summary with profile, finding counts by severity, focus text if provided, and body-only findings under "### Findings Not in Diff".
-
-- **When zero findings exist (findings == 0):**
-  1. Set review body to the standard "No Findings" template:
-     ```markdown
-     ## CI Review
-
-     No actionable issues found. Reviewed <N> files across <M> changed lines.
-
-     **Profile**: <profile>
-     ```
-  2. Set inline comments to empty array `[]`.
-**Construct review payload file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
-Write the review body markdown to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` and inline comments to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`, then use `jq` to safely encode the payload (preventing invalid JSON from multi-paragraph markdown or special characters):
-   ```bash
-   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
-   <REVIEW_BODY>
-   EOF
-
-   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
-   [ ...inline comments... ]
-   EOF
-
-   jq -n \
-     --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
-     --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
-     '{body: $body, comments: ($comments[0] // [])}' \
-     > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
-   ```
-   If there are no inline comments, write `[]` to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`.
-After the payload file is written, emit the Step-6 phase-end marker:
-
-```bash
-echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-echo "::endgroup::"
-```
 
 ### Step 7: Post Review
-Single-call timing variant. Step 7 deterministically posts the review payload by executing `post-review.sh`. This step is mandatory on every run (including zero-findings runs). The script automatically handles GitHub API review submission, invalid inline comment retries, body-only review fallback, and PR issue comment fallback:
+
+Single-call timing variant. You MUST execute this Bash command on every run (including zero-findings runs) to submit the review to GitHub:
+
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
 START=$(date +%s)
@@ -451,7 +451,7 @@ exit $STATUS
 
 The script outputs `Review posted: <URL>` on success (exit 0) or `POSTING FAILED: <reason>` to stderr (exit 1). Capture the review URL from the output for the Step 8 summary.
 
-**Zero findings is NOT an exit, and posting must NEVER be skipped** — a posted review on GitHub is required on every run. Step 7 must always be executed before proceeding to Step 8.
+**Zero findings is NOT an exit, and posting must NEVER be skipped** — you must execute Step 7's Bash tool call before proceeding to Step 8.
 ### Step 8: Summary
 
 No `::group::` wrapper for this step — the summary should be visible at the top level of the log. Still include the total elapsed time.
