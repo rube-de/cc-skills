@@ -454,6 +454,14 @@ PAYLOAD=$(jq -n \
 3. If review API fails entirely (403/401) → fall back to `gh pr comment <PR#> --body "$REVIEW_BODY_WITH_ALL_FINDINGS"`
 4. If everything fails → print the review body to stdout so the user can post manually
 
+**Zero findings is NOT an exit, and neither is a failed post** — a posted review is mandatory on every run. Before emitting the Step-7 phase-end marker, confirm you hold a review URL (`.html_url`) returned by a successful `gh api` post, or a comment URL from the `gh pr comment` fallback, **from this session**. If you hold neither, the review was not posted:
+
+1. Post the body-only review now — the REVIEW-POSTING.md §3 template for the findings case, or the "No Findings" template when findings were zero
+2. Re-run the post; a retry that returns an `.html_url` satisfies this gate
+3. Only then emit the phase-end marker
+
+Do not proceed to Step 8 without a URL proving this session posted. Ending a session without a posted review is a contract violation that turns the CI job red.
+
 Print the review URL on success, then emit the Step-7 phase-end marker. **The same two-line phase-end block must follow every exit path above** (successful post, retry success after invalid-comment cleanup, drop-inline fallback success, `gh pr comment` fallback, and the stdout-print terminal fallback) so the Step-7 group is always closed:
 
 ```bash
