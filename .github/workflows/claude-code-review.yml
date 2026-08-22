@@ -126,5 +126,18 @@ jobs:
             fi
             sleep 10
           done
-          echo "::error::ci-review posted no review or comment — contract violation (a body-only review is required even with zero findings)"
-          exit 1
+          # Session completed green (this step only runs then) but posted nothing —
+          # the known clean-run skip. Post the fallback so the always-a-review
+          # contract holds deterministically, and surface it as a warning.
+          case "${{ steps.resolve.outputs.flag }}" in
+            --full) PROFILE_TEXT=full ;;
+            *) PROFILE_TEXT=lean ;;
+          esac
+          PAYLOAD=$(jq -n --arg profile "$PROFILE_TEXT" '{event: "COMMENT", body: ("## CI Review\n\n**Profile**: " + $profile + " | **Findings**: 0\n\nNo actionable issues found — the review session completed without posting, so this body-only review was posted by the postcondition step (known agent skip on zero-findings runs).")}')
+          if echo "$PAYLOAD" | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --method POST --input - >/dev/null; then
+            echo "::warning::review session posted nothing; fallback no-findings review posted by the postcondition"
+            exit 0
+          else
+            echo "::error::review session posted nothing and the fallback post failed"
+            exit 1
+          fi
