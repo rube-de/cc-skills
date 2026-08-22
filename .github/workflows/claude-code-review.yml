@@ -44,9 +44,16 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         env:
           PR_NUMBER_INPUT: ${{ inputs.pr_number }}
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           [[ "$PR_NUMBER_INPUT" =~ ^[1-9][0-9]*$ ]] || { echo "pr_number must be a positive integer"; exit 1; }
+          # Target PR author must be in the same allowlist as the if: block above
+          AUTHOR=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER_INPUT" --jq .user.login) || { echo "Could not read PR #$PR_NUMBER_INPUT"; exit 1; }
+          case "$AUTHOR" in
+            rube-de|funny-otter) ;;
+            *) echo "PR #$PR_NUMBER_INPUT author ($AUTHOR) is not in the review allowlist"; exit 1 ;;
+          esac
 
       - name: Resolve inputs
         id: resolve
@@ -100,13 +107,24 @@ jobs:
           STARTED: ${{ steps.resolve.outputs.started }}
         shell: bash
         run: |
-          sleep 10 # eventual consistency on the reviews API
-          POSTED=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews?per_page=100" \
-            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at > \"$STARTED\")] | length")
-          COMMENTS=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" \
-            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\")] | length")
-          echo "Reviews posted since $STARTED: $POSTED; comments: $COMMENTS"
-          if [ "$((POSTED + COMMENTS))" -eq 0 ]; then
-            echo "::error::ci-review posted no review or comment — contract violation (a body-only review is required even with zero findings)"
-            exit 1
-          fi
+          count_posts() {
+            local posted comments
+            posted=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews?per_page=100" \
+              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at > \"$STARTED\")] | length") || return 2
+            comments=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" \
+              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\")] | length") || return 2
+            echo $((posted + comments))
+          }
+          for attempt in 1 2 3 4 5 6; do
+            if ! RESULT=$(count_posts); then
+              echo "Attempt $attempt: API query failed; retrying in 10s"
+            elif [ "$RESULT" -gt 0 ]; then
+              echo "$RESULT review(s)/comment(s) posted since $STARTED (attempt $attempt)"
+              exit 0
+            else
+              echo "Attempt $attempt: nothing visible yet; retrying in 10s (eventual consistency)"
+            fi
+            sleep 10
+          done
+          echo "::error::ci-review posted no review or comment — contract violation (a body-only review is required even with zero findings)"
+          exit 1
