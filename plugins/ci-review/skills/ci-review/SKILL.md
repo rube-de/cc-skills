@@ -21,8 +21,16 @@ argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--model s
 
 Multi-agent code review for pull requests. Posts findings as an atomic GitHub PR review with inline comments.
 
-Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the review posting format and error handling chain.
+## Mandatory Review Contract (Inviolable)
 
+Every execution of `/ci-review` MUST complete all workflow steps through Step 8:
+1. **Step 6 is mandatory**: Always construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`. When zero findings survive, use the "No Findings" template with `"comments": []`.
+2. **Step 7 is mandatory**: Always execute `post-review.sh` to submit the review to GitHub via API/comment fallback. A clean run with zero findings still requires a posted review.
+3. **Step 8 is mandatory**: Always output the summary including the review URL returned by Step 7.
+
+Ending a session without executing Step 7 is a contract violation that turns CI red.
+
+Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the review posting format and error handling chain.
 ## Profiles
 
 | Profile | Agents | Use When |
