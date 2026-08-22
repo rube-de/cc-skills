@@ -42,8 +42,8 @@ jobs:
           fetch-depth: 1
 
       - name: Run Claude Code
+        uses: anthropics/claude-code-action@24dcd50c0568f0fc9e9211213a4fd2d9eb15c4e0 # v1.0.200 (24dcd50 is the commit; 91782ab is the annotated tag object)
         id: claude
-        uses: anthropics/claude-code-action@26ec041249acb0a944c0a47b6c0c13f05dbc5b44 # v1.0.70 (26ec0412 is the commit; 491e5eb is the annotated tag object)
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           github_token: ${{ github.token }}
