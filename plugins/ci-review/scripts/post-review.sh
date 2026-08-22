@@ -83,12 +83,11 @@ RAW_PAYLOAD_FILE="$_tmpdir/raw_payload.json"
 
 if [ -n "$PAYLOAD_FILE" ] && [ "$PAYLOAD_FILE" != "-" ]; then
   if [ ! -f "$PAYLOAD_FILE" ]; then
-    echo "{}" > "$RAW_PAYLOAD_FILE"
-  else
-    cp "$PAYLOAD_FILE" "$RAW_PAYLOAD_FILE" || echo "{}" > "$RAW_PAYLOAD_FILE"
+    die "Payload file not found: $PAYLOAD_FILE"
   fi
+  cp "$PAYLOAD_FILE" "$RAW_PAYLOAD_FILE" || die "Failed to copy payload file: $PAYLOAD_FILE"
 elif [ "$PAYLOAD_FILE" = "-" ]; then
-  cat > "$RAW_PAYLOAD_FILE" || echo "{}" > "$RAW_PAYLOAD_FILE"
+  cat > "$RAW_PAYLOAD_FILE" || die "Failed to read payload from stdin"
 else
   echo "{}" > "$RAW_PAYLOAD_FILE"
 fi
@@ -267,7 +266,7 @@ echo "Initial review POST failed: $API_ERROR" >&2
 # Attempt 1.1: If comments existed and error mentions line/comment issues, retry with invalid comment pruning
 if [ "$COMMENTS_COUNT" -gt 0 ]; then
   echo "Attempting recovery: checking for invalid inline comments..." >&2
-  PR_DIFF_FILES=$(gh pr diff "$PR_NUMBER" --name-only 2>/dev/null || true)
+  PR_DIFF_FILES=$(gh pr diff "$PR_NUMBER" --repo "${OWNER}/${REPO}" --name-only 2>/dev/null || true)
   if [ -n "$PR_DIFF_FILES" ]; then
     jq --arg diff_files "$PR_DIFF_FILES" '
       ($diff_files | split("\n")) as $valid_files |

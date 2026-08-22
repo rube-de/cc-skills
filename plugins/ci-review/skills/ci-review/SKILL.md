@@ -443,8 +443,6 @@ echo "::endgroup::"
 
 ### Step 7: Post Review
 Single-call timing variant. Step 7 deterministically posts the review payload by executing `post-review.sh`. This step is mandatory on every run (including zero-findings runs). The script automatically handles GitHub API review submission, invalid inline comment retries, body-only review fallback, and PR issue comment fallback:
-
-**If findings were produced in Step 6:**
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
 START=$(date +%s)
@@ -452,16 +450,6 @@ sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-pay
 echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - START ))s"
 echo "::endgroup::"
 ```
-
-**If zero findings were produced (clean run):**
-```bash
-echo "::group::[ci-review] Step 7: Post Review"
-START=$(date +%s)
-sh plugins/ci-review/scripts/post-review.sh <PR#>
-echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - START ))s"
-echo "::endgroup::"
-```
-
 The script outputs `Review posted: <URL>` on success (exit 0) or `POSTING FAILED: <reason>` to stderr (exit 1). Capture the review URL from the output for the Step 8 summary.
 
 **Zero findings is NOT an exit, and posting must NEVER be skipped** — a posted review on GitHub is required on every run. Step 7 must always be executed before proceeding to Step 8.
