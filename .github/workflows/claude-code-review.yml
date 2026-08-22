@@ -109,15 +109,15 @@ jobs:
         run: |
           count_posts() {
             local posted comments
-            # --paginate: PRs can exceed 100 reviews/comments; page one alone
-            # (the trap this verifier itself hit during development)
-            # reviews additionally filtered by the CI Review body prefix so a
-            # concurrent github-actions post from another workflow cannot
-            # satisfy this gate
-            posted=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
-              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at > \"$STARTED\" and (.body | startswith(\"## CI Review\")))] | length") || return 2
-            comments=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\" and (.body | startswith(\"## CI Review\")))] | length") || return 2
+            # --paginate --slurp returns one JSON array of all pages; external jq
+            # aggregates across pages (gh's --jq runs per page, which would emit
+            # one length per page and break the arithmetic below). Pipefail makes
+            # a gh or jq failure nonzero so the caller can distinguish transport
+            # errors from a verified zero.
+            posted=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
+              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .submitted_at > $started and ((.body // "") | startswith("## CI Review")))] | length') || return 2
+            comments=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .created_at > $started and ((.body // "") | startswith("## CI Review")))] | length') || return 2
             echo $((posted + comments))
           }
           API_FAILS=0
