@@ -115,29 +115,32 @@ jobs:
               --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\")] | length") || return 2
             echo $((posted + comments))
           }
+          API_FAILS=0
+          ZERO_VERIFIED=0
           for attempt in 1 2 3 4 5 6; do
             if ! RESULT=$(count_posts); then
+              API_FAILS=$((API_FAILS + 1))
               echo "Attempt $attempt: API query failed; retrying in 10s"
             elif [ "$RESULT" -gt 0 ]; then
               echo "$RESULT review(s)/comment(s) posted since $STARTED (attempt $attempt)"
               exit 0
             else
+              ZERO_VERIFIED=1
               echo "Attempt $attempt: nothing visible yet; retrying in 10s (eventual consistency)"
             fi
             sleep 10
           done
-          # Session completed green (this step only runs then) but posted nothing —
-          # the known clean-run skip. Post the fallback so the always-a-review
-          # contract holds deterministically, and surface it as a warning.
-          case "${{ steps.resolve.outputs.flag }}" in
-            --full) PROFILE_TEXT=full ;;
-            *) PROFILE_TEXT=lean ;;
-          esac
-          PAYLOAD=$(jq -n --arg profile "$PROFILE_TEXT" '{event: "COMMENT", body: ("## CI Review\n\n**Profile**: " + $profile + " | **Findings**: 0\n\nNo actionable issues found — the review session completed without posting, so this body-only review was posted by the postcondition step (known agent skip on zero-findings runs).")}')
-          if echo "$PAYLOAD" | gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" --method POST --input - >/dev/null; then
-            echo "::warning::review session posted nothing; fallback no-findings review posted by the postcondition"
-            exit 0
-          else
-            echo "::error::review session posted nothing and the fallback post failed"
+          # Distinguish transport failure from a verified contract violation.
+          # A green SDK exit proves neither review completion nor zero findings,
+          # so no synthetic review is ever posted here — a clean verdict may only
+          # come from the review session itself.
+          if [ "$API_FAILS" -eq 6 ]; then
+            echo "::error::could not verify posting — all 6 API queries failed (transport). Nothing assumed about the review session."
             exit 1
           fi
+          if [ "$ZERO_VERIFIED" -eq 1 ]; then
+            echo "::error::review session posted no review or comment (verified after retries) — contract violation; a body-only review is required even with zero findings. Known agent skip: #255"
+            exit 1
+          fi
+          echo "::error::verification loop ended without a verdict — this should be unreachable"
+          exit 1
