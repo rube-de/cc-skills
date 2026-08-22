@@ -109,10 +109,15 @@ jobs:
         run: |
           count_posts() {
             local posted comments
-            posted=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews?per_page=100" \
-              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at > \"$STARTED\")] | length") || return 2
-            comments=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" \
-              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\")] | length") || return 2
+            # --paginate: PRs can exceed 100 reviews/comments; page one alone
+            # (the trap this verifier itself hit during development)
+            # reviews additionally filtered by the CI Review body prefix so a
+            # concurrent github-actions post from another workflow cannot
+            # satisfy this gate
+            posted=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
+              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at > \"$STARTED\" and (.body | startswith(\"## CI Review\")))] | length") || return 2
+            comments=$(gh api --paginate "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
+              --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\" and (.body | startswith(\"## CI Review\")))] | length") || return 2
             echo $((posted + comments))
           }
           API_FAILS=0
