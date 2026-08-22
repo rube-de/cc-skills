@@ -75,6 +75,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
+          # Dispatch from any ref must review (and self-bootstrap from) the target
+          # PR's merge ref, not the dispatching branch's checkout — otherwise the
+          # './' marketplace resolves to the wrong plugin version
+          ref: ${{ github.event_name == 'workflow_dispatch' && format('refs/pull/{0}/merge', inputs.pr_number) || github.ref }}
           fetch-depth: 0 # full history — ci-review agents run git blame
           persist-credentials: false # Claude gets cat access; don't leave the token in .git/config
 
