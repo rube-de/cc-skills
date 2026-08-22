@@ -63,6 +63,7 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - Only post **actionable** inline comments — no confirmations, no "looks good"
 - Do not repeat correctly addressed items
 - If no inline comments, omit the comments array and just post the body
+- **Always post — even with zero findings.** A clean review still requires a body-only review (e.g. `## CI Review — no findings` with the profile and agents-run summary). Never end the run without creating a review or, if the review API fails, the `gh pr comment` fallback. A run that posts nothing is a contract violation.
 
 ## Timing Logs
 

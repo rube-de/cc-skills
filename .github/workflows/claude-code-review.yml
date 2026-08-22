@@ -63,6 +63,7 @@ jobs:
             echo "pr=$PR_NUMBER_EVENT" >> "$GITHUB_OUTPUT"
             echo "flag=--lean" >> "$GITHUB_OUTPUT"
           fi
+          echo "started=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -91,3 +92,21 @@ jobs:
           # builds review URLs from shell variables, which prefix patterns cannot match
           claude_args: >-
             --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api:*),Bash(sh:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*),Bash(date:*)"
+
+      - name: Verify review posted
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ steps.resolve.outputs.pr }}
+          STARTED: ${{ steps.resolve.outputs.started }}
+        shell: bash
+        run: |
+          sleep 10 # eventual consistency on the reviews API
+          POSTED=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews?per_page=100" \
+            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .submitted_at > \"$STARTED\")] | length")
+          COMMENTS=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments?per_page=100" \
+            --jq "[.[] | select(.user.login == \"github-actions[bot]\" and .created_at > \"$STARTED\")] | length")
+          echo "Reviews posted since $STARTED: $POSTED; comments: $COMMENTS"
+          if [ "$((POSTED + COMMENTS))" -eq 0 ]; then
+            echo "::error::ci-review posted no review or comment — contract violation (a body-only review is required even with zero findings)"
+            exit 1
+          fi
