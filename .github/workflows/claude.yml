@@ -12,7 +12,7 @@ on:
 
 jobs:
   claude:
-    # Keep in sync with the author allowlist in claude-code-review.yml — no shared
+    # Keep in sync with the trusted-login allowlist in claude-code-review.yml — no shared
     # source exists until the composite action (#170)
     if: |
       (

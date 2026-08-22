@@ -22,7 +22,7 @@ jobs:
   claude-review:
     # PR events: only allowlisted PR authors. Dispatch: GitHub already requires
     # write access to dispatch; the actor check keeps the intent explicit.
-    # Keep in sync with the sender allowlist in claude.yml — no shared source
+    # Keep in sync with the trusted-login allowlist in claude.yml — no shared source
     # exists until the composite action (#170)
     if: |
       (github.event_name == 'workflow_dispatch' && (github.actor == 'rube-de' || github.actor == 'funny-otter')) ||
