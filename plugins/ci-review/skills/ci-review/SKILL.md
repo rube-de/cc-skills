@@ -350,9 +350,7 @@ A single generic signal (severity tag alone or type keyword alone) is NOT suffic
 
 Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
 
-**If no findings survive filtering:** Build a no-findings review body using the template from REVIEW-POSTING.md section 3 ("No Findings"), write the payload in Step 6 with `"comments": []`, and run Step 7 to post it.
-
-After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
+After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker, then proceed to Step 6 to construct the review payload (mandatory on all runs, including zero-findings runs):
 
 ```bash
 echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
@@ -385,26 +383,31 @@ date +%s   # remember this epoch for the phase-end call
 | comment-analyzer | comment-accuracy |
 | type-analyzer | type-design |
 
-For each surviving finding:
+Construct the review body markdown and inline comments according to the findings status:
 
-1. **Determine if it's inline-eligible**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
+- **When surviving findings exist (findings > 0):**
+  1. **Determine inline eligibility**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
+  2. **Build inline comment objects**:
+     ```json
+     {
+       "path": "<file>",
+       "line": <line_number>,
+       "side": "RIGHT",
+       "body": "**[<severity>] <type>**\n\n<description>\n\n**Recommendation:** <recommendation>\n\n`Found by: <agent-name>`"
+     }
+     ```
+  3. **Build review body**: Summary with profile, finding counts by severity, focus text if provided, and body-only findings under "### Findings Not in Diff".
 
-2. **Build inline comment object**:
-   ```json
-   {
-     "path": "<file>",
-     "line": <line_number>,
-     "side": "RIGHT",
-     "body": "**[<severity>] <type>**\n\n<description>\n\n**Recommendation:** <recommendation>\n\n`Found by: <agent-name>`"
-   }
-   ```
+- **When zero findings exist (findings == 0):**
+  1. Set review body to the standard "No Findings" template:
+     ```markdown
+     ## CI Review
 
-3. **Build review body**:
-   - Summary with profile, finding counts by severity
-   - If focus text was provided, mention it
-   - List any body-only findings (not in diff) under "### Findings Not in Diff"
-   - If no findings survived: use the "No Findings" template (`## CI Review\n\nNo actionable issues found. Reviewed <N> files across <M> changed lines.\n\n**Profile**: <profile>`)
+     No actionable issues found. Reviewed <N> files across <M> changed lines.
 
+     **Profile**: <profile>
+     ```
+  2. Set inline comments to empty array `[]`.
 4. **Construct review payload file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
    Write the review body markdown to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` and inline comments to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`, then use `jq` to safely encode the payload (preventing invalid JSON from multi-paragraph markdown or special characters):
    ```bash
@@ -431,8 +434,7 @@ echo "::endgroup::"
 ```
 
 ### Step 7: Post Review
-
-Single-call timing variant. Step 7 deterministically posts the review payload built in Step 6 by executing `post-review.sh`. The script automatically handles GitHub API review submission, invalid inline comment retries, body-only review fallback, and PR issue comment fallback:
+Single-call timing variant. Step 7 deterministically posts the review payload built in Step 6 by executing `post-review.sh`. This step is mandatory on every run (including zero-findings runs). The script automatically handles GitHub API review submission, invalid inline comment retries, body-only review fallback, and PR issue comment fallback:
 
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
@@ -456,9 +458,9 @@ echo "::endgroup::"
 exit $STATUS
 ```
 
-The script outputs `Review posted: <URL>` on success and exits 0, or outputs `POSTING FAILED: <reason>` to stderr and exits 1.
+The script outputs `Review posted: <URL>` on success and exits 0, or outputs `POSTING FAILED: <reason>` to stderr and exits 1. Capture the review URL from the output for the Step 8 summary.
 
-**Zero findings is NOT an exit, and posting must NEVER be skipped** — the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json` is always created (with `"comments": []` when clean) and posted via `post-review.sh`.
+**Zero findings is NOT an exit, and posting must NEVER be skipped** — the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json` is always created (with `"comments": []` when clean) and posted via `post-review.sh`. Do not proceed to Step 8 without executing Step 7.
 ### Step 8: Summary
 
 No `::group::` wrapper for this step — the summary should be visible at the top level of the log. Still include the total elapsed time.

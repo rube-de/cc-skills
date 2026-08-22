@@ -85,10 +85,10 @@ if [ -n "$PAYLOAD_FILE" ] && [ "$PAYLOAD_FILE" != "-" ]; then
   if [ ! -f "$PAYLOAD_FILE" ]; then
     die "Payload file not found: $PAYLOAD_FILE"
   fi
-  cp "$PAYLOAD_FILE" "$RAW_PAYLOAD_FILE"
+  cp "$PAYLOAD_FILE" "$RAW_PAYLOAD_FILE" || die "Failed to copy payload file: $PAYLOAD_FILE"
 else
   # Read from stdin if no file given or "-" specified
-  cat > "$RAW_PAYLOAD_FILE"
+  cat > "$RAW_PAYLOAD_FILE" || die "Failed to read payload from stdin"
 fi
 
 # Ensure valid JSON
@@ -99,7 +99,7 @@ fi
 # Extract PR number from JSON if not provided on CLI
 if [ -z "$PR_NUMBER" ]; then
   JSON_PR=$(jq -r '(.pr_number // .pull_request // .pr // empty) | tostring' "$RAW_PAYLOAD_FILE" 2>/dev/null || true)
-  if [ -n "$JSON_PR" ] && printf '%s\n' "$JSON_PR" | grep -qE '^[0-9]+$'; then
+  if [ -n "$JSON_PR" ] && printf '%s\n' "$JSON_PR" | grep -qE '^[1-9][0-9]*$'; then
     PR_NUMBER="$JSON_PR"
   fi
 fi
@@ -107,7 +107,7 @@ fi
 # Extract owner/repo from JSON if not provided on CLI
 if [ -z "$OWNER_REPO" ]; then
   JSON_OWNER_REPO=$(jq -r '(.owner_repo // .repo // empty) | tostring' "$RAW_PAYLOAD_FILE" 2>/dev/null || true)
-  if [ -n "$JSON_OWNER_REPO" ] && printf '%s\n' "$JSON_OWNER_REPO" | grep -q '/'; then
+  if [ -n "$JSON_OWNER_REPO" ] && printf '%s\n' "$JSON_OWNER_REPO" | grep -qE '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$'; then
     OWNER_REPO="$JSON_OWNER_REPO"
   fi
 fi
@@ -133,7 +133,7 @@ if [ -z "$PR_NUMBER" ]; then
   PR_NUMBER=$(gh pr view --json number -q .number 2>/dev/null) || die "No PR specified and could not detect PR for current branch"
 fi
 
-if [ -z "$PR_NUMBER" ] || ! printf '%s\n' "$PR_NUMBER" | grep -qE '^[0-9]+$'; then
+if [ -z "$PR_NUMBER" ] || ! printf '%s\n' "$PR_NUMBER" | grep -qE '^[1-9][0-9]*$'; then
   die "Invalid PR number: ${PR_NUMBER}"
 fi
 

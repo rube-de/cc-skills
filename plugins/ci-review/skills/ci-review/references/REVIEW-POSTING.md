@@ -117,7 +117,7 @@ sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-pay
 The script automates the complete retry and fallback chain:
 
 1. **Primary Attempt**: Submits review via `gh api repos/<owner>/<repo>/pulls/<PR#>/reviews` with event `"COMMENT"`.
-2. **Retry 1 (Invalid comments)**: If the API rejects comments not in the diff, removes invalid comments and retries.
+2. **Retry 1 (Invalid comments)**: If the API rejects inline comments, prunes comments targeting files not in the PR diff and retries submission before falling back to body-only review.
 3. **Retry 2 (Body-only review)**: If inline comments still fail, moves inline comments to the review body and submits a body-only review (`POST .../reviews`).
 4. **Retry 3 (PR Comment fallback)**: If the reviews API fails (403, 401, permissions), falls back to `gh api repos/<owner>/<repo>/issues/<PR#>/comments` (or `gh pr comment`).
 5. **Verification**: Verifies that a valid URL was returned by GitHub, outputs `Review posted: <URL>`, and exits 0.
