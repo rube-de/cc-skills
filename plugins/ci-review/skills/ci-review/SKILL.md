@@ -21,13 +21,15 @@ argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--model s
 ## Mandatory Review Contract (Inviolable)
 
 Every execution of `/ci-review` MUST complete all workflow steps through Step 8:
-1. **Step 6 is mandatory when findings exist**: Construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`.
-2. **Step 7 is mandatory on ALL runs**: Call the `Bash` tool to run `sh plugins/ci-review/scripts/post-review.sh <PR#> [payload_file]`. When zero findings exist, run `sh plugins/ci-review/scripts/post-review.sh <PR#>`.
+1. **Step 6 is mandatory on ALL runs**: Construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json` (using the "No Findings" template with `"comments": []` when clean).
+2. **Step 7 is mandatory on ALL runs**: Call the `Bash` tool to run `sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"`.
 3. **Step 8 is mandatory**: Output the summary including the review URL returned by `post-review.sh`.
 
 Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the review posting format and error handling chain.
 
 ## Profiles
+
+| Profile | Agents | Use When |
 |---------|--------|----------|
 | **single** | single-reviewer (one comprehensive agent) | Routine PRs, CI budgets, small diffs — ~6x cheaper than lean |
 | **lean** (default) | deep-reviewer, guidelines-checker, bug-detector, security-reviewer, silent-failure-hunter, code-simplifier | Every PR — balanced cost and coverage |
