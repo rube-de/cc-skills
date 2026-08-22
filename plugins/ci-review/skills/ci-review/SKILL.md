@@ -63,6 +63,7 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - Only post **actionable** inline comments — no confirmations, no "looks good"
 - Do not repeat correctly addressed items
 - If no inline comments, omit the comments array and just post the body
+- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile). Never end the run without creating a review or, if the review API fails, the `gh pr comment` fallback. A run that posts nothing is a contract violation.
 
 ## Timing Logs
 
@@ -448,10 +449,18 @@ PAYLOAD=$(jq -n \
 ```
 
 **Error handling chain** (follow in order):
-1. If `gh api` fails due to invalid inline comments → remove the invalid comment, rebuild payload, retry (up to 3 times)
+1. If `gh api` fails due to invalid inline comments → remove the invalid comment, rebuild payload, retry (within the 3-total-attempt budget the posting gate below enforces)
 2. If still failing → drop all inline comments, move all findings to review body, retry
 3. If review API fails entirely (403/401) → fall back to `gh pr comment <PR#> --body "$REVIEW_BODY_WITH_ALL_FINDINGS"`
-4. If everything fails → print the review body to stdout so the user can post manually
+4. If everything fails → print the review body to stdout so the user can post manually (**local runs only** — in CI the mandatory-posting gate below takes precedence: a stdout print is not a posted review)
+
+**Zero findings is NOT an exit, and neither is a failed post** — a posted review is mandatory on every run. Before emitting the Step-7 phase-end marker, confirm you hold a review URL (`.html_url`) returned by a successful `gh api` post, or a comment URL from the `gh pr comment` fallback, **from this session**. If you hold neither, the review was not posted:
+
+1. Re-post up to 2 more times (bounded — 3 total attempts across the chain), alternating the body-only form and the `gh pr comment` fallback
+2. If all attempts fail: in CI, end the session with an explicit "POSTING FAILED" statement (the CI verifier will fail the job — that is correct); locally, print the body for manual posting
+3. Only a URL from a successful post clears the gate — emit the phase-end marker immediately after
+
+Do not proceed to Step 8 without a URL proving this session posted. Ending a session without a posted review is a contract violation that turns the CI job red.
 
 Print the review URL on success, then emit the Step-7 phase-end marker. **The same two-line phase-end block must follow every exit path above** (successful post, retry success after invalid-comment cleanup, drop-inline fallback success, `gh pr comment` fallback, and the stdout-print terminal fallback) so the Step-7 group is always closed:
 

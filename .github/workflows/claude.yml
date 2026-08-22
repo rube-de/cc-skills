@@ -12,10 +12,13 @@ on:
 
 jobs:
   claude:
+    # Keep in sync with the trusted-login allowlist in claude-code-review.yml — no shared
+    # source exists until the composite action (#170)
     if: |
       (
         github.event.sender.login == 'rube-de' ||
         github.event.sender.login == 'funny-otter'
+
       ) && (
         (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
         (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
@@ -39,10 +42,11 @@ jobs:
           fetch-depth: 1
 
       - name: Run Claude Code
+        uses: anthropics/claude-code-action@24dcd50c0568f0fc9e9211213a4fd2d9eb15c4e0 # v1.0.200 (24dcd50 is the commit; 91782ab is the annotated tag object)
         id: claude
-        uses: anthropics/claude-code-action@491e5eb471f4008dc0db76dfec54c56ff9f88bba # v1.0.70
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ github.token }}
 
           # This is an optional setting that allows Claude to read CI results on PRs
           additional_permissions: |
