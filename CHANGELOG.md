@@ -1,3 +1,10 @@
+# [2.12.0](https://github.com/rube-de/cc-skills/compare/v2.11.0...v2.12.0) (2026-08-22)
+
+
+### Features
+
+* **ci:** wire ci-review plugin into PR review workflow ([#253](https://github.com/rube-de/cc-skills/issues/253)) ([19e6a7b](https://github.com/rube-de/cc-skills/commit/19e6a7bac695918c55979d85e944dc4523f4ee25)), closes [#204](https://github.com/rube-de/cc-skills/issues/204) [#169](https://github.com/rube-de/cc-skills/issues/169) [#170](https://github.com/rube-de/cc-skills/issues/170) [#255](https://github.com/rube-de/cc-skills/issues/255) [#255](https://github.com/rube-de/cc-skills/issues/255)
+
 # [2.11.0](https://github.com/rube-de/cc-skills/compare/v2.10.0...v2.11.0) (2026-08-19)
 
 
