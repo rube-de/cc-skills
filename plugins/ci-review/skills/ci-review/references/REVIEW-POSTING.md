@@ -81,101 +81,54 @@ No actionable issues found. Reviewed <N> files across <M> changed lines.
 
 ## 4. Construct the JSON Payload
 
-Use `jq` to build the payload. This is robust for dynamic construction:
+Write the review payload as a structured JSON file (e.g. `/tmp/ci-review-payload.json`):
 
-```bash
-# Resolve repo
-OWNER_REPO=$(gh repo view --json nameWithOwner --jq '.nameWithOwner')
-OWNER="${OWNER_REPO%%/*}"
-REPO="${OWNER_REPO#*/}"
-
-# Build payload (COMMENTS_JSON is a JSON array of comment objects)
-PAYLOAD=$(jq -n \
-  --arg event "COMMENT" \
-  --arg body "$REVIEW_BODY" \
-  --argjson comments "$COMMENTS_JSON" \
-  '{event: $event, body: $body, comments: $comments}')
-
-# Post the review
-REVIEW_URL=$(echo "$PAYLOAD" | gh api \
-  "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews" \
-  --method POST \
-  --input - \
-  --jq '.html_url')
-
-echo "Review posted: $REVIEW_URL"
+```json
+{
+  "body": "## CI Review\n\n**Profile**: lean | **Findings**: 2 (0 critical, 1 high, 1 medium, 0 low)\n\n### Summary\n...",
+  "comments": [
+    {
+      "path": "src/api.ts",
+      "line": 42,
+      "side": "RIGHT",
+      "body": "**[high] bug**\n\nSQL injection via unsanitized user input.\n\n**Recommendation:** Use parameterized queries.\n\n`Found by: bug-detector`"
+    }
+  ]
+}
 ```
 
-If there are no inline comments, omit the `comments` array entirely:
+If there are no inline comments (or zero findings), set `"comments": []`:
 
-```bash
-PAYLOAD=$(jq -n \
-  --arg event "COMMENT" \
-  --arg body "$REVIEW_BODY" \
-  '{event: $event, body: $body}')
+```json
+{
+  "body": "## CI Review\n\nNo actionable issues found. Reviewed 3 files across 45 changed lines.\n\n**Profile**: lean",
+  "comments": []
+}
 ```
 
-## 5. Error Handling Chain
+## 5. Deterministic Posting via `post-review.sh`
 
-If the `gh api` call fails, follow this retry chain:
-
-### Retry 1: Remove Invalid Comments (up to 3 attempts)
-
-If the error mentions a specific invalid comment (line not in diff), remove it and retry. Repeat up to 3 times. If still failing after 3 retries, proceed to Retry 2.
+Posting is performed deterministically by `scripts/post-review.sh`:
 
 ```bash
-# Remove the invalid comment
-COMMENTS_JSON=$(echo "$COMMENTS_JSON" | jq \
-  --arg invalid_path "$INVALID_PATH" \
-  --arg invalid_line "$INVALID_LINE" \
-  'del(.[] | select(.path == $invalid_path and .line == ($invalid_line | tonumber)))')
-
-# Rebuild and retry
-PAYLOAD=$(jq -n \
-  --arg event "COMMENT" \
-  --arg body "$REVIEW_BODY" \
-  --argjson comments "$COMMENTS_JSON" \
-  '{event: $event, body: $body, comments: $comments}')
-
-echo "$PAYLOAD" | gh api \
-  "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews" \
-  --method POST \
-  --input -
+sh plugins/ci-review/scripts/post-review.sh <PR#> /tmp/ci-review-payload.json
 ```
 
-### Retry 2: Body-Only Review
+The script automates the complete retry and fallback chain:
 
-If inline comments keep failing, move all findings into the review body and post with no comments:
-
-```bash
-PAYLOAD=$(jq -n \
-  --arg event "COMMENT" \
-  --arg body "$REVIEW_BODY_WITH_ALL_FINDINGS" \
-  '{event: $event, body: $body}')
-
-echo "$PAYLOAD" | gh api \
-  "repos/$OWNER/$REPO/pulls/$PR_NUMBER/reviews" \
-  --method POST \
-  --input -
-```
-
-### Retry 3: Fallback to PR Comment
-
-If the review API fails entirely (403, 401, permissions), fall back to a regular PR comment:
-
-```bash
-gh pr comment "$PR_NUMBER" --body "$REVIEW_BODY_WITH_ALL_FINDINGS"
-```
-
-Note in the comment: "*(Posted as PR comment — review API unavailable)*"
+1. **Primary Attempt**: Submits review via `gh api repos/<owner>/<repo>/pulls/<PR#>/reviews` with event `"COMMENT"`.
+2. **Retry 1 (Invalid comments)**: If the API rejects comments not in the diff, removes invalid comments and retries.
+3. **Retry 2 (Body-only review)**: If inline comments still fail, moves inline comments to the review body and submits a body-only review (`POST .../reviews`).
+4. **Retry 3 (PR Comment fallback)**: If the reviews API fails (403, 401, permissions), falls back to `gh api repos/<owner>/<repo>/issues/<PR#>/comments` (or `gh pr comment`).
+5. **Verification**: Verifies that a valid URL was returned by GitHub, outputs `Review posted: <URL>`, and exits 0.
 
 ## 6. Error Summary
 
-| Error | Recovery |
-|-------|----------|
+| Error | Recovery (handled by `post-review.sh`) |
+|-------|----------------------------------------|
 | Invalid inline comment (line not in diff) | Remove that comment, retry with remaining |
-| All inline comments invalid | Post body-only review (no comments array) |
-| Review API 403/401 | Fall back to `gh pr comment` |
+| All inline comments invalid | Post body-only review (inline findings moved to body) |
+| Review API 403/401 | Fall back to PR issue comment |
 | `gh` CLI not found | Abort with install instructions |
 | PR not found or closed | Abort with clear error message |
 | No findings after filtering | Post body-only "no issues found" review |
