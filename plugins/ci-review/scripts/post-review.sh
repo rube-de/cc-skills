@@ -150,12 +150,15 @@ jq -r '
   end
 ' "$RAW_PAYLOAD_FILE" > "$_tmpdir/body.md"
 
-# Extract comments array (ensuring valid structure)
+# Extract comments array (ensuring valid structure and safe line parsing)
 jq '
   if .comments and (.comments | type == "array") then
-    [ .comments[] | select(.path and .line and .body) | {
+    [ .comments[] | select(.path and .line and .body) |
+      (try (.line | tonumber) catch null) as $l |
+      select($l != null and $l > 0) |
+      {
         path: (.path | tostring),
-        line: (.line | tonumber),
+        line: $l,
         side: (.side // "RIGHT" | tostring),
         body: (.body | tostring)
       }
@@ -163,7 +166,7 @@ jq '
   else
     []
   end
-' "$RAW_PAYLOAD_FILE" > "$_tmpdir/comments.json"
+' "$RAW_PAYLOAD_FILE" > "$_tmpdir/comments.json" || jq -n '[]' > "$_tmpdir/comments.json"
 
 COMMENTS_COUNT=$(jq 'length' "$_tmpdir/comments.json")
 

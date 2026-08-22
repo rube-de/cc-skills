@@ -405,17 +405,24 @@ For each surviving finding:
    - List any body-only findings (not in diff) under "### Findings Not in Diff"
    - If no findings survived: use the "No Findings" template (`## CI Review\n\nNo actionable issues found. Reviewed <N> files across <M> changed lines.\n\n**Profile**: <profile>`)
 
-4. **Write review payload to file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
+4. **Construct review payload file** `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
+   Write the review body markdown to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` and inline comments to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`, then use `jq` to safely encode the payload (preventing invalid JSON from multi-paragraph markdown or special characters):
    ```bash
-   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
-   {
-     "body": "<REVIEW_BODY>",
-     "comments": [ ...inline comments... ]
-   }
+   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+   <REVIEW_BODY>
    EOF
-   ```
-   If there are no inline comments, set `"comments": []`.
 
+   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+   [ ...inline comments... ]
+   EOF
+
+   jq -n \
+     --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+     --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+     '{body: $body, comments: ($comments[0] // [])}' \
+     > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+   ```
+   If there are no inline comments, write `[]` to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`.
 After the payload file is written, emit the Step-6 phase-end marker:
 
 ```bash
