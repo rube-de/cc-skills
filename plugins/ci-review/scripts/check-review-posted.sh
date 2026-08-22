@@ -40,26 +40,15 @@ fi
 [ -z "$OWNER_REPO" ] && exit 0
 OWNER="${OWNER_REPO%%/*}"
 REPO="${OWNER_REPO#*/}"
-[ -z "$OWNER" ] || [ -z "$REPO" ] && exit 0
+if [ -z "$OWNER" ] || [ -z "$REPO" ]; then
+  exit 0
+fi
 
 # --- detect PR number ------------------------------------------------------
 
 PR_NUMBER=""
-PAYLOAD_FILE=""
 
-# Check if payload file exists with PR number
-for f in "${TMPDIR:-/tmp}"/ci-review-payload-*.json; do
-  if [ -f "$f" ]; then
-    NUM=$(printf '%s\n' "$f" | sed -n 's/.*ci-review-payload-\([0-9]*\)\.json/\1/p')
-    if [ -n "$NUM" ]; then
-      PR_NUMBER="$NUM"
-      PAYLOAD_FILE="$f"
-      break
-    fi
-  fi
-done
-
-if [ -z "$PR_NUMBER" ] && [ -n "$GITHUB_REF" ]; then
+if [ -n "$GITHUB_REF" ]; then
   PR_NUMBER=$(printf '%s\n' "$GITHUB_REF" | sed -n 's|refs/pull/\([0-9]*\)/.*|\1|p')
 fi
 
@@ -78,6 +67,13 @@ if [ -f "$SUCCESS_MARKER" ]; then
   exit 0
 fi
 
+# --- check for matching PR payload file ------------------------------------
+
+PAYLOAD_FILE=""
+if [ -f "${TMPDIR:-/tmp}/ci-review-payload-${PR_NUMBER}.json" ]; then
+  PAYLOAD_FILE="${TMPDIR:-/tmp}/ci-review-payload-${PR_NUMBER}.json"
+fi
+
 # --- locate and run post-review.sh -----------------------------------------
 
 POST_SCRIPT=""
@@ -89,11 +85,22 @@ fi
 
 if [ -n "$POST_SCRIPT" ] && [ -f "$POST_SCRIPT" ]; then
   if [ -n "$PAYLOAD_FILE" ] && [ -f "$PAYLOAD_FILE" ]; then
-    sh "$POST_SCRIPT" "$PR_NUMBER" "$PAYLOAD_FILE" "${OWNER}/${REPO}" >&2 || true
+    if sh "$POST_SCRIPT" "$PR_NUMBER" "$PAYLOAD_FILE" "${OWNER}/${REPO}" >&2; then
+      exit 0
+    fi
   else
-    sh "$POST_SCRIPT" "$PR_NUMBER" "${OWNER}/${REPO}" >&2 || true
+    if sh "$POST_SCRIPT" "$PR_NUMBER" "${OWNER}/${REPO}" >&2; then
+      exit 0
+    fi
   fi
-  exit 0
 fi
+
+# If posting failed or script was unavailable, block termination to prompt agent
+cat <<'JSON'
+{
+  "decision": "block",
+  "reason": "MANDATORY REVIEW NOT POSTED: You must execute Step 7 (`sh plugins/ci-review/scripts/post-review.sh <PR#>`) via the Bash tool to post the review to GitHub before finishing."
+}
+JSON
 
 exit 0
