@@ -174,6 +174,13 @@ COMMENTS_COUNT=$(jq 'length' "$_tmpdir/comments.json")
 
 POSTED_URL=""
 
+# Helper to record successful post marker and exit
+mark_success() {
+  echo "Review posted: $POSTED_URL"
+  echo "$POSTED_URL" > "${TMPDIR:-/tmp}/ci-review-posted-${PR_NUMBER}.txt" 2>/dev/null || true
+  exit 0
+}
+
 # Helper function to post review via API
 post_review_api() {
   _pra_payload_file="$1"
@@ -256,8 +263,7 @@ build_review_payload "$_tmpdir/body.md" "$CURRENT_COMMENTS" "$PRIMARY_PAYLOAD"
 echo "Attempting to post PR review on ${OWNER}/${REPO}#${PR_NUMBER} (${COMMENTS_COUNT} inline comments)..." >&2
 
 if post_review_api "$PRIMARY_PAYLOAD"; then
-  echo "Review posted: $POSTED_URL"
-  exit 0
+  mark_success
 fi
 
 API_ERROR=$(cat "$_tmpdir/api_error.txt" 2>/dev/null || echo "Unknown error")
@@ -282,8 +288,7 @@ if [ "$COMMENTS_COUNT" -gt 0 ]; then
     PRUNED_PAYLOAD="$_tmpdir/payload_pruned.json"
     build_review_payload "$_tmpdir/body.md" "$_tmpdir/comments_pruned.json" "$PRUNED_PAYLOAD"
     if post_review_api "$PRUNED_PAYLOAD"; then
-      echo "Review posted: $POSTED_URL"
-      exit 0
+      mark_success
     fi
     API_ERROR=$(cat "$_tmpdir/api_error.txt" 2>/dev/null || echo "Unknown error")
     echo "Pruned review POST failed: $API_ERROR" >&2
@@ -300,8 +305,7 @@ jq -n '[]' > "$_tmpdir/empty_comments.json"
 build_review_payload "$BODY_WITH_COMMENTS" "$_tmpdir/empty_comments.json" "$BODY_ONLY_PAYLOAD"
 
 if post_review_api "$BODY_ONLY_PAYLOAD"; then
-  echo "Review posted: $POSTED_URL"
-  exit 0
+  mark_success
 fi
 
 API_ERROR=$(cat "$_tmpdir/api_error.txt" 2>/dev/null || echo "Unknown error")
@@ -314,8 +318,7 @@ cp "$BODY_WITH_COMMENTS" "$PR_COMMENT_BODY"
 printf '\n\n*(Posted as PR comment — review API unavailable)*\n' >> "$PR_COMMENT_BODY"
 
 if post_pr_comment "$PR_COMMENT_BODY"; then
-  echo "Review posted: $POSTED_URL"
-  exit 0
+  mark_success
 fi
 
 COMMENT_ERROR=$(cat "$_tmpdir/comment_error.txt" 2>/dev/null || echo "Unknown error")
