@@ -263,7 +263,7 @@ fi
 API_ERROR=$(cat "$_tmpdir/api_error.txt" 2>/dev/null || echo "Unknown error")
 echo "Initial review POST failed: $API_ERROR" >&2
 
-# Attempt 1.1: If comments existed and error mentions line/comment issues, retry with invalid comment pruning
+# Attempt 1.1: If inline comments failed, prune comments targeting files outside the PR diff and retry
 if [ "$COMMENTS_COUNT" -gt 0 ]; then
   echo "Attempting recovery: checking for invalid inline comments..." >&2
   PR_DIFF_FILES=$(gh pr diff "$PR_NUMBER" --repo "${OWNER}/${REPO}" --name-only 2>/dev/null || true)

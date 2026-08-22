@@ -69,7 +69,7 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - `line` is the line number on the new version of the file. Always use `side=RIGHT`
 - Only post **actionable** inline comments — no confirmations, no "looks good"
 - Do not repeat correctly addressed items
-- If no inline comments, set comments array to `[]` and post the body
+- If no inline comments, write `"comments": []` in the Step 6 payload file
 - **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile).
 - **Posting is deterministic via `post-review.sh`**: Step 6 writes `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`, and Step 7 executes `post-review.sh` to handle payload submission, retry logic, and fallback posting automatically. Never skip Step 7.
 ## Timing Logs
