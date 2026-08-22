@@ -454,11 +454,19 @@ exit $STATUS
 The script outputs `Review posted: <URL>` on success (exit 0) or `POSTING FAILED: <reason>` to stderr (exit 1). Capture the review URL from the output for the Step 8 summary.
 
 **Zero findings is NOT an exit, and posting must NEVER be skipped** — you must execute Step 7's Bash tool call before proceeding to Step 8.
-### Step 8: Summary
+### Step 8: Self-Check & Summary
 
 No `::group::` wrapper for this step — the summary should be visible at the top level of the log. Still include the total elapsed time.
 
-Print a brief summary for the CI log:
+Before writing the final summary, verify that the review was posted by checking the URL returned from Step 7:
+- The `Review:` line in the summary below MUST contain the real GitHub review URL returned by `post-review.sh` in Step 7 (`Review posted: https://github.com/...`).
+- If you have not executed Step 7 yet, execute it now via Bash:
+  ```bash
+  sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+  ```
+- Never use a placeholder like `<URL>` or `None` — the review URL must be a live GitHub URL from a successful post.
+
+Print the summary for the CI log:
 
 ```
 CI Review complete for PR #N
@@ -469,10 +477,9 @@ After confidence scoring (≥65): N survived
 After severity filter (≥{min-severity}): N survived
 Already commented (skipped): N
 Posted: N inline comments + review body
-Review: <URL>
+Review: <URL_FROM_POST_REVIEW_SH>
 Phase timings (s): s0=<prereq> s1=<parse> s2=<eligibility> s3=<context> s3_5=<checkout> s4=<agents> s5=<scoring> s6=<payload> s7=<post> total=<sum>
 ```
-
 The `Phase timings` line is the most load-bearing output for post-run analysis — list every step's elapsed seconds (using the values you tracked across the Timing Logs markers) plus a `total=` that is the sum of all phases. **Every Step must still be measured and reported when it runs** — even when no branching action occurs (e.g., Step 3.5 when HEAD_SHA already matches PR_HEAD_SHA and no checkout runs, the Step still executed `gh pr view` + `git rev-parse`, so its elapsed time should be recorded and reported). Because `date +%s` has 1-second granularity, legitimately fast steps (especially Step 1's no-op argument parse) may report `s<N>=0` — that is a valid measured value, not a "skipped" marker. A Step's elapsed should be omitted only when the Step was truly not entered (which for Steps 0–7 would indicate a prompt bug — they run on every invocation).
 
 ## Agent Output Format
