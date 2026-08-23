@@ -160,7 +160,7 @@ jq '
   if .comments and (.comments | type == "array") then
     [ .comments[] | select((.path | type == "string" and length > 0) and .line and (.body | type == "string" and length > 0)) |
       (try (.line | tonumber) catch null) as $l |
-      select($l != null and ($l | floor == .) and $l > 0) |
+      select($l != null and ($l | floor == $l) and $l > 0) |
       {
         path: (.path | tostring),
         line: $l,

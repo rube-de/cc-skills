@@ -392,6 +392,7 @@ date +%s   # remember this epoch for the phase-end call
 You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
 - **For clean runs with zero findings (findings == 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
+  ```bash
   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
   ## CI Review
 
