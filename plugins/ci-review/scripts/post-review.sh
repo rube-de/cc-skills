@@ -199,7 +199,7 @@ post_review_api() {
       --input "$_pra_payload_file" \
       > "$_pra_response_file" 2> "$_pra_error_file"; then
     POSTED_URL=$(jq -r '.html_url // empty' "$_pra_response_file" 2>/dev/null || true)
-    if [ -n "$POSTED_URL" ] && [ "$POSTED_URL" != "null" ]; then
+    if [ -n "$POSTED_URL" ] && [ "$POSTED_URL" != "null" ] && printf '%s\n' "$POSTED_URL" | grep -qE '^https?://'; then
       return 0
     fi
   fi
@@ -218,7 +218,7 @@ post_pr_comment() {
       -F "body=@${_ppc_body_file}" \
       > "$_ppc_response_file" 2> "$_ppc_error_file"; then
     POSTED_URL=$(jq -r '.html_url // empty' "$_ppc_response_file" 2>/dev/null || true)
-    if [ -n "$POSTED_URL" ] && [ "$POSTED_URL" != "null" ]; then
+    if [ -n "$POSTED_URL" ] && [ "$POSTED_URL" != "null" ] && printf '%s\n' "$POSTED_URL" | grep -qE '^https?://'; then
       return 0
     fi
   fi
