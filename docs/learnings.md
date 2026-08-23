@@ -506,7 +506,7 @@ Skills that make 3–4 sequential `gh` CLI calls waste context window space on r
 
 **Frontmatter impact**: If a skill's `allowed-tools` restricts Bash (e.g., `Bash(gh:*)`), widen to `Bash` when adding local script execution. Acceptable trade-off since skills with Read/Grep/Glob already have filesystem access.
 
-> Source: [Issue #74](https://github.com/rube-de/cc-skills/issues/74) — `pr-check` and `pm:next` batched into `pr-comments.sh` and `open-issues.sh` respectively.
+> Source: [Issue #74](https://github.com/rube-de/cc-skills/issues/74) — `pr-check` and `pm:next` batched into `pr-comments.sh` and `open-issues.sh`; [Issue #254](https://github.com/rube-de/cc-skills/issues/254) — `ci-review` Step 3d script path resolution under `claude-code-action`.
 
 ### `jq` function parameters are filters, not values — rebind to a local var
 
