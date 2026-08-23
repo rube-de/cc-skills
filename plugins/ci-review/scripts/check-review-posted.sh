@@ -27,10 +27,35 @@ fi
 
 # --- check prerequisites ---------------------------------------------------
 
-command -v gh >/dev/null 2>&1 || exit 0
-command -v jq >/dev/null 2>&1 || exit 0
-gh auth status >/dev/null 2>&1 || exit 0
+if ! command -v gh >/dev/null 2>&1; then
+  cat <<'JSON'
+{
+  "decision": "block",
+  "reason": "MANDATORY REVIEW NOT POSTED: gh CLI is not installed. Install gh to submit review."
+}
+JSON
+  exit 0
+fi
 
+if ! command -v jq >/dev/null 2>&1; then
+  cat <<'JSON'
+{
+  "decision": "block",
+  "reason": "MANDATORY REVIEW NOT POSTED: jq is not installed. Install jq to build payload."
+}
+JSON
+  exit 0
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+  cat <<'JSON'
+{
+  "decision": "block",
+  "reason": "MANDATORY REVIEW NOT POSTED: gh is not authenticated. Run gh auth login to submit review."
+}
+JSON
+  exit 0
+fi
 # --- detect repository -----------------------------------------------------
 
 OWNER_REPO="${GITHUB_REPOSITORY}"

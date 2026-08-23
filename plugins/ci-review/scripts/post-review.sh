@@ -52,7 +52,7 @@ elif [ $# -eq 1 ]; then
 elif [ $# -eq 2 ]; then
   if printf '%s\n' "$1" | grep -qE '^[1-9][0-9]*$'; then
     PR_NUMBER="$1"
-    if printf '%s\n' "$2" | grep -qE '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$' && [ ! -f "$2" ]; then
+    if [ ! -f "$2" ] && printf '%s\n' "$2" | grep -qE '^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$' && ! printf '%s\n' "$2" | grep -qE '\.(json|md|txt)$'; then
       OWNER_REPO="$2"
       PAYLOAD_FILE=""
     else
@@ -158,7 +158,7 @@ jq -r '
 # Extract comments array (ensuring valid structure and safe line parsing)
 jq '
   if .comments and (.comments | type == "array") then
-    [ .comments[] | select(.path and .line and .body) |
+    [ .comments[] | select((.path | type == "string" and length > 0) and .line and (.body | type == "string" and length > 0)) |
       (try (.line | tonumber) catch null) as $l |
       select($l != null and $l > 0) |
       {
