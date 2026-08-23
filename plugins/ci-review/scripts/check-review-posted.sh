@@ -86,7 +86,8 @@ printf '%s\n' "$PR_NUMBER" | grep -qE '^[1-9][0-9]*$' || exit 0
 
 # --- check if review already posted in this session ------------------------
 
-SUCCESS_MARKER="${TMPDIR:-/tmp}/ci-review-posted-${PR_NUMBER}.txt"
+REPO_SLUG=$(printf '%s' "${OWNER}_${REPO}" | tr '/:.' '_')
+SUCCESS_MARKER="${TMPDIR:-/tmp}/ci-review-posted-${REPO_SLUG}-${PR_NUMBER}.txt"
 if [ -f "$SUCCESS_MARKER" ]; then
   # Review already posted successfully in this session
   exit 0
