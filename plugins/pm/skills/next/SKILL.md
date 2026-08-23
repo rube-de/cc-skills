@@ -32,17 +32,17 @@ Analyze open GitHub issues, build a dependency graph, and recommend the highest-
 
 ### Step 1: Fetch and Pre-process Issues
 
-Run the `open-issues.sh` script from the plugin's `scripts/` directory (two levels up from this skill):
+Run the `open-issues.sh` script from the plugin's `scripts/` directory:
 
 ```bash
 # Auto-detect repository from current directory
-sh ../../scripts/open-issues.sh
+sh "${CLAUDE_SKILL_DIR}/../../scripts/open-issues.sh"
 
 # Or specify repository explicitly
-sh ../../scripts/open-issues.sh OWNER/REPO
+sh "${CLAUDE_SKILL_DIR}/../../scripts/open-issues.sh" OWNER/REPO
 
 # Include assigned issues in results
-sh ../../scripts/open-issues.sh --include-assigned
+sh "${CLAUDE_SKILL_DIR}/../../scripts/open-issues.sh" --include-assigned
 ```
 
 **Validate the response:**

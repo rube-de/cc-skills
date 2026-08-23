@@ -78,14 +78,14 @@ Parse `--unattended` out of the argument string before invoking the script; only
 
 ### Run pr-comments.sh
 
-Run the `pr-comments.sh` script from the plugin's `scripts/` directory (two levels up from this skill):
+Run the `pr-comments.sh` script from the plugin's `scripts/` directory:
 
 ```bash
 # If PR number provided as argument
-sh ../../scripts/pr-comments.sh <PR_NUMBER>
+sh "${CLAUDE_SKILL_DIR}/../../scripts/pr-comments.sh" <PR_NUMBER>
 
 # If no argument — auto-detect from current branch
-sh ../../scripts/pr-comments.sh
+sh "${CLAUDE_SKILL_DIR}/../../scripts/pr-comments.sh"
 ```
 
 **Validate the response:**
