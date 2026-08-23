@@ -125,7 +125,7 @@ fi
 cat <<'JSON'
 {
   "decision": "block",
-  "reason": "MANDATORY REVIEW NOT POSTED: You must execute Step 7 (`sh plugins/ci-review/scripts/post-review.sh <PR#>`) via the Bash tool to post the review to GitHub before finishing."
+  "reason": "MANDATORY REVIEW NOT POSTED: You must execute Step 7 (`sh plugins/ci-review/scripts/post-review.sh <PR#> \"\${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json\"`) via the Bash tool to post the review to GitHub before finishing."
 }
 JSON
 
