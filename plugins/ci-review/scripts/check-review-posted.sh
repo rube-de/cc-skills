@@ -114,6 +114,10 @@ if [ -n "$POST_SCRIPT" ] && [ -f "$POST_SCRIPT" ]; then
     if sh "$POST_SCRIPT" "$PR_NUMBER" "$PAYLOAD_FILE" "${OWNER}/${REPO}" >&2; then
       exit 0
     fi
+  else
+    if sh "$POST_SCRIPT" "$PR_NUMBER" "${OWNER}/${REPO}" >&2; then
+      exit 0
+    fi
   fi
 fi
 
