@@ -16,7 +16,7 @@ argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--model s
 
 **CRITICAL REQUIREMENT**: This skill is an automated review submitter. Its primary deliverable is an atomic GitHub PR review submitted by calling the `Bash` tool to execute `post-review.sh`.
 
-**You MUST call the `Bash` tool to run `sh "${CLAUDE_SKILL_DIR}/../../scripts/post-review.sh"` on EVERY run before writing any final summary text.** Ending a session without calling the `Bash` tool to post the review violates the contract and fails CI.
+**You MUST call the `Bash` tool to run `sh "${CLAUDE_SKILL_DIR}/../../scripts/post-review.sh" <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"` on EVERY run before writing any final summary text.** Ending a session without calling the `Bash` tool to post the review violates the contract and fails CI.
 
 ## Mandatory Review Contract (Inviolable)
 
