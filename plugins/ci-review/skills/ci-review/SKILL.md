@@ -2,15 +2,10 @@
 name: ci-review
 description: >-
   CI-optimized code review: multi-agent parallel review with confidence scoring
-  and atomic GitHub PR review posting. Runs 6 (lean) or 9 (full) specialized
-  review agents including one unconstrained deep-reviewer, scores findings for confidence, filters false positives, and
-  submits a single atomic GitHub PR review with inline comments via gh api.
-  Supports --single for cost-effective single-agent reviews with confidence scoring,
-  --agent profile for AI-authored PRs (surfaces more findings since
-  fixes are cheap). Use --min-severity to control finding threshold.
-  Use when reviewing PRs in CI pipelines, GitHub Actions workflows, or locally.
+  and atomic GitHub PR review posting. Runs specialized review agents, scores
+  findings, and submits a GitHub PR review via `sh plugins/ci-review/scripts/post-review.sh`.
+  Always executes `post-review.sh` to submit a review on every run (including zero-findings runs).
   Triggers: /ci-review, review PR, CI code review, automated PR review.
-  Use --model to override the reviewer model (e.g., --model opus for deeper analysis).
   Use: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--model sonnet|opus] [--min-severity <level>]
 user-invocable: true
 allowed-tools: [Bash, Read, Grep, Glob, Agent, AskUserQuestion]
@@ -19,7 +14,16 @@ argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--model s
 
 # CI Review
 
-Multi-agent code review for pull requests. Posts findings as an atomic GitHub PR review with inline comments.
+**CRITICAL REQUIREMENT**: This skill is an automated review submitter. Its primary deliverable is an atomic GitHub PR review submitted by calling the `Bash` tool to execute `post-review.sh`.
+
+**You MUST call the `Bash` tool to run `sh plugins/ci-review/scripts/post-review.sh` on EVERY run before writing any final summary text.** Ending a session without calling the `Bash` tool to post the review violates the contract and fails CI.
+
+## Mandatory Review Contract (Inviolable)
+
+Every execution of `/ci-review` MUST complete all workflow steps through Step 8:
+1. **Step 6 is mandatory on ALL runs**: Construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json` (using the "No Findings" template with `"comments": []` when clean).
+2. **Step 7 is mandatory on ALL runs**: Call the `Bash` tool to run `sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"`.
+3. **Step 8 is mandatory**: Output the summary including the review URL returned by `post-review.sh`.
 
 Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the review posting format and error handling chain.
 
@@ -58,22 +62,21 @@ If not specified, `--min-severity` defaults to `medium` for normal runs and to `
 These rules are critical. They are also detailed in REVIEW-POSTING.md but inlined here as defense-in-depth:
 
 - **Always use event `"COMMENT"`** — never `"APPROVE"` or `"REQUEST_CHANGES"`
-- Build ONE `gh api` call that creates the review with all inline comments at once
 - `line` is the line number on the new version of the file. Always use `side=RIGHT`
 - Only post **actionable** inline comments — no confirmations, no "looks good"
 - Do not repeat correctly addressed items
-- If no inline comments, omit the comments array and just post the body
-- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile). Never end the run without creating a review or, if the review API fails, the `gh pr comment` fallback. A run that posts nothing is a contract violation.
-
+- If no inline comments, write `"comments": []` in the Step 6 payload file
+- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile).
+- **Posting is deterministic via `post-review.sh`**: Step 6 writes `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`, and Step 7 executes `post-review.sh` to handle payload submission, retry logic, and fallback posting automatically. Never skip Step 7.
 ## Timing Logs
 
 This section is reference guidance. **Do not execute anything from it directly** — timing markers are only emitted from within each numbered Step's own Bash invocations below. This section describes the two variants and when to apply each.
 
 Every Step in the `## Workflow` section emits a phase-start marker at its beginning and a phase-end marker at its end so the GitHub Actions log shows where time is spent. GitHub Actions renders `::group::` / `::endgroup::` as collapsible sections in the run UI; local runs see them as plain text. Track each Step's elapsed seconds and report them in the Step 8 summary as `Phase timings (s): s0=... s1=... ... total=...`.
 
-**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. **Preserve the step's exit status** by capturing `$?` immediately after `<step commands>` and re-emitting it at the end — otherwise the trailing `echo` commands would always return 0 and mask prerequisite or eligibility failures (e.g., `gh auth status` failing in Step 0). **All echoes go to stdout** — per GitHub's workflow-command spec, `::group::` / `::endgroup::` must appear on stdout to render as collapsible sections in the Actions log. For steps whose `<step commands>` also produces parseable output (e.g., Step 2's `gh pr view --json`), the output stream will interleave markers with the parseable line; the model reads both and extracts the parseable content visually (the JSON line is self-evident). Pattern: `echo "::group::[ci-review] Step N: <name>"; START=$(date +%s); <step commands>; STATUS=$?; echo "[ci-review] Step N done elapsed=$(( $(date +%s) - START ))s"; echo "::endgroup::"; exit $STATUS`.
+**Single-call variant** — use when the entire Step fits in one Bash invocation (Steps 0, 1, 2, 7). Capture the start epoch into a shell variable and compute elapsed inline, so no state needs to cross tool calls. **Preserve the step's exit status** by capturing `$?` immediately after `<step commands>` and re-emitting it at the end — otherwise the trailing `echo` commands would always return 0 and mask prerequisite or eligibility failures (e.g., `gh auth status` failing in Step 0). **All echoes go to stdout** — per GitHub's workflow-command spec, `::group::` / `::endgroup::` must appear on stdout to render as collapsible sections in the Actions log. For steps whose `<step commands>` also produces parseable output (e.g., Step 2's `gh pr view --json`), the output should remain parseable.
 
-**Multi-call variant** — use when the Step spans multiple Bash invocations or waits on subagent tool calls (Steps 3, 3.5, 4, 5, 6, 7). All marker echoes go to stdout (GitHub's workflow-command spec). Any value the model needs to remember for later calls (epochs, SHAs, owner/repo) must be printed to stdout as a labeled line so it survives across tool calls. In the first Bash call of the Step, print `echo "::group::[ci-review] Step N: <name>"` and `date +%s` — remember the printed epoch in your working state. In the last Bash call of the Step, substitute the remembered epoch into `echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <REMEMBERED_EPOCH> ))s"; echo "::endgroup::"`. For Steps with agent fan-out (Steps 4, 5), place the phase-end marker *after* all agents have returned — the elapsed value will include their wall-clock time, which is exactly what we want to measure.
+**Multi-call variant** — use when the Step spans multiple Bash invocations or waits on subagent tool calls (Steps 3, 3.5, 4, 5, 6). All marker echoes go to stdout (GitHub's workflow-command spec). Any value the model needs to remember for later calls (epochs, SHAs, owner/repo) must be printed to stdout as a labeled line so it survives across tool calls. In the first Bash call of the Step, print `echo "::group::[ci-review] Step N: <name>"` and `date +%s` — remember the printed epoch in your working state. In the last Bash call of the Step, substitute the remembered epoch into `echo "[ci-review] Step N done elapsed=$(( $(date +%s) - <REMEMBERED_EPOCH> ))s"; echo "::endgroup::"`. For Steps with agent fan-out (Steps 4, 5), place the phase-end marker *after* all agents return.
 
 ## Workflow
 
@@ -275,6 +278,7 @@ echo "[ci-review] Step 4 done elapsed=$(( $(date +%s) - <STEP4_START_EPOCH> ))s"
 echo "::endgroup::"
 ```
 
+Then proceed to Step 5 (Confidence Scoring).
 ### Step 5: Confidence Scoring
 
 Multi-call timing variant. Emit the phase-start marker in a dedicated Bash call **before** launching scorers:
@@ -350,15 +354,14 @@ A single generic signal (severity tag alone or type keyword alone) is NOT suffic
 - String matching is case-insensitive
 
 Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
-
-**If no findings survive filtering:** Build a no-findings review body using the template from REVIEW-POSTING.md section 3 ("No Findings"), then skip to Step 7 to post it.
-
 After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
 
 ```bash
 echo "[ci-review] Step 5 done elapsed=$(( $(date +%s) - <STEP5_START_EPOCH> ))s"
 echo "::endgroup::"
 ```
+
+Then proceed to Step 6 to construct the review payload.
 
 ### Step 6: Build Review Payload
 
@@ -386,94 +389,84 @@ date +%s   # remember this epoch for the phase-end call
 | comment-analyzer | comment-accuracy |
 | type-analyzer | type-design |
 
-For each surviving finding:
+You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
-1. **Determine if it's inline-eligible**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
+- **For clean runs with zero findings (findings == 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
+  ```bash
+  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+  ## CI Review
 
-2. **Build inline comment object**:
-   ```json
-   {
-     "path": "<file>",
-     "line": <line_number>,
-     "side": "RIGHT",
-     "body": "**[<severity>] <type>**\n\n<description>\n\n**Recommendation:** <recommendation>\n\n`Found by: <agent-name>`"
-   }
-   ```
+  No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-3. **Build review body**:
-   - Summary with profile, finding counts by severity
-   - If focus text was provided, mention it
-   - List any body-only findings (not in diff) under "### Findings Not in Diff"
+  **Profile**: <profile>
+  EOF
 
-After the payload is built, emit the Step-6 phase-end marker:
+  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+  []
+  EOF
 
-```bash
-echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-echo "::endgroup::"
-```
+  jq -n \
+    --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+    --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+    '{body: $body, comments: ($comments[0] // [])}' \
+    > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+
+  echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+  echo "::endgroup::"
+  ```
+
+- **For runs with surviving findings (findings > 0)**:
+  1. **Determine inline eligibility**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
+  2. **Build inline comment objects** in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`, then encode with `jq`:
+     ```bash
+     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+     <REVIEW_BODY>
+     EOF
+
+     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+     [ ...inline comments... ]
+     EOF
+
+     jq -n \
+       --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+       --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+       '{body: $body, comments: ($comments[0] // [])}' \
+       > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+
+     echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+     echo "::endgroup::"
+     ```
 
 ### Step 7: Post Review
 
-Multi-call timing variant — this step spans multiple Bash invocations (OWNER/REPO resolution, payload build, `gh api` post, and potential error-handling retries). Fold the phase-start marker into the first Bash call (OWNER/REPO resolution below), and emit the phase-end marker at the end of **every exit path** of the error-handling chain: successful post, the invalid-comments retry, the drop-all-inline-comments fallback, the `gh pr comment` fallback, and the final stdout-print fallback.
-
-Resolve the repository owner and repo — Bash tool state does not persist across calls, so print a labeled `OWNER_REPO=<owner/repo>` line to stdout and remember it. The model substitutes the `<OWNER>` and `<REPO>` placeholders in the `gh api` block below with the remembered value — no reliance on shell variables from this call:
+Single-call timing variant. You MUST execute this Bash command on every run (including zero-findings runs) to submit the review to GitHub:
 
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
-date +%s   # remember this epoch for the phase-end call on every exit path below
-gh repo view --json nameWithOwner --jq '"OWNER_REPO=" + .nameWithOwner'
-```
-
-Build the JSON payload using `jq` and post via `gh api`. Substitute the owner/repo you remembered from the phase-start call into `<OWNER>/<REPO>` below:
-
-```bash
-PAYLOAD=$(jq -n \
-  --arg event "COMMENT" \
-  --arg body "$REVIEW_BODY" \
-  --argjson comments "$COMMENTS_JSON" \
-  '{event: $event, body: $body, comments: $comments}')
-
-REVIEW_URL=$(echo "$PAYLOAD" | gh api \
-  "repos/<OWNER>/<REPO>/pulls/<PR#>/reviews" \
-  --method POST \
-  --input - \
-  --jq '.html_url')
-```
-
-**If no inline comments**, omit the comments array:
-```bash
-PAYLOAD=$(jq -n \
-  --arg event "COMMENT" \
-  --arg body "$REVIEW_BODY" \
-  '{event: $event, body: $body}')
-```
-
-**Error handling chain** (follow in order):
-1. If `gh api` fails due to invalid inline comments → remove the invalid comment, rebuild payload, retry (within the 3-total-attempt budget the posting gate below enforces)
-2. If still failing → drop all inline comments, move all findings to review body, retry
-3. If review API fails entirely (403/401) → fall back to `gh pr comment <PR#> --body "$REVIEW_BODY_WITH_ALL_FINDINGS"`
-4. If everything fails → print the review body to stdout so the user can post manually (**local runs only** — in CI the mandatory-posting gate below takes precedence: a stdout print is not a posted review)
-
-**Zero findings is NOT an exit, and neither is a failed post** — a posted review is mandatory on every run. Before emitting the Step-7 phase-end marker, confirm you hold a review URL (`.html_url`) returned by a successful `gh api` post, or a comment URL from the `gh pr comment` fallback, **from this session**. If you hold neither, the review was not posted:
-
-1. Re-post up to 2 more times (bounded — 3 total attempts across the chain), alternating the body-only form and the `gh pr comment` fallback
-2. If all attempts fail: in CI, end the session with an explicit "POSTING FAILED" statement (the CI verifier will fail the job — that is correct); locally, print the body for manual posting
-3. Only a URL from a successful post clears the gate — emit the phase-end marker immediately after
-
-Do not proceed to Step 8 without a URL proving this session posted. Ending a session without a posted review is a contract violation that turns the CI job red.
-
-Print the review URL on success, then emit the Step-7 phase-end marker. **The same two-line phase-end block must follow every exit path above** (successful post, retry success after invalid-comment cleanup, drop-inline fallback success, `gh pr comment` fallback, and the stdout-print terminal fallback) so the Step-7 group is always closed:
-
-```bash
-echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - <STEP7_START_EPOCH> ))s"
+START=$(date +%s)
+sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+STATUS=$?
+echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - START ))s"
 echo "::endgroup::"
+exit $STATUS
 ```
 
-### Step 8: Summary
+The script outputs `Review posted: <URL>` on success (exit 0) or `POSTING FAILED: <reason>` to stderr (exit 1). Capture the review URL from the output for the Step 8 summary.
+
+**Zero findings is NOT an exit, and posting must NEVER be skipped** — you must execute Step 7's Bash tool call before proceeding to Step 8.
+### Step 8: Self-Check & Summary
 
 No `::group::` wrapper for this step — the summary should be visible at the top level of the log. Still include the total elapsed time.
 
-Print a brief summary for the CI log:
+Before writing the final summary, verify that the review was posted by checking the URL returned from Step 7:
+- The `Review:` line in the summary below MUST contain the real GitHub review URL returned by `post-review.sh` in Step 7 (`Review posted: https://github.com/...`).
+- If you have not executed Step 7 yet, execute it now via Bash:
+  ```bash
+  sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+  ```
+- Never use a placeholder like `<URL>` or `None` — the review URL must be a live GitHub URL from a successful post.
+
+Print the summary for the CI log:
 
 ```
 CI Review complete for PR #N
@@ -484,10 +477,9 @@ After confidence scoring (≥65): N survived
 After severity filter (≥{min-severity}): N survived
 Already commented (skipped): N
 Posted: N inline comments + review body
-Review: <URL>
+Review: <URL_FROM_POST_REVIEW_SH>
 Phase timings (s): s0=<prereq> s1=<parse> s2=<eligibility> s3=<context> s3_5=<checkout> s4=<agents> s5=<scoring> s6=<payload> s7=<post> total=<sum>
 ```
-
 The `Phase timings` line is the most load-bearing output for post-run analysis — list every step's elapsed seconds (using the values you tracked across the Timing Logs markers) plus a `total=` that is the sum of all phases. **Every Step must still be measured and reported when it runs** — even when no branching action occurs (e.g., Step 3.5 when HEAD_SHA already matches PR_HEAD_SHA and no checkout runs, the Step still executed `gh pr view` + `git rev-parse`, so its elapsed time should be recorded and reported). Because `date +%s` has 1-second granularity, legitimately fast steps (especially Step 1's no-op argument parse) may report `s<N>=0` — that is a valid measured value, not a "skipped" marker. A Step's elapsed should be omitted only when the Step was truly not entered (which for Steps 0–7 would indicate a prompt bug — they run on every invocation).
 
 ## Agent Output Format
