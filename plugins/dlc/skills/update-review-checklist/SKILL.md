@@ -116,7 +116,7 @@ This rule applies in both attended and unattended modes. Dry-run is the one exce
 
 Run the helper script that lists merged PRs in window, fetches review-thread + review-body + issue-comment data per PR, applies the resolved-by-commit heuristic, and detects severity labels:
 
-The skill's bash blocks run with cwd at the skill's base directory (`plugins/dlc/skills/update-review-checklist/`) — same convention as `dlc:pr-check`, documented in `docs/learnings.md:505`. The LLM consumer should `cd` into the skill directory before executing this block. The `../../scripts/` prefix then resolves to `plugins/dlc/scripts/`.
+The skill's bash blocks run with cwd at the skill's base directory (`plugins/dlc/skills/update-review-checklist/`). The LLM consumer should `cd` into the skill directory before executing this block. The `../../scripts/` prefix then resolves to `plugins/dlc/scripts/`.
 
 ```bash
 FETCH_ERR="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-fetch-err.XXXXXX")"

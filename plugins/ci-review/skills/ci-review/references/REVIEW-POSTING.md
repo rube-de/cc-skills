@@ -108,11 +108,7 @@ If there are no inline comments (or zero findings), set `"comments": []`:
 
 ## 5. Deterministic Posting via `post-review.sh`
 
-Posting is performed deterministically by `plugins/ci-review/scripts/post-review.sh`:
-
-```bash
-sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
-```
+Posting is performed deterministically by the bundled `post-review.sh` script (invoked via the command given in SKILL.md Step 7).
 
 The script automates the complete retry and fallback chain:
 
