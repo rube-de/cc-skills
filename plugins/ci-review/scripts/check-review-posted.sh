@@ -111,11 +111,14 @@ fi
 
 if [ -n "$POST_SCRIPT" ] && [ -f "$POST_SCRIPT" ]; then
   if [ -n "$PAYLOAD_FILE" ] && [ -f "$PAYLOAD_FILE" ]; then
-    sh "$POST_SCRIPT" "$PR_NUMBER" "$PAYLOAD_FILE" "${OWNER}/${REPO}" >&2 || true
+    if sh "$POST_SCRIPT" "$PR_NUMBER" "$PAYLOAD_FILE" "${OWNER}/${REPO}" >&2; then
+      exit 0
+    fi
   else
-    sh "$POST_SCRIPT" "$PR_NUMBER" "${OWNER}/${REPO}" >&2 || true
+    if sh "$POST_SCRIPT" "$PR_NUMBER" "${OWNER}/${REPO}" >&2; then
+      exit 0
+    fi
   fi
-  exit 0
 fi
 
 # If posting failed or script was unavailable, block termination to prompt agent

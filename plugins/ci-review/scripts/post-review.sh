@@ -164,7 +164,7 @@ jq '
       {
         path: (.path | tostring),
         line: $l,
-        side: (.side // "RIGHT" | tostring),
+        side: "RIGHT",
         body: (.body | tostring)
       }
     ]
