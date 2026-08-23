@@ -1,3 +1,10 @@
+## [2.12.1](https://github.com/rube-de/cc-skills/compare/v2.12.0...v2.12.1) (2026-08-23)
+
+
+### Bug Fixes
+
+* **ci-review:** add deterministic post-review script for reliable review posting ([#255](https://github.com/rube-de/cc-skills/issues/255)) ([#256](https://github.com/rube-de/cc-skills/issues/256)) ([e5ce9c5](https://github.com/rube-de/cc-skills/commit/e5ce9c54b4b98af48ae4b53054839233fa2404d4))
+
 # [2.12.0](https://github.com/rube-de/cc-skills/compare/v2.11.0...v2.12.0) (2026-08-22)
 
 
