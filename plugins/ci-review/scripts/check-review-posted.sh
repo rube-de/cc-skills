@@ -125,7 +125,7 @@ fi
 cat <<'JSON'
 {
   "decision": "block",
-  "reason": "MANDATORY REVIEW NOT POSTED: You must execute Step 7 (post-review.sh) as specified in SKILL.md via the Bash tool to post the review to GitHub before finishing."
+  "reason": "MANDATORY REVIEW NOT POSTED: You must execute Step 7 in SKILL.md via the Bash tool to post the review to GitHub before finishing."
 }
 JSON
 exit 0
