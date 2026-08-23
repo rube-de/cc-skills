@@ -116,11 +116,11 @@ This rule applies in both attended and unattended modes. Dry-run is the one exce
 
 Run the helper script that lists merged PRs in window, fetches review-thread + review-body + issue-comment data per PR, applies the resolved-by-commit heuristic, and detects severity labels:
 
-The skill's bash blocks run with cwd at the skill's base directory (`plugins/dlc/skills/update-review-checklist/`). The LLM consumer should `cd` into the skill directory before executing this block. The `../../scripts/` prefix then resolves to `plugins/dlc/scripts/`.
+The skill's bash block references the helper script via `${CLAUDE_SKILL_DIR}/../../scripts/fetch-merged-pr-comments.sh` so it resolves deterministically regardless of execution cwd.
 
 ```bash
 FETCH_ERR="$(mktemp "${TMPDIR:-/tmp}/update-review-checklist-fetch-err.XXXXXX")"
-PR_DATA=$(sh ../../scripts/fetch-merged-pr-comments.sh "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
+PR_DATA=$(sh "${CLAUDE_SKILL_DIR}/../../scripts/fetch-merged-pr-comments.sh" "$REPO" --lookback "$LOOKBACK" 2>"$FETCH_ERR") || {
   err_msg=$(jq -r '.error // .' "$FETCH_ERR" 2>/dev/null || cat "$FETCH_ERR")
   rm -f "$FETCH_ERR"
   echo "fetch-merged-pr-comments.sh failed: $err_msg" >&2

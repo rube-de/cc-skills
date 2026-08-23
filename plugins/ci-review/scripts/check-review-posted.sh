@@ -122,11 +122,8 @@ if [ -n "$POST_SCRIPT" ] && [ -f "$POST_SCRIPT" ]; then
 fi
 
 # If posting failed or script was unavailable, block termination to prompt agent
-cat <<'JSON'
-{
-  "decision": "block",
-  "reason": "MANDATORY REVIEW NOT POSTED: You must execute Step 7 as specified in SKILL.md via the Bash tool to post the review to GitHub before finishing."
-}
-JSON
-
+jq -n '{
+  decision: "block",
+  reason: "MANDATORY REVIEW NOT POSTED: You must execute Step 7 (post-review.sh) as specified in SKILL.md via the Bash tool to post the review to GitHub before finishing."
+}'
 exit 0
