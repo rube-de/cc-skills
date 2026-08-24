@@ -320,15 +320,24 @@ git -c commit.gpgsign=false commit -m "chore(dlc): update review checklist (look
 git push -u origin "$BRANCH"
 ```
 
-Build the PR body per the template in [`references/checklist-schema.md`](references/checklist-schema.md). Include:
+Build the PR body per the template in [`references/checklist-schema.md`](references/checklist-schema.md).
+
+> **No GitHub mentions in posted PR body:** Any text this skill posts to GitHub — including the "Derived from" table, "Pending human review" section, and summary prose — MUST NOT contain an `@`-prefixed username or bot name. Write bare logins/names (e.g. `ana`, `ben`, `copilot`) without `@` prefixes to avoid triggering unintended mention notifications or bot actions. If quoting reviewer comments or technical content containing an `@` character (such as scoped packages or decorators), insert a space immediately after the `@` (e.g. `@ name`).
+
+Include:
 
 - A one-line summary of `ENTRIES_ADDED`
 - A **"Derived from"** table listing each new entry and the PRs it was clustered from (acceptance criterion #4)
 - The lookback window and threshold used
-- If `PENDING_HUMAN` is non-empty, a separate **"Pending human review"** section listing the held-back themes with their `source_prs` and `reason` — informational, so reviewers know these clusters were observed but not promoted
+- If `PENDING_HUMAN` is non-empty, a separate **"Pending human review"** section listing the held-back themes with their `source_prs` and `reason` — informational, so reviewers know these clusters were observed but not promoted (no `@`-mentions)
 - A "How this was generated" footer pointing at this skill
 
 ```bash
+if grep -qE '@[[:alnum:]_-]' "$WORKDIR/.pr-body.md"; then
+  echo "ERROR: PR body contains unneutralized @-mentions. Refusing to post." >&2
+  exit 1
+fi
+
 gh pr create \
   --repo "$REPO" \
   --title "chore(dlc): update review checklist (lookback $LOOKBACK)" \

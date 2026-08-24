@@ -70,8 +70,9 @@ When in genuine doubt after all three questions, **keep** the candidate. The cos
 
 ## PR Body Structure (Step 7)
 
-The PR body the skill opens has this skeleton:
+> **No GitHub mentions in PR body:** Never use `@`-prefixed reviewer or bot names in the PR body, "Derived from" table, or "Pending human review" section — use bare names (e.g. `ana`, `ben`, `copilot`) to avoid triggering notifications or bot actions. For technical tokens containing `@` (e.g. scoped packages, decorators), insert a space after the `@`.
 
+The PR body the skill opens has this skeleton:
 ```markdown
 ## Summary
 
