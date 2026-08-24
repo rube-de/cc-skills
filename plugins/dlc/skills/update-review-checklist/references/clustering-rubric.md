@@ -78,9 +78,9 @@ Ambiguous clusters are not failures of the rubric — they are real cases where 
 **Good cluster** (3 PRs, weight 6):
 - Theme: "Form submissions disable the submit button while pending"
 - Members:
-  - PR #210, reviewer @ana, "this button stays active during submit — should be disabled"
-  - PR #214, reviewer @ben, severity:medium, "missing pending state on the submit button, double-submit possible"
-  - PR #221, reviewer @ana, "same issue as #210 — disable while loading"
+  - PR #210, reviewer ana, "this button stays active during submit — should be disabled"
+  - PR #214, reviewer ben, severity:medium, "missing pending state on the submit button, double-submit possible"
+  - PR #221, reviewer ana, "same issue as #210 — disable while loading"
 
 **Bad cluster** (overcoarse):
 - Theme: "Improve error handling"
