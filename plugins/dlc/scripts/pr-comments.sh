@@ -74,6 +74,7 @@ MAX_PAGES=20
 # Initial query — includes pageInfo for cursor-based pagination
 QUERY='
 query($owner: String!, $repo: String!, $number: Int!) {
+  viewer { login }
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
       number title url headRefName state reviewDecision
@@ -301,10 +302,10 @@ done
 
 jq --arg owner "$OWNER" --arg repo "$REPO" '
   .data.repository.pullRequest as $pr |
+  (.data.viewer.login // "unknown") as $viewer |
 
   # Extract PR author for has_author_reply detection
   ($pr.author.login // "unknown") as $pr_author |
-
   # Extract review bodies (top-level PR review comments, e.g. bot summaries)
   [ $pr.reviews.nodes[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
@@ -362,10 +363,18 @@ jq --arg owner "$OWNER" --arg repo "$REPO" '
   ] as $threads |
 
   # Filter issue comments for reviewer inventory and summary totals:
-  # exclude PR author comments and DLC sentinel replies (both retained in
-  # the raw $issue_comments array for "already replied" detection).
+  # exclude PR author comments and authentic DLC sentinel replies
+  # (authored by PR author, viewer actor, or bot with a valid dlc-reply sentinel).
+  # Both are retained in the raw $issue_comments array for "already replied" detection.
+  # Reviewer comments mentioning "<!-- dlc-reply:" are NOT excluded.
   [ $issue_comments[] |
-    select(.author != $pr_author and (.body | contains("<!-- dlc-reply:") | not))
+    select(
+      .author != $pr_author and
+      (
+        ((.author == $viewer or (.author | test("(\\[bot\\]$|^github-actions$)"))) and
+         (.body | test("<!--\\s*dlc-reply:[0-9]+\\s*-->"))) | not
+      )
+    )
   ] as $reviewer_issue_comments |
 
   # Build reviewer inventory (from threads, review bodies, and filtered issue comments)
@@ -402,6 +411,7 @@ jq --arg owner "$OWNER" --arg repo "$REPO" '
       branch:         $pr.headRefName,
       state:          $pr.state,
       author:         ($pr.author.login // "unknown"),
+      viewer:         $viewer,
       reviewDecision: ($pr.reviewDecision // null),
       owner:          $owner,
       repo:           $repo

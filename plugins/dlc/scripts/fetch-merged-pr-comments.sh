@@ -343,18 +343,16 @@ while [ "$_idx" -lt "$_pr_count" ]; do
 
     # Threads → per-comment entries. Iterate all non-author comments per
     # thread so reviewer follow-ups (not just the root) reach clustering.
-    # Filter PR-author comments and DLC reply sentinels with the same rules
-    # used by the review-bodies and issue-comments blocks below.
+    # Exclude PR-author comments — they carry author response, not reviewer signal.
     [ $pr.reviewThreads.nodes[] as $thread |
       $thread.comments.nodes[] |
       . as $c |
       select(($c.author.login // "ghost") != $pr_author) |
-      select(($c.body // "") | contains("<!-- dlc-reply:") | not) |
       {
         id:                 ($c.id // $thread.id),
         type:               "thread",
         author:             ($c.author.login // "ghost"),
-        is_bot:             (($c.author.__typename // "") == "Bot"),
+        is_bot:             (($c.author.__typename // "") == "Bot" or (($c.author.login // "") | endswith("[bot]"))),
         body:               (($c.body // "") | .[0:2000]),
         path:               $thread.path,
         line:               $thread.line,
@@ -364,18 +362,15 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $thread_comments |
 
-    # Review bodies → comments[]. Exclude PR-author review bodies and DLC
-    # reply sentinels — same rule as issue comments below; neither carries
-    # reviewer signal.
+    # Review bodies → comments[]. Exclude PR-author review bodies.
     [ $pr.reviews.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(.body | contains("<!-- dlc-reply:") | not) |
       {
         id:                 .id,
         type:               "review_body",
         author:             (.author.login // "ghost"),
-        is_bot:             ((.author.__typename // "") == "Bot"),
+        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | endswith("[bot]"))),
         body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
@@ -385,17 +380,22 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $review_bodies |
 
-    # Issue comments → comments[]. Exclude PR-author comments and DLC reply
-    # sentinels — neither carries reviewer signal.
+    # Issue comments → comments[]. Exclude PR-author comments and automated DLC reply
+    # sentinels (from bots/actors) — neither carries reviewer signal.
     [ $pr.comments.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(.body | contains("<!-- dlc-reply:") | not) |
+      select(
+        (
+          ((.author.__typename // "") == "Bot" or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))) and
+          ((.body // "") | test("<!--\\s*dlc-reply:[0-9]+\\s*-->"))
+        ) | not
+      ) |
       {
         id:                 .id,
         type:               "issue_comment",
         author:             (.author.login // "ghost"),
-        is_bot:             ((.author.__typename // "") == "Bot"),
+        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | endswith("[bot]"))),
         body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
