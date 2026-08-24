@@ -130,6 +130,7 @@ else
   REPO=$(printf '%s\n' "$_repo_json" | jq -r '.name')
 fi
 [ -n "$OWNER" ] && [ -n "$REPO" ] || die_json "Could not parse owner/repo" "REPO_PARSE"
+VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>/dev/null || echo "")
 
 # --- compute cutoff date (BSD + GNU date compatible) -----------------------
 
@@ -290,7 +291,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
   #   3. Per comment: marks is_bot (author.__typename == "Bot"), detects severity from body,
   #      and stamps resolved_by_commit when ≥1 PR-author commit landed AFTER the comment.
 
-  jq '
+  jq --arg viewer "$VIEWER" '
     .data.repository.pullRequest as $pr |
     ($pr.author.login // "ghost") as $pr_author |
 
@@ -381,12 +382,16 @@ while [ "$_idx" -lt "$_pr_count" ]; do
     ] as $review_bodies |
 
     # Issue comments → comments[]. Exclude PR-author comments and authentic DLC reply
-    # sentinels (trailing sentinel <!-- dlc-reply:{database_id} -->) — neither carries
-    # reviewer signal.
+    # sentinels (authored by executing viewer or CI bot) — neither carries reviewer signal.
     [ $pr.comments.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$")) | not) |
+      select(
+        (
+          ((.author.login // "") == $viewer or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))) and
+          ((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$"))
+        ) | not
+      ) |
       {
         id:                 .id,
         type:               "issue_comment",
