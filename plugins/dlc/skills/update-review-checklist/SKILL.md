@@ -327,12 +327,17 @@ Build the PR body per the template in [`references/checklist-schema.md`](referen
 Include:
 
 - A one-line summary of `ENTRIES_ADDED`
-- A **"Derived from"** table listing each new entry and the PRs it was clustered from (acceptance criterion #4) — cite source PRs and bare reviewer names, never `@`-prefixed logins
+- A **"Derived from"** table listing each new entry and the PRs it was clustered from (acceptance criterion #4)
 - The lookback window and threshold used
 - If `PENDING_HUMAN` is non-empty, a separate **"Pending human review"** section listing the held-back themes with their `source_prs` and `reason` — informational, so reviewers know these clusters were observed but not promoted (no `@`-mentions)
 - A "How this was generated" footer pointing at this skill
 
 ```bash
+if grep -qE '@[[:alnum:]_-]' "$WORKDIR/.pr-body.md"; then
+  echo "ERROR: PR body contains unneutralized @-mentions. Refusing to post." >&2
+  exit 1
+fi
+
 gh pr create \
   --repo "$REPO" \
   --title "chore(dlc): update review checklist (lookback $LOOKBACK)" \
