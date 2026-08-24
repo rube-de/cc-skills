@@ -1,3 +1,10 @@
+## [2.12.3](https://github.com/rube-de/cc-skills/compare/v2.12.2...v2.12.3) (2026-08-24)
+
+
+### Bug Fixes
+
+* **dlc:** strip @-mentions from update-review-checklist worked examples and PR body ([#258](https://github.com/rube-de/cc-skills/issues/258)) ([607247a](https://github.com/rube-de/cc-skills/commit/607247ad7b66f249102777359b841d6583f2bf5c))
+
 ## [2.12.2](https://github.com/rube-de/cc-skills/compare/v2.12.1...v2.12.2) (2026-08-24)
 
 
