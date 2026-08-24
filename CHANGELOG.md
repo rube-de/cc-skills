@@ -1,3 +1,10 @@
+## [2.12.2](https://github.com/rube-de/cc-skills/compare/v2.12.1...v2.12.2) (2026-08-24)
+
+
+### Bug Fixes
+
+* **ci-review:** resolve bundled script paths via CLAUDE_SKILL_DIR ([#257](https://github.com/rube-de/cc-skills/issues/257)) ([0a84769](https://github.com/rube-de/cc-skills/commit/0a84769b2647d446243b089dd6b6ec3f1ec83d20))
+
 ## [2.12.1](https://github.com/rube-de/cc-skills/compare/v2.12.0...v2.12.1) (2026-08-23)
 
 
