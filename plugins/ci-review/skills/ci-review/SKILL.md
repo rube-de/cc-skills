@@ -3,7 +3,7 @@ name: ci-review
 description: >-
   CI-optimized code review: multi-agent parallel review with confidence scoring
   and atomic GitHub PR review posting. Runs specialized review agents, scores
-  findings, and submits a GitHub PR review via `sh plugins/ci-review/scripts/post-review.sh`.
+  findings, and submits a GitHub PR review via `post-review.sh`.
   Always executes `post-review.sh` to submit a review on every run (including zero-findings runs).
   Triggers: /ci-review, review PR, CI code review, automated PR review.
   Use: /ci-review <PR#> [focus text] [--full|--lean|--single] [--agent] [--model sonnet|opus] [--min-severity <level>]
@@ -16,13 +16,12 @@ argument-hint: "<PR#> [focus text] [--full|--lean|--single] [--agent] [--model s
 
 **CRITICAL REQUIREMENT**: This skill is an automated review submitter. Its primary deliverable is an atomic GitHub PR review submitted by calling the `Bash` tool to execute `post-review.sh`.
 
-**You MUST call the `Bash` tool to run `sh plugins/ci-review/scripts/post-review.sh` on EVERY run before writing any final summary text.** Ending a session without calling the `Bash` tool to post the review violates the contract and fails CI.
-
+**You MUST call the `Bash` tool to execute `post-review.sh` on EVERY run before writing any final summary text (see Step 7 for the invocation command).** Ending a session without calling the `Bash` tool to post the review violates the contract and fails CI.
 ## Mandatory Review Contract (Inviolable)
 
 Every execution of `/ci-review` MUST complete all workflow steps through Step 8:
 1. **Step 6 is mandatory on ALL runs**: Construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json` (using the "No Findings" template with `"comments": []` when clean).
-2. **Step 7 is mandatory on ALL runs**: Call the `Bash` tool to run `sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"`.
+2. **Step 7 is mandatory on ALL runs**: Call the `Bash` tool to run `sh "${CLAUDE_SKILL_DIR}/../../scripts/post-review.sh" <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"`.
 3. **Step 8 is mandatory**: Output the summary including the review URL returned by `post-review.sh`.
 
 Before running, **read [references/REVIEW-POSTING.md](references/REVIEW-POSTING.md) now** for the review posting format and error handling chain.
@@ -164,7 +163,7 @@ Search for CLAUDE.md files in the repo root and in directories containing change
 **3d. Fetch existing PR comments:**
 Run the `fetch-pr-comments.sh` script to retrieve all existing comments on this PR (inline review comments, PR-level comments, and review bodies from all authors):
 ```bash
-sh ../../scripts/fetch-pr-comments.sh <PR#>
+sh "${CLAUDE_SKILL_DIR}/../../scripts/fetch-pr-comments.sh" <PR#>
 ```
 Store the JSON output as `EXISTING_COMMENTS`. Comment bodies are truncated to 2000 characters by the script to limit context size on comment-heavy PRs — this is sufficient for content-signal matching since actionable content appears early in comments.
 
@@ -444,7 +443,7 @@ Single-call timing variant. You MUST execute this Bash command on every run (inc
 ```bash
 echo "::group::[ci-review] Step 7: Post Review"
 START=$(date +%s)
-sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+sh "${CLAUDE_SKILL_DIR}/../../scripts/post-review.sh" <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 STATUS=$?
 echo "[ci-review] Step 7 done elapsed=$(( $(date +%s) - START ))s"
 echo "::endgroup::"
@@ -462,7 +461,7 @@ Before writing the final summary, verify that the review was posted by checking 
 - The `Review:` line in the summary below MUST contain the real GitHub review URL returned by `post-review.sh` in Step 7 (`Review posted: https://github.com/...`).
 - If you have not executed Step 7 yet, execute it now via Bash:
   ```bash
-  sh plugins/ci-review/scripts/post-review.sh <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+  sh "${CLAUDE_SKILL_DIR}/../../scripts/post-review.sh" <PR#> "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
   ```
 - Never use a placeholder like `<URL>` or `None` — the review URL must be a live GitHub URL from a successful post.
 

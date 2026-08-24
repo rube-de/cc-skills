@@ -502,11 +502,11 @@ Skills that make 3–4 sequential `gh` CLI calls waste context window space on r
 - **Optional positional args** — scripts auto-detect PR number and repo when args are omitted, saving a preliminary `gh` call in the SKILL.md
 - **Cycle detection deferred to LLM** — jq lacks mutable state for DFS; scripts provide edge lists, SKILL.md steps do graph traversal
 
-**Script path resolution**: SKILL.md bash code blocks run relative to the **skill's base directory** (`skills/<skill-name>/`), NOT the plugin root. Use `../../scripts/foo.sh` to reach the plugin-level `scripts/` directory. This differs from markdown reference links (which are resolved by the plugin loader). A bare `scripts/foo.sh` resolves to `skills/<skill-name>/scripts/foo.sh` — which doesn't exist.
+**Script path resolution**: When a skill's bash block invokes bundled scripts, addressing them as `../../scripts/foo.sh` assumes the execution cwd is the skill directory. However, in `claude-code-action` and CLI invocations, the cwd is typically the workspace root. To ensure deterministic execution regardless of working directory (both in-repo and when installed in external repos), reference bundled scripts from SKILL.md bodies using `${CLAUDE_SKILL_DIR}` (e.g. `sh "${CLAUDE_SKILL_DIR}/../../scripts/foo.sh"`; see "Reference bundled scripts from a SKILL.md body with `${CLAUDE_SKILL_DIR}`" below).
 
 **Frontmatter impact**: If a skill's `allowed-tools` restricts Bash (e.g., `Bash(gh:*)`), widen to `Bash` when adding local script execution. Acceptable trade-off since skills with Read/Grep/Glob already have filesystem access.
 
-> Source: [Issue #74](https://github.com/rube-de/cc-skills/issues/74) — `pr-check` and `pm:next` batched into `pr-comments.sh` and `open-issues.sh` respectively.
+> Source: [Issue #74](https://github.com/rube-de/cc-skills/issues/74) — `pr-check` and `pm:next` batched into `pr-comments.sh` and `open-issues.sh`; [Issue #254](https://github.com/rube-de/cc-skills/issues/254) — `ci-review` Step 3d script path resolution under `claude-code-action`.
 
 ### `jq` function parameters are filters, not values — rebind to a local var
 
