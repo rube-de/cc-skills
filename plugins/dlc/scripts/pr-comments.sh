@@ -364,16 +364,13 @@ jq --arg owner "$OWNER" --arg repo "$REPO" '
 
   # Filter issue comments for reviewer inventory and summary totals:
   # exclude PR author comments and authentic DLC sentinel replies
-  # (authored by PR author, viewer actor, or bot with a valid dlc-reply sentinel).
+  # (authored by viewer actor with a valid dlc-reply sentinel).
   # Both are retained in the raw $issue_comments array for "already replied" detection.
   # Reviewer comments mentioning "<!-- dlc-reply:" are NOT excluded.
   [ $issue_comments[] |
     select(
       .author != $pr_author and
-      (
-        ((.author == $viewer or (.author | test("(\\[bot\\]$|^github-actions$)"))) and
-         (.body | test("<!--\\s*dlc-reply:[0-9]+\\s*-->"))) | not
-      )
+      ((.author == $viewer and (.body | test("<!--\\s*dlc-reply:[0-9]+\\s*-->"))) | not)
     )
   ] as $reviewer_issue_comments |
 

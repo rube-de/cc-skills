@@ -352,7 +352,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
         id:                 ($c.id // $thread.id),
         type:               "thread",
         author:             ($c.author.login // "ghost"),
-        is_bot:             (($c.author.__typename // "") == "Bot" or (($c.author.login // "") | endswith("[bot]"))),
+        is_bot:             ((($c.author.__typename // "") == "Bot") or ((($c.author.login // "") | test("(\\[bot\\]$|^github-actions$)")))),
         body:               (($c.body // "") | .[0:2000]),
         path:               $thread.path,
         line:               $thread.line,
@@ -370,7 +370,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
         id:                 .id,
         type:               "review_body",
         author:             (.author.login // "ghost"),
-        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | endswith("[bot]"))),
+        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))),
         body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
@@ -380,22 +380,17 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $review_bodies |
 
-    # Issue comments → comments[]. Exclude PR-author comments and automated DLC reply
-    # sentinels (from bots/actors) — neither carries reviewer signal.
+    # Issue comments → comments[]. Exclude PR-author comments and authentic DLC reply
+    # sentinels — neither carries reviewer signal.
     [ $pr.comments.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(
-        (
-          ((.author.__typename // "") == "Bot" or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))) and
-          ((.body // "") | test("<!--\\s*dlc-reply:[0-9]+\\s*-->"))
-        ) | not
-      ) |
+      select(((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$")) | not) |
       {
         id:                 .id,
         type:               "issue_comment",
         author:             (.author.login // "ghost"),
-        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | endswith("[bot]"))),
+        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))),
         body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
