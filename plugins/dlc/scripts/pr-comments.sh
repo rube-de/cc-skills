@@ -371,8 +371,7 @@ jq --arg owner "$OWNER" --arg repo "$REPO" '
     select(
       .author != $pr_author and
       (((.author == $viewer or .author == "github-actions[bot]" or .author == "github-actions") and
-        (.body | test("<!--\\s*dlc-reply:[0-9]+\\s*-->"))) | not)
-    )
+        (.body | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$"))) | not)
   ] as $reviewer_issue_comments |
 
   # Build reviewer inventory (from threads, review bodies, and filtered issue comments)

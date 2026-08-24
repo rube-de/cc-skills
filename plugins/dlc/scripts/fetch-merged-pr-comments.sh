@@ -380,13 +380,17 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $review_bodies |
 
-    # Issue comments → comments[]. Exclude PR-author comments and authentic DLC reply
-    # sentinels (trailing sentinel <!-- dlc-reply:{database_id} -->) — neither carries
-    # reviewer signal.
+    # Issue comments → comments[]. Exclude PR-author comments and CI-authored DLC reply
+    # sentinels — neither carries reviewer signal.
     [ $pr.comments.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$")) | not) |
+      select(
+        (
+          ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)")) and
+          ((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$"))
+        ) | not
+      ) |
       {
         id:                 .id,
         type:               "issue_comment",
