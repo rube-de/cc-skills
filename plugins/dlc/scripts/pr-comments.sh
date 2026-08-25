@@ -65,6 +65,13 @@ fi
 _tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
 trap 'rm -rf "$_tmpdir"' EXIT
 
+# --- viewer detection ------------------------------------------------------
+
+if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
+  die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
+fi
+[ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
+
 # Safety limit: prevents infinite loops if the API returns hasNextPage
 # indefinitely. 20 pages × 50–100 nodes/page = 1000–2000 items per resource.
 MAX_PAGES=20
@@ -74,7 +81,6 @@ MAX_PAGES=20
 # Initial query — includes pageInfo for cursor-based pagination
 QUERY='
 query($owner: String!, $repo: String!, $number: Int!) {
-  viewer { login }
   repository(owner: $owner, name: $repo) {
     pullRequest(number: $number) {
       number title url headRefName state reviewDecision
@@ -300,10 +306,8 @@ done
 
 # --- jq transform ----------------------------------------------------------
 
-jq --arg owner "$OWNER" --arg repo "$REPO" '
+jq --arg owner "$OWNER" --arg repo "$REPO" --arg viewer "$VIEWER" '
   .data.repository.pullRequest as $pr |
-  (.data.viewer.login // "unknown") as $viewer |
-
   # Extract PR author for has_author_reply detection
   ($pr.author.login // "unknown") as $pr_author |
   # Extract review bodies (top-level PR review comments, e.g. bot summaries)
@@ -371,8 +375,8 @@ jq --arg owner "$OWNER" --arg repo "$REPO" '
     select(
       .author != $pr_author and
       (
-        ((.author == $viewer or .author == "github-actions[bot]" or .author == "github-actions") and
-         (.body | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$"))) | not
+        ((($viewer != "" and .author == $viewer) or .author == "github-actions[bot]" or .author == "github-actions") and
+         (.body | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$"))) | not
       )
     )
   ] as $reviewer_issue_comments |

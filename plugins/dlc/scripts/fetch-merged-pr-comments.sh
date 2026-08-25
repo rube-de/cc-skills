@@ -130,7 +130,17 @@ else
   REPO=$(printf '%s\n' "$_repo_json" | jq -r '.name')
 fi
 [ -n "$OWNER" ] && [ -n "$REPO" ] || die_json "Could not parse owner/repo" "REPO_PARSE"
-VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>/dev/null) || die_json "Failed to fetch authenticated viewer login" "VIEWER_FETCH"
+
+# --- temp files ------------------------------------------------------------
+
+_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/fetch-merged-pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
+trap 'rm -rf "$_tmpdir"' EXIT
+
+# --- viewer detection ------------------------------------------------------
+
+if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
+  die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
+fi
 [ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
 
 # --- compute cutoff date (BSD + GNU date compatible) -----------------------
@@ -138,11 +148,6 @@ VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.lo
 CUTOFF_DATE=$(date -u -v-"${LOOKBACK_DAYS}"d +%Y-%m-%d 2>/dev/null \
   || date -u --date="${LOOKBACK_DAYS} days ago" +%Y-%m-%d 2>/dev/null) \
   || die_json "Failed to compute cutoff date" "DATE_FAIL"
-
-# --- temp files ------------------------------------------------------------
-
-_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/fetch-merged-pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
-trap 'rm -rf "$_tmpdir"' EXIT
 
 # --- list merged PRs in window ---------------------------------------------
 #
@@ -389,9 +394,9 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       select((.author.login // "ghost") != $pr_author) |
       select(
         (
-          (($viewer != "" and (.author.login // "") == $viewer) or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))) and
-          ((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$"))
-        ) | not
+          ((($viewer != "" and (.author.login // "") == $viewer) or (.author.login // "") == "github-actions[bot]" or (.author.login // "") == "github-actions") and
+          ((.body // "") | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$"))) | not
+        )
       ) |
       {
         id:                 .id,

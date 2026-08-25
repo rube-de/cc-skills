@@ -1023,7 +1023,7 @@ GitHub's `pullRequest.comments` (issue comments) is a flat list with no `in_repl
 
 **Bad pattern**: Detecting prior DLC replies by matching body text prefixes against a flat comment array — coincidental matches cause false positives; DLC's own replies create ghost reviewers.
 
-**Good pattern**: Embed a `<!-- dlc-reply:{database_id} -->` HTML comment sentinel in every DLC reply body. On re-runs, the script filters authentic sentinel-bearing replies (authored by PR author, viewer actor, or CI bot) from the reviewer inventory, and the skill matches by author + `database_id` for reliable "already replied" detection, preventing raw substring forgeability by third-party reviewer comments.
+**Good pattern**: Embed a `<!-- dlc-reply:{database_id} -->` HTML comment sentinel in every DLC reply body. On re-runs, the script filters authentic sentinel-bearing replies (authored by viewer actor or CI bot) from the reviewer inventory, and the skill matches by author (`PR_VIEWER` or CI actor) + `database_id` for reliable "already replied" detection, preventing raw substring forgeability by third-party reviewer or PR author comments.
 
 > Source: [PR #167](https://github.com/rube-de/cc-skills/pull/167), [Issue #243](https://github.com/rube-de/cc-skills/issues/243) — `claude[bot]` identified the re-ingestion bug; #243 hardened against sentinel forgery via unauthenticated substring scan.
 
