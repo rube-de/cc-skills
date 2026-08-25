@@ -130,7 +130,8 @@ else
   REPO=$(printf '%s\n' "$_repo_json" | jq -r '.name')
 fi
 [ -n "$OWNER" ] && [ -n "$REPO" ] || die_json "Could not parse owner/repo" "REPO_PARSE"
-VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>/dev/null || echo "")
+VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>/dev/null) || die_json "Failed to fetch authenticated viewer login" "VIEWER_FETCH"
+[ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
 
 # --- compute cutoff date (BSD + GNU date compatible) -----------------------
 
@@ -388,7 +389,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       select((.author.login // "ghost") != $pr_author) |
       select(
         (
-          ((.author.login // "") == $viewer or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))) and
+          (($viewer != "" and (.author.login // "") == $viewer) or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))) and
           ((.body // "") | test("(^|\\n)<!--\\s*dlc-reply:[0-9]+\\s*-->\\s*$"))
         ) | not
       ) |
