@@ -1,3 +1,10 @@
+# [2.13.0](https://github.com/rube-de/cc-skills/compare/v2.12.4...v2.13.0) (2026-08-27)
+
+
+### Features
+
+* **ci-review:** add Copilot-style verdict headings and sentinel verification ([7677011](https://github.com/rube-de/cc-skills/commit/7677011255170368338a47405fc03131c9dca690))
+
 ## [2.12.4](https://github.com/rube-de/cc-skills/compare/v2.12.3...v2.12.4) (2026-08-27)
 
 
