@@ -119,9 +119,9 @@ jobs:
             # a gh or jq failure nonzero so the caller can distinguish transport
             # errors from a verified zero.
             posted=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/pulls/$PR/reviews" \
-              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .submitted_at > $started and ((.body // "") | startswith("## CI Review")))] | length') || return 2
+              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .submitted_at > $started and ((.body // "") | startswith("<!-- ci-review -->")))] | length') || return 2
             comments=$(gh api --paginate --slurp "repos/$GITHUB_REPOSITORY/issues/$PR/comments" \
-              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .created_at > $started and ((.body // "") | startswith("## CI Review")))] | length') || return 2
+              | jq --arg started "$STARTED" '[.[][] | select(.user.login == "github-actions[bot]" and .created_at > $started and ((.body // "") | startswith("<!-- ci-review -->")))] | length') || return 2
             echo $((posted + comments))
           }
           API_FAILS=0

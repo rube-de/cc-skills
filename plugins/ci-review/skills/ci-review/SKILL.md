@@ -65,7 +65,7 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - Only post **actionable** inline comments — no confirmations, no "looks good"
 - Do not repeat correctly addressed items
 - If no inline comments, write `"comments": []` in the Step 6 payload file
-- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile).
+- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (first line `<!-- ci-review -->`, `### ✅ Approval recommended` heading, "No actionable issues found. Reviewed N files across M changed lines.", profile).
 - **Posting is deterministic via `post-review.sh`**: Step 6 writes `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`, and Step 7 executes `post-review.sh` to handle payload submission, retry logic, and fallback posting automatically. Never skip Step 7.
 ## Timing Logs
 
@@ -353,6 +353,8 @@ A single generic signal (severity tag alone or type keyword alone) is NOT suffic
 - String matching is case-insensitive
 
 Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
+
+Record the severity counts of findings that survived the confidence + severity filters **before** this dedup pass as `VERDICT_COUNTS` — Step 6 derives the review verdict from them, so dedup-suppressed findings still influence the verdict.
 After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
 
 ```bash
@@ -388,53 +390,67 @@ date +%s   # remember this epoch for the phase-end call
 | comment-analyzer | comment-accuracy |
 | type-analyzer | type-design |
 
+
+**Determine the verdict.** Derive the review verdict from `VERDICT_COUNTS` (post-confidence, post-severity-filter findings before dedup):
+
+| Condition (on `VERDICT_COUNTS`) | Verdict heading |
+|---|---|
+| ≥1 `critical` | `### 🚨 Blocker found` |
+| ≥1 `high` | `### ⚠️ Changes recommended` |
+| ≥1 `medium` or `low` | `### 👀 Needs a closer look` |
+| none | `### ✅ Approval recommended` |
+
 You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
-- **For clean runs with zero findings (findings == 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
-  ```bash
-  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
-  ## CI Review
+- **For clean runs with zero findings (total findings surviving confidence & severity filters == 0 / all counts in `VERDICT_COUNTS` are 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
+```bash
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+<!-- ci-review -->
+### ✅ Approval recommended
 
-  No actionable issues found. Reviewed <N> files across <M> changed lines.
+No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-  **Profile**: <profile>
-  EOF
+**CI Review** · **Profile**: <profile>
+EOF
 
-  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
-  []
-  EOF
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+[]
+EOF
 
-  jq -n \
-    --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
-    --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
-    '{body: $body, comments: ($comments[0] // [])}' \
-    > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+jq -n \
+  --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+  --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+  '{body: $body, comments: ($comments[0] // [])}' \
+  > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 
-  echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-  echo "::endgroup::"
-  ```
+echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+echo "::endgroup::"
+```
 
-- **For runs with surviving findings (findings > 0)**:
-  1. **Determine inline eligibility**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
-  2. **Build inline comment objects** in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`, then encode with `jq`:
-     ```bash
-     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
-     <REVIEW_BODY>
-     EOF
+- **For runs with findings (total findings surviving confidence & severity filters > 0 / at least one severity count in `VERDICT_COUNTS` > 0)**:
+  1. **Determine inline eligibility**: Check if each surviving finding (after dedup) appears in the PR diff and its `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
+  2. **Build payload files and encode**:
+     - **If all findings were excluded by dedup (posted findings == 0)**: write `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 edge case using the severity-derived verdict heading and the all-deduplicated verdict paragraph (`All <N> findings were already flagged in existing comments — nothing new posted.`), and write `[]` to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`.
+     - **Otherwise (posted findings > 0)**: write inline comment objects to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 — first line `<!-- ci-review -->`, then the verdict heading and verdict paragraph — to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`.
+     - **Encode with jq** (required for both cases above before Step 7):
+```bash
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+<REVIEW_BODY>
+EOF
 
-     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
-     [ ...inline comments... ]
-     EOF
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+[ ...inline comments... ]
+EOF
 
-     jq -n \
-       --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
-       --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
-       '{body: $body, comments: ($comments[0] // [])}' \
-       > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+jq -n \
+  --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+  --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+  '{body: $body, comments: ($comments[0] // [])}' \
+  > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 
-     echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-     echo "::endgroup::"
-     ```
+echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+echo "::endgroup::"
+```
 
 ### Step 7: Post Review
 
@@ -470,6 +486,7 @@ Print the summary for the CI log:
 ```
 CI Review complete for PR #N
 Profile: single|lean|full|agent
+Verdict: <emoji> <text>
 Agents: N launched, N completed [, N failed]
 Raw findings: N collected
 After confidence scoring (≥65): N survived

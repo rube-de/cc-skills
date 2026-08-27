@@ -5,7 +5,7 @@
 #
 # Accepts a JSON payload containing:
 #   {
-#     "body": "## CI Review\n...",
+#     "body": "<!-- ci-review -->\n### ⚠️ Changes recommended\n...",
 #     "comments": [
 #       { "path": "src/foo.ts", "line": 10, "side": "RIGHT", "body": "..." }
 #     ]
@@ -146,13 +146,18 @@ fi
 
 # Extract or construct review body
 jq -r '
-  if .body and (.body | type == "string") and (.body | length > 0) then
-    .body
-  elif .summary and (.summary | type == "string") then
-    "## CI Review\n\n" + .summary
-  else
-    "## CI Review\n\nNo actionable issues found."
-  end
+  ( if .body and (.body | type == "string") and (.body | test("[^ \t\r\n]")) then
+      .body
+    elif .summary and (.summary | type == "string") and (.summary | test("[^ \t\r\n]")) then
+      .summary
+    elif .comments and (.comments | type == "array") and (.comments | length > 0) then
+      "## CI Review"
+    else
+      "## CI Review\n\nNo actionable issues found."
+    end )
+  | sub("^[ \t\r\n]*<!-- ci-review -->[ \t]*\n*"; "")
+  | sub("^[ \t\r\n]*"; "")
+  | "<!-- ci-review -->\n" + .
 ' "$RAW_PAYLOAD_FILE" > "$_tmpdir/body.md"
 
 # Extract comments array (ensuring valid structure and safe line parsing)
