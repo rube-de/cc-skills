@@ -49,16 +49,26 @@ Where:
 
 The review body is the summary posted at the top of the review.
 
+### Verdict Model
+
+The verdict is computed from findings that survive the **confidence filter (≥65) and severity filter**, i.e. **before** the existing-comment dedup pass. Dedup only suppresses duplicate comment posting; the verdict reflects the PR's actual state:
+
+| Condition (on post-filter findings) | Verdict heading |
+|---|---|
+| ≥1 `critical` | `### 🚨 Blocker found` |
+| ≥1 `high` | `### ⚠️ Changes recommended` |
+| ≥1 `medium` or `low` | `### 👀 Needs a closer look` |
+| none | `### ✅ Approval recommended` |
+
 ### With Findings
 
 ```markdown
-## CI Review
+<!-- ci-review -->
+### <verdict emoji> <verdict text>
 
-**Profile**: <single|lean|full|agent> | **Findings**: <total> (<N> critical, <N> high, <N> medium, <N> low)
+<1–2 sentence verdict paragraph: name the most important finding(s) and why they matter — not a generic "issues were found">
 
-### Summary
-
-<2-3 sentence overview of the review — what was checked, key themes>
+**CI Review** · **Profile**: <single|lean|full|agent> | **Findings**: <total> (<N> critical, <N> high, <N> medium, <N> low)<if EXISTING_DEDUP_COUNT > 0: append " | **Already flagged**: <EXISTING_DEDUP_COUNT> (not re-posted)">
 
 ### Findings Not in Diff
 
@@ -69,14 +79,19 @@ The review body is the summary posted at the top of the review.
   - `Found by: <agent-name>`
 ```
 
+*Note:* The `### Findings Not in Diff` section is omitted when there are no body-only findings.
+
+*Edge case (all findings already commented):* When all surviving findings are excluded by existing-comment dedup (posted findings == 0 but verdict ≠ ✅), keep the severity-derived verdict, set `"comments": []`, and use this verdict paragraph: `All <N> findings were already flagged in existing comments — nothing new posted.` (with no `### Findings Not in Diff` section).
+
 ### No Findings
 
 ```markdown
-## CI Review
+<!-- ci-review -->
+### ✅ Approval recommended
 
 No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-**Profile**: <single|lean|full|agent>
+**CI Review** · **Profile**: <single|lean|full|agent>
 ```
 
 ## 4. Construct the JSON Payload
@@ -84,8 +99,7 @@ No actionable issues found. Reviewed <N> files across <M> changed lines.
 Write the review payload as a structured JSON file (e.g. `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`):
 
 ```json
-{
-  "body": "## CI Review\n\n**Profile**: lean | **Findings**: 2 (0 critical, 1 high, 1 medium, 0 low)\n\n### Summary\n...",
+  "body": "<!-- ci-review -->\n### ⚠️ Changes recommended\n\nPotential SQL injection in user query handler.\n\n**CI Review** · **Profile**: lean | **Findings**: 2 (0 critical, 1 high, 1 medium, 0 low)\n...",
   "comments": [
     {
       "path": "src/api.ts",
@@ -101,7 +115,7 @@ If there are no inline comments (or zero findings), set `"comments": []`:
 
 ```json
 {
-  "body": "## CI Review\n\nNo actionable issues found. Reviewed 3 files across 45 changed lines.\n\n**Profile**: lean",
+  "body": "<!-- ci-review -->\n### ✅ Approval recommended\n\nNo actionable issues found. Reviewed 3 files across 45 changed lines.\n\n**CI Review** · **Profile**: lean",
   "comments": []
 }
 ```

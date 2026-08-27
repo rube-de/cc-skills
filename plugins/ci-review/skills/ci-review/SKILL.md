@@ -65,7 +65,7 @@ These rules are critical. They are also detailed in REVIEW-POSTING.md but inline
 - Only post **actionable** inline comments — no confirmations, no "looks good"
 - Do not repeat correctly addressed items
 - If no inline comments, write `"comments": []` in the Step 6 payload file
-- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (`## CI Review` header, "No actionable issues found. Reviewed N files across M changed lines.", profile).
+- **Always post — even with zero findings.** A clean review still requires a body-only review using the exact "No Findings" template from [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 (first line `<!-- ci-review -->`, `### ✅ Approval recommended` heading, "No actionable issues found. Reviewed N files across M changed lines.", profile).
 - **Posting is deterministic via `post-review.sh`**: Step 6 writes `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`, and Step 7 executes `post-review.sh` to handle payload submission, retry logic, and fallback posting automatically. Never skip Step 7.
 ## Timing Logs
 
@@ -353,6 +353,8 @@ A single generic signal (severity tag alone or type keyword alone) is NOT suffic
 - String matching is case-insensitive
 
 Track the count of findings excluded by this pass as `EXISTING_DEDUP_COUNT`.
+
+Record the severity counts of findings that survived the confidence + severity filters **before** this dedup pass as `VERDICT_COUNTS` — Step 6 derives the review verdict from them, so dedup-suppressed findings still influence the verdict.
 After all scorers have returned and filtering/deduplication is complete, emit the Step-5 phase-end marker:
 
 ```bash
@@ -388,16 +390,26 @@ date +%s   # remember this epoch for the phase-end call
 | comment-analyzer | comment-accuracy |
 | type-analyzer | type-design |
 
+
+**Determine the verdict.** Derive the review verdict from `VERDICT_COUNTS` (post-confidence, post-severity-filter findings before dedup):
+
+| Condition (on `VERDICT_COUNTS`) | Verdict heading |
+|---|---|
+| ≥1 `critical` | `### 🚨 Blocker found` |
+| ≥1 `high` | `### ⚠️ Changes recommended` |
+| ≥1 `medium` or `low` | `### 👀 Needs a closer look` |
+| none | `### ✅ Approval recommended` |
 You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
 - **For clean runs with zero findings (findings == 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
   ```bash
   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
-  ## CI Review
+  <!-- ci-review -->
+  ### ✅ Approval recommended
 
   No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-  **Profile**: <profile>
+  **CI Review** · **Profile**: <profile>
   EOF
 
   cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
@@ -416,7 +428,7 @@ You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/
 
 - **For runs with surviving findings (findings > 0)**:
   1. **Determine inline eligibility**: Check if the finding's `file` appears in the PR diff and the `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
-  2. **Build inline comment objects** in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`, then encode with `jq`:
+  2. **Build inline comment objects** in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 — first line `<!-- ci-review -->`, then the verdict heading and verdict paragraph — in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`, then encode with `jq`:
      ```bash
      cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
      <REVIEW_BODY>
@@ -470,6 +482,7 @@ Print the summary for the CI log:
 ```
 CI Review complete for PR #N
 Profile: single|lean|full|agent
+Verdict: <emoji> <text>
 Agents: N launched, N completed [, N failed]
 Raw findings: N collected
 After confidence scoring (≥65): N survived
