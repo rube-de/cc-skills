@@ -146,9 +146,9 @@ fi
 
 # Extract or construct review body
 jq -r '
-  ( if .body and (.body | type == "string") and (.body | length > 0) then
+  ( if .body and (.body | type == "string") and (.body | test("[^ \t\r\n]")) then
       .body
-    elif .summary and (.summary | type == "string") then
+    elif .summary and (.summary | type == "string") and (.summary | test("[^ \t\r\n]")) then
       "## CI Review\n\n" + .summary
     elif .comments and (.comments | type == "array") and (.comments | length > 0) then
       "## CI Review"
