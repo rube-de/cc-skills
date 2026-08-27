@@ -149,7 +149,7 @@ jq -r '
   ( if .body and (.body | type == "string") and (.body | test("[^ \t\r\n]")) then
       .body
     elif .summary and (.summary | type == "string") and (.summary | test("[^ \t\r\n]")) then
-      "## CI Review\n\n" + .summary
+      .summary
     elif .comments and (.comments | type == "array") and (.comments | length > 0) then
       "## CI Review"
     else
