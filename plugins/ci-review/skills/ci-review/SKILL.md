@@ -429,9 +429,10 @@ echo "::endgroup::"
 
 - **For runs with findings (VERDICT_COUNTS > 0)**:
   1. **Determine inline eligibility**: Check if each surviving finding (after dedup) appears in the PR diff and its `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
-  2. **Build payload**:
-     - **If all findings were excluded by dedup (posted findings == 0)**: construct `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 edge case using the severity-derived verdict heading and the all-deduplicated verdict paragraph (`All <N> findings were already flagged in existing comments — nothing new posted.`), and set `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` to `[]`.
-     - **Otherwise (posted findings > 0)**: build inline comment objects in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 — first line `<!-- ci-review -->`, then the verdict heading and verdict paragraph — in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`. Then encode with `jq`:
+  2. **Build payload files and encode**:
+     - **If all findings were excluded by dedup (posted findings == 0)**: write `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 edge case using the severity-derived verdict heading and the all-deduplicated verdict paragraph (`All <N> findings were already flagged in existing comments — nothing new posted.`), and write `[]` to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`.
+     - **Otherwise (posted findings > 0)**: write inline comment objects to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 — first line `<!-- ci-review -->`, then the verdict heading and verdict paragraph — to `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`.
+     - **Encode with jq** (required for both cases above before Step 7):
 ```bash
 cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
 <REVIEW_BODY>
