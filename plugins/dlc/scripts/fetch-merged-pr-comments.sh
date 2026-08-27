@@ -131,16 +131,27 @@ else
 fi
 [ -n "$OWNER" ] && [ -n "$REPO" ] || die_json "Could not parse owner/repo" "REPO_PARSE"
 
+# --- temp files ------------------------------------------------------------
+
+_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/fetch-merged-pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
+trap 'rm -rf "$_tmpdir"' EXIT
+# --- viewer detection ------------------------------------------------------
+
+fetch_viewer() {
+  if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q '.data.viewer.login // empty' 2>"$_tmpdir/viewer_err.txt"); then
+    die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
+  fi
+  if [ -z "$VIEWER" ] || [ "$VIEWER" = "null" ]; then
+    die_json "Authenticated viewer login is empty or null" "VIEWER_EMPTY"
+  fi
+}
+
+fetch_viewer
 # --- compute cutoff date (BSD + GNU date compatible) -----------------------
 
 CUTOFF_DATE=$(date -u -v-"${LOOKBACK_DAYS}"d +%Y-%m-%d 2>/dev/null \
   || date -u --date="${LOOKBACK_DAYS} days ago" +%Y-%m-%d 2>/dev/null) \
   || die_json "Failed to compute cutoff date" "DATE_FAIL"
-
-# --- temp files ------------------------------------------------------------
-
-_tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/fetch-merged-pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
-trap 'rm -rf "$_tmpdir"' EXIT
 
 # --- list merged PRs in window ---------------------------------------------
 #
@@ -290,7 +301,12 @@ while [ "$_idx" -lt "$_pr_count" ]; do
   #   3. Per comment: marks is_bot (author.__typename == "Bot"), detects severity from body,
   #      and stamps resolved_by_commit when ≥1 PR-author commit landed AFTER the comment.
 
-  jq '
+  jq --arg viewer "$VIEWER" '
+    # Authentic DLC sentinel reply: trailing <!-- dlc-reply:{id} --> authored by executing actor or CI bot
+    def is_authentic_dlc_reply($v; $author; $body):
+      ((($v != "" and $author == $v) or $author == "github-actions[bot]" or $author == "github-actions") and
+       (($body // "") | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$")));
+
     .data.repository.pullRequest as $pr |
     ($pr.author.login // "ghost") as $pr_author |
 
@@ -343,18 +359,16 @@ while [ "$_idx" -lt "$_pr_count" ]; do
 
     # Threads → per-comment entries. Iterate all non-author comments per
     # thread so reviewer follow-ups (not just the root) reach clustering.
-    # Filter PR-author comments and DLC reply sentinels with the same rules
-    # used by the review-bodies and issue-comments blocks below.
+    # Exclude PR-author comments — they carry author response, not reviewer signal.
     [ $pr.reviewThreads.nodes[] as $thread |
       $thread.comments.nodes[] |
       . as $c |
       select(($c.author.login // "ghost") != $pr_author) |
-      select(($c.body // "") | contains("<!-- dlc-reply:") | not) |
       {
         id:                 ($c.id // $thread.id),
         type:               "thread",
         author:             ($c.author.login // "ghost"),
-        is_bot:             (($c.author.__typename // "") == "Bot"),
+        is_bot:             ((($c.author.__typename // "") == "Bot") or ((($c.author.login // "") | test("(\\[bot\\]$|^github-actions$)")))),
         body:               (($c.body // "") | .[0:2000]),
         path:               $thread.path,
         line:               $thread.line,
@@ -364,18 +378,15 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $thread_comments |
 
-    # Review bodies → comments[]. Exclude PR-author review bodies and DLC
-    # reply sentinels — same rule as issue comments below; neither carries
-    # reviewer signal.
+    # Review bodies → comments[]. Exclude PR-author review bodies.
     [ $pr.reviews.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(.body | contains("<!-- dlc-reply:") | not) |
       {
         id:                 .id,
         type:               "review_body",
         author:             (.author.login // "ghost"),
-        is_bot:             ((.author.__typename // "") == "Bot"),
+        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))),
         body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
@@ -385,17 +396,17 @@ while [ "$_idx" -lt "$_pr_count" ]; do
       }
     ] as $review_bodies |
 
-    # Issue comments → comments[]. Exclude PR-author comments and DLC reply
-    # sentinels — neither carries reviewer signal.
+    # Issue comments → comments[]. Exclude PR-author comments and authentic DLC reply
+    # sentinels (authored by executing viewer or CI bot) — neither carries reviewer signal.
     [ $pr.comments.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(.body | contains("<!-- dlc-reply:") | not) |
+      select((is_authentic_dlc_reply($viewer; (.author.login // ""); .body) | not)) |
       {
         id:                 .id,
         type:               "issue_comment",
         author:             (.author.login // "ghost"),
-        is_bot:             ((.author.__typename // "") == "Bot"),
+        is_bot:             ((.author.__typename // "") == "Bot" or ((.author.login // "") | test("(\\[bot\\]$|^github-actions$)"))),
         body:               (.body | .[0:2000]),
         path:               null,
         line:               null,
