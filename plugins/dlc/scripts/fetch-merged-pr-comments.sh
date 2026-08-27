@@ -138,10 +138,12 @@ trap 'rm -rf "$_tmpdir"' EXIT
 # --- viewer detection ------------------------------------------------------
 
 fetch_viewer() {
-  if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
+  if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q '.data.viewer.login // empty' 2>"$_tmpdir/viewer_err.txt"); then
     die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
   fi
-  [ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
+  if [ -z "$VIEWER" ] || [ "$VIEWER" = "null" ]; then
+    die_json "Authenticated viewer login is empty or null" "VIEWER_EMPTY"
+  fi
 }
 
 fetch_viewer
