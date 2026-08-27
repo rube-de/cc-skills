@@ -99,6 +99,7 @@ No actionable issues found. Reviewed <N> files across <M> changed lines.
 Write the review payload as a structured JSON file (e.g. `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`):
 
 ```json
+{
   "body": "<!-- ci-review -->\n### ⚠️ Changes recommended\n\nPotential SQL injection in user query handler.\n\n**CI Review** · **Profile**: lean | **Findings**: 2 (0 critical, 1 high, 1 medium, 0 low)\n...",
   "comments": [
     {

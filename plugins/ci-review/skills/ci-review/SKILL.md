@@ -399,6 +399,7 @@ date +%s   # remember this epoch for the phase-end call
 | ≥1 `high` | `### ⚠️ Changes recommended` |
 | ≥1 `medium` or `low` | `### 👀 Needs a closer look` |
 | none | `### ✅ Approval recommended` |
+
 You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
 - **For clean runs with zero findings (findings == 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
