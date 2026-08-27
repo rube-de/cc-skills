@@ -402,7 +402,7 @@ date +%s   # remember this epoch for the phase-end call
 
 You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
-- **For clean runs with zero findings (VERDICT_COUNTS empty / no findings surviving confidence & severity filters)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
+- **For clean runs with zero findings (total findings surviving confidence & severity filters == 0 / all counts in `VERDICT_COUNTS` are 0)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
 ```bash
 cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
 <!-- ci-review -->
@@ -427,7 +427,7 @@ echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
 echo "::endgroup::"
 ```
 
-- **For runs with findings (VERDICT_COUNTS > 0)**:
+- **For runs with findings (total findings surviving confidence & severity filters > 0 / at least one severity count in `VERDICT_COUNTS` > 0)**:
   1. **Determine inline eligibility**: Check if each surviving finding (after dedup) appears in the PR diff and its `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
   2. **Build payload files and encode**:
      - **If all findings were excluded by dedup (posted findings == 0)**: write `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 edge case using the severity-derived verdict heading and the all-deduplicated verdict paragraph (`All <N> findings were already flagged in existing comments — nothing new posted.`), and write `[]` to `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json`.
