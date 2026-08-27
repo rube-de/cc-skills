@@ -154,12 +154,10 @@ jq -r '
       "## CI Review"
     else
       "## CI Review\n\nNo actionable issues found."
-    end ) as $b
-  | if ($b | test("^[ \t\r\n]*<!-- ci-review -->")) then
-      ($b | sub("^[ \t\r\n]*"; ""))
-    else
-      "<!-- ci-review -->\n" + ($b | sub("^[ \t\r\n]*"; ""))
-    end
+    end )
+  | sub("^[ \t\r\n]*<!-- ci-review -->[ \t]*\n*"; "")
+  | sub("^[ \t\r\n]*"; "")
+  | "<!-- ci-review -->\n" + .
 ' "$RAW_PAYLOAD_FILE" > "$_tmpdir/body.md"
 
 # Extract comments array (ensuring valid structure and safe line parsing)
