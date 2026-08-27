@@ -1,3 +1,10 @@
+## [2.12.4](https://github.com/rube-de/cc-skills/compare/v2.12.3...v2.12.4) (2026-08-27)
+
+
+### Bug Fixes
+
+* **dlc:** prevent sentinel detection forgery in pr-check ([#259](https://github.com/rube-de/cc-skills/issues/259)) ([9b3524f](https://github.com/rube-de/cc-skills/commit/9b3524f21818c26fde04362818dfe1e8bda3b76b))
+
 ## [2.12.3](https://github.com/rube-de/cc-skills/compare/v2.12.2...v2.12.3) (2026-08-24)
 
 
