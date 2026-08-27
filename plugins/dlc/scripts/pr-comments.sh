@@ -67,11 +67,14 @@ trap 'rm -rf "$_tmpdir"' EXIT
 
 # --- viewer detection ------------------------------------------------------
 
-if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
-  die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
-fi
-[ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
+fetch_viewer() {
+  if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
+    die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
+  fi
+  [ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
+}
 
+fetch_viewer
 # Safety limit: prevents infinite loops if the API returns hasNextPage
 # indefinitely. 20 pages × 50–100 nodes/page = 1000–2000 items per resource.
 MAX_PAGES=20
@@ -307,10 +310,14 @@ done
 # --- jq transform ----------------------------------------------------------
 
 jq --arg owner "$OWNER" --arg repo "$REPO" --arg viewer "$VIEWER" '
+  # Authentic DLC sentinel reply: trailing <!-- dlc-reply:{id} --> authored by executing actor or CI bot
+  def is_authentic_dlc_reply($v; $author; $body):
+    ((($v != "" and $author == $v) or $author == "github-actions[bot]" or $author == "github-actions") and
+     (($body // "") | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$")));
+
   .data.repository.pullRequest as $pr |
   # Extract PR author for has_author_reply detection
   ($pr.author.login // "unknown") as $pr_author |
-  # Extract review bodies (top-level PR review comments, e.g. bot summaries)
   [ $pr.reviews.nodes[] |
     select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
     {
@@ -374,10 +381,7 @@ jq --arg owner "$OWNER" --arg repo "$REPO" --arg viewer "$VIEWER" '
   [ $issue_comments[] |
     select(
       .author != $pr_author and
-      (
-        ((($viewer != "" and .author == $viewer) or .author == "github-actions[bot]" or .author == "github-actions") and
-         (.body | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$"))) | not
-      )
+      (is_authentic_dlc_reply($viewer; .author; .body) | not)
     )
   ] as $reviewer_issue_comments |
 

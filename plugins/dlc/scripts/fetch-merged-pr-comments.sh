@@ -135,14 +135,16 @@ fi
 
 _tmpdir=$(mktemp -d "${TMPDIR:-/tmp}/fetch-merged-pr-comments.XXXXXX") || die_json "Failed to create temporary directory" "TMPDIR_CREATE"
 trap 'rm -rf "$_tmpdir"' EXIT
-
 # --- viewer detection ------------------------------------------------------
 
-if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
-  die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
-fi
-[ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
+fetch_viewer() {
+  if ! VIEWER=$(gh api graphql -f query='query { viewer { login } }' -q .data.viewer.login 2>"$_tmpdir/viewer_err.txt"); then
+    die_json "Failed to fetch authenticated viewer login: $(tr '"' "'" < "$_tmpdir/viewer_err.txt")" "VIEWER_FETCH"
+  fi
+  [ -n "$VIEWER" ] || die_json "Authenticated viewer login is empty" "VIEWER_EMPTY"
+}
 
+fetch_viewer
 # --- compute cutoff date (BSD + GNU date compatible) -----------------------
 
 CUTOFF_DATE=$(date -u -v-"${LOOKBACK_DAYS}"d +%Y-%m-%d 2>/dev/null \
@@ -298,6 +300,11 @@ while [ "$_idx" -lt "$_pr_count" ]; do
   #      and stamps resolved_by_commit when ≥1 PR-author commit landed AFTER the comment.
 
   jq --arg viewer "$VIEWER" '
+    # Authentic DLC sentinel reply: trailing <!-- dlc-reply:{id} --> authored by executing actor or CI bot
+    def is_authentic_dlc_reply($v; $author; $body):
+      ((($v != "" and $author == $v) or $author == "github-actions[bot]" or $author == "github-actions") and
+       (($body // "") | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$")));
+
     .data.repository.pullRequest as $pr |
     ($pr.author.login // "ghost") as $pr_author |
 
@@ -392,12 +399,7 @@ while [ "$_idx" -lt "$_pr_count" ]; do
     [ $pr.comments.nodes[] |
       select(.body != null and (.body | gsub("\\s"; "") | length > 0)) |
       select((.author.login // "ghost") != $pr_author) |
-      select(
-        (
-          ((($viewer != "" and (.author.login // "") == $viewer) or (.author.login // "") == "github-actions[bot]" or (.author.login // "") == "github-actions") and
-          ((.body // "") | test("(^|\n)<!--[[:space:]]*dlc-reply:[0-9]+[[:space:]]*-->[[:space:]]*$"))) | not
-        )
-      ) |
+      select((is_authentic_dlc_reply($viewer; (.author.login // ""); .body) | not)) |
       {
         id:                 .id,
         type:               "issue_comment",
