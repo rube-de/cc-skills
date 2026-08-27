@@ -403,53 +403,53 @@ date +%s   # remember this epoch for the phase-end call
 You MUST execute the `Bash` tool to construct the payload file `${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json`:
 
 - **For clean runs with zero findings (VERDICT_COUNTS empty / no findings surviving confidence & severity filters)**, substitute the actual values into `<PR#>`, `<N>` (files), `<M>` (lines), and `<profile>`, and execute this Bash command:
-  ```bash
-  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
-  <!-- ci-review -->
-  ### ✅ Approval recommended
+```bash
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+<!-- ci-review -->
+### ✅ Approval recommended
 
-  No actionable issues found. Reviewed <N> files across <M> changed lines.
+No actionable issues found. Reviewed <N> files across <M> changed lines.
 
-  **CI Review** · **Profile**: <profile>
-  EOF
+**CI Review** · **Profile**: <profile>
+EOF
 
-  cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
-  []
-  EOF
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+[]
+EOF
 
-  jq -n \
-    --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
-    --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
-    '{body: $body, comments: ($comments[0] // [])}' \
-    > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+jq -n \
+  --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+  --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+  '{body: $body, comments: ($comments[0] // [])}' \
+  > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 
-  echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-  echo "::endgroup::"
-  ```
+echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+echo "::endgroup::"
+```
 
 - **For runs with findings (VERDICT_COUNTS > 0)**:
   1. **Determine inline eligibility**: Check if each surviving finding (after dedup) appears in the PR diff and its `line` is in a changed hunk. If yes → inline comment. If no → body-only finding.
   2. **Build payload**:
      - **If all findings were excluded by dedup (posted findings == 0)**: construct `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md` per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 edge case using the severity-derived verdict heading and the all-deduplicated verdict paragraph (`All <N> findings were already flagged in existing comments — nothing new posted.`), and set `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` to `[]`.
      - **Otherwise (posted findings > 0)**: build inline comment objects in `${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json` and review body per [REVIEW-POSTING.md](references/REVIEW-POSTING.md) §3 — first line `<!-- ci-review -->`, then the verdict heading and verdict paragraph — in `${TMPDIR:-/tmp}/ci-review-body-<PR#>.md`. Then encode with `jq`:
-     ```bash
-     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
-     <REVIEW_BODY>
-     EOF
+```bash
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md"
+<REVIEW_BODY>
+EOF
 
-     cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
-     [ ...inline comments... ]
-     EOF
+cat << 'EOF' > "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json"
+[ ...inline comments... ]
+EOF
 
-     jq -n \
-       --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
-       --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
-       '{body: $body, comments: ($comments[0] // [])}' \
-       > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
+jq -n \
+  --rawfile body "${TMPDIR:-/tmp}/ci-review-body-<PR#>.md" \
+  --slurpfile comments "${TMPDIR:-/tmp}/ci-review-comments-<PR#>.json" \
+  '{body: $body, comments: ($comments[0] // [])}' \
+  > "${TMPDIR:-/tmp}/ci-review-payload-<PR#>.json"
 
-     echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
-     echo "::endgroup::"
-     ```
+echo "[ci-review] Step 6 done elapsed=$(( $(date +%s) - <STEP6_START_EPOCH> ))s"
+echo "::endgroup::"
+```
 
 ### Step 7: Post Review
 

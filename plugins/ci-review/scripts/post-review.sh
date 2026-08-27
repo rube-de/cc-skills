@@ -150,6 +150,8 @@ jq -r '
       .body
     elif .summary and (.summary | type == "string") then
       "## CI Review\n\n" + .summary
+    elif .comments and (.comments | type == "array") and (.comments | length > 0) then
+      "## CI Review"
     else
       "## CI Review\n\nNo actionable issues found."
     end ) as $b
