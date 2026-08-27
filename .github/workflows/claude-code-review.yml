@@ -103,7 +103,6 @@ jobs:
           # builds review URLs from shell variables, which prefix patterns cannot match
           claude_args: >-
             --allowedTools "Read,Grep,Glob,Agent,Bash(gh auth status:*),Bash(gh pr:*),Bash(gh repo view:*),Bash(gh api:*),Bash(sh:*),Bash(git branch:*),Bash(git rev-parse:*),Bash(git blame:*),Bash(jq:*),Bash(echo:*),Bash(cat:*),Bash(date:*)"
-          show_full_output: true
 
       - name: Verify review posted
         env:
