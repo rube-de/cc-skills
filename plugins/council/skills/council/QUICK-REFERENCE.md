@@ -107,7 +107,7 @@ Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
 
 | Agent | Model | Role |
 |-------|-------|------|
-| `council:gemini-consultant` | Gemini 3.7 Flash | Fast external perspective |
+| `council:gemini-consultant` | Gemini 3.8 Flash | Fast external perspective |
 | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
 
 **Skipped in quick mode** (only run if escalating to full council):
@@ -310,7 +310,7 @@ git diff | codex exec --sandbox read-only -c approval_policy=never "review chang
   git diff main...HEAD > "$sandbox/changes.diff"   # capture before cd
   cd "$sandbox"
 
-  omp -p --no-tools --model google-antigravity/gemini-3.7-flash "prompt @\"$sandbox/changes.diff\""
+  omp -p --no-tools --model google-antigravity/gemini-3.8-flash "prompt @\"$sandbox/changes.diff\""
   omp -p --no-tools --model zai/glm-5.3:max "prompt @\"$sandbox/changes.diff\""
   omp -p --no-tools --model kimi-code/k3 "prompt @\"$sandbox/changes.diff\""
 )
