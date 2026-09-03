@@ -1,3 +1,10 @@
+# [2.14.0](https://github.com/rube-de/cc-skills/compare/v2.13.0...v2.14.0) (2026-09-03)
+
+
+### Features
+
+* **council:** upgrade gemini consultant to gemini-3.8-flash ([#261](https://github.com/rube-de/cc-skills/issues/261)) ([9cb403e](https://github.com/rube-de/cc-skills/commit/9cb403e708fd6052528b80061abed8915c272819))
+
 # [2.13.0](https://github.com/rube-de/cc-skills/compare/v2.12.4...v2.13.0) (2026-08-27)
 
 
