@@ -108,6 +108,8 @@ When invoked without subcommands (or during first-run setup):
 6. **Ask Scope Preference**:
    - Save to current project (`.dev/council/config.json`)
    - Save globally (`~/.config/council/config.json`)
+
+7. **Save Configuration**:
    Apply user choices using `council-config.sh write <consultant> <true|false>`:
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write gemini <bool> [flags]
@@ -116,7 +118,8 @@ When invoked without subcommands (or during first-run setup):
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write kimi <bool> [flags]
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <quick_choice> [flags]
    ```
-7. **Verify & Display Summary**:
+
+8. **Verify & Display Summary**:
    Run:
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show

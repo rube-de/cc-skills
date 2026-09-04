@@ -70,7 +70,7 @@ Built-in taxonomy auto-rejects:
 | `/council plan` | Implementation plan validation |
 | `/council adversarial` | Advocates vs critics comparison |
 | `/council consensus [topic]` | Multi-round consensus building |
-| `/council quick` | Parallel triage — Gemini Flash + Claude subagent in parallel, escalates to full council if needed |
+| `/council quick` | Parallel triage — configured quick consultant (default: fastest enabled) + Claude subagent in parallel, escalates to full council if needed |
 
 ## Hooks
 
