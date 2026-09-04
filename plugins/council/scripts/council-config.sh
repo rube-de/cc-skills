@@ -13,6 +13,10 @@
 
 set -e
 
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: 'jq' is required by council-config.sh but was not found in PATH." >&2
+  exit 1
+fi
 DEFAULT_GLOBAL_PATH="${HOME}/.config/council/config.json"
 
 get_repo_root() {
@@ -43,10 +47,15 @@ resolve_read_path() {
 
   proj_path="$(get_project_path)"
   if [ -f "$proj_path" ]; then
-    echo "$proj_path"
-    return 0
+    # Security check (CWE-15): verify .dev/council/config.json is not tracked in git
+    # Only local, untracked runtime configuration is honored from repository trees
+    if command -v git >/dev/null 2>&1 && git ls-files --error-unmatch "$proj_path" >/dev/null 2>&1; then
+      echo "Security warning: $proj_path is tracked in git repository. Ignoring untrusted repo config." >&2
+    else
+      echo "$proj_path"
+      return 0
+    fi
   fi
-
   if [ -f "$DEFAULT_GLOBAL_PATH" ]; then
     echo "$DEFAULT_GLOBAL_PATH"
     return 0
@@ -385,6 +394,20 @@ cmd_get_enabled() {
     | join(" ")
   '
 }
+
+cmd_get_available() {
+  detected="$(cmd_detect --json)"
+  data="$(cmd_read "$@")"
+  available=()
+  for c in gemini codex glm kimi; do
+    en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
+    rec="$(echo "$detected" | jq -r ".${c}.recommended // false")"
+    if [ "$en" = "true" ] && [ "$rec" = "true" ]; then
+      available+=("$c")
+    fi
+  done
+  echo "${available[*]}"
+}
 cmd_set_quick() {
   val="$1"
   shift || true
@@ -630,6 +653,10 @@ case "$1" in
   get-quick)
     shift
     cmd_get_quick "$@"
+    ;;
+  get-available)
+    shift
+    cmd_get_available "$@"
     ;;
   set-subagent-backend)
     shift

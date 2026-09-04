@@ -67,7 +67,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
    - $k = 1$ ($N_{\text{enabled}} > 1$): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
    - $k / N_{\text{enabled}} \ge 0.66$ ($k > 1$): Proceed with note: "[X] consultant unavailable"
    - $k / N_{\text{enabled}} \ge 0.50$ ($k > 1$): Proceed with warning: "Limited council - only $k/$N responses"
-   - $k = 0$ ($N_{\text{enabled}} > 0$): Abort with error: "Council unavailable - all active consultants failed"
+   - $k = 0 ($N_{\text{enabled}} > 0$): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
 5. **Apply Weighted Synthesis**
    ```
    For architecture findings, weight:
@@ -505,7 +505,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
 ### Round 1: Independent Opinions
 
 ```
-Task(all consultants):
+Task(active consultants in $ENABLED_CONSULTANTS):
 "We need to decide: [decision question]
 
 Options:
@@ -521,12 +521,9 @@ Return: {choice: 'A|B|C', confidence: 0-1, reasoning: '...'}"
 ### Round 2: Cross-Examination
 
 ```
-Task(all consultants):
+Task(active consultants in $ENABLED_CONSULTANTS):
 "Round 1 results:
-- Gemini chose [X] because [reason]
-- Codex chose [Y] because [reason]
-- GLM chose [W] because [reason]
-- Kimi chose [Z] because [reason]
+[summary of choices and reasoning from active consultants]
 
 Review these perspectives:
 1. Which reasoning do you find most compelling?
@@ -542,7 +539,7 @@ Review these perspectives:
 - Disagreement is on preferences, not facts
 - More rounds won't produce new information
 ```
-Task(all consultants):
+Task(active consultants in $ENABLED_CONSULTANTS):
 "The council remains split after cross-examination.
 
 Agreement: [list]
@@ -557,13 +554,12 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 ## Consensus Result: [Topic]
 
 ### Final Recommendation: [Option X]
-- Confidence: 0.78 (3/4 agree after Round 2)
+- Confidence: [score] (≥ 2/3 agree after Round 2)
 
 ### Vote Distribution
+(Columns reflect active consultants in $ENABLED_CONSULTANTS)
 | Consultant | R1 | R2 | R3 | Final |
 |------------|----|----|----| ------|
-| Gemini | A | A | - | A |
-| Codex | B | A | - | A |
 | GLM | C | C | - | C (dissent) |
 | Kimi | A | A | - | A |
 

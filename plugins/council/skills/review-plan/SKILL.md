@@ -94,25 +94,23 @@ Resolve active consultants based on configuration and CLI availability:
 if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
   "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
 fi
-ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
+AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
+ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
 DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
-
-# Filter enabled consultants by CLI availability
-AVAILABLE_CONSULTANTS=""
-for c in $ENABLED_CONSULTANTS; do
-  case "$c" in
-    codex) command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} $c" ;;
-    gemini|glm|kimi) command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} $c" ;;
-  esac
-done
 ```
 
 **Consultant Selection**:
-- If 2 or more external consultants are available: Launch the first 2 from `$AVAILABLE_CONSULTANTS` (e.g. `gemini` and `codex`).
-- If only 1 external consultant is available: Launch that external consultant and pair with `council:claude-deep-review` (model: `$DEEP_MODEL`).
-- If 0 external consultants are available: Launch `council:claude-deep-review` (model: `$DEEP_MODEL`) and `council:claude-codebase-context` (sonnet).
+- **If 2 or more external consultants are available**: Launch the first 2 from `$AVAILABLE_CONSULTANTS` (e.g. `gemini` and `codex`).
+- **If only 1 external consultant is available**:
+  - Launch that 1 external consultant.
+  - Pair with `council:claude-deep-review` (model: `$DEEP_MODEL`) if enabled in `$ENABLED_SUBAGENTS`.
+  - Otherwise, pair with `council:claude-codebase-context` (model: `sonnet`) if enabled in `$ENABLED_SUBAGENTS`.
+- **If 0 external consultants are available**:
+  - If both `claude-deep-review` and `claude-codebase-context` are enabled in `$ENABLED_SUBAGENTS`: Launch `council:claude-deep-review` (model: `$DEEP_MODEL`) and `council:claude-codebase-context` (sonnet).
+  - If only one is enabled: Launch that single enabled subagent.
+  - If neither is enabled: Abort plan review with message: "No external consultants or Claude subagents enabled for plan review."
 
-Launch both consultants in parallel using the Task tool. Both receive the **same prompt**.
+Launch available consultants in parallel using the Task tool. Both receive the **same prompt**.
 #### Secret-Scanning Gate
 
 Before sending plan content to external consultants, check for secrets:

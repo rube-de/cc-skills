@@ -53,7 +53,7 @@ Backend: native (Task), omp, or claude-cli (configured via /council:config)
 if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
   "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
 fi
-"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli
+"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli || true
 ```
 
 Configure active consultants anytime with `/council:config` (or `/council config`).
