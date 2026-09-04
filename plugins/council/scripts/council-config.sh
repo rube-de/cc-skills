@@ -7,10 +7,18 @@
 #   council-config.sh write <consultant> <true|false> [--global]
 #   council-config.sh detect [--json]
 #   council-config.sh init [--auto] [--global]
-#   council-config.sh show
+#   council-config.sh show [--global]
 #   council-config.sh check-cli
-#   council-config.sh get-enabled
-
+#   council-config.sh get-enabled [--global]
+#   council-config.sh get-available [--global]
+#   council-config.sh get-quick [--global]
+#   council-config.sh set-quick <consultant|auto> [--global]
+#   council-config.sh get-subagent-backend [--global]
+#   council-config.sh set-subagent-backend <native|omp|claude-cli> [--global]
+#   council-config.sh get-deep-model [--global]
+#   council-config.sh set-deep-model <opus|sonnet> [--global]
+#   council-config.sh get-enabled-subagents [--global]
+#   council-config.sh write-subagent <subagent> <true|false> [--global]
 set -e
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -707,7 +715,7 @@ case "$1" in
     cmd_get_enabled_subagents "$@"
     ;;
   *)
-    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|set-quick|get-quick|set-subagent-backend|get-subagent-backend|set-deep-model|get-deep-model|write-subagent|get-enabled-subagents} [args...]" >&2
+    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|get-available|get-quick|set-quick|get-subagent-backend|set-subagent-backend|get-deep-model|set-deep-model|get-enabled-subagents|write-subagent} [args...]" >&2
     exit 1
     ;;
 esac

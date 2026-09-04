@@ -19,10 +19,9 @@ Orchestrate multiple external AI consultants to provide thorough, consensus-driv
 Before invoking any consultant, resolve the active consultant set:
 
 ```bash
-# Check if council config exists (.dev/council/config.json or ~/.config/council/config.json)
+# Check if council config exists (council-config.sh automatically falls back to defaults if unconfigured)
 if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  # First-run setup: auto-detect available subscriptions and initialize config
-  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
+  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
 fi
 
 # Retrieve enabled external consultants (e.g. "gemini codex")

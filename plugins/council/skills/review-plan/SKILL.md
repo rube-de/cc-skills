@@ -92,7 +92,7 @@ Resolve active consultants based on configuration and CLI availability:
 
 ```bash
 if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
+  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
 fi
 AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
 ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
@@ -110,7 +110,7 @@ DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-mode
   - If only one is enabled: Launch that single enabled subagent.
   - If neither is enabled: Abort plan review with message: "No external consultants or Claude subagents enabled for plan review."
 
-Launch available consultants in parallel using the Task tool. Both receive the **same prompt**.
+Launch available consultants in parallel using the Task tool. All launched consultants receive the **same prompt**.
 #### Secret-Scanning Gate
 
 Before sending plan content to external consultants, check for secrets:

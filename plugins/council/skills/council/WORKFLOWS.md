@@ -7,10 +7,10 @@ Before ANY workflow, execute:
 ```bash
 #!/bin/bash
 # Pre-flight checks: resolve config and verify CLIs for enabled consultants
+# council-config.sh automatically falls back to defaults if unconfigured
 if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
+  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
 fi
-
 ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
 SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
 DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)

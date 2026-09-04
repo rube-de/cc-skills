@@ -1,7 +1,7 @@
 # council
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-2-blue.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-3-blue.svg)]()
 [![Agents](https://img.shields.io/badge/Agents-7-green.svg)]()
 [![Commands](https://img.shields.io/badge/Commands-1-purple.svg)]()
 [![Hooks](https://img.shields.io/badge/Hooks-2-orange.svg)](#hooks)
@@ -167,22 +167,21 @@ Pass `--global` to any command to persist settings across all repositories in `~
 
 ### Prerequisites
 
-At least one external CLI (or subscription) is recommended:
+`jq` (or `jaq`) is required for configuration parsing and JSON validation hooks. At least one external CLI (or subscription) is recommended:
 
 ```bash
 # Check capability detection
 ./plugins/council/scripts/council-config.sh detect
 ```
-
 The plugin operates in partial-success mode — it proceeds with whichever consultants are enabled and available. If all external consultants are disabled, Council seamlessly runs Layer 2 (Claude Opus and Sonnet subagents) for dual-depth analysis.
 ## Dependencies
 
 | Component | Required | Purpose |
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
+| jq | Yes | JSON configuration and validation hooks |
 | codex CLI | Recommended | Codex consultant |
 | omp CLI | Recommended | Gemini, GLM-5.3, and Kimi consultants (3 of 4) |
-
 ## Troubleshooting
 
 | Issue | Cause | Solution |
