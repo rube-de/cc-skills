@@ -159,8 +159,8 @@ External consultants can be enabled or disabled based on your active subscriptio
 /council:config subagent model <m>    # Set deep review model (opus, sonnet)
 /council:config subagent enable <name># Enable subagent (claude-deep-review, claude-codebase-context, review-scorer)
 /council:config subagent disable <n>  # Disable subagent
-/council:config detect                # Probe installed CLIs & active subscriptions
-/council:config init [--auto]         # Initialize configuration (.dev/council/config.json)
+/council:config detect                     # Probe installed CLIs & active subscriptions
+/council:config init [--auto] [--force]    # Initialize configuration (.dev/council/config.json)
 ```
 
 Pass `--global` to any command to persist settings across all repositories in `~/.config/council/config.json`.

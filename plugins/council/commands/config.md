@@ -20,7 +20,7 @@ Configure which external AI consultants are enabled for Council reviews and cons
 /council:config subagent enable <name>     # Enable subagent (claude-deep-review, claude-codebase-context, review-scorer)
 /council:config subagent disable <name>    # Disable subagent
 /council:config detect                     # Probe installed CLIs & active subscriptions
-/council:config init [--auto]              # Initialize configuration (.dev/council/config.json)
+/council:config init [--auto] [--force]    # Initialize configuration (.dev/council/config.json)
 ```
 
 Add `--global` to any command to target `~/.config/council/config.json` instead of the project-local `.dev/council/config.json`.

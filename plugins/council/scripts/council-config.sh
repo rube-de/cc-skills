@@ -6,7 +6,7 @@
 #   council-config.sh read [--global]
 #   council-config.sh write <consultant> <true|false> [--global]
 #   council-config.sh detect [--json]
-#   council-config.sh init [--auto] [--global]
+#   council-config.sh init [--auto] [--force] [--global]
 #   council-config.sh show [--global]
 #   council-config.sh check-cli
 #   council-config.sh get-enabled [--global]
@@ -161,7 +161,11 @@ cmd_exists() {
 cmd_read() {
   cfg="$(resolve_read_path "$@")"
   if [ -n "$cfg" ] && [ -f "$cfg" ]; then
-    cat "$cfg"
+    def_tmp="$(mktemp "${TMPDIR:-/tmp}/council-def.XXXXXX")"
+    default_config > "$def_tmp"
+    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '$def[0] * $custom[0]')"
+    rm -f "$def_tmp"
+    echo "$merged"
   else
     default_config
   fi
@@ -296,18 +300,22 @@ cmd_detect() {
 
 cmd_init() {
   auto_mode=false
-  target_global=false
+  force_mode=false
   for arg in "$@"; do
-    if [ "$arg" = "--auto" ]; then
-      auto_mode=true
-    elif [ "$arg" = "--global" ]; then
-      target_global=true
-    fi
+    case "$arg" in
+      --auto) auto_mode=true ;;
+      --force) force_mode=true ;;
+    esac
   done
 
   cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
+
+  if [ -f "$cfg" ] && [ "$force_mode" = "false" ]; then
+    echo "Configuration already exists at $cfg (use --force to overwrite)"
+    return 0
+  fi
 
   if [ "$auto_mode" = "true" ]; then
     detected="$(cmd_detect --json)"
@@ -335,12 +343,8 @@ cmd_init() {
     mv "$tmp_file" "$cfg"
     echo "Initialized configuration with auto-detected consultants at $cfg"
   else
-    if [ ! -f "$cfg" ]; then
-      default_config > "$cfg"
-      echo "Initialized default configuration at $cfg"
-    else
-      echo "Configuration already exists at $cfg"
-    fi
+    default_config > "$cfg"
+    echo "Initialized default configuration at $cfg"
   fi
 }
 
