@@ -113,6 +113,10 @@ Inspect `$ARGUMENTS`:
 
 When invoked without subcommands (or during first-run setup):
 
+**Scope Handling**:
+- If `$ARGUMENTS` contains `--global`: set `SCOPE_FLAG="--global"` and skip Step 6.
+- Otherwise: prompt user for scope in Step 6 (set `SCOPE_FLAG="--global"` if user chooses global scope, or leave empty for project scope).
+
 1. **Run Capability Detection**:
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" detect --json
@@ -120,7 +124,7 @@ When invoked without subcommands (or during first-run setup):
 
 2. **Read Existing Config (or defaults)**:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" read
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" read $SCOPE_FLAG
    ```
 
 3. **Present Status**:
@@ -140,23 +144,23 @@ When invoked without subcommands (or during first-run setup):
    - "Which consultant should be used for quick triage reviews (/council quick)?"
    - Options: `auto (Recommended: First enabled)`, `gemini`, `codex`, `glm`, `kimi`
 
-6. **Ask Scope Preference**:
+6. **Ask Scope Preference** (skipped if `--global` was already passed):
    - Save to current project (`.dev/council/config.json`)
    - Save globally (`~/.config/council/config.json`)
 
 7. **Save Configuration**:
    Apply user choices using `council-config.sh write <consultant> <true|false>`:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write gemini <bool> [flags]
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write codex <bool> [flags]
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write glm <bool> [flags]
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write kimi <bool> [flags]
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <quick_choice> [flags]
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write gemini <bool> $SCOPE_FLAG
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write codex <bool> $SCOPE_FLAG
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write glm <bool> $SCOPE_FLAG
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write kimi <bool> $SCOPE_FLAG
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <quick_choice> $SCOPE_FLAG
    ```
 
 8. **Verify & Display Summary**:
    Run:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show $SCOPE_FLAG
    ```
    Inform the user that `/council` will now dynamically dispatch only the enabled consultants.

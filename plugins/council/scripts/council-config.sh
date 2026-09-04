@@ -34,9 +34,10 @@ get_project_path() {
 resolve_read_path() {
   target_global=false
   for arg in "$@"; do
-    case "$arg" in
-      *--global*) target_global=true; break ;;
-    esac
+    if [ "$arg" = "--global" ]; then
+      target_global=true
+      break
+    fi
   done
 
   if [ "$target_global" = "true" ]; then
@@ -75,9 +76,10 @@ resolve_read_path() {
 
 resolve_write_path() {
   for arg in "$@"; do
-    case "$arg" in
-      *--global*) echo "$DEFAULT_GLOBAL_PATH"; return 0 ;;
-    esac
+    if [ "$arg" = "--global" ]; then
+      echo "$DEFAULT_GLOBAL_PATH"
+      return 0
+    fi
   done
 
   repo_root="$(get_repo_root)"
@@ -614,12 +616,16 @@ cmd_check_cli() {
     command -v omp >/dev/null 2>&1 || missing+=("omp")
   fi
 
-  sub_backend="$(cmd_get_subagent_backend "$@")"
-  if [ "$sub_backend" = "omp" ]; then
-    command -v omp >/dev/null 2>&1 || missing+=("omp (subagent backend)")
-  elif [ "$sub_backend" = "claude-cli" ]; then
-    command -v claude >/dev/null 2>&1 || missing+=("claude CLI (subagent backend)")
+  enabled_subagents="$(cmd_get_enabled_subagents "$@")"
+  if [ -n "$enabled_subagents" ]; then
+    sub_backend="$(cmd_get_subagent_backend "$@")"
+    if [ "$sub_backend" = "omp" ]; then
+      command -v omp >/dev/null 2>&1 || missing+=("omp (subagent backend)")
+    elif [ "$sub_backend" = "claude-cli" ]; then
+      command -v claude >/dev/null 2>&1 || missing+=("claude CLI (subagent backend)")
+    fi
   fi
+
   if [ ${#missing[@]} -gt 0 ]; then
     echo "Council plugin: missing CLIs for enabled consultants (${enabled_consultants}): ${missing[*]}"
     return 1

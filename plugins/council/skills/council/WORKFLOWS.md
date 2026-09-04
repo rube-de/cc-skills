@@ -557,15 +557,14 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 - Confidence: [score] (≥ 2/3 agree after Round 2)
 
 ### Vote Distribution
-(Columns reflect active consultants in $ENABLED_CONSULTANTS)
+(One row per active consultant in $ENABLED_CONSULTANTS)
 | Consultant | R1 | R2 | R3 | Final |
 |------------|----|----|----| ------|
-| GLM | C | C | - | C (dissent) |
-| Kimi | A | A | - | A |
+| [Consultant 1] | A | A | - | A |
+| [Consultant 2] | C | C | - | C (dissent) |
 
-### Dissenting View (GLM)
-[Capture their reasoning - it may reveal blind spots]
-
+### Dissenting Views
+[Capture reasoning of any dissenting consultant from $ENABLED_CONSULTANTS — it may reveal blind spots]
 ### Rounds Required: 2
 ### Rate Limits Encountered: None
 ```

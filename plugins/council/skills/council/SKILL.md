@@ -39,7 +39,7 @@ If the user explicitly invoked `/council config`, execute the configuration mana
 
 ```bash
 # Verifies required CLIs (codex, omp) only for consultants that are currently enabled
-"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli
+"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli || true
 ```
 
 If any required CLI is missing, inform the user and proceed with available enabled consultants only.
