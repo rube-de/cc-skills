@@ -2,7 +2,7 @@
 name: council
 description: Consult external AI council (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
 argument-hint: "[review|plan|adversarial|consensus|quick|config] [security|architecture|bugs|quality] [--blind]"
-allowed-tools: Task, Read, Grep, Glob, Bash, TodoWrite
+allowed-tools: Task, Read, Grep, Glob, Bash, TodoWrite, AskUserQuestion
 user-invocable: true
 context: fork
 agent: general-purpose
@@ -34,7 +34,7 @@ DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-mode
 ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
 ```
 
-If the user explicitly invoked `/council config`, execute the `/council:config` management workflow instead of a review.
+If the user explicitly invoked `/council config`, execute the configuration management commands using `council-config.sh` (via Bash) and `AskUserQuestion` for interactive selections (matching the `/council:config` workflow) instead of running a review.
 ### Step 1: Check CLI Availability for Enabled Consultants
 
 ```bash
