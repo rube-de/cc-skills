@@ -22,8 +22,12 @@
 set -e
 
 if ! command -v jq >/dev/null 2>&1; then
-  echo "Error: 'jq' is required by council-config.sh but was not found in PATH." >&2
-  exit 1
+  if command -v jaq >/dev/null 2>&1; then
+    jq() { jaq "$@"; }
+  else
+    echo "Error: 'jq' (or 'jaq') is required by council-config.sh but was not found in PATH." >&2
+    exit 1
+  fi
 fi
 DEFAULT_GLOBAL_PATH="${HOME}/.config/council/config.json"
 
