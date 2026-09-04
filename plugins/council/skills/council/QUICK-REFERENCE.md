@@ -103,20 +103,19 @@ Configure active consultants anytime with `/council:config` (or `/council config
 ```
 
 ### Quick Mode Agent Boundary
+Quick mode (`/council quick`) runs **up to 2 agents** — gated by your configuration:
 
-Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
+1. **External Slot**: Resolved by `council-config.sh get-quick`, using `settings.quick_consultant`. Set it with `/council:config quick <auto|gemini|codex|glm|kimi>`. Falls back to `council:claude-deep-review` (if enabled in `$ENABLED_SUBAGENTS`) when no external consultant is available.
+2. **Codebase Depth Slot**: `council:claude-codebase-context` (sonnet) with native tool access, launched only if enabled in `$ENABLED_SUBAGENTS`.
 
-1. **External Slot**: Resolved by `council-config.sh get-quick`, using `settings.quick_consultant`. Set it with `/council:config quick <auto|gemini|codex|glm|kimi>`.
-2. **Codebase Depth Slot**: Always `council:claude-codebase-context` (sonnet) with native tool access.
-
-`auto` chooses the first enabled and CLI-available consultant in priority order (`gemini` → `codex` → `glm` → `kimi`). An unavailable explicit choice falls back to `auto`; if none are available, use `council:claude-deep-review`.
+`auto` chooses the first enabled and CLI-available consultant in priority order (`gemini` → `codex` → `glm` → `kimi`). An unavailable explicit choice falls back to `auto`; if none are available, use `council:claude-deep-review` (if enabled).
 
 **Skipped in quick mode** (only run if escalating to full council):
 - Remaining external consultants
-- `council:claude-deep-review` (unless no external slot is available)
+- `council:claude-deep-review` (unless used as external slot substitute)
 - `council:review-scorer` (not needed unless escalating)
 
-Escalation to full council launches **all enabled** external consultants + 2 Claude subagents + scorer.
+Escalation to full council launches **all enabled** external consultants + enabled Claude subagents + scorer (if enabled).
 ## Review Workflow Flow
 
 ```
