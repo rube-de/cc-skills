@@ -45,19 +45,29 @@ resolve_read_path() {
     return 0
   fi
 
+  repo_root="$(get_repo_root)"
   proj_path="$(get_project_path)"
+  proj_is_tracked=false
+
   if [ -f "$proj_path" ]; then
     # Security check (CWE-15): verify .dev/council/config.json is not tracked in git
     # Only local, untracked runtime configuration is honored from repository trees
-    if command -v git >/dev/null 2>&1 && git ls-files --error-unmatch "$proj_path" >/dev/null 2>&1; then
-      echo "Security warning: $proj_path is tracked in git repository. Ignoring untrusted repo config." >&2
+    if command -v git >/dev/null 2>&1 && git -C "$repo_root" ls-files --error-unmatch -- .dev/council/config.json >/dev/null 2>&1; then
+      proj_is_tracked=true
+      echo "Security warning: .dev/council/config.json is tracked in git repository. Ignoring untrusted repo config." >&2
     else
       echo "$proj_path"
       return 0
     fi
   fi
+
   if [ -f "$DEFAULT_GLOBAL_PATH" ]; then
     echo "$DEFAULT_GLOBAL_PATH"
+    return 0
+  fi
+
+  if [ "$proj_is_tracked" = "true" ]; then
+    echo ""
     return 0
   fi
 
@@ -123,7 +133,7 @@ cmd_path() {
 
 cmd_exists() {
   cfg="$(resolve_read_path "$@")"
-  if [ -f "$cfg" ]; then
+  if [ -n "$cfg" ] && [ -f "$cfg" ]; then
     exit 0
   else
     exit 1
@@ -132,7 +142,7 @@ cmd_exists() {
 
 cmd_read() {
   cfg="$(resolve_read_path "$@")"
-  if [ -f "$cfg" ]; then
+  if [ -n "$cfg" ] && [ -f "$cfg" ]; then
     cat "$cfg"
   else
     default_config

@@ -67,7 +67,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
    - $k = 1$ ($N_{\text{enabled}} > 1$): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
    - $k / N_{\text{enabled}} \ge 0.66$ ($k > 1$): Proceed with note: "[X] consultant unavailable"
    - $k / N_{\text{enabled}} \ge 0.50$ ($k > 1$): Proceed with warning: "Limited council - only $k/$N responses"
-   - $k = 0 ($N_{\text{enabled}} > 0$): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
+   - $k = 0$ ($N_{\text{enabled}} > 0$): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
 5. **Apply Weighted Synthesis**
    ```
    For architecture findings, weight:
