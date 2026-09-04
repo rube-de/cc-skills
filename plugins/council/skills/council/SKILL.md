@@ -428,10 +428,11 @@ See "Dual-Layer Architecture" section above and WORKFLOWS.md Workflow B for deta
 Quick mode runs **exactly 2 agents** — one external consultant (for fast external perspective) and one Claude subagent (for codebase depth):
 
 1. **External Slot Selection** (dynamic based on config):
-   - Pick the first enabled external consultant from priority order: `gemini` $\to$ `codex` $\to$ `glm` $\to$ `kimi`.
-   - Default when Gemini is enabled: `council:gemini-consultant` (Gemini 3.8 Flash).
-   - Fallback if Gemini is disabled: Next enabled external consultant (e.g. `council:codex-consultant`).
-   - Fallback if $N_{\text{enabled}} = 0$: Fall back to `council:claude-deep-review` (opus) + `council:claude-codebase-context` (sonnet) for all-internal dual-perspective triage.
+   - Run `"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-quick`.
+   - The command resolves the configured `settings.quick_consultant` (`auto`, `gemini`, `codex`, `glm`, or `kimi`) against enabled consultants and installed CLIs.
+   - `auto` selects the first enabled consultant in priority order: `gemini` → `codex` → `glm` → `kimi`.
+   - An explicit consultant that is disabled or unavailable falls back to the same `auto` resolution.
+   - If resolution returns `none`, use `council:claude-deep-review` (opus) + `council:claude-codebase-context` (sonnet) for all-internal dual-perspective triage.
 
 2. **Codebase Depth Slot**:
    - Always `council:claude-codebase-context` (sonnet) with native tool access.

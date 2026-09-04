@@ -331,20 +331,22 @@ echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
 
 ### Step-by-Step
 
-1. **Log Agent Selection and Launch Both in Parallel**
+1. **Resolve Quick Consultant and Launch Both in Parallel**
 
-   Quick mode runs exactly 2 agents: one external consultant (selected dynamically from enabled consultants in priority order `gemini` $\to$ `codex` $\to$ `glm` $\to$ `kimi`, or `claude-deep-review` if all external are disabled) plus `council:claude-codebase-context`.
+   Run `"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-quick`. This resolves `settings.quick_consultant` against enabled consultants and installed CLIs. An explicit unavailable or disabled choice falls back to `auto`, which uses `gemini` → `codex` → `glm` → `kimi`. If it returns `none`, use `council:claude-deep-review` as the external-slot substitute.
+
+   Quick mode runs exactly 2 agents: the resolved external consultant (or `council:claude-deep-review` when none is available) plus `council:claude-codebase-context`.
 
    Log the selection at start:
    ```text
-   "Quick mode: running [selected-external-consultant] + council:claude-codebase-context only.
-    Skipping remaining consultants and deep-review/scorer."
+   "Quick mode: running [selected-consultant] + council:claude-codebase-context only.
+    Skipping remaining consultants and scorer."
    ```
 
    Launch simultaneously:
 
    ```text
-   Task(council:gemini-consultant):
+   Task(council:[selected-consultant]-consultant, timeout=120s):
    "Quick review of [artifact]. Return JSON with:
    - consultant: your name (e.g. 'gemini')
    - success: true

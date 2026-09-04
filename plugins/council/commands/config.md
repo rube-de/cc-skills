@@ -10,12 +10,13 @@ Configure which external AI consultants are enabled for Council reviews and cons
 ## Usage
 
 ```text
-/council:config                       # Interactive setup & detection wizard
-/council:config show                  # Display current configuration & CLI status
-/council:config enable <consultant>   # Enable a consultant (gemini, codex, glm, kimi)
-/council:config disable <consultant>  # Disable a consultant
-/council:config detect                # Probe installed CLIs & active subscriptions
-/council:config init [--auto]         # Initialize configuration (.dev/council/config.json)
+/council:config                            # Interactive setup & detection wizard
+/council:config show                       # Display current configuration & CLI status
+/council:config enable <consultant>        # Enable a consultant (gemini, codex, glm, kimi)
+/council:config disable <consultant>       # Disable a consultant
+/council:config quick <consultant|auto>    # Set preferred quick mode external consultant
+/council:config detect                     # Probe installed CLIs & active subscriptions
+/council:config init [--auto]              # Initialize configuration (.dev/council/config.json)
 ```
 
 Add `--global` to any command to target `~/.config/council/config.json` instead of the project-local `.dev/council/config.json`.
@@ -53,6 +54,12 @@ Inspect `$ARGUMENTS`:
   ```
   Confirm to user that the consultant was disabled.
 
+- If `$ARGUMENTS` starts with `quick `:
+  Extract the consultant name (or `auto`) and optional flags:
+  ```bash
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <consultant|auto> [flags]
+  ```
+  Confirm to user that the quick mode consultant was updated.
 - If `$ARGUMENTS` contains `detect`:
   Run:
   ```bash
@@ -93,19 +100,22 @@ When invoked without subcommands (or during first-run setup):
    - "Which external consultants do you want to enable for Council reviews?"
    - Multi-select options showing detected recommendation (e.g. `Gemini 3.8 Flash (Recommended: Active)`, `Codex (Recommended: Active)`, `GLM-5.3`, `Kimi K3`).
 
-5. **Ask Scope Preference**:
+5. **Ask Preferred Quick Mode Consultant**:
+   Prompt user with `AskUserQuestion`:
+   - "Which consultant should be used for quick triage reviews (/council quick)?"
+   - Options: `auto (Recommended: First enabled)`, `gemini`, `codex`, `glm`, `kimi`
+
+6. **Ask Scope Preference**:
    - Save to current project (`.dev/council/config.json`)
    - Save globally (`~/.config/council/config.json`)
-
-6. **Save Configuration**:
    Apply user choices using `council-config.sh write <consultant> <true|false>`:
    ```bash
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write gemini <bool> [flags]
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write codex <bool> [flags]
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write glm <bool> [flags]
    "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write kimi <bool> [flags]
+   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <quick_choice> [flags]
    ```
-
 7. **Verify & Display Summary**:
    Run:
    ```bash

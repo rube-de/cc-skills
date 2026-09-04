@@ -154,6 +154,7 @@ External consultants can be enabled or disabled based on your active subscriptio
 /council:config show                  # Display current configuration & CLI status
 /council:config enable <consultant>   # Enable a consultant (gemini, codex, glm, kimi)
 /council:config disable <consultant>  # Disable a consultant
+/council:config quick <consultant>     # Set quick mode consultant, or use auto
 /council:config detect                # Probe installed CLIs & active subscriptions
 /council:config init [--auto]         # Initialize configuration (.dev/council/config.json)
 ```

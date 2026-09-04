@@ -70,7 +70,8 @@ default_config() {
     }
   },
   "settings": {
-    "timeout_seconds": 120
+    "timeout_seconds": 120,
+    "quick_consultant": "auto"
   }
 }
 EOF
@@ -315,6 +316,11 @@ cmd_show() {
     fi
     printf "  %-8s %s (via %s: %s)\n" "$c" "$status_tag" "$cli_type" "$model_info"
   done
+
+  quick_cfg="$(echo "$data" | jq -r '.settings.quick_consultant // "auto"')"
+  quick_resolved="$(cmd_get_quick "$@")"
+  echo ""
+  echo "Quick Mode Consultant: $quick_resolved (setting: $quick_cfg)"
 }
 
 cmd_get_enabled() {
@@ -325,6 +331,69 @@ cmd_get_enabled() {
     | map(select(.value.enabled == true) | .key)
     | join(" ")
   '
+}
+cmd_set_quick() {
+  val="$1"
+  shift || true
+
+  case "$val" in
+    auto|gemini|codex|glm|kimi) ;;
+    *)
+      echo "Error: Unknown quick consultant '$val'. Valid: auto, gemini, codex, glm, kimi" >&2
+      exit 1
+      ;;
+  esac
+
+  cfg="$(resolve_config_path "$@")"
+  cfg_dir="$(dirname "$cfg")"
+  mkdir -p "$cfg_dir"
+
+  current="$(cmd_read "$@")"
+  tmp_file="$(mktemp "${cfg_dir}/.config.tmp.XXXXXX")"
+  echo "$current" | jq --arg q "$val" '.settings.quick_consultant = $q' > "$tmp_file"
+  mv "$tmp_file" "$cfg"
+
+  echo "Updated quick_consultant=$val in $cfg"
+}
+
+cmd_get_quick() {
+  data="$(cmd_read "$@")"
+  configured="$(echo "$data" | jq -r '.settings.quick_consultant // "auto"')"
+
+  # Check if explicitly configured consultant is enabled and CLI available
+  if [ "$configured" != "auto" ] && [ -n "$configured" ]; then
+    en="$(echo "$data" | jq -r ".consultants.${configured}.enabled // false")"
+    if [ "$en" = "true" ]; then
+      has_cli=false
+      case "$configured" in
+        codex) command -v codex >/dev/null 2>&1 && has_cli=true ;;
+        gemini|glm|kimi) command -v omp >/dev/null 2>&1 && has_cli=true ;;
+      esac
+      if [ "$has_cli" = "true" ]; then
+        echo "$configured"
+        return 0
+      fi
+    fi
+  fi
+
+  # Auto resolution: iterate enabled consultants in priority order
+  for c in gemini codex glm kimi; do
+    en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
+    if [ "$en" = "true" ]; then
+      has_cli=false
+      case "$c" in
+        codex) command -v codex >/dev/null 2>&1 && has_cli=true ;;
+        gemini|glm|kimi) command -v omp >/dev/null 2>&1 && has_cli=true ;;
+      esac
+      if [ "$has_cli" = "true" ]; then
+        echo "$c"
+        return 0
+      fi
+    fi
+  done
+
+  echo "none"
+  return 0
 }
 
 cmd_check_cli() {
@@ -393,8 +462,16 @@ case "$1" in
     shift
     cmd_get_enabled "$@"
     ;;
+  set-quick)
+    shift
+    cmd_set_quick "$@"
+    ;;
+  get-quick)
+    shift
+    cmd_get_quick "$@"
+    ;;
   *)
-    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled} [args...]" >&2
+    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|set-quick|get-quick} [args...]" >&2
     exit 1
     ;;
 esac

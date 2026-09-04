@@ -105,12 +105,14 @@ Configure active consultants anytime with `/council:config` (or `/council config
 
 Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
 
-1. **External Slot**: First enabled external consultant in priority order (`gemini` $\to$ `codex` $\to$ `glm` $\to$ `kimi`). Falls back to `claude-deep-review` (opus) if all external consultants are disabled.
+1. **External Slot**: Resolved by `council-config.sh get-quick`, using `settings.quick_consultant`. Set it with `/council:config quick <auto|gemini|codex|glm|kimi>`.
 2. **Codebase Depth Slot**: Always `council:claude-codebase-context` (sonnet) with native tool access.
+
+`auto` chooses the first enabled and CLI-available consultant in priority order (`gemini` → `codex` → `glm` → `kimi`). An unavailable explicit choice falls back to `auto`; if none are available, use `council:claude-deep-review`.
 
 **Skipped in quick mode** (only run if escalating to full council):
 - Remaining external consultants
-- `council:claude-deep-review` (unless external slot fell back to it)
+- `council:claude-deep-review` (unless no external slot is available)
 - `council:review-scorer` (not needed unless escalating)
 
 Escalation to full council launches **all enabled** external consultants + 2 Claude subagents + scorer.
