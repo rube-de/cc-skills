@@ -495,7 +495,7 @@ Round 2: Cross-examination (share Round 1, ask for critique)
 Round 3: Final synthesis (if still split)
 
 Abort criteria:
-- After Round 2 if 3/4 agree
+- After Round 2 if ≥ 2/3 of available consultants agree
 - After Round 3 regardless of consensus
 - If disagreement is on preferences, not facts
 ```

@@ -538,10 +538,9 @@ Review these perspectives:
 ### Round 3: Final Call (if needed)
 
 **Abort Criteria - Skip Round 3 if:**
-- 3/4 or 4/4 agree after Round 2
+- ≥ 2/3 of available consultants agree after Round 2
 - Disagreement is on preferences, not facts
 - More rounds won't produce new information
-
 ```
 Task(all consultants):
 "The council remains split after cross-examination.
