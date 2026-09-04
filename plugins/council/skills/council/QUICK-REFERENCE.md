@@ -45,17 +45,17 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
               └───────────┘
 ```
 
-## Pre-Flight Check
+## Pre-Flight & Configuration Check
 
 ```bash
-# Run before ANY council invocation
-for cli in codex omp; do
-  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
-done
+# Check/initialize config and verify CLIs for enabled consultants
+if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+fi
+"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli
 ```
 
-**Note**: `omp` gates 3 of the 4 external consultants (Gemini, GLM, Kimi). A missing `omp` is not a minor, single-consultant degradation — it drops you straight to 1/4 (Codex only).
-
+Configure active consultants anytime with `/council:config` (or `/council config`).
 ## Expertise Weights
 
 ```
@@ -105,18 +105,15 @@ done
 
 Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
 
-| Agent | Model | Role |
-|-------|-------|------|
-| `council:gemini-consultant` | Gemini 3.8 Flash | Fast external perspective |
-| `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
+1. **External Slot**: First enabled external consultant in priority order (`gemini` $\to$ `codex` $\to$ `glm` $\to$ `kimi`). Falls back to `claude-deep-review` (opus) if all external consultants are disabled.
+2. **Codebase Depth Slot**: Always `council:claude-codebase-context` (sonnet) with native tool access.
 
 **Skipped in quick mode** (only run if escalating to full council):
-- `council:codex-consultant`, `council:glm-consultant`, `council:kimi-consultant`
-- `council:claude-deep-review` (opus — reserved for full review)
+- Remaining external consultants
+- `council:claude-deep-review` (unless external slot fell back to it)
 - `council:review-scorer` (not needed unless escalating)
 
-Escalation to full council launches **all** agents (4 external + 2 Claude subagents + scorer).
-
+Escalation to full council launches **all enabled** external consultants + 2 Claude subagents + scorer.
 ## Review Workflow Flow
 
 ```

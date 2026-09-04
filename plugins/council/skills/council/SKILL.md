@@ -1,7 +1,7 @@
 ---
 name: council
 description: Consult external AI council (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi) for thorough reviews and consensus-driven decisions. Use ONLY when explicitly invoked with "/council" or when user says "consult the council", "invoke council", or "council review". Do NOT auto-trigger on generic phrases like "thorough review".
-argument-hint: "[review|plan|adversarial|consensus|quick] [security|architecture|bugs|quality] [--blind]"
+argument-hint: "[review|plan|adversarial|consensus|quick|config] [security|architecture|bugs|quality] [--blind]"
 allowed-tools: Task, Read, Grep, Glob, Bash, TodoWrite
 user-invocable: true
 context: fork
@@ -12,18 +12,34 @@ agent: general-purpose
 
 Orchestrate multiple external AI consultants to provide thorough, consensus-driven feedback on plans, code, and architectural decisions.
 
-## Pre-Flight Checks (MANDATORY)
+## Configuration & Pre-Flight Checks (MANDATORY)
 
-Before invoking any consultant, verify:
+### Step 0: Read Configuration & Active Consultants
+
+Before invoking any consultant, resolve the active consultant set:
 
 ```bash
-# Check CLI availability — codex is independent, but omp now gates 3 of the 4
-# external consultants (Gemini, GLM, Kimi), not just one
-command -v codex >/dev/null 2>&1 || echo "WARN: codex CLI not found"
-command -v omp >/dev/null 2>&1 || echo "WARN: omp CLI not found (needed for Gemini, GLM, and Kimi)"
+# Check if council config exists (.dev/council/config.json or ~/.config/council/config.json)
+if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
+  # First-run setup: auto-detect available subscriptions and initialize config
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+fi
+
+# Retrieve enabled external consultants (e.g. "gemini codex")
+ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
 ```
 
-If any CLI is missing, inform user and proceed with available consultants only.
+If the user explicitly invoked `/council config`, execute the `/council:config` management workflow instead of a review.
+
+### Step 1: Check CLI Availability for Enabled Consultants
+
+```bash
+# Verifies required CLIs (codex, omp) only for consultants that are currently enabled
+"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli
+```
+
+If any required CLI is missing, inform the user and proceed with available enabled consultants only.
+
 
 ## Rate Limit Handling
 
@@ -54,12 +70,12 @@ retry_with_backoff() {
 
 ### Staggered Launch (if rate limits frequent)
 
-Instead of all 4 simultaneously, stagger by 5 seconds:
+Instead of launching all active consultants simultaneously, stagger by 5 seconds:
 ```
-t=0s:  Launch Gemini
-t=5s:  Launch Codex
-t=10s: Launch GLM
-t=15s: Launch Kimi
+t=0s:  Launch Consultant 1
+t=5s:  Launch Consultant 2
+t=10s: Launch Consultant 3 (if enabled)
+t=15s: Launch Consultant 4 (if enabled)
 ```
 
 ## Available Consultants
@@ -140,13 +156,16 @@ Use `--blind` when you want to compare Claude's blind opinion against its tool-a
 
 ### Partial Success Modes
 
-| Available | Action |
+Evaluated dynamically against $N_{\text{enabled}}$ (the count of enabled external consultants):
+
+| Condition | Action |
 |-----------|--------|
-| 4/4 | Full synthesis |
-| 3/4 | Proceed with note: "[X] consultant unavailable" |
-| 2/4 | Proceed with warning: "Limited council - only 2 responses" |
-| 1/4 | Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation" |
-| 0/4 | Abort with error: "Council unavailable - all consultants failed" |
+| $k = N_{\text{enabled}}$ ($k > 0$) | Full synthesis |
+| $k / N_{\text{enabled}} \ge 0.66$ | Proceed with note: "[X] consultant unavailable" |
+| $k / N_{\text{enabled}} \ge 0.50$ | Proceed with warning: "Limited council - only $k/$N responses" |
+| $k = 1$ ($N_{\text{enabled}} > 1$) | Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation" |
+| $k = 0$ ($N_{\text{enabled}} > 0$) | Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error |
+| $N_{\text{enabled}} = 0$ | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
 
 ### Structured Response Format
 
@@ -230,7 +249,10 @@ IF layer2_success == 0 AND mode == "full" (Pattern B):
   → Proceed with Layer 1 findings only
 
 IF layer1_success == 0 AND layer2_success > 0 AND mode == "full" (Pattern B):
-  WARN: "Layer 1 (external consultants) returned no valid results — review lacks model diversity"
+  IF N_enabled > 0:
+    WARN: "Layer 1 (external consultants) returned no valid results — review lacks model diversity"
+  ELSE:
+    NOTE: "Layer 1 skipped (all external consultants disabled in config) — review conducted via Layer 2 Claude subagents"
   → Proceed with Layer 2 findings only
 ```
 
@@ -403,31 +425,25 @@ See "Dual-Layer Architecture" section above and WORKFLOWS.md Workflow B for deta
 
 ### Pattern C: Parallel Triage (Efficient)
 
-Quick mode runs **exactly these 2 agents**:
+Quick mode runs **exactly 2 agents** — one external consultant (for fast external perspective) and one Claude subagent (for codebase depth):
 
-| Agent | Model | Role | Why included |
-|-------|-------|------|--------------|
-| `council:gemini-consultant` | Gemini 3.8 Flash (`google-antigravity/gemini-3.8-flash`) | Fast external perspective | Fastest external model, broad coverage |
-| `council:claude-codebase-context` | Sonnet | Codebase-aware depth | Native tool access, CLAUDE.md compliance, git history |
+1. **External Slot Selection** (dynamic based on config):
+   - Pick the first enabled external consultant from priority order: `gemini` $\to$ `codex` $\to$ `glm` $\to$ `kimi`.
+   - Default when Gemini is enabled: `council:gemini-consultant` (Gemini 3.8 Flash).
+   - Fallback if Gemini is disabled: Next enabled external consultant (e.g. `council:codex-consultant`).
+   - Fallback if $N_{\text{enabled}} = 0$: Fall back to `council:claude-deep-review` (opus) + `council:claude-codebase-context` (sonnet) for all-internal dual-perspective triage.
 
-Quick mode **does NOT run** these agents:
-
-| Agent | Why skipped |
-|-------|-------------|
-| `council:codex-consultant` | Cost/time — covered by escalation if needed |
-| `council:glm-consultant` | Cost/time — covered by escalation if needed |
-| `council:kimi-consultant` | Cost/time — covered by escalation if needed |
-| `council:claude-deep-review` | Opus cost — reserved for full review |
-| `council:review-scorer` | Not needed unless escalating to full council |
+2. **Codebase Depth Slot**:
+   - Always `council:claude-codebase-context` (sonnet) with native tool access.
 
 ```text
 1. Log agent selection:
-   "Quick mode: running council:gemini-consultant (Flash) + council:claude-codebase-context only.
-    Skipping 5 agents (codex, glm, kimi, claude-deep-review, review-scorer)."
+   "Quick mode: running [selected-external-consultant] + council:claude-codebase-context only.
+    Skipping other consultants and deep-review/scorer."
 
 2. Launch BOTH in parallel:
-   - council:gemini-consultant (omp google-antigravity/gemini-3.8-flash) — fastest external model
-   - council:claude-codebase-context (sonnet) — native codebase access
+   - [selected external consultant]
+   - council:claude-codebase-context (sonnet)
 
 3. Validate both responses (see Response Validation above)
    - Mark invalid responses as failed
@@ -437,7 +453,7 @@ Quick mode **does NOT run** these agents:
    → DONE (synthesize dual-perspective report)
 
 5. If either invalid, confidence < 0.7, disagreement, OR severity == "critical":
-   → Escalate to full council (all 4 external + 2 Claude subagents + scoring)
+   → Escalate to full council (all enabled external consultants + 2 Claude subagents + scoring)
 ```
 
 **Use for**: Quick validations, cost-sensitive reviews, time-critical decisions
@@ -445,19 +461,24 @@ Quick mode **does NOT run** these agents:
 
 ### Pattern D: Adversarial Review (Thorough)
 
-```
+Dynamic team assignment based on enabled external consultants ($N_{\text{enabled}}$):
+
+```text
 1. Assign roles:
    - Advocate: "Find every reason this SHOULD be approved"
    - Critic: "Find every reason this SHOULD NOT be approved"
-2. Pair consultants:
-   - Gemini + Kimi as Advocates
-   - Codex + GLM as Critics
+
+2. Team pairing:
+   - If N_enabled >= 4: Split enabled list evenly (first half Advocates, second half Critics)
+   - If N_enabled == 2 (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
+   - If N_enabled == 1: Single external consultant as Advocate, claude-deep-review as Critic
+   - If N_enabled == 0: claude-codebase-context as Advocate, claude-deep-review as Critic
+
 3. Present both perspectives
 4. User decides based on trade-offs
 ```
 
 **Use for**: Critical decisions, security reviews, architecture choices
-
 ### Pattern E: Sequential Rounds (Consensus)
 
 ```
@@ -494,10 +515,8 @@ Example for security finding:
 ## Council Review Summary
 
 ### Pre-Flight Status
-- Gemini: ✓ Available
-- Codex: ✓ Available
-- GLM: ✗ Timeout (proceeded with 3/4)
-- Kimi: ✓ Available
+(Lists status for each enabled external consultant from config, plus Claude subagents)
+- [Consultant]: ✓ Available | ✗ Unavailable / Timeout
 
 ### Consensus (All Available Agree)
 - [Weighted findings where all agree]
@@ -506,9 +525,10 @@ Example for security finding:
 - [Findings with strong weighted agreement]
 
 ### Divergent Views
-| Finding | Gemini | Codex | GLM | Kimi | Weighted |
-|---------|--------|-------|-----|------|----------|
-| [Issue] | [View] | [View] | N/A | [View] | [Score] |
+Column headers adapt to currently enabled consultants:
+| Finding | [Consultant 1] | [Consultant 2] | ... | Weighted |
+|---------|----------------|----------------|-----|----------|
+| [Issue] | [View]         | [View]         | ... | [Score]  |
 
 ### Critical Issues (Any Consultant, severity=critical)
 - [Always include - err on caution]
@@ -518,10 +538,9 @@ Example for security finding:
 2. [Include dissenting rationale for user decision]
 
 ### Confidence Level
-- High (4/4 available, weighted agreement > 0.8): ✓
-- Medium (2-3/4 available OR agreement 0.6-0.8): ~
-- Low (1/4 available OR agreement < 0.6): User must decide
-
+- High (all enabled available, weighted agreement > 0.8): ✓
+- Medium (majority available OR agreement 0.6-0.8): ~
+- Low (<=1 available OR agreement < 0.6): User must decide
 ### Rate Limit Status
 - Retries: 0
 - Skipped due to limits: None

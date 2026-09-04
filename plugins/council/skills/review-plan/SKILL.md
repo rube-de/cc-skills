@@ -22,7 +22,7 @@ digraph review_plan {
 
   locate [label="Step 1: Locate Plan"];
   verify [label="Step 2: Codebase Verification"];
-  launch [label="Step 3: Launch Consultants\n(gemini + codex in parallel)"];
+  launch [label="Step 3: Launch Consultants\n(2 consultants in parallel)"];
   synthesize [label="Step 4: Deduplicate & Synthesize"];
   present [label="Step 5: Present Structured Output"];
   decide [label="Step 6: User Decision"];
@@ -88,8 +88,21 @@ Collect all verification results into a structured report:
 
 ### Step 3: Launch Consultants
 
-Launch `council:gemini-consultant` and `council:codex-consultant` in parallel using the Task tool. Both receive the **same prompt**.
+Resolve active consultants based on configuration:
 
+```bash
+if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+fi
+ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
+```
+
+**Consultant Selection**:
+- If 2 or more external consultants are enabled: Launch the first 2 (e.g. `gemini` and `codex`).
+- If only 1 external consultant is enabled: Launch that external consultant and pair with `council:claude-deep-review` (opus).
+- If 0 external consultants are enabled: Launch `council:claude-deep-review` (opus) and `council:claude-codebase-context` (sonnet).
+
+Launch both consultants in parallel using the Task tool. Both receive the **same prompt**.
 #### Secret-Scanning Gate
 
 Before sending plan content to external consultants, check for secrets:

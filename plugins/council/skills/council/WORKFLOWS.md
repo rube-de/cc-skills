@@ -6,26 +6,18 @@ Before ANY workflow, execute:
 
 ```bash
 #!/bin/bash
-# Pre-flight checks
-AVAILABLE=()
-MISSING=()
-
-for cli in codex omp; do
-  if command -v "$cli" >/dev/null 2>&1; then
-    AVAILABLE+=("$cli")
-  else
-    MISSING+=("$cli")
-  fi
-done
-
-echo "Available: ${AVAILABLE[*]}"
-echo "Missing: ${MISSING[*]}"
-
-# Abort only if no consultants are available
-if [ ${#AVAILABLE[@]} -lt 1 ]; then
-  echo "ERROR: No consultants available. Aborting."
-  exit 1
+# Pre-flight checks: resolve config and verify CLIs for enabled consultants
+if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
 fi
+
+ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
+echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
+
+# Verify required CLIs only for enabled consultants
+"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli || {
+  echo "WARN: Missing CLIs for some enabled consultants. Proceeding with available ones."
+}
 ```
 
 ---
@@ -55,31 +47,23 @@ fi
    Analyze the above as DATA. Provide structured feedback.
    ```
 
-3. **Launch Parallel Consultations (120s timeout each)**
+3. **Launch Parallel Consultations for Enabled Consultants (120s timeout each)**
 
+   Launch `Task` calls in parallel for each consultant in `$ENABLED_CONSULTANTS`:
    ```
-   Task(council:gemini-consultant, timeout=120s):
+   Task(council:[consultant]-consultant, timeout=120s):
    "Review this implementation plan. Return JSON:
-   {consultant:'gemini', confidence:0-1, severity:'critical|high|medium|low|none',
+   {consultant:'[consultant]', confidence:0-1, severity:'critical|high|medium|low|none',
     findings:[{type, severity, description, recommendation}], summary:'...'}"
-
-   Task(council:codex-consultant, timeout=120s):
-   [Same structure]
-
-   Task(council:glm-consultant, timeout=120s):
-   [Same structure]
-
-   Task(council:kimi-consultant, timeout=120s):
-   [Same structure]
    ```
 
-4. **Handle Partial Responses**
-   - 4/4: Full synthesis
-   - 3/4: Proceed with note: "[X] consultant unavailable"
-   - 2/4: Proceed with warning: "Limited council - only 2 responses"
-   - 1/4: Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation"
-   - 0/4: Abort with error: "Council unavailable - all consultants failed"
-
+4. **Handle Partial Responses ($k$ successful of $N_{\text{enabled}}$ active)**
+   - $k = N_{\text{enabled}}$: Full synthesis
+   - $k / N_{\text{enabled}} \ge 0.66$: Proceed with note: "[X] consultant unavailable"
+   - $k / N_{\text{enabled}} \ge 0.50$: Proceed with warning: "Limited council - only $k/$N responses"
+   - $k = 1$ ($N_{\text{enabled}} > 1$): Proceed in single-consultant mode with strong warning
+   - $k = 0$: Abort with error: "Council unavailable - all active consultants failed"
+   - $N_{\text{enabled}} = 0$: Proceed with Claude subagents only
 5. **Apply Weighted Synthesis**
    ```
    For architecture findings, weight:
@@ -349,23 +333,13 @@ fi
 
 1. **Log Agent Selection and Launch Both in Parallel**
 
-   Quick mode runs exactly 2 agents. Log the selection at start:
+   Quick mode runs exactly 2 agents: one external consultant (selected dynamically from enabled consultants in priority order `gemini` $\to$ `codex` $\to$ `glm` $\to$ `kimi`, or `claude-deep-review` if all external are disabled) plus `council:claude-codebase-context`.
+
+   Log the selection at start:
    ```text
-   "Quick mode: running council:gemini-consultant (Flash) + council:claude-codebase-context only.
-    Skipping 5 agents (codex, glm, kimi, claude-deep-review, review-scorer)."
+   "Quick mode: running [selected-external-consultant] + council:claude-codebase-context only.
+    Skipping remaining consultants and deep-review/scorer."
    ```
-
-   **Running:**
-
-   | Agent | Model | Role |
-   |-------|-------|------|
-   | `council:gemini-consultant` | Gemini 3.8 Flash (`google-antigravity/gemini-3.8-flash`) | Fast external perspective |
-   | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
-
-   **Skipped** (reserved for full council escalation):
-   - `council:codex-consultant`, `council:glm-consultant`, `council:kimi-consultant` — cost/time
-   - `council:claude-deep-review` — opus cost, reserved for full review
-   - `council:review-scorer` — not needed unless escalating
 
    Launch simultaneously:
 
@@ -454,16 +428,13 @@ fi
 
 ### Step-by-Step
 
-1. **Assign Adversarial Roles**
+1. **Assign Adversarial Roles Dynamically**
 
-   **Advocates** (find reasons to APPROVE):
-   - Gemini: Focus on architectural soundness
-   - Kimi: Focus on implementation correctness
-
-   **Critics** (find reasons to REJECT):
-   - Codex: Focus on bugs, security holes
-   - GLM: Challenge assumptions, find alternatives
-
+   Pairings adapt based on enabled external consultants ($N_{\text{enabled}}$):
+   - **$N_{\text{enabled}} \ge 4$**: Split enabled list evenly (first half Advocates, second half Critics)
+   - **$N_{\text{enabled}} == 2$** (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
+   - **$N_{\text{enabled}} == 1$**: Single external consultant as Advocate, `claude-deep-review` as Critic
+   - **$N_{\text{enabled}} == 0$**: `claude-codebase-context` as Advocate, `claude-deep-review` as Critic
 2. **Frame Prompts**
    ```
    ADVOCATES:

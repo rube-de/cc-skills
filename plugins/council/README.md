@@ -3,9 +3,8 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Skills](https://img.shields.io/badge/Skills-2-blue.svg)]()
 [![Agents](https://img.shields.io/badge/Agents-7-green.svg)]()
+[![Commands](https://img.shields.io/badge/Commands-1-purple.svg)]()
 [![Hooks](https://img.shields.io/badge/Hooks-2-orange.svg)](#hooks)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
-[![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
 Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
@@ -51,13 +50,14 @@ Built-in taxonomy auto-rejects:
 - Pedantic nitpicks senior engineers wouldn't flag
 - Issues on lines NOT modified in the review
 
-## Skills
+## Skills & Commands
 
-| Skill | Purpose | User-Invocable |
-|-------|---------|----------------|
-| **council** | Main orchestration — all review modes | Yes |
-| **council-reference** | Expertise matrix and response format data | No (background) |
-
+| Name | Type | Purpose | Invocable |
+|------|------|---------|-----------|
+| **council** | Skill | Main orchestration — all review modes | Yes (`/council`) |
+| **council:config** | Command | Configure consultant enablement & active subscriptions | Yes (`/council:config` or `/council config`) |
+| **council:review-plan** | Skill | Pre-execution implementation plan review | Yes (`/council:review-plan`) |
+| **council-reference** | Skill | Expertise matrix and response format data | No (background) |
 ## Review Modes
 
 | Command | Description |
@@ -76,7 +76,7 @@ Built-in taxonomy auto-rejects:
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| `preflight.sh` | SessionStart | Check CLI availability for all external consultant CLIs |
+| `preflight.sh` | SessionStart | Check configuration and CLI availability for enabled consultants |
 | `validate-json-output.sh` | PostToolUse (Bash) | Validate consultant output matches expected JSON schema |
 
 ## How It Works
@@ -145,23 +145,31 @@ npx skills add rube-de/cc-skills --skill council
 > - `validate-json-output.sh` — no PostToolUse JSON validation for consultant output
 > - Agent `.md` definitions — subagent types (codex-consultant, gemini-consultant, etc.) won't be registered
 
-### Prerequisites
+### Configuration & Subscriptions
 
-At least one external CLI must be installed:
+External consultants can be enabled or disabled based on your active subscriptions (`.dev/council/config.json`):
 
 ```bash
-# Check availability (prints ✓/✗ per CLI — omp covers 3 of 4 consultants, codex covers 1)
-for cli in codex omp; do
-  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
-done
-
-# Install as needed
-# codex   — https://github.com/openai/codex
-# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.8 Flash via antigravity, GLM-5.3, Kimi K3)
+/council:config                       # Interactive setup & detection wizard
+/council:config show                  # Display current configuration & CLI status
+/council:config enable <consultant>   # Enable a consultant (gemini, codex, glm, kimi)
+/council:config disable <consultant>  # Disable a consultant
+/council:config detect                # Probe installed CLIs & active subscriptions
+/council:config init [--auto]         # Initialize configuration (.dev/council/config.json)
 ```
 
-The plugin operates in partial-success mode — it proceeds with whichever consultants are available. Note that `omp` is the dominant dependency: it gates three of the four external consultants (Gemini, GLM-5.3, Kimi), so a missing or broken `omp` install leaves Codex as the only external voice.
+Pass `--global` to any command to persist settings across all repositories in `~/.config/council/config.json`.
 
+### Prerequisites
+
+At least one external CLI (or subscription) is recommended:
+
+```bash
+# Check capability detection
+./plugins/council/scripts/council-config.sh detect
+```
+
+The plugin operates in partial-success mode — it proceeds with whichever consultants are enabled and available. If all external consultants are disabled, Council seamlessly runs Layer 2 (Claude Opus and Sonnet subagents) for dual-depth analysis.
 ## Dependencies
 
 | Component | Required | Purpose |
