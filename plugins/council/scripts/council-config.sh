@@ -34,10 +34,9 @@ get_project_path() {
 resolve_read_path() {
   target_global=false
   for arg in "$@"; do
-    if [ "$arg" = "--global" ]; then
-      target_global=true
-      break
-    fi
+    case "$arg" in
+      *--global*) target_global=true; break ;;
+    esac
   done
 
   if [ "$target_global" = "true" ]; then
@@ -76,12 +75,21 @@ resolve_read_path() {
 
 resolve_write_path() {
   for arg in "$@"; do
-    if [ "$arg" = "--global" ]; then
-      echo "$DEFAULT_GLOBAL_PATH"
-      return 0
-    fi
+    case "$arg" in
+      *--global*) echo "$DEFAULT_GLOBAL_PATH"; return 0 ;;
+    esac
   done
-  get_project_path
+
+  repo_root="$(get_repo_root)"
+  proj_path="$(get_project_path)"
+
+  # Security check: refuse to write to a tracked repo file
+  if [ -f "$proj_path" ] && command -v git >/dev/null 2>&1 && git -C "$repo_root" ls-files --error-unmatch -- .dev/council/config.json >/dev/null 2>&1; then
+    echo "Security error: $proj_path is tracked in git repository. Refusing to overwrite tracked file. Use --global or remove from git tracking." >&2
+    exit 1
+  fi
+
+  echo "$proj_path"
 }
 
 resolve_config_path() {

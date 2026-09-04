@@ -35,59 +35,61 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 ### 1. Parse Arguments
 
+Check if `$ARGUMENTS` contains `--global`. If present, pass `--global` as an explicit, separate flag argument to script commands (e.g. `show --global`).
+
 Inspect `$ARGUMENTS`:
 
 - If `$ARGUMENTS` contains `show` or `status`:
   Run:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show "$ARGUMENTS"
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show [flags]
   ```
   Present the formatted status table to the user.
 
 - If `$ARGUMENTS` starts with `enable `:
-  Extract the consultant name and optional flags:
+  Extract the consultant name:
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write <consultant> true [flags]
   ```
   Confirm to user that the consultant was enabled.
 
 - If `$ARGUMENTS` starts with `disable `:
-  Extract the consultant name and optional flags:
+  Extract the consultant name:
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write <consultant> false [flags]
   ```
   Confirm to user that the consultant was disabled.
 
 - If `$ARGUMENTS` starts with `quick `:
-  Extract the consultant name (or `auto`) and optional flags:
+  Extract the consultant name (or `auto`):
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <consultant|auto> [flags]
   ```
   Confirm to user that the quick mode consultant was updated.
 
 - If `$ARGUMENTS` starts with `subagent backend `:
-  Extract the backend value (`native`, `omp`, `claude-cli`) and optional flags:
+  Extract the backend value (`native`, `omp`, `claude-cli`):
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-subagent-backend <type> [flags]
   ```
   Confirm to user that the subagent backend was updated.
 
 - If `$ARGUMENTS` starts with `subagent model `:
-  Extract the model value (`opus`, `sonnet`) and optional flags:
+  Extract the model value (`opus`, `sonnet`):
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-deep-model <model> [flags]
   ```
   Confirm to user that the deep review model was updated.
 
 - If `$ARGUMENTS` starts with `subagent enable `:
-  Extract the subagent name and optional flags:
+  Extract the subagent name:
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write-subagent <name> true [flags]
   ```
   Confirm to user that the subagent was enabled.
 
 - If `$ARGUMENTS` starts with `subagent disable `:
-  Extract the subagent name and optional flags:
+  Extract the subagent name:
   ```bash
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write-subagent <name> false [flags]
   ```
