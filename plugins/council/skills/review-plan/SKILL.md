@@ -88,19 +88,29 @@ Collect all verification results into a structured report:
 
 ### Step 3: Launch Consultants
 
-Resolve active consultants based on configuration:
+Resolve active consultants based on configuration and CLI availability:
 
 ```bash
-if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
+  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
 fi
-ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
+ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
+DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
+
+# Filter enabled consultants by CLI availability
+AVAILABLE_CONSULTANTS=""
+for c in $ENABLED_CONSULTANTS; do
+  case "$c" in
+    codex) command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} $c" ;;
+    gemini|glm|kimi) command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} $c" ;;
+  esac
+done
 ```
 
 **Consultant Selection**:
-- If 2 or more external consultants are enabled: Launch the first 2 (e.g. `gemini` and `codex`).
-- If only 1 external consultant is enabled: Launch that external consultant and pair with `council:claude-deep-review` (opus).
-- If 0 external consultants are enabled: Launch `council:claude-deep-review` (opus) and `council:claude-codebase-context` (sonnet).
+- If 2 or more external consultants are available: Launch the first 2 from `$AVAILABLE_CONSULTANTS` (e.g. `gemini` and `codex`).
+- If only 1 external consultant is available: Launch that external consultant and pair with `council:claude-deep-review` (model: `$DEEP_MODEL`).
+- If 0 external consultants are available: Launch `council:claude-deep-review` (model: `$DEEP_MODEL`) and `council:claude-codebase-context` (sonnet).
 
 Launch both consultants in parallel using the Task tool. Both receive the **same prompt**.
 #### Secret-Scanning Gate

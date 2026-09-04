@@ -16,14 +16,18 @@ set -e
 DEFAULT_GLOBAL_PATH="${HOME}/.config/council/config.json"
 
 get_repo_root() {
-  git rev-parse --show-toplevel 2>/dev/null || pwd
+  if command -v git >/dev/null 2>&1; then
+    git rev-parse --show-toplevel 2>/dev/null || pwd
+  else
+    pwd
+  fi
 }
 
 get_project_path() {
   echo "$(get_repo_root)/.dev/council/config.json"
 }
 
-resolve_config_path() {
+resolve_read_path() {
   target_global=false
   for arg in "$@"; do
     if [ "$arg" = "--global" ]; then
@@ -49,6 +53,20 @@ resolve_config_path() {
   fi
 
   echo "$proj_path"
+}
+
+resolve_write_path() {
+  for arg in "$@"; do
+    if [ "$arg" = "--global" ]; then
+      echo "$DEFAULT_GLOBAL_PATH"
+      return 0
+    fi
+  done
+  get_project_path
+}
+
+resolve_config_path() {
+  resolve_read_path "$@"
 }
 
 default_config() {
@@ -91,11 +109,11 @@ EOF
 }
 
 cmd_path() {
-  resolve_config_path "$@"
+  resolve_read_path "$@"
 }
 
 cmd_exists() {
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_read_path "$@")"
   if [ -f "$cfg" ]; then
     exit 0
   else
@@ -104,7 +122,7 @@ cmd_exists() {
 }
 
 cmd_read() {
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_read_path "$@")"
   if [ -f "$cfg" ]; then
     cat "$cfg"
   else
@@ -134,7 +152,7 @@ cmd_write() {
       ;;
   esac
 
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
 
@@ -250,7 +268,7 @@ cmd_init() {
     fi
   done
 
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
 
@@ -290,7 +308,7 @@ cmd_init() {
 }
 
 cmd_show() {
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_read_path "$@")"
   data="$(cmd_read "$@")"
 
   echo "Council Consultant Configuration"
@@ -379,7 +397,7 @@ cmd_set_quick() {
       ;;
   esac
 
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
 
@@ -442,7 +460,7 @@ cmd_set_subagent_backend() {
       ;;
   esac
 
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
 
@@ -471,7 +489,7 @@ cmd_set_deep_model() {
       ;;
   esac
 
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
 
@@ -510,7 +528,7 @@ cmd_write_subagent() {
       ;;
   esac
 
-  cfg="$(resolve_config_path "$@")"
+  cfg="$(resolve_write_path "$@")"
   cfg_dir="$(dirname "$cfg")"
   mkdir -p "$cfg_dir"
 

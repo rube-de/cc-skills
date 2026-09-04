@@ -20,31 +20,29 @@ Before invoking any consultant, resolve the active consultant set:
 
 ```bash
 # Check if council config exists (.dev/council/config.json or ~/.config/council/config.json)
-if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
+if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
   # First-run setup: auto-detect available subscriptions and initialize config
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
 fi
 
 # Retrieve enabled external consultants (e.g. "gemini codex")
-ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
+ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
 
 # Retrieve subagent settings
-SUBAGENT_BACKEND=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-subagent-backend)
-DEEP_MODEL=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-deep-model)
-ENABLED_SUBAGENTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled-subagents)
+SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
+DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
+ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
 ```
 
 If the user explicitly invoked `/council config`, execute the `/council:config` management workflow instead of a review.
-
 ### Step 1: Check CLI Availability for Enabled Consultants
 
 ```bash
 # Verifies required CLIs (codex, omp) only for consultants that are currently enabled
-"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli
+"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli
 ```
 
 If any required CLI is missing, inform the user and proceed with available enabled consultants only.
-
 
 ## Rate Limit Handling
 
@@ -166,12 +164,12 @@ Evaluated dynamically against $N_{\text{enabled}}$ (the count of enabled externa
 
 | Condition | Action |
 |-----------|--------|
-| $k = N_{\text{enabled}}$ ($k > 0$) | Full synthesis |
-| $k / N_{\text{enabled}} \ge 0.66$ | Proceed with note: "[X] consultant unavailable" |
-| $k / N_{\text{enabled}} \ge 0.50$ | Proceed with warning: "Limited council - only $k/$N responses" |
-| $k = 1$ ($N_{\text{enabled}} > 1$) | Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation" |
-| $k = 0$ ($N_{\text{enabled}} > 0$) | Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error |
 | $N_{\text{enabled}} = 0$ | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
+| $k = N_{\text{enabled}}$ ($k > 0$) | Full synthesis |
+| $k = 1$ ($N_{\text{enabled}} > 1$) | Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation" |
+| $k / N_{\text{enabled}} \ge 0.66$ ($k > 1$) | Proceed with note: "[X] consultant unavailable" |
+| $k / N_{\text{enabled}} \ge 0.50$ ($k > 1$) | Proceed with warning: "Limited council - only $k/$N responses" |
+| $k = 0$ ($N_{\text{enabled}} > 0$) | Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error |
 
 ### Structured Response Format
 
@@ -431,36 +429,39 @@ See "Dual-Layer Architecture" section above and WORKFLOWS.md Workflow B for deta
 
 ### Pattern C: Parallel Triage (Efficient)
 
-Quick mode runs **exactly 2 agents** — one external consultant (for fast external perspective) and one Claude subagent (for codebase depth):
+Quick mode runs **up to 2 agents** — one external consultant (for fast external perspective) and one Claude subagent (for codebase depth), gated by your configuration:
 
 1. **External Slot Selection** (dynamic based on config):
-   - Run `"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-quick`.
+   - Run `"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-quick`.
    - The command resolves the configured `settings.quick_consultant` (`auto`, `gemini`, `codex`, `glm`, or `kimi`) against enabled consultants and installed CLIs.
    - `auto` selects the first enabled consultant in priority order: `gemini` → `codex` → `glm` → `kimi`.
    - An explicit consultant that is disabled or unavailable falls back to the same `auto` resolution.
-   - If resolution returns `none`, use `council:claude-deep-review` (opus) + `council:claude-codebase-context` (sonnet) for all-internal dual-perspective triage.
+   - If resolution returns `none`:
+     - If `claude-deep-review` is enabled in `$ENABLED_SUBAGENTS`: launch `council:claude-deep-review` (model: `$DEEP_MODEL`) as the external substitute.
+     - Otherwise, leave the external slot unassigned.
 
 2. **Codebase Depth Slot**:
-   - Always `council:claude-codebase-context` (sonnet) with native tool access.
+   - Launch `council:claude-codebase-context` (sonnet) only if enabled in `$ENABLED_SUBAGENTS`.
+   - If neither participant is enabled, abort: "No external consultants or Claude subagents enabled for quick triage."
 
 ```text
 1. Log agent selection:
-   "Quick mode: running [selected-external-consultant] + council:claude-codebase-context only.
-    Skipping other consultants and deep-review/scorer."
+   "Quick mode: running [selected participants from ENABLED_SUBAGENTS].
+    Skipping remaining consultants and deep-review/scorer."
 
-2. Launch BOTH in parallel:
-   - [selected external consultant]
-   - council:claude-codebase-context (sonnet)
+2. Launch enabled participants in parallel:
+   - [selected external consultant or claude-deep-review]
+   - council:claude-codebase-context (sonnet, if enabled)
 
-3. Validate both responses (see Response Validation above)
+3. Validate responses (see Response Validation above)
    - Mark invalid responses as failed
    - Drop invalid individual findings
 
-4. If BOTH valid AND confident (>= 0.7) AND no critical findings:
-   → DONE (synthesize dual-perspective report)
+4. If valid AND confident (>= 0.7) AND no critical findings:
+   → DONE (synthesize triage report)
 
-5. If either invalid, confidence < 0.7, disagreement, OR severity == "critical":
-   → Escalate to full council (all enabled external consultants + 2 Claude subagents + scoring)
+5. If invalid, confidence < 0.7, disagreement, OR severity == "critical":
+   → Escalate to full council (all enabled external consultants + enabled Claude subagents + scoring if enabled)
 ```
 
 **Use for**: Quick validations, cost-sensitive reviews, time-critical decisions
@@ -477,10 +478,10 @@ Dynamic team assignment based on enabled external consultants ($N_{\text{enabled
 
 2. Team pairing:
    - If N_enabled >= 4: Split enabled list evenly (first half Advocates, second half Critics)
+   - If N_enabled == 3: Consultant 1 and 2 as Advocates, Consultant 3 as Critic
    - If N_enabled == 2 (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
    - If N_enabled == 1: Single external consultant as Advocate, claude-deep-review as Critic
    - If N_enabled == 0: claude-codebase-context as Advocate, claude-deep-review as Critic
-
 3. Present both perspectives
 4. User decides based on trade-offs
 ```
