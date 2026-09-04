@@ -465,7 +465,7 @@ Quick mode runs **up to 2 agents** — one external consultant (for fast externa
 ```
 
 **Use for**: Quick validations, cost-sensitive reviews, time-critical decisions
-**API calls**: Always 2, escalates to full council only if needed
+**API calls**: Up to 2, escalates to full council only if needed
 
 ### Pattern D: Adversarial Review (Thorough)
 

@@ -345,7 +345,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
 ### When to Use
 - Quick validations (`/council quick`)
 - Time-critical decisions
-- Cost-sensitive reviews (always 2 calls, rarely more)
+- Cost-sensitive reviews (up to 2 calls, rarely more)
 
 ### Step-by-Step
 
