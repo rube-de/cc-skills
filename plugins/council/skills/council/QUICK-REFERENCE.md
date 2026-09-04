@@ -50,10 +50,10 @@ Backend: native (Task), omp, or claude-cli (configured via /council:config)
 
 ```bash
 # Check/initialize config and verify CLIs for enabled consultants
-if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
+  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
 fi
-"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli
+"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli
 ```
 
 Configure active consultants anytime with `/council:config` (or `/council config`).

@@ -7,19 +7,19 @@ Before ANY workflow, execute:
 ```bash
 #!/bin/bash
 # Pre-flight checks: resolve config and verify CLIs for enabled consultants
-if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init --auto
+if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
+  "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" init --auto
 fi
 
-ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
-SUBAGENT_BACKEND=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-subagent-backend)
-DEEP_MODEL=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-deep-model)
-ENABLED_SUBAGENTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled-subagents)
+ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
+SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
+DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
+ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
 echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
 echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"
 
 # Verify required CLIs only for enabled consultants and backend
-"${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli || {
+"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli || {
   echo "WARN: Missing CLIs for some enabled consultants/backend. Proceeding with available ones."
 }
 ```
