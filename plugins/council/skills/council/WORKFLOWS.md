@@ -12,11 +12,15 @@ if ! "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" exists; then
 fi
 
 ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
+SUBAGENT_BACKEND=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-subagent-backend)
+DEEP_MODEL=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-deep-model)
+ENABLED_SUBAGENTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled-subagents)
 echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
+echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"
 
-# Verify required CLIs only for enabled consultants
+# Verify required CLIs only for enabled consultants and backend
 "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" check-cli || {
-  echo "WARN: Missing CLIs for some enabled consultants. Proceeding with available ones."
+  echo "WARN: Missing CLIs for some enabled consultants/backend. Proceeding with available ones."
 }
 ```
 
@@ -189,21 +193,26 @@ echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
 
    **Layer 2: Claude Subagents (parallel, 120s timeout each)**
 
-   Each runs a DIFFERENT concern domain with native tool access:
-   ```
-   Task(council:claude-deep-review, model=opus):     "Review for security, bugs, and performance. Trace input paths, follow call chains, profile hot paths."
-   Task(council:claude-codebase-context, model=sonnet): "Check quality patterns, CLAUDE.md compliance, git history, and documentation. Compare against codebase conventions."
-   ```
+   Launches enabled subagents from `$ENABLED_SUBAGENTS` via `$SUBAGENT_BACKEND`:
 
-   If `--blind` flag is set, invoke Claude subagents via CLI instead:
-   ```bash
-   claude -p "Review for security, bugs, and performance: [diff content]"
-   claude -p "Review for quality, compliance, history, and documentation: [diff content]"
-   # No tool access, same constraints as external consultants
-   ```
+   - **`native`** backend (default):
+     ```text
+     # Deep review uses configured model ($DEEP_MODEL: opus or sonnet)
+     Task(council:claude-deep-review, model=$DEEP_MODEL): "Review for security, bugs, performance."
+     Task(council:claude-codebase-context, model=sonnet): "Check quality, CLAUDE.md, git history, docs."
+     ```
+   - **`omp`** backend (utilizes OMP Anthropic quota or profile):
+     ```bash
+     omp -p --model "anthropic/claude-${DEEP_MODEL}" "Review for security, bugs, performance @\"$sandbox/diff\""
+     omp -p --model "anthropic/claude-sonnet" "Check quality, compliance, git history @\"$sandbox/diff\""
+     ```
+   - **`claude-cli`** backend (CLI blind mode, or `--blind` flag):
+     ```bash
+     claude -p --model "$DEEP_MODEL" "Review for security, bugs, performance: [diff]"
+     claude -p --model "sonnet" "Check quality, compliance, history: [diff]"
+     ```
 
-   All 6 agents (4 external + 2 Claude) run simultaneously.
-   Each MUST return findings with mandatory `location` field (`file:line`).
+   All active external consultants and enabled Claude subagents run simultaneously.
 
 8. **Auto-Escalation (Broad Pass Only)**
 
@@ -269,9 +278,9 @@ echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
 
     Only findings from validated, successful responses proceed to scoring.
 
-11. **Confidence Scoring (Sonnet Agent)**
+11. **Confidence Scoring (Conditional)**
 
-    After all findings are validated and merged:
+    If `review-scorer` is enabled in `$ENABLED_SUBAGENTS`:
     ```
     1. Deduplicate findings referring to the same issue (across both layers)
     2. Launch council:review-scorer (Sonnet) with full context + all findings
@@ -281,8 +290,8 @@ echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
        - Cross-layer corroboration
     4. Filter: only findings >= 80 appear in final report
     ```
-
-    See SKILL.md "Confidence Scoring Agent" for scorer prompt template and rubric.
+    If `review-scorer` is disabled in config:
+    - Skip separate scoring pass; synthesize findings directly using consultant confidence and consensus weighting.
 
 12. **Apply Weighted Synthesis**
     ```

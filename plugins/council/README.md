@@ -23,17 +23,16 @@ Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) 
 | GLM-5.3 | `omp -p --no-tools --model zai/glm-5.3:max` | Alternative perspectives, algorithms |
 | Kimi K3 | `omp -p --no-tools --model kimi-code/k3` | Long-context reasoning, creative solutions |
 
-**Layer 2 — Claude Subagents** (concern depth, tool access):
+**Layer 2 — Claude Subagents** (concern depth, tool access — backend and models configurable):
 | Subagent | Model | Focus |
 |----------|-------|-------|
-| claude-deep-review | Opus | Security, bugs, performance — traces input paths, follows call chains |
+| claude-deep-review | Opus (or Sonnet via config) | Security, bugs, performance — traces input paths, follows call chains |
 | claude-codebase-context | Sonnet | Quality, compliance, history, documentation — compares against project conventions |
 
-**Layer 3 — Scoring** (noise reduction):
+**Layer 3 — Scoring** (noise reduction — optional / conditional via config):
 | Agent | Model | Role |
 |-------|-------|------|
 | review-scorer | Sonnet | Deduplicate, verify, score 0-100, filter to >= 80 |
-
 ### Weighted Synthesis
 
 Not simple voting — findings are weighted by expertise and confidence:
@@ -152,9 +151,13 @@ External consultants can be enabled or disabled based on your active subscriptio
 ```bash
 /council:config                       # Interactive setup & detection wizard
 /council:config show                  # Display current configuration & CLI status
-/council:config enable <consultant>   # Enable a consultant (gemini, codex, glm, kimi)
-/council:config disable <consultant>  # Disable a consultant
-/council:config quick <consultant>     # Set quick mode consultant, or use auto
+/council:config enable <consultant>   # Enable an external consultant (gemini, codex, glm, kimi)
+/council:config disable <consultant>  # Disable an external consultant
+/council:config quick <consultant>    # Set quick mode consultant (gemini, codex, glm, kimi, auto)
+/council:config subagent backend <t>  # Set subagent execution backend (native, omp, claude-cli)
+/council:config subagent model <m>    # Set deep review model (opus, sonnet)
+/council:config subagent enable <name># Enable subagent (claude-deep-review, claude-codebase-context, review-scorer)
+/council:config subagent disable <n>  # Disable subagent
 /council:config detect                # Probe installed CLIs & active subscriptions
 /council:config init [--auto]         # Initialize configuration (.dev/council/config.json)
 ```

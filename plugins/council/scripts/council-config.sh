@@ -69,6 +69,19 @@ default_config() {
       "enabled": false
     }
   },
+  "subagents": {
+    "backend": "native",
+    "deep_review_model": "opus",
+    "claude-deep-review": {
+      "enabled": true
+    },
+    "claude-codebase-context": {
+      "enabled": true
+    },
+    "review-scorer": {
+      "enabled": true
+    }
+  },
   "settings": {
     "timeout_seconds": 120,
     "quick_consultant": "auto"
@@ -321,6 +334,28 @@ cmd_show() {
   quick_resolved="$(cmd_get_quick "$@")"
   echo ""
   echo "Quick Mode Consultant: $quick_resolved (setting: $quick_cfg)"
+
+  sub_backend="$(cmd_get_subagent_backend "$@")"
+  deep_mod="$(cmd_get_deep_model "$@")"
+  echo ""
+  echo "Claude Subagent Configuration:"
+  echo "  Backend:           $sub_backend (options: native, omp, claude-cli)"
+  echo "  Deep Review Model: $deep_mod (options: opus, sonnet)"
+  for s in claude-deep-review claude-codebase-context review-scorer; do
+    en="$(echo "$data" | jq -r --arg s "$s" '((.subagents // {})[$s] // {}).enabled as $v | if $v != null then $v else true end')"
+    if [ "$en" = "true" ]; then
+      status_tag="[ENABLED] "
+    else
+      status_tag="[DISABLED]"
+    fi
+    role_desc=""
+    case "$s" in
+      claude-deep-review) role_desc="Layer 2: security, bugs, performance" ;;
+      claude-codebase-context) role_desc="Layer 2: quality, compliance, docs" ;;
+      review-scorer) role_desc="Layer 3: confidence scoring" ;;
+    esac
+    printf "  %-24s %s (%s)\n" "$s" "$status_tag" "$role_desc"
+  done
 }
 
 cmd_get_enabled() {
@@ -395,6 +430,108 @@ cmd_get_quick() {
   echo "none"
   return 0
 }
+cmd_set_subagent_backend() {
+  val="$1"
+  shift || true
+
+  case "$val" in
+    native|omp|claude-cli) ;;
+    *)
+      echo "Error: Unknown subagent backend '$val'. Valid: native, omp, claude-cli" >&2
+      exit 1
+      ;;
+  esac
+
+  cfg="$(resolve_config_path "$@")"
+  cfg_dir="$(dirname "$cfg")"
+  mkdir -p "$cfg_dir"
+
+  current="$(cmd_read "$@")"
+  tmp_file="$(mktemp "${cfg_dir}/.config.tmp.XXXXXX")"
+  echo "$current" | jq --arg b "$val" '.subagents.backend = $b' > "$tmp_file"
+  mv "$tmp_file" "$cfg"
+
+  echo "Updated subagents.backend=$val in $cfg"
+}
+
+cmd_get_subagent_backend() {
+  data="$(cmd_read "$@")"
+  echo "$data" | jq -r '.subagents.backend // "native"'
+}
+
+cmd_set_deep_model() {
+  val="$1"
+  shift || true
+
+  case "$val" in
+    opus|sonnet) ;;
+    *)
+      echo "Error: Unknown deep review model '$val'. Valid: opus, sonnet" >&2
+      exit 1
+      ;;
+  esac
+
+  cfg="$(resolve_config_path "$@")"
+  cfg_dir="$(dirname "$cfg")"
+  mkdir -p "$cfg_dir"
+
+  current="$(cmd_read "$@")"
+  tmp_file="$(mktemp "${cfg_dir}/.config.tmp.XXXXXX")"
+  echo "$current" | jq --arg m "$val" '.subagents.deep_review_model = $m' > "$tmp_file"
+  mv "$tmp_file" "$cfg"
+
+  echo "Updated subagents.deep_review_model=$val in $cfg"
+}
+
+cmd_get_deep_model() {
+  data="$(cmd_read "$@")"
+  echo "$data" | jq -r '.subagents.deep_review_model // "opus"'
+}
+
+cmd_write_subagent() {
+  agent="$1"
+  state="$2"
+  shift 2 || true
+
+  case "$agent" in
+    claude-deep-review|claude-codebase-context|review-scorer) ;;
+    *)
+      echo "Error: Unknown subagent '$agent'. Valid: claude-deep-review, claude-codebase-context, review-scorer" >&2
+      exit 1
+      ;;
+  esac
+
+  case "$state" in
+    true|on|enable|enabled) bool_val="true" ;;
+    false|off|disable|disabled) bool_val="false" ;;
+    *)
+      echo "Error: Invalid state '$state'. Valid: true, false, on, off, enable, disable" >&2
+      exit 1
+      ;;
+  esac
+
+  cfg="$(resolve_config_path "$@")"
+  cfg_dir="$(dirname "$cfg")"
+  mkdir -p "$cfg_dir"
+
+  current="$(cmd_read "$@")"
+  tmp_file="$(mktemp "${cfg_dir}/.config.tmp.XXXXXX")"
+  echo "$current" | jq --arg a "$agent" --argjson v "$bool_val" \
+    '.subagents[$a].enabled = $v' > "$tmp_file"
+  mv "$tmp_file" "$cfg"
+
+  echo "Updated subagent $agent enabled=$bool_val in $cfg"
+}
+
+cmd_get_enabled_subagents() {
+  data="$(cmd_read "$@")"
+  echo "$data" | jq -r '
+    .subagents // {}
+    | to_entries
+    | map(select(.key != "backend" and .key != "deep_review_model" and .value.enabled == true) | .key)
+    | join(" ")
+  '
+}
 
 cmd_check_cli() {
   data="$(cmd_read "$@")"
@@ -418,6 +555,12 @@ cmd_check_cli() {
     command -v omp >/dev/null 2>&1 || missing+=("omp")
   fi
 
+  sub_backend="$(cmd_get_subagent_backend "$@")"
+  if [ "$sub_backend" = "omp" ]; then
+    command -v omp >/dev/null 2>&1 || missing+=("omp (subagent backend)")
+  elif [ "$sub_backend" = "claude-cli" ]; then
+    command -v claude >/dev/null 2>&1 || missing+=("claude CLI (subagent backend)")
+  fi
   if [ ${#missing[@]} -gt 0 ]; then
     echo "Council plugin: missing CLIs for enabled consultants (${enabled_consultants}): ${missing[*]}"
     return 1
@@ -470,8 +613,32 @@ case "$1" in
     shift
     cmd_get_quick "$@"
     ;;
+  set-subagent-backend)
+    shift
+    cmd_set_subagent_backend "$@"
+    ;;
+  get-subagent-backend)
+    shift
+    cmd_get_subagent_backend "$@"
+    ;;
+  set-deep-model)
+    shift
+    cmd_set_deep_model "$@"
+    ;;
+  get-deep-model)
+    shift
+    cmd_get_deep_model "$@"
+    ;;
+  write-subagent)
+    shift
+    cmd_write_subagent "$@"
+    ;;
+  get-enabled-subagents)
+    shift
+    cmd_get_enabled_subagents "$@"
+    ;;
   *)
-    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|set-quick|get-quick} [args...]" >&2
+    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|set-quick|get-quick|set-subagent-backend|get-subagent-backend|set-deep-model|get-deep-model|write-subagent|get-enabled-subagents} [args...]" >&2
     exit 1
     ;;
 esac

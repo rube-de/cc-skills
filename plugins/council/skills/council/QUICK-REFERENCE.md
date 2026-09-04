@@ -33,7 +33,7 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
 (model diversity, same prompt)                   (concern depth, tool access)
 ┌────────┬────────┬────────┬────────┐            ┌──────────────┬──────────────┐
 │ Gemini │ Codex  │ GLM    │ Kimi   │            │ Deep Review  │  Codebase    │
-│  CLI   │  CLI   │  CLI   │  CLI   │            │ (opus)       │  Context     │
+│  CLI   │  CLI   │  CLI   │  CLI   │            │ (opus/sonnet)│  Context     │
 └────────┴────────┴────────┴────────┘            │ Security +   │  (sonnet)    │
          ↓ consensus                              │ Bugs + Perf  │  Quality +   │
                                                   │              │  Compliance +│
@@ -41,8 +41,9 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
                     ↓                             │              │  Docs        │
               ┌───────────┐                       └──────────────┴──────────────┘
               │  Scorer   │ ← merges + scores all findings   ↓ depth
-              │ (sonnet)  │
+              │ (sonnet)  │   (optional / conditional)
               └───────────┘
+Backend: native (Task), omp, or claude-cli (configured via /council:config)
 ```
 
 ## Pre-Flight & Configuration Check

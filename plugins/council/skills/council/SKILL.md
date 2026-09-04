@@ -27,6 +27,11 @@ fi
 
 # Retrieve enabled external consultants (e.g. "gemini codex")
 ENABLED_CONSULTANTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled)
+
+# Retrieve subagent settings
+SUBAGENT_BACKEND=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-subagent-backend)
+DEEP_MODEL=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-deep-model)
+ENABLED_SUBAGENTS=$("${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" get-enabled-subagents)
 ```
 
 If the user explicitly invoked `/council config`, execute the `/council:config` management workflow instead of a review.
@@ -93,13 +98,13 @@ Invoked via CLI. Each brings a different AI model's perspective. All receive the
 
 ### Claude Subagents (Concern Depth — Review Workflows Only)
 
-Invoked via Task tool. Each has a **different concern** and **native codebase access** (Read, Grep, Glob, Bash).
+Each subagent brings deep analysis with configurable execution backends (`native` Task, `omp`, or `claude-cli`) and model selection:
 
-| Agent | Model | Concern | Unique Capability |
-|-------|-------|---------|-------------------|
-| `council:claude-deep-review` | opus | Security, bugs, performance | Traces input paths, follows call chains, profiles hot paths |
-| `council:claude-codebase-context` | sonnet | Quality, compliance, history, documentation | Reads CLAUDE.md rules, greps codebase patterns, runs git blame |
-
+| Agent | Default Model | Configurable Model | Concern | Unique Capability |
+|-------|---------------|-------------------|---------|-------------------|
+| `council:claude-deep-review` | opus | `opus` or `sonnet` | Security, bugs, performance | Traces input paths, follows call chains, profiles hot paths |
+| `council:claude-codebase-context` | sonnet | sonnet | Quality, compliance, history, docs | Reads CLAUDE.md rules, greps codebase patterns, runs git blame |
+| `council:review-scorer` | sonnet | sonnet | Confidence scoring | Uniform 0-100 evaluation across all findings |
 ### Dual-Layer Architecture (Review Workflows)
 
 ```
@@ -135,17 +140,18 @@ Invoked via Task tool. Each has a **different concern** and **native codebase ac
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-Both layers launch **simultaneously** — external consultants (4) and Claude subagents (2) run in parallel.
+Both layers launch **simultaneously** — active external consultants and enabled Claude subagents run in parallel.
+
+### Subagent Execution Backends
+
+Configured via `/council:config subagent backend <type>`:
+- **`native`** (default): Runs via host `Task` tool with full native tool access (`Read`, `Grep`, `Glob`, `Bash`).
+- **`omp`**: Runs via `omp -p --model anthropic/<model>` (with tool access or report sandbox), utilizing your OMP Anthropic quota or profile.
+- **`claude-cli`**: Runs via `claude -p --model <model>` (CLI blind mode, no tool access).
 
 ### Blind Mode (`--blind`)
 
-By default, Claude subagents use native tool access. With the `--blind` flag, they run via `claude -p` CLI instead — losing tool access but reviewing under the same constraints as external consultants.
-
-```
-/council review --blind    → Claude subagents invoked via CLI, no tool access
-/council review            → Claude subagents invoked via Task, full tool access (default)
-```
-
+With the `--blind` flag (or `claude-cli` backend), subagents run without tool access, reviewing under the same constraints as external consultants.
 Use `--blind` when you want to compare Claude's blind opinion against its tool-assisted findings, or when you want all reviewers on equal footing.
 
 ## Timeout and Failure Handling
@@ -348,13 +354,14 @@ Phase 2: Auto-Escalation
   - If all findings are medium/low:
     → No escalation, proceed to scoring
 
-Phase 3: Confidence Scoring
-  - Sonnet scoring agent evaluates all findings (see below)
+Phase 3: Confidence Scoring (Conditional)
+  - If `review-scorer` is enabled in config: Sonnet scoring agent evaluates all findings (see below)
+  - If `review-scorer` is disabled: Skip separate scoring pass; synthesize findings directly using consultant confidence
 ```
 
 ## Confidence Scoring Agent
 
-After consultants return findings (in any `/council review` workflow), a **Sonnet scoring agent** evaluates every finding uniformly.
+After consultants return findings (in any `/council review` workflow), if `review-scorer` is enabled, a **Sonnet scoring agent** evaluates every finding uniformly.
 
 ### Scoring Process
 
@@ -362,7 +369,6 @@ After consultants return findings (in any `/council review` workflow), a **Sonne
 1. Collect ALL findings from ALL consultants
 2. Deduplicate findings that refer to the same issue (merge consultant attributions)
 3. Launch a Sonnet agent (model: sonnet) with the full code context + all findings
-4. The scorer evaluates each finding on a 0-100 confidence scale:
 
    0:   False positive. Does not stand up to scrutiny, or is pre-existing.
    25:  Might be real, but could also be a false positive. Not verified.

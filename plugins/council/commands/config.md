@@ -15,6 +15,10 @@ Configure which external AI consultants are enabled for Council reviews and cons
 /council:config enable <consultant>        # Enable a consultant (gemini, codex, glm, kimi)
 /council:config disable <consultant>       # Disable a consultant
 /council:config quick <consultant|auto>    # Set preferred quick mode external consultant
+/council:config subagent backend <type>    # Set Claude subagent backend (native, omp, claude-cli)
+/council:config subagent model <model>     # Set deep review model (opus, sonnet)
+/council:config subagent enable <name>     # Enable subagent (claude-deep-review, claude-codebase-context, review-scorer)
+/council:config subagent disable <name>    # Disable subagent
 /council:config detect                     # Probe installed CLIs & active subscriptions
 /council:config init [--auto]              # Initialize configuration (.dev/council/config.json)
 ```
@@ -60,6 +64,35 @@ Inspect `$ARGUMENTS`:
   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <consultant|auto> [flags]
   ```
   Confirm to user that the quick mode consultant was updated.
+
+- If `$ARGUMENTS` starts with `subagent backend `:
+  Extract the backend value (`native`, `omp`, `claude-cli`) and optional flags:
+  ```bash
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-subagent-backend <type> [flags]
+  ```
+  Confirm to user that the subagent backend was updated.
+
+- If `$ARGUMENTS` starts with `subagent model `:
+  Extract the model value (`opus`, `sonnet`) and optional flags:
+  ```bash
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-deep-model <model> [flags]
+  ```
+  Confirm to user that the deep review model was updated.
+
+- If `$ARGUMENTS` starts with `subagent enable `:
+  Extract the subagent name and optional flags:
+  ```bash
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write-subagent <name> true [flags]
+  ```
+  Confirm to user that the subagent was enabled.
+
+- If `$ARGUMENTS` starts with `subagent disable `:
+  Extract the subagent name and optional flags:
+  ```bash
+  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write-subagent <name> false [flags]
+  ```
+  Confirm to user that the subagent was disabled.
+
 - If `$ARGUMENTS` contains `detect`:
   Run:
   ```bash
