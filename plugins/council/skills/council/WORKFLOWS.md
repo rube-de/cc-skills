@@ -213,6 +213,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
      ```
 
    All active external consultants and enabled Claude subagents run simultaneously.
+   Each MUST return findings with mandatory `location` field (`file:line`).
 
 8. **Auto-Escalation (Broad Pass Only)**
 

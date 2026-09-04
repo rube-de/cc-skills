@@ -33,6 +33,7 @@ Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) 
 | Agent | Model | Role |
 |-------|-------|------|
 | review-scorer | Sonnet | Deduplicate, verify, score 0-100, filter to >= 80 |
+
 ### Weighted Synthesis
 
 Not simple voting — findings are weighted by expertise and confidence:
