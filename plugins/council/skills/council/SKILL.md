@@ -46,7 +46,7 @@ If the user explicitly invoked `/council config`, execute the configuration mana
 ### Step 1: Check CLI Availability for Enabled Consultants
 
 ```bash
-if [ -x "$CONFIG_SCRIPT" ]; then
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
   "$CONFIG_SCRIPT" check-cli || true
 fi
 ```

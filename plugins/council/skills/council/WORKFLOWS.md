@@ -27,7 +27,7 @@ fi
 echo "Available consultants: ${AVAILABLE_CONSULTANTS}"
 echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"
 
-if [ -x "$CONFIG_SCRIPT" ]; then
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
   "$CONFIG_SCRIPT" check-cli || {
     echo "WARN: Missing CLIs for some enabled consultants/backend. Proceeding with available ones."
   }
