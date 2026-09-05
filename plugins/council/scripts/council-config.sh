@@ -169,9 +169,17 @@ cmd_read() {
   if [ -n "$cfg" ] && [ -f "$cfg" ]; then
     def_tmp="$(mktemp "${TMPDIR:-/tmp}/council-def.XXXXXX")"
     default_config > "$def_tmp"
-    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '$def[0] * ($custom[0] // {})')"
+    set +e
+    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '$def[0] * ($custom[0] // {})' 2>/dev/null)"
+    status=$?
+    set -e
     rm -f "$def_tmp"
-    echo "$merged"
+    if [ $status -eq 0 ] && [ -n "$merged" ]; then
+      echo "$merged"
+    else
+      echo "Warning: Failed to parse configuration at $cfg (invalid JSON). Falling back to default settings." >&2
+      default_config
+    fi
   else
     default_config
   fi
@@ -658,7 +666,9 @@ cmd_check_cli() {
   if [ -n "$enabled_subagents" ]; then
     sub_backend="$(cmd_get_subagent_backend "$@")"
     if [ "$sub_backend" = "omp" ]; then
-      command -v omp >/dev/null 2>&1 || missing+=("omp (subagent backend)")
+      if [ "$need_omp" != "true" ]; then
+        command -v omp >/dev/null 2>&1 || missing+=("omp (subagent backend)")
+      fi
     elif [ "$sub_backend" = "claude-cli" ]; then
       command -v claude >/dev/null 2>&1 || missing+=("claude CLI (subagent backend)")
     fi

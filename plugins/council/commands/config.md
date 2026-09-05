@@ -37,7 +37,7 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 Resolve the config utility path with a fallback when `CLAUDE_PLUGIN_ROOT` is unset:
 ```bash
-CONFIG_SCRIPT="${CLAUDE_PLUGIN_ROOT:-plugins/council}/scripts/council-config.sh"
+CONFIG_SCRIPT="${CLAUDE_PLUGIN_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)/plugins/council}/scripts/council-config.sh"
 ```
 
 Check if `$ARGUMENTS` contains the standalone flag token `--global` (not as part of another argument like `--globalfoo`). If present, pass `--global` as an explicit, separate flag argument to script commands (e.g. `show --global`).
