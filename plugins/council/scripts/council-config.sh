@@ -470,37 +470,26 @@ cmd_set_quick() {
 
 cmd_get_quick() {
   data="$(cmd_read "$@")"
+  detected="$(cmd_detect --json)"
   configured="$(echo "$data" | jq -r '.settings.quick_consultant // "auto"')"
 
-  # Check if explicitly configured consultant is enabled and CLI available
+  # Check if explicitly configured consultant is enabled and recommended (CLI + auth)
   if [ "$configured" != "auto" ] && [ -n "$configured" ]; then
     en="$(echo "$data" | jq -r ".consultants.${configured}.enabled // false")"
-    if [ "$en" = "true" ]; then
-      has_cli=false
-      case "$configured" in
-        codex) command -v codex >/dev/null 2>&1 && has_cli=true ;;
-        gemini|glm|kimi) command -v omp >/dev/null 2>&1 && has_cli=true ;;
-      esac
-      if [ "$has_cli" = "true" ]; then
-        echo "$configured"
-        return 0
-      fi
+    rec="$(echo "$detected" | jq -r ".${configured}.recommended // false")"
+    if [ "$en" = "true" ] && [ "$rec" = "true" ]; then
+      echo "$configured"
+      return 0
     fi
   fi
 
-  # Auto resolution: iterate enabled consultants in priority order
+  # Auto resolution: iterate enabled consultants in priority order, checking recommended
   for c in gemini codex glm kimi; do
     en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
-    if [ "$en" = "true" ]; then
-      has_cli=false
-      case "$c" in
-        codex) command -v codex >/dev/null 2>&1 && has_cli=true ;;
-        gemini|glm|kimi) command -v omp >/dev/null 2>&1 && has_cli=true ;;
-      esac
-      if [ "$has_cli" = "true" ]; then
-        echo "$c"
-        return 0
-      fi
+    rec="$(echo "$detected" | jq -r ".${c}.recommended // false")"
+    if [ "$en" = "true" ] && [ "$rec" = "true" ]; then
+      echo "$c"
+      return 0
     fi
   done
 

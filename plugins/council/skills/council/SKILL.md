@@ -19,28 +19,37 @@ Orchestrate multiple external AI consultants to provide thorough, consensus-driv
 Before invoking any consultant, resolve the active consultant set:
 
 ```bash
-# Check if council config exists (council-config.sh automatically falls back to defaults if unconfigured)
-if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+  fi
+  ENABLED_CONSULTANTS=$("$CONFIG_SCRIPT" get-enabled)
+  AVAILABLE_CONSULTANTS=$("$CONFIG_SCRIPT" get-available)
+  SUBAGENT_BACKEND=$("$CONFIG_SCRIPT" get-subagent-backend)
+  DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
+  ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+else
+  echo "Notice: council-config.sh or jq/jaq unavailable (skill-only install). Using default consultants and models."
+  ENABLED_CONSULTANTS="gemini codex"
+  AVAILABLE_CONSULTANTS=""
+  command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
+  command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
+  SUBAGENT_BACKEND="native"
+  DEEP_MODEL="opus"
+  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
 fi
-
-# Retrieve enabled and available external consultants (e.g. "gemini codex")
-ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
-AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
-# Retrieve subagent settings
-SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
-DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
-ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
 ```
 
 If the user explicitly invoked `/council config`, execute the configuration management commands using `council-config.sh` (via Bash) and `AskUserQuestion` for interactive selections (matching the `/council:config` workflow) instead of running a review.
+
 ### Step 1: Check CLI Availability for Enabled Consultants
 
 ```bash
-# Verifies required CLIs (codex, omp) only for consultants that are currently enabled
-"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli || true
+if [ -x "$CONFIG_SCRIPT" ]; then
+  "$CONFIG_SCRIPT" check-cli || true
+fi
 ```
-
 If any required CLI is missing, inform the user and proceed with available enabled consultants only.
 
 ## Rate Limit Handling

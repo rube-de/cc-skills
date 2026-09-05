@@ -7,21 +7,31 @@ Before ANY workflow, execute:
 ```bash
 #!/bin/bash
 # Pre-flight checks: resolve config and verify CLIs for enabled consultants
-# council-config.sh automatically falls back to defaults if unconfigured
-if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+  fi
+  AVAILABLE_CONSULTANTS=$("$CONFIG_SCRIPT" get-available)
+  SUBAGENT_BACKEND=$("$CONFIG_SCRIPT" get-subagent-backend)
+  DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
+  ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+else
+  AVAILABLE_CONSULTANTS=""
+  command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
+  command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
+  SUBAGENT_BACKEND="native"
+  DEEP_MODEL="opus"
+  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
 fi
-AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
-SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
-DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
-ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
 echo "Available consultants: ${AVAILABLE_CONSULTANTS}"
 echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"
 
-# Verify required CLIs only for enabled consultants and backend
-"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli || {
-  echo "WARN: Missing CLIs for some enabled consultants/backend. Proceeding with available ones."
-}
+if [ -x "$CONFIG_SCRIPT" ]; then
+  "$CONFIG_SCRIPT" check-cli || {
+    echo "WARN: Missing CLIs for some enabled consultants/backend. Proceeding with available ones."
+  }
+fi
 ```
 
 ---

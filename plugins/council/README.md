@@ -144,7 +144,7 @@ npx skills add rube-de/cc-skills --skill council
 > - `preflight.sh` — no automatic CLI availability check on session start
 > - `validate-json-output.sh` — no PostToolUse JSON validation for consultant output
 > - Agent `.md` definitions — subagent types (codex-consultant, gemini-consultant, etc.) won't be registered
-
+> - `/council:config` command & scripts — consultant enablement configuration and subscription management won't be available (council falls back to default consultants)
 ### Configuration & Subscriptions
 
 External consultants can be enabled or disabled based on your active subscriptions (`.dev/council/config.json`):

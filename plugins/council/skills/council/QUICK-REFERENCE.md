@@ -49,11 +49,13 @@ Backend: native (Task), omp, or claude-cli (configured via /council:config)
 ## Pre-Flight & Configuration Check
 
 ```bash
-# Check config and verify CLIs for enabled consultants (falls back to defaults if unconfigured)
-if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ]; then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+  fi
+  "$CONFIG_SCRIPT" check-cli || true
 fi
-"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" check-cli || true
 ```
 
 Configure active consultants anytime with `/council:config` (or `/council config`).
