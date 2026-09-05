@@ -99,8 +99,10 @@ if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >
   ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
   DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
 else
-  echo "Notice: council-config.sh not found (standalone skill install). Using default consultants and models."
-  AVAILABLE_CONSULTANTS="gemini codex"
+  echo "Notice: council-config.sh or jq/jaq unavailable (standalone skill install). Using default consultants and models."
+  AVAILABLE_CONSULTANTS=""
+  command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
+  command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
   ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
   DEEP_MODEL="opus"
 fi
