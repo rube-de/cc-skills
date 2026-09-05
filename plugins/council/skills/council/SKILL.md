@@ -24,9 +24,9 @@ if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
   echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
 fi
 
-# Retrieve enabled external consultants (e.g. "gemini codex")
+# Retrieve enabled and available external consultants (e.g. "gemini codex")
 ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
-
+AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
 # Retrieve subagent settings
 SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
 DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)

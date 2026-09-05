@@ -403,7 +403,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
 3. **Full Council Escalation (Rare)**
 
    ```text
-   → Launch full council: all enabled external consultants from $ENABLED_CONSULTANTS
+   → Launch full council: all available external consultants from $AVAILABLE_CONSULTANTS
      + enabled Layer 2 Claude subagents from $ENABLED_SUBAGENTS
      + review-scorer (only if enabled in $ENABLED_SUBAGENTS)
    → Or escalate to human decision
@@ -505,7 +505,7 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
 ### Round 1: Independent Opinions
 
 ```
-Task(active consultants in $ENABLED_CONSULTANTS):
+Task(active consultants in $AVAILABLE_CONSULTANTS):
 "We need to decide: [decision question]
 
 Options:
@@ -521,7 +521,7 @@ Return: {choice: 'A|B|C', confidence: 0-1, reasoning: '...'}"
 ### Round 2: Cross-Examination
 
 ```
-Task(active consultants in $ENABLED_CONSULTANTS):
+Task(active consultants in $AVAILABLE_CONSULTANTS):
 "Round 1 results:
 [summary of choices and reasoning from active consultants]
 
@@ -539,7 +539,7 @@ Review these perspectives:
 - Disagreement is on preferences, not facts
 - More rounds won't produce new information
 ```
-Task(active consultants in $ENABLED_CONSULTANTS):
+Task(active consultants in $AVAILABLE_CONSULTANTS):
 "The council remains split after cross-examination.
 
 Agreement: [list]
@@ -557,14 +557,14 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 - Confidence: [score] (≥ 2/3 agree after Round 2)
 
 ### Vote Distribution
-(One row per active consultant in $ENABLED_CONSULTANTS)
+(One row per active consultant in $AVAILABLE_CONSULTANTS)
 | Consultant | R1 | R2 | R3 | Final |
 |------------|----|----|----| ------|
 | [Consultant 1] | A | A | - | A |
 | [Consultant 2] | C | C | - | C (dissent) |
 
 ### Dissenting Views
-[Capture reasoning of any dissenting consultant from $ENABLED_CONSULTANTS — it may reveal blind spots]
+[Capture reasoning of any dissenting consultant from $AVAILABLE_CONSULTANTS — it may reveal blind spots]
 ### Rounds Required: 2
 ### Rate Limits Encountered: None
 ```
