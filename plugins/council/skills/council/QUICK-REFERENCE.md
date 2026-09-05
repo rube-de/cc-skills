@@ -50,7 +50,7 @@ Backend: native (Task), omp, or claude-cli (configured via /council:config)
 
 ```bash
 CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
-if [ -x "$CONFIG_SCRIPT" ]; then
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
   if ! "$CONFIG_SCRIPT" exists; then
     echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
   fi
@@ -175,16 +175,16 @@ Escalation to full council launches **all enabled** external consultants + enabl
 
 ## Partial Success Modes
 
-Evaluated dynamically against `N_enabled`:
+Evaluated dynamically against `N_available`:
 
 | Condition | Action |
 |-----------|--------|
-| N_enabled == 0 | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
-| k == N_enabled (k > 0) | Full synthesis |
-| k == 1 (N_enabled > 1) | Proceed in single-consultant mode with strong warning |
-| k / N_enabled >= 0.66 (k > 1) | Proceed + note |
-| k / N_enabled >= 0.50 (k > 1) | Proceed + warning |
-| k == 0 (N_enabled > 0) | Abort with error (or Layer 2 fallback if available) |
+| N_available == 0 | External layer skipped (or no external tools available). Proceed with Layer 2 (Claude subagents) only |
+| k == N_available (k > 0) | Full synthesis |
+| k == 1 (N_available > 1) | Proceed in single-consultant mode with strong warning |
+| k / N_available >= 0.66 (k > 1) | Proceed + note |
+| k / N_available >= 0.50 (k > 1) | Proceed + warning |
+| k == 0 (N_available > 0) | Abort with error (or Layer 2 fallback if available) |
 ## Structured Response Schema
 
 ```json

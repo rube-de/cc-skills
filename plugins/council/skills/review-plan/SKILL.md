@@ -91,7 +91,7 @@ Collect all verification results into a structured report:
 Resolve active consultants based on configuration and CLI availability:
 ```bash
 CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
-if [ -x "$CONFIG_SCRIPT" ]; then
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
   if ! "$CONFIG_SCRIPT" exists; then
     echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
   fi
