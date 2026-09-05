@@ -615,7 +615,7 @@ cmd_set_timeout() {
   val="$1"
   shift || true
   case "$val" in
-    ''|*[!0-9]*)
+    ''|*[!0-9]*|0*)
       echo "Error: timeout must be a positive integer" >&2
       exit 1
       ;;
