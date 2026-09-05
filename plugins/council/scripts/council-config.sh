@@ -225,8 +225,11 @@ cmd_detect() {
     has_codex_cli=true
     if [ -n "$OPENAI_API_KEY" ]; then
       has_codex_auth=true
-    elif codex login status 2>&1 | grep -qi "Logged in" && ! codex login status 2>&1 | grep -qi "Not logged in"; then
-      has_codex_auth=true
+    else
+      codex_status="$(codex login status 2>&1 || true)"
+      if echo "$codex_status" | grep -qi "Logged in" && ! echo "$codex_status" | grep -qi "Not logged in"; then
+        has_codex_auth=true
+      fi
     fi
   fi
 
