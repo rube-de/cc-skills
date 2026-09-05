@@ -89,16 +89,22 @@ Collect all verification results into a structured report:
 ### Step 3: Launch Consultants
 
 Resolve active consultants based on configuration and CLI availability:
-
 ```bash
-if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
-  echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ]; then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+  fi
+  AVAILABLE_CONSULTANTS=$("$CONFIG_SCRIPT" get-available)
+  ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+  DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
+else
+  echo "Notice: council-config.sh not found (standalone skill install). Using default consultants and models."
+  AVAILABLE_CONSULTANTS="gemini codex"
+  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
+  DEEP_MODEL="opus"
 fi
-AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
-ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
-DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
 ```
-
 **Consultant Selection**:
 - **If 2 or more external consultants are available**: Launch the first 2 from `$AVAILABLE_CONSULTANTS` (e.g. `gemini` and `codex`).
 - **If only 1 external consultant is available**:

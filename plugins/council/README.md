@@ -1,9 +1,9 @@
 # council
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-3-blue.svg)]()
-[![Agents](https://img.shields.io/badge/Agents-7-green.svg)]()
-[![Commands](https://img.shields.io/badge/Commands-1-purple.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-3-blue.svg)](#skills--commands)
+[![Agents](https://img.shields.io/badge/Agents-7-green.svg)](#dual-layer-review-system)
+[![Commands](https://img.shields.io/badge/Commands-1-purple.svg)](#skills--commands)
 [![Hooks](https://img.shields.io/badge/Hooks-2-orange.svg)](#hooks)
 
 Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.

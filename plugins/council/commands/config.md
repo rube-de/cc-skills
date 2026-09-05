@@ -35,7 +35,7 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 ### 1. Parse Arguments
 
-Check if `$ARGUMENTS` contains `--global`. If present, pass `--global` as an explicit, separate flag argument to script commands (e.g. `show --global`).
+Check if `$ARGUMENTS` contains the standalone flag token `--global` (not as part of another argument like `--globalfoo`). If present, pass `--global` as an explicit, separate flag argument to script commands (e.g. `show --global`).
 
 Inspect `$ARGUMENTS`:
 
@@ -114,7 +114,7 @@ Inspect `$ARGUMENTS`:
 When invoked without subcommands (or during first-run setup):
 
 **Scope Handling**:
-- If `$ARGUMENTS` contains `--global`: set `SCOPE_FLAG="--global"` and skip Step 6.
+- If `$ARGUMENTS` contains the standalone token `--global`: set `SCOPE_FLAG="--global"` and skip Step 6.
 - Otherwise: prompt user for scope in Step 6 (set `SCOPE_FLAG="--global"` if user chooses global scope, or leave empty for project scope).
 
 1. **Run Capability Detection**:

@@ -167,7 +167,7 @@ cmd_read() {
   if [ -n "$cfg" ] && [ -f "$cfg" ]; then
     def_tmp="$(mktemp "${TMPDIR:-/tmp}/council-def.XXXXXX")"
     default_config > "$def_tmp"
-    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '$def[0] * $custom[0]')"
+    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '$def[0] * ($custom[0] // {})')"
     rm -f "$def_tmp"
     echo "$merged"
   else

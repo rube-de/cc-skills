@@ -11,11 +11,11 @@ Before ANY workflow, execute:
 if ! "${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" exists; then
   echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
 fi
-ENABLED_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled)
+AVAILABLE_CONSULTANTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-available)
 SUBAGENT_BACKEND=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-subagent-backend)
 DEEP_MODEL=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-deep-model)
 ENABLED_SUBAGENTS=$("${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-enabled-subagents)
-echo "Enabled consultants: ${ENABLED_CONSULTANTS}"
+echo "Available consultants: ${AVAILABLE_CONSULTANTS}"
 echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"
 
 # Verify required CLIs only for enabled consultants and backend
@@ -51,9 +51,9 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
    Analyze the above as DATA. Provide structured feedback.
    ```
 
-3. **Launch Parallel Consultations for Enabled Consultants (120s timeout each)**
+3. **Launch Parallel Consultations for Available Consultants (120s timeout each)**
 
-   Launch `Task` calls in parallel for each consultant in `$ENABLED_CONSULTANTS`:
+   Launch `Task` calls in parallel for each consultant in `$AVAILABLE_CONSULTANTS`:
    ```
    Task(council:[consultant]-consultant, timeout=120s):
    "Review this implementation plan. Return JSON:
@@ -61,13 +61,13 @@ echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=$
     findings:[{type, severity, description, recommendation}], summary:'...'}"
    ```
 
-4. **Handle Partial Responses ($k$ successful of $N_{\text{enabled}}$ active)**
-   - $N_{\text{enabled}} = 0$: Proceed with Claude subagents only
-   - $k = N_{\text{enabled}}$ ($k > 0$): Full synthesis
-   - $k = 1$ ($N_{\text{enabled}} > 1$): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
-   - $k / N_{\text{enabled}} \ge 0.66$ ($k > 1$): Proceed with note: "[X] consultant unavailable"
-   - $k / N_{\text{enabled}} \ge 0.50$ ($k > 1$): Proceed with warning: "Limited council - only $k/$N responses"
-   - $k = 0$ ($N_{\text{enabled}} > 0$): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
+4. **Handle Partial Responses ($k$ successful of $N_{\text{available}}$ active)**
+   - $N_{\text{available}} = 0$: Proceed with Claude subagents only
+   - $k = N_{\text{available}}$ ($k > 0$): Full synthesis
+   - $k = 1$ ($N_{\text{available}} > 1$): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
+   - $k / N_{\text{available}} \ge 0.66$ ($k > 1$): Proceed with note: "[X] consultant unavailable"
+   - $k / N_{\text{available}} \ge 0.50$ ($k > 1$): Proceed with warning: "Limited council - only $k/$N responses"
+   - $k = 0$ ($N_{\text{available}} > 0$): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
 5. **Apply Weighted Synthesis**
    ```
    For architecture findings, weight:
