@@ -35,6 +35,11 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 ### 1. Parse Arguments
 
+Resolve the config utility path with a fallback when `CLAUDE_PLUGIN_ROOT` is unset:
+```bash
+CONFIG_SCRIPT="${CLAUDE_PLUGIN_ROOT:-plugins/council}/scripts/council-config.sh"
+```
+
 Check if `$ARGUMENTS` contains the standalone flag token `--global` (not as part of another argument like `--globalfoo`). If present, pass `--global` as an explicit, separate flag argument to script commands (e.g. `show --global`).
 
 Inspect `$ARGUMENTS`:
@@ -42,70 +47,70 @@ Inspect `$ARGUMENTS`:
 - If `$ARGUMENTS` contains `show` or `status`:
   Run:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show [flags]
+  "$CONFIG_SCRIPT" show [flags]
   ```
   Present the formatted status table to the user.
 
 - If `$ARGUMENTS` starts with `enable `:
   Extract the consultant name:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write <consultant> true [flags]
+  "$CONFIG_SCRIPT" write <consultant> true [flags]
   ```
   Confirm to user that the consultant was enabled.
 
 - If `$ARGUMENTS` starts with `disable `:
   Extract the consultant name:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write <consultant> false [flags]
+  "$CONFIG_SCRIPT" write <consultant> false [flags]
   ```
   Confirm to user that the consultant was disabled.
 
 - If `$ARGUMENTS` starts with `quick `:
   Extract the consultant name (or `auto`):
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <consultant|auto> [flags]
+  "$CONFIG_SCRIPT" set-quick <consultant|auto> [flags]
   ```
   Confirm to user that the quick mode consultant was updated.
 
 - If `$ARGUMENTS` starts with `subagent backend `:
   Extract the backend value (`native`, `omp`, `claude-cli`):
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-subagent-backend <type> [flags]
+  "$CONFIG_SCRIPT" set-subagent-backend <type> [flags]
   ```
   Confirm to user that the subagent backend was updated.
 
 - If `$ARGUMENTS` starts with `subagent model `:
   Extract the model value (`opus`, `sonnet`):
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-deep-model <model> [flags]
+  "$CONFIG_SCRIPT" set-deep-model <model> [flags]
   ```
   Confirm to user that the deep review model was updated.
 
 - If `$ARGUMENTS` starts with `subagent enable `:
   Extract the subagent name:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write-subagent <name> true [flags]
+  "$CONFIG_SCRIPT" write-subagent <name> true [flags]
   ```
   Confirm to user that the subagent was enabled.
 
 - If `$ARGUMENTS` starts with `subagent disable `:
   Extract the subagent name:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write-subagent <name> false [flags]
+  "$CONFIG_SCRIPT" write-subagent <name> false [flags]
   ```
   Confirm to user that the subagent was disabled.
 
 - If `$ARGUMENTS` contains `detect`:
   Run:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" detect
+  "$CONFIG_SCRIPT" detect
   ```
   Present detection results and explain which subscriptions/CLIs were found.
 
 - If `$ARGUMENTS` contains `init`:
   Run:
   ```bash
-  "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" init [flags]
+  "$CONFIG_SCRIPT" init [flags]
   ```
   Confirm initialization path.
 
@@ -119,12 +124,12 @@ When invoked without subcommands (or during first-run setup):
 
 1. **Run Capability Detection**:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" detect --json
+   "$CONFIG_SCRIPT" detect --json
    ```
 
 2. **Read Existing Config (or defaults)**:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" read $SCOPE_FLAG
+   "$CONFIG_SCRIPT" read $SCOPE_FLAG
    ```
 
 3. **Present Status**:
@@ -151,16 +156,16 @@ When invoked without subcommands (or during first-run setup):
 7. **Save Configuration**:
    Apply user choices using `council-config.sh write <consultant> <true|false>`:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write gemini <bool> $SCOPE_FLAG
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write codex <bool> $SCOPE_FLAG
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write glm <bool> $SCOPE_FLAG
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" write kimi <bool> $SCOPE_FLAG
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" set-quick <quick_choice> $SCOPE_FLAG
+   "$CONFIG_SCRIPT" write gemini <bool> $SCOPE_FLAG
+   "$CONFIG_SCRIPT" write codex <bool> $SCOPE_FLAG
+   "$CONFIG_SCRIPT" write glm <bool> $SCOPE_FLAG
+   "$CONFIG_SCRIPT" write kimi <bool> $SCOPE_FLAG
+   "$CONFIG_SCRIPT" set-quick <quick_choice> $SCOPE_FLAG
    ```
 
 8. **Verify & Display Summary**:
    Run:
    ```bash
-   "${CLAUDE_PLUGIN_ROOT}/scripts/council-config.sh" show $SCOPE_FLAG
+   "$CONFIG_SCRIPT" show $SCOPE_FLAG
    ```
    Inform the user that `/council` will now dynamically dispatch only the enabled consultants.

@@ -175,16 +175,16 @@ Escalation to full council launches **all enabled** external consultants + enabl
 
 ## Partial Success Modes
 
-Evaluated dynamically against $N_{\text{enabled}}$:
+Evaluated dynamically against `N_enabled`:
 
 | Condition | Action |
 |-----------|--------|
-| $N_{\text{enabled}} = 0$ | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
-| $k = N_{\text{enabled}}$ ($k > 0$) | Full synthesis |
-| $k = 1$ ($N_{\text{enabled}} > 1$) | Proceed in single-consultant mode with strong warning |
-| $k / N_{\text{enabled}} \ge 0.66$ ($k > 1$) | Proceed + note |
-| $k / N_{\text{enabled}} \ge 0.50$ ($k > 1$) | Proceed + warning |
-| $k = 0$ ($N_{\text{enabled}} > 0$) | Abort with error (or Layer 2 fallback if available) |
+| N_enabled == 0 | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
+| k == N_enabled (k > 0) | Full synthesis |
+| k == 1 (N_enabled > 1) | Proceed in single-consultant mode with strong warning |
+| k / N_enabled >= 0.66 (k > 1) | Proceed + note |
+| k / N_enabled >= 0.50 (k > 1) | Proceed + warning |
+| k == 0 (N_enabled > 0) | Abort with error (or Layer 2 fallback if available) |
 ## Structured Response Schema
 
 ```json

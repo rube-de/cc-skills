@@ -19,6 +19,8 @@
 #   council-config.sh set-deep-model <opus|sonnet> [--global]
 #   council-config.sh get-enabled-subagents [--global]
 #   council-config.sh write-subagent <subagent> <true|false> [--global]
+#   council-config.sh get-timeout [--global]
+#   council-config.sh set-timeout <seconds> [--global]
 set -e
 
 if ! command -v jq >/dev/null 2>&1; then
@@ -253,7 +255,7 @@ cmd_detect() {
   if [ "$has_omp_cli" = "true" ]; then
     if [ -n "$ZAI_API_KEY" ]; then
       has_glm_auth=true
-    elif echo "$omp_usage" | grep -qi "Zai"; then
+    elif echo "$omp_usage" | grep -Eiq "Zai|Z\.AI"; then
       has_glm_auth=true
     fi
   fi
@@ -419,6 +421,11 @@ cmd_show() {
     esac
     printf "  %-24s %s (%s)\n" "$s" "$status_tag" "$role_desc"
   done
+
+  timeout="$(cmd_get_timeout "$@")"
+  echo ""
+  echo "Operational Settings:"
+  echo "  Timeout:                 ${timeout}s"
 }
 
 cmd_get_enabled() {
@@ -599,6 +606,30 @@ cmd_get_enabled_subagents() {
   '
 }
 
+cmd_get_timeout() {
+  data="$(cmd_read "$@")"
+  echo "$data" | jq -r '.settings.timeout_seconds // 120'
+}
+
+cmd_set_timeout() {
+  val="$1"
+  shift || true
+  case "$val" in
+    ''|*[!0-9]*)
+      echo "Error: timeout must be a positive integer" >&2
+      exit 1
+      ;;
+  esac
+  cfg="$(resolve_write_path "$@")"
+  cfg_dir="$(dirname "$cfg")"
+  mkdir -p "$cfg_dir"
+  current="$(cmd_read "$@")"
+  tmp_file="$(mktemp "${cfg_dir}/.config.tmp.XXXXXX")"
+  echo "$current" | jq --argjson t "$val" '.settings.timeout_seconds = $t' > "$tmp_file"
+  mv "$tmp_file" "$cfg"
+  echo "Updated timeout_seconds=$val in $cfg"
+}
+
 cmd_check_cli() {
   data="$(cmd_read "$@")"
   enabled_consultants="$(cmd_get_enabled "$@")"
@@ -632,7 +663,7 @@ cmd_check_cli() {
   fi
 
   if [ ${#missing[@]} -gt 0 ]; then
-    echo "Council plugin: missing CLIs for enabled consultants (${enabled_consultants}): ${missing[*]}"
+    echo "Council plugin: missing required CLIs: ${missing[*]}"
     return 1
   fi
   return 0
@@ -711,8 +742,16 @@ case "$1" in
     shift
     cmd_get_enabled_subagents "$@"
     ;;
+  get-timeout)
+    shift
+    cmd_get_timeout "$@"
+    ;;
+  set-timeout)
+    shift
+    cmd_set_timeout "$@"
+    ;;
   *)
-    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|get-available|get-quick|set-quick|get-subagent-backend|set-subagent-backend|get-deep-model|set-deep-model|get-enabled-subagents|write-subagent} [args...]" >&2
+    echo "Usage: $0 {path|exists|read|write|detect|init|show|check-cli|get-enabled|get-available|get-quick|set-quick|get-subagent-backend|set-subagent-backend|get-deep-model|set-deep-model|get-enabled-subagents|write-subagent|get-timeout|set-timeout} [args...]" >&2
     exit 1
     ;;
 esac

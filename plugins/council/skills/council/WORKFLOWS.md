@@ -71,13 +71,13 @@ fi
     findings:[{type, severity, description, recommendation}], summary:'...'}"
    ```
 
-4. **Handle Partial Responses ($k$ successful of $N_{\text{available}}$ active)**
-   - $N_{\text{available}} = 0$: Proceed with Claude subagents only
-   - $k = N_{\text{available}}$ ($k > 0$): Full synthesis
-   - $k = 1$ ($N_{\text{available}} > 1$): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
-   - $k / N_{\text{available}} \ge 0.66$ ($k > 1$): Proceed with note: "[X] consultant unavailable"
-   - $k / N_{\text{available}} \ge 0.50$ ($k > 1$): Proceed with warning: "Limited council - only $k/$N responses"
-   - $k = 0$ ($N_{\text{available}} > 0$): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
+4. **Handle Partial Responses (k successful of N_available active)**
+   - N_available == 0: Proceed with Claude subagents only
+   - k == N_available (k > 0): Full synthesis
+   - k == 1 (N_available > 1): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
+   - k / N_available >= 0.66 (k > 1): Proceed with note: "[X] consultant unavailable"
+   - k / N_available >= 0.50 (k > 1): Proceed with warning: "Limited council - only k/N_available responses"
+   - k == 0 (N_available > 0): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
 5. **Apply Weighted Synthesis**
    ```
    For architecture findings, weight:
