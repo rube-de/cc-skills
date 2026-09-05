@@ -33,7 +33,7 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
 (model diversity, same prompt)                   (concern depth, tool access)
 ┌────────┬────────┬────────┬────────┐            ┌──────────────┬──────────────┐
 │ Gemini │ Codex  │ GLM    │ Kimi   │            │ Deep Review  │  Codebase    │
-│  CLI   │  CLI   │  CLI   │  CLI   │            │ (opus)       │  Context     │
+│  CLI   │  CLI   │  CLI   │  CLI   │            │ (opus/sonnet)│  Context     │
 └────────┴────────┴────────┴────────┘            │ Security +   │  (sonnet)    │
          ↓ consensus                              │ Bugs + Perf  │  Quality +   │
                                                   │              │  Compliance +│
@@ -41,21 +41,24 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
                     ↓                             │              │  Docs        │
               ┌───────────┐                       └──────────────┴──────────────┘
               │  Scorer   │ ← merges + scores all findings   ↓ depth
-              │ (sonnet)  │
+              │ (sonnet)  │   (optional / conditional)
               └───────────┘
+Backend: native (Task), omp, or claude-cli (configured via /council:config)
 ```
 
-## Pre-Flight Check
+## Pre-Flight & Configuration Check
 
 ```bash
-# Run before ANY council invocation
-for cli in codex omp; do
-  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
-done
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ]; then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+  fi
+  "$CONFIG_SCRIPT" check-cli || true
+fi
 ```
 
-**Note**: `omp` gates 3 of the 4 external consultants (Gemini, GLM, Kimi). A missing `omp` is not a minor, single-consultant degradation — it drops you straight to 1/4 (Codex only).
-
+Configure active consultants anytime with `/council:config` (or `/council config`).
 ## Expertise Weights
 
 ```
@@ -102,21 +105,19 @@ done
 ```
 
 ### Quick Mode Agent Boundary
+Quick mode (`/council quick`) runs **up to 2 agents** — gated by your configuration:
 
-Quick mode (`/council quick`) runs **exactly 2 agents** — no more, no fewer:
+1. **External Slot**: Resolved by `council-config.sh get-quick`, using `settings.quick_consultant`. Set it with `/council:config quick <auto|gemini|codex|glm|kimi>`. Falls back to `council:claude-deep-review` (if enabled in `$ENABLED_SUBAGENTS`) when no external consultant is available.
+2. **Codebase Depth Slot**: `council:claude-codebase-context` (sonnet) with native tool access, launched only if enabled in `$ENABLED_SUBAGENTS`.
 
-| Agent | Model | Role |
-|-------|-------|------|
-| `council:gemini-consultant` | Gemini 3.8 Flash | Fast external perspective |
-| `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
+`auto` chooses the first enabled and CLI-available consultant in priority order (`gemini` → `codex` → `glm` → `kimi`). An unavailable explicit choice falls back to `auto`; if none are available, use `council:claude-deep-review` (if enabled).
 
 **Skipped in quick mode** (only run if escalating to full council):
-- `council:codex-consultant`, `council:glm-consultant`, `council:kimi-consultant`
-- `council:claude-deep-review` (opus — reserved for full review)
+- Remaining external consultants
+- `council:claude-deep-review` (unless used as external slot substitute)
 - `council:review-scorer` (not needed unless escalating)
 
-Escalation to full council launches **all** agents (4 external + 2 Claude subagents + scorer).
-
+Escalation to full council launches **all enabled** external consultants + enabled Claude subagents + scorer (if enabled).
 ## Review Workflow Flow
 
 ```
@@ -174,14 +175,16 @@ Escalation to full council launches **all** agents (4 external + 2 Claude subage
 
 ## Partial Success Modes
 
-| Available | Action |
-|-----------|--------|
-| 4/4 | Full synthesis |
-| 3/4 | Proceed + note |
-| 2/4 | Proceed + warning |
-| 1/4 | Proceed (single consultant) + strong warning |
-| 0/4 | Abort with error |
+Evaluated dynamically against `N_enabled`:
 
+| Condition | Action |
+|-----------|--------|
+| N_enabled == 0 | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
+| k == N_enabled (k > 0) | Full synthesis |
+| k == 1 (N_enabled > 1) | Proceed in single-consultant mode with strong warning |
+| k / N_enabled >= 0.66 (k > 1) | Proceed + note |
+| k / N_enabled >= 0.50 (k > 1) | Proceed + warning |
+| k == 0 (N_enabled > 0) | Abort with error (or Layer 2 fallback if available) |
 ## Structured Response Schema
 
 ```json

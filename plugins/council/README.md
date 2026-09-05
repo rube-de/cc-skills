@@ -1,11 +1,10 @@
 # council
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Skills](https://img.shields.io/badge/Skills-2-blue.svg)]()
-[![Agents](https://img.shields.io/badge/Agents-7-green.svg)]()
+[![Skills](https://img.shields.io/badge/Skills-3-blue.svg)](#skills--commands)
+[![Agents](https://img.shields.io/badge/Agents-7-green.svg)](#dual-layer-review-system)
+[![Commands](https://img.shields.io/badge/Commands-1-purple.svg)](#skills--commands)
 [![Hooks](https://img.shields.io/badge/Hooks-2-orange.svg)](#hooks)
-[![Claude Code](https://img.shields.io/badge/Claude%20Code-Plugin-purple.svg)]()
-[![Install](https://img.shields.io/badge/Install-Plugin%20%7C%20Skill-informational.svg)]()
 
 Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
@@ -24,13 +23,13 @@ Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) 
 | GLM-5.3 | `omp -p --no-tools --model zai/glm-5.3:max` | Alternative perspectives, algorithms |
 | Kimi K3 | `omp -p --no-tools --model kimi-code/k3` | Long-context reasoning, creative solutions |
 
-**Layer 2 — Claude Subagents** (concern depth, tool access):
+**Layer 2 — Claude Subagents** (concern depth, tool access — backend and models configurable):
 | Subagent | Model | Focus |
 |----------|-------|-------|
-| claude-deep-review | Opus | Security, bugs, performance — traces input paths, follows call chains |
+| claude-deep-review | Opus (or Sonnet via config) | Security, bugs, performance — traces input paths, follows call chains |
 | claude-codebase-context | Sonnet | Quality, compliance, history, documentation — compares against project conventions |
 
-**Layer 3 — Scoring** (noise reduction):
+**Layer 3 — Scoring** (noise reduction — optional / conditional via config):
 | Agent | Model | Role |
 |-------|-------|------|
 | review-scorer | Sonnet | Deduplicate, verify, score 0-100, filter to >= 80 |
@@ -51,13 +50,14 @@ Built-in taxonomy auto-rejects:
 - Pedantic nitpicks senior engineers wouldn't flag
 - Issues on lines NOT modified in the review
 
-## Skills
+## Skills & Commands
 
-| Skill | Purpose | User-Invocable |
-|-------|---------|----------------|
-| **council** | Main orchestration — all review modes | Yes |
-| **council-reference** | Expertise matrix and response format data | No (background) |
-
+| Name | Type | Purpose | Invocable |
+|------|------|---------|-----------|
+| **council** | Skill | Main orchestration — all review modes | Yes (`/council`) |
+| **council:config** | Command | Configure consultant enablement & active subscriptions | Yes (`/council:config` or `/council config`) |
+| **council:review-plan** | Skill | Pre-execution implementation plan review | Yes (`/council:review-plan`) |
+| **council-reference** | Skill | Expertise matrix and response format data | No (background) |
 ## Review Modes
 
 | Command | Description |
@@ -70,13 +70,13 @@ Built-in taxonomy auto-rejects:
 | `/council plan` | Implementation plan validation |
 | `/council adversarial` | Advocates vs critics comparison |
 | `/council consensus [topic]` | Multi-round consensus building |
-| `/council quick` | Parallel triage — Gemini Flash + Claude subagent in parallel, escalates to full council if needed |
+| `/council quick` | Parallel triage — configured quick consultant (default: fastest enabled) + Claude subagent in parallel, escalates to full council if needed |
 
 ## Hooks
 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
-| `preflight.sh` | SessionStart | Check CLI availability for all external consultant CLIs |
+| `preflight.sh` | SessionStart | Check configuration and CLI availability for enabled consultants |
 | `validate-json-output.sh` | PostToolUse (Bash) | Validate consultant output matches expected JSON schema |
 
 ## How It Works
@@ -144,32 +144,44 @@ npx skills add rube-de/cc-skills --skill council
 > - `preflight.sh` — no automatic CLI availability check on session start
 > - `validate-json-output.sh` — no PostToolUse JSON validation for consultant output
 > - Agent `.md` definitions — subagent types (codex-consultant, gemini-consultant, etc.) won't be registered
+> - `/council:config` command & scripts — consultant enablement configuration and subscription management won't be available (council falls back to default consultants)
+### Configuration & Subscriptions
+
+External consultants can be enabled or disabled based on your active subscriptions (`.dev/council/config.json`):
+
+```bash
+/council:config                       # Interactive setup & detection wizard
+/council:config show                  # Display current configuration & CLI status
+/council:config enable <consultant>   # Enable an external consultant (gemini, codex, glm, kimi)
+/council:config disable <consultant>  # Disable an external consultant
+/council:config quick <consultant>    # Set quick mode consultant (gemini, codex, glm, kimi, auto)
+/council:config subagent backend <t>  # Set subagent execution backend (native, omp, claude-cli)
+/council:config subagent model <m>    # Set deep review model (opus, sonnet)
+/council:config subagent enable <name># Enable subagent (claude-deep-review, claude-codebase-context, review-scorer)
+/council:config subagent disable <n>  # Disable subagent
+/council:config detect                     # Probe installed CLIs & active subscriptions
+/council:config init [--auto] [--force]    # Initialize configuration (.dev/council/config.json)
+```
+
+Pass `--global` to any command to persist settings across all repositories in `~/.config/council/config.json`.
 
 ### Prerequisites
 
-At least one external CLI must be installed:
+`jq` (or `jaq`) is required for configuration parsing and JSON validation hooks. At least one external CLI (or subscription) is recommended:
 
 ```bash
-# Check availability (prints ✓/✗ per CLI — omp covers 3 of 4 consultants, codex covers 1)
-for cli in codex omp; do
-  command -v "$cli" >/dev/null 2>&1 && echo "✓ $cli" || echo "✗ $cli"
-done
-
-# Install as needed
-# codex   — https://github.com/openai/codex
-# omp     — https://github.com/can1357/oh-my-pi (Gemini 3.8 Flash via antigravity, GLM-5.3, Kimi K3)
+# Check capability detection
+./plugins/council/scripts/council-config.sh detect
 ```
-
-The plugin operates in partial-success mode — it proceeds with whichever consultants are available. Note that `omp` is the dominant dependency: it gates three of the four external consultants (Gemini, GLM-5.3, Kimi), so a missing or broken `omp` install leaves Codex as the only external voice.
-
+The plugin operates in partial-success mode — it proceeds with whichever consultants are enabled and available. If all external consultants are disabled, Council seamlessly runs Layer 2 (Claude Opus and Sonnet subagents) for dual-depth analysis.
 ## Dependencies
 
 | Component | Required | Purpose |
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
+| jq | Yes | JSON configuration and validation hooks |
 | codex CLI | Recommended | Codex consultant |
 | omp CLI | Recommended | Gemini, GLM-5.3, and Kimi consultants (3 of 4) |
-
 ## Troubleshooting
 
 | Issue | Cause | Solution |

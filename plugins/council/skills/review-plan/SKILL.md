@@ -22,7 +22,7 @@ digraph review_plan {
 
   locate [label="Step 1: Locate Plan"];
   verify [label="Step 2: Codebase Verification"];
-  launch [label="Step 3: Launch Consultants\n(gemini + codex in parallel)"];
+  launch [label="Step 3: Launch Consultants\n(2 consultants in parallel)"];
   synthesize [label="Step 4: Deduplicate & Synthesize"];
   present [label="Step 5: Present Structured Output"];
   decide [label="Step 6: User Decision"];
@@ -88,8 +88,35 @@ Collect all verification results into a structured report:
 
 ### Step 3: Launch Consultants
 
-Launch `council:gemini-consultant` and `council:codex-consultant` in parallel using the Task tool. Both receive the **same prompt**.
+Resolve active consultants based on configuration and CLI availability:
+```bash
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ]; then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
+  fi
+  AVAILABLE_CONSULTANTS=$("$CONFIG_SCRIPT" get-available)
+  ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+  DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
+else
+  echo "Notice: council-config.sh not found (standalone skill install). Using default consultants and models."
+  AVAILABLE_CONSULTANTS="gemini codex"
+  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
+  DEEP_MODEL="opus"
+fi
+```
+**Consultant Selection**:
+- **If 2 or more external consultants are available**: Launch the first 2 from `$AVAILABLE_CONSULTANTS` (e.g. `gemini` and `codex`).
+- **If only 1 external consultant is available**:
+  - Launch that 1 external consultant.
+  - Pair with `council:claude-deep-review` (model: `$DEEP_MODEL`) if enabled in `$ENABLED_SUBAGENTS`.
+  - Otherwise, pair with `council:claude-codebase-context` (model: `sonnet`) if enabled in `$ENABLED_SUBAGENTS`.
+- **If 0 external consultants are available**:
+  - If both `claude-deep-review` and `claude-codebase-context` are enabled in `$ENABLED_SUBAGENTS`: Launch `council:claude-deep-review` (model: `$DEEP_MODEL`) and `council:claude-codebase-context` (sonnet).
+  - If only one is enabled: Launch that single enabled subagent.
+  - If neither is enabled: Abort plan review with message: "No external consultants or Claude subagents enabled for plan review."
 
+Launch available consultants in parallel using the Task tool. All launched consultants receive the **same prompt**.
 #### Secret-Scanning Gate
 
 Before sending plan content to external consultants, check for secrets:

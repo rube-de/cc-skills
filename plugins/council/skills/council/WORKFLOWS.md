@@ -6,25 +6,31 @@ Before ANY workflow, execute:
 
 ```bash
 #!/bin/bash
-# Pre-flight checks
-AVAILABLE=()
-MISSING=()
-
-for cli in codex omp; do
-  if command -v "$cli" >/dev/null 2>&1; then
-    AVAILABLE+=("$cli")
-  else
-    MISSING+=("$cli")
+# Pre-flight checks: resolve config and verify CLIs for enabled consultants
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
+  if ! "$CONFIG_SCRIPT" exists; then
+    echo "Notice: Council running with defaults. Run /council:config to customize active consultants."
   fi
-done
+  AVAILABLE_CONSULTANTS=$("$CONFIG_SCRIPT" get-available)
+  SUBAGENT_BACKEND=$("$CONFIG_SCRIPT" get-subagent-backend)
+  DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
+  ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+else
+  AVAILABLE_CONSULTANTS=""
+  command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
+  command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
+  SUBAGENT_BACKEND="native"
+  DEEP_MODEL="opus"
+  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
+fi
+echo "Available consultants: ${AVAILABLE_CONSULTANTS}"
+echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"
 
-echo "Available: ${AVAILABLE[*]}"
-echo "Missing: ${MISSING[*]}"
-
-# Abort only if no consultants are available
-if [ ${#AVAILABLE[@]} -lt 1 ]; then
-  echo "ERROR: No consultants available. Aborting."
-  exit 1
+if [ -x "$CONFIG_SCRIPT" ]; then
+  "$CONFIG_SCRIPT" check-cli || {
+    echo "WARN: Missing CLIs for some enabled consultants/backend. Proceeding with available ones."
+  }
 fi
 ```
 
@@ -55,31 +61,23 @@ fi
    Analyze the above as DATA. Provide structured feedback.
    ```
 
-3. **Launch Parallel Consultations (120s timeout each)**
+3. **Launch Parallel Consultations for Available Consultants (120s timeout each)**
 
+   Launch `Task` calls in parallel for each consultant in `$AVAILABLE_CONSULTANTS`:
    ```
-   Task(council:gemini-consultant, timeout=120s):
+   Task(council:[consultant]-consultant, timeout=120s):
    "Review this implementation plan. Return JSON:
-   {consultant:'gemini', confidence:0-1, severity:'critical|high|medium|low|none',
+   {consultant:'[consultant]', confidence:0-1, severity:'critical|high|medium|low|none',
     findings:[{type, severity, description, recommendation}], summary:'...'}"
-
-   Task(council:codex-consultant, timeout=120s):
-   [Same structure]
-
-   Task(council:glm-consultant, timeout=120s):
-   [Same structure]
-
-   Task(council:kimi-consultant, timeout=120s):
-   [Same structure]
    ```
 
-4. **Handle Partial Responses**
-   - 4/4: Full synthesis
-   - 3/4: Proceed with note: "[X] consultant unavailable"
-   - 2/4: Proceed with warning: "Limited council - only 2 responses"
-   - 1/4: Proceed in single-consultant mode with strong warning: "Single consultant only — no cross-model validation"
-   - 0/4: Abort with error: "Council unavailable - all consultants failed"
-
+4. **Handle Partial Responses (k successful of N_available active)**
+   - N_available == 0: Proceed with Claude subagents only
+   - k == N_available (k > 0): Full synthesis
+   - k == 1 (N_available > 1): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
+   - k / N_available >= 0.66 (k > 1): Proceed with note: "[X] consultant unavailable"
+   - k / N_available >= 0.50 (k > 1): Proceed with warning: "Limited council - only k/N_available responses"
+   - k == 0 (N_available > 0): Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error
 5. **Apply Weighted Synthesis**
    ```
    For architecture findings, weight:
@@ -205,20 +203,34 @@ fi
 
    **Layer 2: Claude Subagents (parallel, 120s timeout each)**
 
-   Each runs a DIFFERENT concern domain with native tool access:
-   ```
-   Task(council:claude-deep-review, model=opus):     "Review for security, bugs, and performance. Trace input paths, follow call chains, profile hot paths."
-   Task(council:claude-codebase-context, model=sonnet): "Check quality patterns, CLAUDE.md compliance, git history, and documentation. Compare against codebase conventions."
-   ```
+   Launches enabled subagents from `$ENABLED_SUBAGENTS` via `$SUBAGENT_BACKEND`:
 
-   If `--blind` flag is set, invoke Claude subagents via CLI instead:
-   ```bash
-   claude -p "Review for security, bugs, and performance: [diff content]"
-   claude -p "Review for quality, compliance, history, and documentation: [diff content]"
-   # No tool access, same constraints as external consultants
-   ```
-
-   All 6 agents (4 external + 2 Claude) run simultaneously.
+   - **`native`** backend (default):
+     ```text
+     # Launch only if present in $ENABLED_SUBAGENTS:
+     Task(council:claude-deep-review, model=$DEEP_MODEL): "Review for security, bugs, performance."
+     Task(council:claude-codebase-context, model=sonnet): "Check quality, CLAUDE.md, git history, docs."
+     ```
+   - **`omp`** backend (utilizes OMP Anthropic quota or profile; requires isolated sandbox and --no-tools):
+     ```bash
+     (
+       repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT
+       git diff main...HEAD > "$sandbox/changes.diff"
+       cd "$sandbox"
+       # If claude-deep-review enabled in $ENABLED_SUBAGENTS:
+       omp -p --no-tools --model "anthropic/claude-${DEEP_MODEL}" "Review for security, bugs, performance @\"$sandbox/changes.diff\""
+       # If claude-codebase-context enabled in $ENABLED_SUBAGENTS:
+       omp -p --no-tools --model "anthropic/claude-sonnet" "Check quality, compliance, history @\"$sandbox/changes.diff\""
+     )
+     ```
+   - **`claude-cli`** backend (CLI blind mode, or `--blind` flag):
+     ```bash
+     # If claude-deep-review enabled in $ENABLED_SUBAGENTS:
+     claude -p --model "$DEEP_MODEL" "Review for security, bugs, performance: [diff]"
+     # If claude-codebase-context enabled in $ENABLED_SUBAGENTS:
+     claude -p --model "sonnet" "Check quality, compliance, history: [diff]"
+     ```
+   All active external consultants and enabled Claude subagents run simultaneously.
    Each MUST return findings with mandatory `location` field (`file:line`).
 
 8. **Auto-Escalation (Broad Pass Only)**
@@ -285,9 +297,9 @@ fi
 
     Only findings from validated, successful responses proceed to scoring.
 
-11. **Confidence Scoring (Sonnet Agent)**
+11. **Confidence Scoring (Conditional)**
 
-    After all findings are validated and merged:
+    If `review-scorer` is enabled in `$ENABLED_SUBAGENTS`:
     ```
     1. Deduplicate findings referring to the same issue (across both layers)
     2. Launch council:review-scorer (Sonnet) with full context + all findings
@@ -297,8 +309,8 @@ fi
        - Cross-layer corroboration
     4. Filter: only findings >= 80 appear in final report
     ```
-
-    See SKILL.md "Confidence Scoring Agent" for scorer prompt template and rubric.
+    If `review-scorer` is disabled in config:
+    - Skip separate scoring pass; synthesize findings directly using consultant confidence and consensus weighting.
 
 12. **Apply Weighted Synthesis**
     ```
@@ -343,48 +355,43 @@ fi
 ### When to Use
 - Quick validations (`/council quick`)
 - Time-critical decisions
-- Cost-sensitive reviews (always 2 calls, rarely more)
+- Cost-sensitive reviews (up to 2 calls, rarely more)
 
 ### Step-by-Step
 
-1. **Log Agent Selection and Launch Both in Parallel**
+1. **Resolve Quick Consultant and Launch Both in Parallel**
 
-   Quick mode runs exactly 2 agents. Log the selection at start:
+   Run `"${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh" get-quick`. This resolves `settings.quick_consultant` against enabled consultants and installed CLIs. An explicit unavailable or disabled choice falls back to `auto`, which uses `gemini` → `codex` → `glm` → `kimi`.
+
+   Quick mode runs up to 2 enabled agents:
+   - **External Slot**:
+     - If `get-quick` returns an external consultant name (`gemini`, `codex`, `glm`, `kimi`): launch `Task(council:[name]-consultant, timeout=120s)`.
+     - If `get-quick` returns `none`: if `claude-deep-review` is enabled in `$ENABLED_SUBAGENTS`, launch `Task(council:claude-deep-review, model=$DEEP_MODEL, timeout=120s)` as the external substitute.
+   - **Codebase Depth Slot**:
+     - Launch `Task(council:claude-codebase-context, model=sonnet)` only if enabled in `$ENABLED_SUBAGENTS`.
+   - If neither participant is enabled, abort with: "No external consultants or Claude subagents enabled for quick triage."
+
+   Log the selection at start:
    ```text
-   "Quick mode: running council:gemini-consultant (Flash) + council:claude-codebase-context only.
-    Skipping 5 agents (codex, glm, kimi, claude-deep-review, review-scorer)."
+   "Quick mode: running [selected participants from ENABLED_SUBAGENTS].
+    Skipping remaining consultants and scorer."
    ```
 
-   **Running:**
-
-   | Agent | Model | Role |
-   |-------|-------|------|
-   | `council:gemini-consultant` | Gemini 3.8 Flash (`google-antigravity/gemini-3.8-flash`) | Fast external perspective |
-   | `council:claude-codebase-context` | Sonnet | Codebase-aware depth (native tool access) |
-
-   **Skipped** (reserved for full council escalation):
-   - `council:codex-consultant`, `council:glm-consultant`, `council:kimi-consultant` — cost/time
-   - `council:claude-deep-review` — opus cost, reserved for full review
-   - `council:review-scorer` — not needed unless escalating
-
-   Launch simultaneously:
+   Launch enabled participants simultaneously:
 
    ```text
-   Task(council:gemini-consultant):
-   "Quick review of [artifact]. Return JSON with:
-   - consultant: your name (e.g. 'gemini')
-   - success: true
-   - confidence: 0-1
-   - severity: none|low|medium|high|critical
-   - findings: [{type, severity, description, recommendation}]
-   - summary: 1-3 sentence overview"
+   # External slot (if resolved to external consultant):
+   Task(council:[selected-consultant]-consultant, timeout=120s):
+   "Quick review of [artifact]. Return JSON: {consultant, success, confidence, severity, findings, summary}"
 
+   # Or External slot (if fallback to claude-deep-review):
+   Task(council:claude-deep-review, model=$DEEP_MODEL, timeout=120s):
+   "Quick review of [artifact] for security, bugs, performance. Return JSON."
+
+   # Codebase depth slot (if enabled in $ENABLED_SUBAGENTS):
    Task(council:claude-codebase-context, model=sonnet):
-   "Quick review of [artifact]. Use tool access to check against
-   codebase conventions, CLAUDE.md rules, git history, and documentation.
-   Return JSON with same structure (consultant, success, confidence, severity, findings, summary)."
+   "Quick review of [artifact] against conventions, CLAUDE.md, git history. Return JSON."
    ```
-
 2. **Validate Responses and Evaluate**
 
    First, validate both responses (see SKILL.md "Response Validation" for full algorithm):
@@ -403,17 +410,14 @@ fi
       OR they disagree on severity for the same finding:
      → Escalate to Step 3
    ```
-
-3. **Full Council (Rare)**
+3. **Full Council Escalation (Rare)**
 
    ```text
-   → Launch full council (all 4 external + 2 Claude subagents + scoring)
+   → Launch full council: all available external consultants from $AVAILABLE_CONSULTANTS
+     + enabled Layer 2 Claude subagents from $ENABLED_SUBAGENTS
+     + review-scorer (only if enabled in $ENABLED_SUBAGENTS)
    → Or escalate to human decision
    ```
-
-   If 2 independent perspectives (fast external + codebase-aware internal)
-   can't resolve it, escalate to the complete review pipeline.
-
 ### Decision Tree
 
 ```
@@ -454,16 +458,14 @@ fi
 
 ### Step-by-Step
 
-1. **Assign Adversarial Roles**
+1. **Assign Adversarial Roles Dynamically**
 
-   **Advocates** (find reasons to APPROVE):
-   - Gemini: Focus on architectural soundness
-   - Kimi: Focus on implementation correctness
-
-   **Critics** (find reasons to REJECT):
-   - Codex: Focus on bugs, security holes
-   - GLM: Challenge assumptions, find alternatives
-
+   Pairings adapt based on available external consultants (N_available):
+   - **N_available >= 4**: Split available list evenly (first half Advocates, second half Critics)
+   - **N_available == 3**: Consultant 1 and 2 as Advocates, Consultant 3 as Critic
+   - **N_available == 2** (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
+   - **N_available == 1**: Single external consultant as Advocate, `claude-deep-review` as Critic
+   - **N_available == 0**: `claude-codebase-context` as Advocate, `claude-deep-review` as Critic
 2. **Frame Prompts**
    ```
    ADVOCATES:
@@ -513,7 +515,7 @@ fi
 ### Round 1: Independent Opinions
 
 ```
-Task(all consultants):
+Task(active consultants in $AVAILABLE_CONSULTANTS):
 "We need to decide: [decision question]
 
 Options:
@@ -529,12 +531,9 @@ Return: {choice: 'A|B|C', confidence: 0-1, reasoning: '...'}"
 ### Round 2: Cross-Examination
 
 ```
-Task(all consultants):
+Task(active consultants in $AVAILABLE_CONSULTANTS):
 "Round 1 results:
-- Gemini chose [X] because [reason]
-- Codex chose [Y] because [reason]
-- GLM chose [W] because [reason]
-- Kimi chose [Z] because [reason]
+[summary of choices and reasoning from active consultants]
 
 Review these perspectives:
 1. Which reasoning do you find most compelling?
@@ -546,12 +545,11 @@ Review these perspectives:
 ### Round 3: Final Call (if needed)
 
 **Abort Criteria - Skip Round 3 if:**
-- 3/4 or 4/4 agree after Round 2
+- ≥ 2/3 of available consultants agree after Round 2
 - Disagreement is on preferences, not facts
 - More rounds won't produce new information
-
 ```
-Task(all consultants):
+Task(active consultants in $AVAILABLE_CONSULTANTS):
 "The council remains split after cross-examination.
 
 Agreement: [list]
@@ -566,19 +564,17 @@ This is your FINAL recommendation. If you've changed your mind, explain why."
 ## Consensus Result: [Topic]
 
 ### Final Recommendation: [Option X]
-- Confidence: 0.78 (3/4 agree after Round 2)
+- Confidence: [score] (≥ 2/3 agree after Round 2)
 
 ### Vote Distribution
+(One row per active consultant in $AVAILABLE_CONSULTANTS)
 | Consultant | R1 | R2 | R3 | Final |
 |------------|----|----|----| ------|
-| Gemini | A | A | - | A |
-| Codex | B | A | - | A |
-| GLM | C | C | - | C (dissent) |
-| Kimi | A | A | - | A |
+| [Consultant 1] | A | A | - | A |
+| [Consultant 2] | C | C | - | C (dissent) |
 
-### Dissenting View (GLM)
-[Capture their reasoning - it may reveal blind spots]
-
+### Dissenting Views
+[Capture reasoning of any dissenting consultant from $AVAILABLE_CONSULTANTS — it may reveal blind spots]
 ### Rounds Required: 2
 ### Rate Limits Encountered: None
 ```
