@@ -168,16 +168,16 @@ Use `--blind` when you want to compare Claude's blind opinion against its tool-a
 
 ### Partial Success Modes
 
-Evaluated dynamically against `N_enabled` (the count of enabled external consultants):
+Evaluated dynamically against `N_available` (the count of available external consultants):
 
 | Condition | Action |
 |-----------|--------|
-| N_enabled == 0 | External layer skipped by config. Proceed with Layer 2 (Claude subagents) only |
-| k == N_enabled (k > 0) | Full synthesis |
-| k == 1 (N_enabled > 1) | Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation" |
-| k / N_enabled >= 0.66 (k > 1) | Proceed with note: "[X] consultant unavailable" |
-| k / N_enabled >= 0.50 (k > 1) | Proceed with warning: "Limited council - only k/N_enabled responses" |
-| k == 0 (N_enabled > 0) | Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error |
+| N_available == 0 | External layer skipped by config (or no external tools available). Proceed with Layer 2 (Claude subagents) only |
+| k == N_available (k > 0) | Full synthesis |
+| k == 1 (N_available > 1) | Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation" |
+| k / N_available >= 0.66 (k > 1) | Proceed with note: "[X] consultant unavailable" |
+| k / N_available >= 0.50 (k > 1) | Proceed with warning: "Limited council - only k/N_available responses" |
+| k == 0 (N_available > 0) | Layer 1 failed. If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error |
 ### Structured Response Format
 
 Each consultant MUST return structured output:
@@ -260,7 +260,7 @@ IF layer2_success == 0 AND mode == "full" (Pattern B):
   → Proceed with Layer 1 findings only
 
 IF layer1_success == 0 AND layer2_success > 0 AND mode == "full" (Pattern B):
-  IF N_enabled > 0:
+  IF N_available > 0:
     WARN: "Layer 1 (external consultants) returned no valid results — review lacks model diversity"
   ELSE:
     NOTE: "Layer 1 skipped (all external consultants disabled in config) — review conducted via Layer 2 Claude subagents"
@@ -453,7 +453,7 @@ Quick mode runs **up to 2 agents** — one external consultant (for fast externa
 
 ```text
 1. Log agent selection:
-   "Quick mode: running [selected participants from ENABLED_SUBAGENTS].
+   "Quick mode: running [selected participants from config].
     Skipping remaining consultants and deep-review/scorer."
 
 2. Launch enabled participants in parallel:
@@ -476,7 +476,7 @@ Quick mode runs **up to 2 agents** — one external consultant (for fast externa
 
 ### Pattern D: Adversarial Review (Thorough)
 
-Dynamic team assignment based on enabled external consultants ($N_{\text{enabled}}$):
+Dynamic team assignment based on available external consultants (N_available):
 
 ```text
 1. Assign roles:
@@ -484,11 +484,11 @@ Dynamic team assignment based on enabled external consultants ($N_{\text{enabled
    - Critic: "Find every reason this SHOULD NOT be approved"
 
 2. Team pairing:
-   - If N_enabled >= 4: Split enabled list evenly (first half Advocates, second half Critics)
-   - If N_enabled == 3: Consultant 1 and 2 as Advocates, Consultant 3 as Critic
-   - If N_enabled == 2 (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
-   - If N_enabled == 1: Single external consultant as Advocate, claude-deep-review as Critic
-   - If N_enabled == 0: claude-codebase-context as Advocate, claude-deep-review as Critic
+   - If N_available >= 4: Split available list evenly (first half Advocates, second half Critics)
+   - If N_available == 3: Consultant 1 and 2 as Advocates, Consultant 3 as Critic
+   - If N_available == 2 (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
+   - If N_available == 1: Single external consultant as Advocate, claude-deep-review as Critic
+   - If N_available == 0: claude-codebase-context as Advocate, claude-deep-review as Critic
 3. Present both perspectives
 4. User decides based on trade-offs
 ```

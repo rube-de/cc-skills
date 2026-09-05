@@ -27,7 +27,7 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 ## Configuration Precedence
 
-1. **Project-local**: `.dev/council/config.json` (takes precedence; committed to gitignore)
+1. **Project-local**: `.dev/council/config.json` (takes precedence; should be added to `.gitignore`)
 2. **User-global**: `~/.config/council/config.json` (fallback across all projects)
 3. **Default**: Gemini & Codex enabled, GLM & Kimi disabled
 

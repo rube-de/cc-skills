@@ -460,12 +460,12 @@ fi
 
 1. **Assign Adversarial Roles Dynamically**
 
-   Pairings adapt based on enabled external consultants ($N_{\text{enabled}}$):
-   - **$N_{\text{enabled}} \ge 4$**: Split enabled list evenly (first half Advocates, second half Critics)
-   - **$N_{\text{enabled}} == 3$**: Consultant 1 and 2 as Advocates, Consultant 3 as Critic
-   - **$N_{\text{enabled}} == 2$** (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
-   - **$N_{\text{enabled}} == 1$**: Single external consultant as Advocate, `claude-deep-review` as Critic
-   - **$N_{\text{enabled}} == 0$**: `claude-codebase-context` as Advocate, `claude-deep-review` as Critic
+   Pairings adapt based on available external consultants (N_available):
+   - **N_available >= 4**: Split available list evenly (first half Advocates, second half Critics)
+   - **N_available == 3**: Consultant 1 and 2 as Advocates, Consultant 3 as Critic
+   - **N_available == 2** (e.g. Gemini + Codex): Consultant 1 as Advocate, Consultant 2 as Critic
+   - **N_available == 1**: Single external consultant as Advocate, `claude-deep-review` as Critic
+   - **N_available == 0**: `claude-codebase-context` as Advocate, `claude-deep-review` as Critic
 2. **Frame Prompts**
    ```
    ADVOCATES:

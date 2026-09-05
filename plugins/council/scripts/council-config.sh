@@ -99,9 +99,9 @@ resolve_write_path() {
   repo_root="$(get_repo_root)"
   proj_path="$(get_project_path)"
 
-  # Security check: refuse to write to a tracked repo file
-  if [ -f "$proj_path" ] && command -v git >/dev/null 2>&1 && git -C "$repo_root" ls-files --error-unmatch -- .dev/council/config.json >/dev/null 2>&1; then
-    echo "Security error: $proj_path is tracked in git repository. Refusing to overwrite tracked file. Use --global or remove from git tracking." >&2
+  # Security check: refuse to write to a tracked repo file (checks git index regardless of working tree existence)
+  if command -v git >/dev/null 2>&1 && git -C "$repo_root" ls-files --error-unmatch -- .dev/council/config.json >/dev/null 2>&1; then
+    echo "Security error: $proj_path is tracked in git repository. Refusing to write to tracked repo file. Use --global or remove from git tracking." >&2
     exit 1
   fi
 
@@ -225,7 +225,7 @@ cmd_detect() {
     has_codex_cli=true
     if [ -n "$OPENAI_API_KEY" ]; then
       has_codex_auth=true
-    elif codex login status 2>&1 | grep -qi "Logged in"; then
+    elif codex login status 2>&1 | grep -qi "Logged in" && ! codex login status 2>&1 | grep -qi "Not logged in"; then
       has_codex_auth=true
     fi
   fi
@@ -631,7 +631,6 @@ cmd_set_timeout() {
 }
 
 cmd_check_cli() {
-  data="$(cmd_read "$@")"
   enabled_consultants="$(cmd_get_enabled "$@")"
 
   need_codex=false
