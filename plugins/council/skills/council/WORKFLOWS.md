@@ -22,7 +22,11 @@ else
   command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
   SUBAGENT_BACKEND="native"
   DEEP_MODEL="opus"
-  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
+  if [ -d "${CLAUDE_SKILL_DIR}/../../agents" ]; then
+    ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
+  else
+    ENABLED_SUBAGENTS=""
+  fi
 fi
 echo "Available consultants: ${AVAILABLE_CONSULTANTS}"
 echo "Subagents: backend=${SUBAGENT_BACKEND}, deep_model=${DEEP_MODEL}, active=${ENABLED_SUBAGENTS}"

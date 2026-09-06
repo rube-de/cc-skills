@@ -103,8 +103,12 @@ else
   AVAILABLE_CONSULTANTS=""
   command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
   command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
-  ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
   DEEP_MODEL="opus"
+  if [ -d "${CLAUDE_SKILL_DIR}/../../agents" ]; then
+    ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
+  else
+    ENABLED_SUBAGENTS=""
+  fi
 fi
 ```
 **Consultant Selection**:
