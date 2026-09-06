@@ -179,7 +179,7 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | Component | Required | Purpose |
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
-| jq | Yes | JSON configuration and validation hooks |
+| jq (or jaq) | Yes | JSON configuration and validation hooks |
 | codex CLI | Recommended | Codex consultant |
 | omp CLI | Recommended | Gemini, GLM-5.3, and Kimi consultants (3 of 4) |
 ## Troubleshooting
