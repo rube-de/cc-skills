@@ -3,6 +3,15 @@
 # Used as a PostToolUse hook on Bash calls from consultant agents
 # Reads hook input JSON from stdin (Claude Code hook protocol)
 
+if ! command -v jq >/dev/null 2>&1; then
+  if command -v jaq >/dev/null 2>&1; then
+    jq() { jaq "$@"; }
+  else
+    echo "Warning: Neither 'jq' nor 'jaq' found in PATH. Skipping JSON validation hook." >&2
+    exit 0
+  fi
+fi
+
 INPUT=$(cat)
 TOOL_OUTPUT=$(echo "$INPUT" | jq -r '.tool_output // empty' 2>/dev/null)
 
