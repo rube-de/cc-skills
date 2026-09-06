@@ -6,6 +6,9 @@
 if ! command -v jq >/dev/null 2>&1; then
   if command -v jaq >/dev/null 2>&1; then
     jq() { jaq "$@"; }
+  else
+    echo "Warning: Neither 'jq' nor 'jaq' found in PATH. Skipping JSON validation hook." >&2
+    exit 0
   fi
 fi
 
