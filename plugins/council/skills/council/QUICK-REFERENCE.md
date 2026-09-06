@@ -33,7 +33,7 @@ Layer 1: External Consultants                    Layer 2: Claude Subagents
 (model diversity, same prompt)                   (concern depth, tool access)
 ┌────────┬────────┬────────┬────────┐            ┌──────────────┬──────────────┐
 │ Gemini │ Codex  │ GLM    │ Kimi   │            │ Deep Review  │  Codebase    │
-│  CLI   │  CLI   │  CLI   │  CLI   │            │ (opus/sonnet)│  Context     │
+│  CLI   │  CLI   │  CLI   │  CLI   │            │ opus/sonnet  │  Context     │
 └────────┴────────┴────────┴────────┘            │ Security +   │  (sonnet)    │
          ↓ consensus                              │ Bugs + Perf  │  Quality +   │
                                                   │              │  Compliance +│

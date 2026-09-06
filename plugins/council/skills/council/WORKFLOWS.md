@@ -377,7 +377,7 @@ fi
 
    Log the selection at start:
    ```text
-   "Quick mode: running [selected participants from ENABLED_SUBAGENTS].
+   "Quick mode: running [selected participants from config].
     Skipping remaining consultants and scorer."
    ```
 
