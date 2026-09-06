@@ -381,20 +381,25 @@ cmd_show() {
   for c in gemini codex glm kimi; do
     en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
     cli_type="omp"
+    has_cli="missing"
     model_info=""
     case "$c" in
       gemini)
         model_info="google-antigravity/gemini-3.8-flash"
+        command -v omp >/dev/null 2>&1 && has_cli="installed"
         ;;
       codex)
         cli_type="codex"
         model_info="codex CLI"
+        command -v codex >/dev/null 2>&1 && has_cli="installed"
         ;;
       glm)
         model_info="zai/glm-5.3:max"
+        command -v omp >/dev/null 2>&1 && has_cli="installed"
         ;;
       kimi)
         model_info="kimi-code/k3"
+        command -v omp >/dev/null 2>&1 && has_cli="installed"
         ;;
     esac
 
@@ -403,7 +408,7 @@ cmd_show() {
     else
       status_tag="[DISABLED]"
     fi
-    printf "  %-8s %s (via %s: %s)\n" "$c" "$status_tag" "$cli_type" "$model_info"
+    printf "  %-8s %s (via %s: %s | CLI: %s)\n" "$c" "$status_tag" "$cli_type" "$model_info" "$has_cli"
   done
 
   quick_cfg="$(echo "$data" | jq -r '.settings.quick_consultant // "auto"')"
@@ -418,7 +423,7 @@ cmd_show() {
   echo "  Backend:           $sub_backend (options: native, omp, claude-cli)"
   echo "  Deep Review Model: $deep_mod (options: opus, sonnet)"
   for s in claude-deep-review claude-codebase-context review-scorer; do
-    en="$(echo "$data" | jq -r --arg s "$s" '((.subagents // {})[$s] // {}).enabled as $v | if $v != null then $v else true end')"
+    en="$(echo "$data" | jq -r --arg s "$s" '((.subagents // {})[$s] // {}).enabled == true')"
     if [ "$en" = "true" ]; then
       status_tag="[ENABLED] "
     else
@@ -437,6 +442,8 @@ cmd_show() {
   echo ""
   echo "Operational Settings:"
   echo "  Timeout:                 ${timeout}s"
+  echo ""
+  echo "Tip: Run 'council-config.sh detect' (or /council:config detect) to verify provider authentication."
 }
 
 cmd_get_enabled() {
