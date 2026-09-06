@@ -156,7 +156,7 @@ cmd_path() {
 }
 
 cmd_exists() {
-  cfg="$(resolve_read_path "$@")"
+  cfg="$(resolve_read_path "$@" 2>/dev/null)"
   if [ -n "$cfg" ] && [ -f "$cfg" ]; then
     exit 0
   else
@@ -176,8 +176,15 @@ cmd_read() {
     rm -f "$def_tmp"
     if [ $status -eq 0 ] && [ -n "$merged" ]; then
       echo "$merged"
+      return 0
     else
-      echo "Warning: Failed to parse configuration at $cfg (invalid JSON). Falling back to default settings." >&2
+      echo "Warning: Failed to parse configuration at $cfg (invalid JSON)." >&2
+      proj_path="$(get_project_path)"
+      if [ "$cfg" = "$proj_path" ] && [ -f "$DEFAULT_GLOBAL_PATH" ]; then
+        echo "Notice: Falling back to global configuration at $DEFAULT_GLOBAL_PATH." >&2
+        cmd_read --global
+        return 0
+      fi
       default_config
     fi
   else
