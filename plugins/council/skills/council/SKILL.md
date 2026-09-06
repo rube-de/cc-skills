@@ -29,6 +29,7 @@ if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >
   SUBAGENT_BACKEND=$("$CONFIG_SCRIPT" get-subagent-backend)
   DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
   ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+  TIMEOUT=$("$CONFIG_SCRIPT" get-timeout)
 else
   echo "Notice: council-config.sh or jq/jaq unavailable (skill-only install). Using default consultants and models."
   ENABLED_CONSULTANTS="gemini codex"
@@ -37,6 +38,7 @@ else
   command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
   SUBAGENT_BACKEND="native"
   DEEP_MODEL="opus"
+  TIMEOUT="120"
   if [ -d "${CLAUDE_SKILL_DIR}/../../agents" ]; then
     ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
   else
