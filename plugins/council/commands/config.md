@@ -1,5 +1,5 @@
 ---
-allowed-tools: [Bash, Read, Write, Edit, AskUserQuestion]
+allowed-tools: [Bash, Read, AskUserQuestion]
 description: "Configure Council external consultant enablement based on available subscriptions (Gemini, Codex, GLM, Kimi)"
 ---
 

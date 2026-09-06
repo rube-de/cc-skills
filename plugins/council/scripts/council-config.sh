@@ -370,10 +370,14 @@ cmd_show() {
   data="$(cmd_read "$@")"
 
   echo "Council Consultant Configuration"
-  echo "Active config: $cfg"
-  if [ -f "$cfg" ]; then
+  if [ -n "$cfg" ] && [ -f "$cfg" ]; then
+    echo "Active config: $cfg"
     echo "Status: Saved on disk"
+  elif [ -z "$cfg" ]; then
+    echo "Active config: None (repo config is git-tracked and ignored for security)"
+    echo "Status: Unsaved defaults (use /council:config --global to configure globally)"
   else
+    echo "Active config: $cfg"
     echo "Status: Unsaved defaults (run 'council-config.sh init' to save)"
   fi
   echo ""
