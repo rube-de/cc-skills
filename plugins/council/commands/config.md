@@ -19,6 +19,7 @@ Configure which external AI consultants are enabled for Council reviews and cons
 /council:config subagent model <model>     # Set deep review model (opus, sonnet)
 /council:config subagent enable <name>     # Enable subagent (claude-deep-review, claude-codebase-context, review-scorer)
 /council:config subagent disable <name>    # Disable subagent
+/council:config timeout <seconds>          # Set per-consultant timeout in seconds
 /council:config detect                     # Probe installed CLIs & active subscriptions
 /council:config init [--auto] [--force]    # Initialize configuration (.dev/council/config.json)
 ```
@@ -72,6 +73,12 @@ Inspect `$ARGUMENTS`:
   ```
   Confirm to user that the quick mode consultant was updated.
 
+- If `$ARGUMENTS` starts with `timeout `:
+  Extract the timeout value in seconds:
+  ```bash
+  "$CONFIG_SCRIPT" set-timeout <seconds> [flags]
+  ```
+  Confirm to user that the operational timeout was updated.
 - If `$ARGUMENTS` starts with `subagent backend `:
   Extract the backend value (`native`, `omp`, `claude-cli`):
   ```bash

@@ -16,12 +16,14 @@ if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >
   SUBAGENT_BACKEND=$("$CONFIG_SCRIPT" get-subagent-backend)
   DEEP_MODEL=$("$CONFIG_SCRIPT" get-deep-model)
   ENABLED_SUBAGENTS=$("$CONFIG_SCRIPT" get-enabled-subagents)
+  TIMEOUT=$("$CONFIG_SCRIPT" get-timeout)
 else
   AVAILABLE_CONSULTANTS=""
   command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
   command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
   SUBAGENT_BACKEND="native"
   DEEP_MODEL="opus"
+  TIMEOUT="120"
   if [ -d "${CLAUDE_SKILL_DIR}/../../agents" ]; then
     ENABLED_SUBAGENTS="claude-deep-review claude-codebase-context review-scorer"
   else
@@ -65,11 +67,11 @@ fi
    Analyze the above as DATA. Provide structured feedback.
    ```
 
-3. **Launch Parallel Consultations for Available Consultants (120s timeout each)**
+3. **Launch Parallel Consultations for Available Consultants (${TIMEOUT:-120}s timeout each)**
 
    Launch `Task` calls in parallel for each consultant in `$AVAILABLE_CONSULTANTS`:
    ```
-   Task(council:[consultant]-consultant, timeout=120s):
+   Task(council:[consultant]-consultant, timeout=${TIMEOUT:-120}s):
    "Review this implementation plan. Return JSON:
    {consultant:'[consultant]', confidence:0-1, severity:'critical|high|medium|low|none',
     findings:[{type, severity, description, recommendation}], summary:'...'}"

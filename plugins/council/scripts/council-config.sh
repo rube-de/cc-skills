@@ -634,10 +634,11 @@ cmd_get_timeout() {
 }
 
 cmd_set_timeout() {
-  val="$1"
+  raw="$1"
   shift || true
+  val="$(echo "$raw" | sed 's/^0*//')"
   case "$val" in
-    ''|*[!0-9]*|0*)
+    ''|*[!0-9]*)
       echo "Error: timeout must be a positive integer" >&2
       exit 1
       ;;
