@@ -637,7 +637,10 @@ cmd_get_enabled_subagents() {
 
 cmd_get_timeout() {
   data="$(cmd_read "$@")"
-  echo "$data" | jq -r '.settings.timeout_seconds // 120'
+  echo "$data" | jq -r '
+    (.settings // {}).timeout_seconds as $t |
+    if ($t | type) == "number" and $t > 0 and ($t | floor) == $t then $t else 120 end
+  '
 }
 
 cmd_set_timeout() {
