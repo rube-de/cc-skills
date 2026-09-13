@@ -88,7 +88,7 @@ Collect all verification results into a structured report:
 
 ### Step 3: Launch Consultants
 
-Resolve active consultants based on configuration and CLI availability:
+Resolve active consultants based on configuration and available capabilities (CLI + authentication):
 ```bash
 CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
 if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then

@@ -13,7 +13,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 INPUT=$(cat)
-TOOL_OUTPUT=$(echo "$INPUT" | jq -r '.tool_output // empty' 2>/dev/null)
+TOOL_OUTPUT=$(printf '%s\n' "$INPUT" | jq -r '.tool_output // empty' 2>/dev/null)
 
 # Skip if no output or not a CLI invocation we care about
 if [ -z "$TOOL_OUTPUT" ]; then
@@ -21,12 +21,12 @@ if [ -z "$TOOL_OUTPUT" ]; then
 fi
 
 # Check if output contains a JSON object with expected council fields
-if echo "$TOOL_OUTPUT" | jq -e '.consultant // .findings // .summary' >/dev/null 2>&1; then
+if printf '%s\n' "$TOOL_OUTPUT" | jq -e '.consultant // .findings // .summary' >/dev/null 2>&1; then
   exit 0
 fi
 
 # If output looks like an error or rate limit, let the agent handle it
-if echo "$TOOL_OUTPUT" | grep -qiE '(rate.?limit|429|quota|error|timeout)'; then
+if printf '%s\n' "$TOOL_OUTPUT" | grep -qiE '(rate.?limit|429|quota|error|timeout)'; then
   exit 0
 fi
 

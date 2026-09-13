@@ -251,10 +251,17 @@ cmd_detect() {
   # Check omp CLI and providers
   has_omp_cli=false
   omp_usage=""
+  omp_usage_checked=false
   if command -v omp >/dev/null 2>&1; then
     has_omp_cli=true
-    omp_usage="$(omp usage 2>/dev/null || true)"
   fi
+
+  fetch_omp_usage() {
+    if [ "$omp_usage_checked" = "false" ]; then
+      omp_usage="$(omp usage 2>/dev/null || true)"
+      omp_usage_checked=true
+    fi
+  }
 
   # Check gemini
   has_gemini_cli="$has_omp_cli"
@@ -262,8 +269,11 @@ cmd_detect() {
   if [ "$has_omp_cli" = "true" ]; then
     if [ -n "$GEMINI_API_KEY" ]; then
       has_gemini_auth=true
-    elif echo "$omp_usage" | grep -qi "Google Antigravity"; then
-      has_gemini_auth=true
+    else
+      fetch_omp_usage
+      if printf '%s\n' "$omp_usage" | grep -qi "Google Antigravity"; then
+        has_gemini_auth=true
+      fi
     fi
   fi
 
@@ -273,8 +283,11 @@ cmd_detect() {
   if [ "$has_omp_cli" = "true" ]; then
     if [ -n "$ZAI_API_KEY" ]; then
       has_glm_auth=true
-    elif echo "$omp_usage" | grep -Eiq "Zai|Z\.AI"; then
-      has_glm_auth=true
+    else
+      fetch_omp_usage
+      if printf '%s\n' "$omp_usage" | grep -Eiq "Zai|Z\.AI"; then
+        has_glm_auth=true
+      fi
     fi
   fi
 
@@ -284,8 +297,11 @@ cmd_detect() {
   if [ "$has_omp_cli" = "true" ]; then
     if [ -n "$KIMI_API_KEY" ]; then
       has_kimi_auth=true
-    elif echo "$omp_usage" | grep -qi "Kimi Code"; then
-      has_kimi_auth=true
+    else
+      fetch_omp_usage
+      if printf '%s\n' "$omp_usage" | grep -qi "Kimi Code"; then
+        has_kimi_auth=true
+      fi
     fi
   fi
 
