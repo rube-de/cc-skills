@@ -62,8 +62,16 @@ resolve_read_path() {
   repo_root="$(get_repo_root)"
   proj_path="$(get_project_path)"
   proj_is_tracked=false
+  # Security check (CWE-59): verify path components are not symbolic links
+  for check_path in "$repo_root/.dev" "$repo_root/.dev/council" "$proj_path"; do
+    if [ -L "$check_path" ]; then
+      echo "Security warning: $check_path is a symbolic link. Ignoring untrusted repo config." >&2
+      proj_is_tracked=true
+      break
+    fi
+  done
 
-  if [ -f "$proj_path" ]; then
+  if [ -f "$proj_path" ] && [ "$proj_is_tracked" = "false" ]; then
     # Security check (CWE-15): verify .dev/council/config.json is not tracked in git
     # Only local, untracked runtime configuration is honored from repository trees
     if command -v git >/dev/null 2>&1 && git -C "$repo_root" ls-files --error-unmatch -- .dev/council/config.json >/dev/null 2>&1; then
@@ -99,12 +107,19 @@ resolve_write_path() {
   repo_root="$(get_repo_root)"
   proj_path="$(get_project_path)"
 
-  # Security check: refuse to write to a tracked repo file (checks git index regardless of working tree existence)
+  # Security check (CWE-15): refuse to write to a tracked repo file (checks git index regardless of working tree existence)
   if command -v git >/dev/null 2>&1 && git -C "$repo_root" ls-files --error-unmatch -- .dev/council/config.json >/dev/null 2>&1; then
     echo "Security error: $proj_path is tracked in git repository. Refusing to write to tracked repo file. Use --global or remove from git tracking." >&2
     exit 1
   fi
 
+  # Security check (CWE-59): refuse to write if any component of the path or the target is a symlink
+  for check_path in "$repo_root/.dev" "$repo_root/.dev/council" "$proj_path"; do
+    if [ -L "$check_path" ]; then
+      echo "Security error: $check_path is a symbolic link. Refusing project-local write. Use --global or remove the symbolic link." >&2
+      exit 1
+    fi
+  done
   echo "$proj_path"
 }
 

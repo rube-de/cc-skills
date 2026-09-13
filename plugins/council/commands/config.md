@@ -115,12 +115,12 @@ Inspect `$ARGUMENTS`:
   Present detection results and explain which subscriptions/CLIs were found.
 
 - If `$ARGUMENTS` contains `init`:
-  Run:
+  Extract any passed flags (`--auto`, `--force`, `--global`):
   ```bash
   "$CONFIG_SCRIPT" init [flags]
   ```
-  Confirm initialization path.
-
+  Pass through `--auto` to auto-detect and configure available consultants, and/or `--force` to overwrite existing configuration. Pass `--global` if targeting global configuration.
+  Confirm initialization path and configured consultants.
 ### 2. Interactive Wizard (Default when no subcommands given)
 
 When invoked without subcommands (or during first-run setup):
