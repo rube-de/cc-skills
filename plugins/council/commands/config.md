@@ -36,11 +36,14 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 ### 1. Parse Arguments
 
-Resolve the config utility path with a fallback when `CLAUDE_PLUGIN_ROOT` is unset:
+Resolve the config utility path:
 ```bash
 CONFIG_SCRIPT="${CLAUDE_PLUGIN_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)/plugins/council}/scripts/council-config.sh"
+if [ ! -x "$CONFIG_SCRIPT" ]; then
+  echo "Error: council-config.sh not found or not executable at $CONFIG_SCRIPT. Ensure CLAUDE_PLUGIN_ROOT is set or run within the cc-skills repository." >&2
+  exit 1
+fi
 ```
-
 Check if `$ARGUMENTS` contains the standalone flag token `--global` (not as part of another argument like `--globalfoo`). If present, pass `--global` as an explicit, separate flag argument to script commands (e.g. `show --global`).
 
 Inspect `$ARGUMENTS`:

@@ -412,7 +412,7 @@ cmd_show() {
     echo "Active config: $cfg"
     echo "Status: Saved on disk"
   elif [ -z "$cfg" ]; then
-    echo "Active config: None (repo config is git-tracked and ignored for security)"
+    echo "Active config: None (repo config is git-tracked or symlinked and ignored for security)"
     echo "Status: Unsaved defaults (use /council:config --global to configure globally)"
   else
     echo "Active config: $cfg"
@@ -421,7 +421,7 @@ cmd_show() {
   echo ""
 
   for c in gemini codex glm kimi; do
-    en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
+    en="$(echo "$data" | jq -r --arg c "$c" '(.consultants[$c] // {}).enabled // false')"
     cli_type="omp"
     has_cli="missing"
     model_info=""
@@ -503,8 +503,8 @@ cmd_get_available() {
   data="$(cmd_read "$@")"
   available=()
   for c in gemini codex glm kimi; do
-    en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
-    rec="$(echo "$detected" | jq -r ".${c}.recommended // false")"
+    en="$(echo "$data" | jq -r --arg c "$c" '(.consultants[$c] // {}).enabled // false')"
+    rec="$(echo "$detected" | jq -r --arg c "$c" '(.[$c] // {}).recommended // false')"
     if [ "$en" = "true" ] && [ "$rec" = "true" ]; then
       available+=("$c")
     fi
@@ -542,8 +542,8 @@ cmd_get_quick() {
 
   # Check if explicitly configured consultant is enabled and recommended (CLI + auth)
   if [ "$configured" != "auto" ] && [ -n "$configured" ]; then
-    en="$(echo "$data" | jq -r ".consultants.${configured}.enabled // false")"
-    rec="$(echo "$detected" | jq -r ".${configured}.recommended // false")"
+    en="$(echo "$data" | jq -r --arg c "$configured" '(.consultants[$c] // {}).enabled // false')"
+    rec="$(echo "$detected" | jq -r --arg c "$configured" '(.[$c] // {}).recommended // false')"
     if [ "$en" = "true" ] && [ "$rec" = "true" ]; then
       echo "$configured"
       return 0
@@ -552,8 +552,8 @@ cmd_get_quick() {
 
   # Auto resolution: iterate enabled consultants in priority order, checking recommended
   for c in gemini codex glm kimi; do
-    en="$(echo "$data" | jq -r ".consultants.${c}.enabled // false")"
-    rec="$(echo "$detected" | jq -r ".${c}.recommended // false")"
+    en="$(echo "$data" | jq -r --arg c "$c" '(.consultants[$c] // {}).enabled // false')"
+    rec="$(echo "$detected" | jq -r --arg c "$c" '(.[$c] // {}).recommended // false')"
     if [ "$en" = "true" ] && [ "$rec" = "true" ]; then
       echo "$c"
       return 0
