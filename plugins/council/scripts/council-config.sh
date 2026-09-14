@@ -491,9 +491,9 @@ cmd_show() {
 cmd_get_enabled() {
   data="$(cmd_read "$@")"
   echo "$data" | jq -r '
-    .consultants
+    (if (.consultants | type) == "object" then .consultants else {} end)
     | to_entries
-    | map(select(.value.enabled == true) | .key)
+    | map(select((.value | type) == "object" and .value.enabled == true) | .key)
     | join(" ")
   '
 }
@@ -659,9 +659,9 @@ cmd_write_subagent() {
 cmd_get_enabled_subagents() {
   data="$(cmd_read "$@")"
   echo "$data" | jq -r '
-    .subagents // {}
+    (if (.subagents | type) == "object" then .subagents else {} end)
     | to_entries
-    | map(select(.key != "backend" and .key != "deep_review_model" and .value.enabled == true) | .key)
+    | map(select(.key != "backend" and .key != "deep_review_model" and (.value | type) == "object" and .value.enabled == true) | .key)
     | join(" ")
   '
 }
