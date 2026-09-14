@@ -110,8 +110,9 @@ fi
 
 1. **Gather and Chunk PR Context**
    ```bash
-   # Get diff, chunk if large
-   DIFF=$(git diff main...HEAD)
+   # Get diff (resolve remote default branch or origin/main)
+   BASE_BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
+   DIFF=$(git diff "${BASE_BRANCH:-main}...HEAD")
    LINES=$(echo "$DIFF" | wc -l)
 
    if [ $LINES -gt 500 ]; then
@@ -125,7 +126,7 @@ fi
    Before launching consultants, collect historical context for modified files:
    ```bash
    # Get list of changed files
-   CHANGED_FILES=$(git diff --name-only main...HEAD)
+   CHANGED_FILES=$(git diff --name-only "${BASE_BRANCH:-main}...HEAD")
 
    # For each changed file, gather blame + recent history
    for file in $CHANGED_FILES; do
@@ -222,7 +223,8 @@ fi
      ```bash
      (
        repo="$PWD"; sandbox=$(mktemp -d); trap 'rm -rf "$sandbox"' EXIT
-       git diff main...HEAD > "$sandbox/changes.diff"
+       base_branch="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
+       git diff "${base_branch:-main}...HEAD" > "$sandbox/changes.diff"
        cd "$sandbox"
        # If claude-deep-review enabled in $ENABLED_SUBAGENTS:
        omp -p --no-tools --model "anthropic/claude-${DEEP_MODEL}" "Review for security, bugs, performance @\"$sandbox/changes.diff\""

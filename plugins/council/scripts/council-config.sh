@@ -211,7 +211,7 @@ cmd_read() {
       echo "$merged"
       return 0
     else
-      echo "Warning: Failed to parse configuration at $cfg (invalid JSON)." >&2
+      echo "Warning: Failed to parse configuration at $cfg (invalid JSON or malformed schema)." >&2
       proj_path="$(get_project_path)"
       if [ "$cfg" = "$proj_path" ] && [ -f "$DEFAULT_GLOBAL_PATH" ]; then
         echo "Notice: Falling back to global configuration at $DEFAULT_GLOBAL_PATH." >&2
@@ -517,8 +517,20 @@ cmd_get_enabled() {
 }
 
 cmd_get_available() {
-  detected="$(cmd_detect --json)"
   data="$(cmd_read "$@")"
+  # Fast path: if no external consultants are enabled, skip capability detection
+  en_count="$(echo "$data" | jq -r '
+    (if (.consultants | type) == "object" then .consultants else {} end)
+    | to_entries
+    | map(select((.value | type) == "object" and .value.enabled == true))
+    | length
+  ')"
+  if [ "$en_count" -eq 0 ]; then
+    echo ""
+    return 0
+  fi
+
+  detected="$(cmd_detect --json)"
   available=()
   for c in gemini codex glm kimi; do
     en="$(echo "$data" | jq -r --arg c "$c" '(.consultants[$c] // {}).enabled // false')"
@@ -555,9 +567,25 @@ cmd_set_quick() {
 
 cmd_get_quick() {
   data="$(cmd_read "$@")"
-  detected="$(cmd_detect --json)"
   configured="$(echo "$data" | jq -r '.settings.quick_consultant // "auto"')"
+  if [ "$configured" = "none" ]; then
+    echo "none"
+    return 0
+  fi
 
+  # Fast path: if no external consultants are enabled, skip capability detection
+  en_count="$(echo "$data" | jq -r '
+    (if (.consultants | type) == "object" then .consultants else {} end)
+    | to_entries
+    | map(select((.value | type) == "object" and .value.enabled == true))
+    | length
+  ')"
+  if [ "$en_count" -eq 0 ]; then
+    echo "none"
+    return 0
+  fi
+
+  detected="$(cmd_detect --json)"
   # Check if explicitly configured consultant is enabled and recommended (CLI + auth)
   if [ "$configured" != "auto" ] && [ -n "$configured" ]; then
     en="$(echo "$data" | jq -r --arg c "$configured" '(.consultants[$c] // {}).enabled // false')"

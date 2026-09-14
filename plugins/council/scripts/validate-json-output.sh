@@ -20,8 +20,12 @@ if [ -z "$TOOL_OUTPUT" ]; then
   exit 0
 fi
 
-# Check if output contains a JSON object with expected council fields
-if printf '%s\n' "$TOOL_OUTPUT" | jq -e '.consultant and .findings and .summary' >/dev/null 2>&1; then
+# Check if output contains a JSON object with expected council fields and types
+if printf '%s\n' "$TOOL_OUTPUT" | jq -e '
+  (.consultant | type == "string" and length > 0) and
+  (.findings | type == "array") and
+  (.summary | type == "string")
+' >/dev/null 2>&1; then
   exit 0
 fi
 
