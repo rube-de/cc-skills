@@ -19,7 +19,7 @@ fi
 
 if [ -x "$CONFIG_UTIL" ]; then
   if ! "$CONFIG_UTIL" exists; then
-    echo "Council plugin: no active config found (or git-tracked config ignored). Run /council:config to set active consultants."
+    echo "Council plugin: no active config found (or git-tracked/symlinked config ignored). Run /council:config to set active consultants."
   fi
   # Check CLIs solely for enabled consultants
   "$CONFIG_UTIL" check-cli || true

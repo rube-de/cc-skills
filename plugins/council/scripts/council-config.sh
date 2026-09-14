@@ -171,7 +171,20 @@ cmd_path() {
 }
 
 cmd_exists() {
-  cfg="$(resolve_read_path "$@" 2>/dev/null)"
+  verbose=false
+  args=()
+  for a in "$@"; do
+    if [ "$a" = "--verbose" ] || [ "$a" = "-v" ]; then
+      verbose=true
+    else
+      args+=("$a")
+    fi
+  done
+  if [ "$verbose" = "true" ]; then
+    cfg="$(resolve_read_path "${args[@]}")"
+  else
+    cfg="$(resolve_read_path "${args[@]}" 2>/dev/null)"
+  fi
   if [ -n "$cfg" ] && [ -f "$cfg" ]; then
     exit 0
   else
@@ -185,7 +198,12 @@ cmd_read() {
     def_tmp="$(mktemp "${TMPDIR:-/tmp}/council-def.XXXXXX")"
     default_config > "$def_tmp"
     set +e
-    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '$def[0] * ($custom[0] // {})' 2>/dev/null)"
+    merged="$(jq -n --slurpfile def "$def_tmp" --slurpfile custom "$cfg" '
+      $def[0] * ($custom[0] // {})
+      | .consultants = (if (.consultants | type) == "object" then ($def[0].consultants * .consultants) else $def[0].consultants end)
+      | .subagents = (if (.subagents | type) == "object" then ($def[0].subagents * .subagents) else $def[0].subagents end)
+      | .settings = (if (.settings | type) == "object" then ($def[0].settings * .settings) else $def[0].settings end)
+    ' 2>/dev/null)"
     status=$?
     set -e
     rm -f "$def_tmp"
