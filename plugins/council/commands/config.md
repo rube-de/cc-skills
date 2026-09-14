@@ -38,9 +38,14 @@ Add `--global` to any command to target `~/.config/council/config.json` instead 
 
 Resolve the config utility path:
 ```bash
-CONFIG_SCRIPT="${CLAUDE_PLUGIN_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)/plugins/council}/scripts/council-config.sh"
-if [ ! -x "$CONFIG_SCRIPT" ]; then
-  echo "Error: council-config.sh not found or not executable at $CONFIG_SCRIPT. Ensure CLAUDE_PLUGIN_ROOT is set or run within the cc-skills repository." >&2
+if [ -n "$CLAUDE_PLUGIN_ROOT" ] && [ -f "$CLAUDE_PLUGIN_ROOT/scripts/council-config.sh" ]; then
+  CONFIG_SCRIPT="$CLAUDE_PLUGIN_ROOT/scripts/council-config.sh"
+elif [ -f "plugins/council/scripts/council-config.sh" ]; then
+  CONFIG_SCRIPT="plugins/council/scripts/council-config.sh"
+elif [ -n "$(git rev-parse --show-toplevel 2>/dev/null)" ] && [ -f "$(git rev-parse --show-toplevel)/plugins/council/scripts/council-config.sh" ]; then
+  CONFIG_SCRIPT="$(git rev-parse --show-toplevel)/plugins/council/scripts/council-config.sh"
+else
+  echo "Error: council-config.sh not found. Ensure CLAUDE_PLUGIN_ROOT is set or run within the cc-skills repository." >&2
   exit 1
 fi
 ```
