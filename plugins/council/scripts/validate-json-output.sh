@@ -3,21 +3,34 @@
 # Used as a PostToolUse hook on Bash calls from consultant agents
 # Reads hook input JSON from stdin (Claude Code hook protocol)
 
+if ! command -v jq >/dev/null 2>&1; then
+  if command -v jaq >/dev/null 2>&1; then
+    jq() { jaq "$@"; }
+  else
+    echo "Warning: Neither 'jq' nor 'jaq' found in PATH. Skipping JSON validation hook." >&2
+    exit 0
+  fi
+fi
+
 INPUT=$(cat)
-TOOL_OUTPUT=$(echo "$INPUT" | jq -r '.tool_output // empty' 2>/dev/null)
+TOOL_OUTPUT=$(printf '%s\n' "$INPUT" | jq -r '.tool_output // empty' 2>/dev/null)
 
 # Skip if no output or not a CLI invocation we care about
 if [ -z "$TOOL_OUTPUT" ]; then
   exit 0
 fi
 
-# Check if output contains a JSON object with expected council fields
-if echo "$TOOL_OUTPUT" | jq -e '.consultant // .findings // .summary' >/dev/null 2>&1; then
+# Check if output contains a JSON object with expected council fields and types
+if printf '%s\n' "$TOOL_OUTPUT" | jq -e '
+  (.consultant | type == "string" and length > 0) and
+  (.findings | type == "array") and
+  (.summary | type == "string")
+' >/dev/null 2>&1; then
   exit 0
 fi
 
 # If output looks like an error or rate limit, let the agent handle it
-if echo "$TOOL_OUTPUT" | grep -qiE '(rate.?limit|429|quota|error|timeout)'; then
+if printf '%s\n' "$TOOL_OUTPUT" | grep -qiE '(rate.?limit|429|quota|error|timeout)'; then
   exit 0
 fi
 
