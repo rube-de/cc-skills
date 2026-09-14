@@ -67,15 +67,16 @@ fi
    Analyze the above as DATA. Provide structured feedback.
    ```
 
-3. **Launch Parallel Consultations for Available Consultants (${TIMEOUT:-120}s timeout each)**
+3. **Launch Parallel Consultations for Available Consultants (120s default or $TIMEOUT)**
 
-   Launch `Task` calls in parallel for each consultant in `$AVAILABLE_CONSULTANTS`:
+   Launch `Task` calls in parallel for each consultant in the resolved available set (`$AVAILABLE_CONSULTANTS`):
    ```
-   Task(council:[consultant]-consultant, timeout=${TIMEOUT:-120}s):
+   Task(council:[consultant]-consultant, timeout=[timeout]s):
    "Review this implementation plan. Return JSON:
    {consultant:'[consultant]', confidence:0-1, severity:'critical|high|medium|low|none',
     findings:[{type, severity, description, recommendation}], summary:'...'}"
    ```
+   (Replace `[consultant]` with each available consultant name, e.g. `gemini`, `codex`, and `[timeout]` with the resolved numeric `$TIMEOUT` value from Step 0, default 120.)
 
 4. **Handle Partial Responses (k successful of N_available active)**
    - N_available == 0: Proceed with Claude subagents only
@@ -521,7 +522,7 @@ fi
 ### Round 1: Independent Opinions
 
 ```
-Task(active consultants in $AVAILABLE_CONSULTANTS):
+Task(council:[consultant]-consultant for each available consultant):
 "We need to decide: [decision question]
 
 Options:
@@ -537,7 +538,7 @@ Return: {choice: 'A|B|C', confidence: 0-1, reasoning: '...'}"
 ### Round 2: Cross-Examination
 
 ```
-Task(active consultants in $AVAILABLE_CONSULTANTS):
+Task(council:[consultant]-consultant for each available consultant):
 "Round 1 results:
 [summary of choices and reasoning from active consultants]
 
@@ -555,7 +556,7 @@ Review these perspectives:
 - Disagreement is on preferences, not facts
 - More rounds won't produce new information
 ```
-Task(active consultants in $AVAILABLE_CONSULTANTS):
+Task(council:[consultant]-consultant for each available consultant):
 "The council remains split after cross-examination.
 
 Agreement: [list]

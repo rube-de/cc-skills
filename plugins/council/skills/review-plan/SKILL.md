@@ -122,7 +122,8 @@ fi
   - If only one is enabled: Launch that single enabled subagent.
   - If neither is enabled: Abort plan review with message: "No external consultants or Claude subagents enabled for plan review."
 
-Launch available consultants in parallel using the Task tool. All launched consultants receive the **same prompt**.
+Launch selected participants (consultants and/or Claude subagents) in parallel using the Task tool. All launched participants receive the **same prompt**.
+
 #### Secret-Scanning Gate
 
 Before sending plan content to external consultants, check for secrets:
