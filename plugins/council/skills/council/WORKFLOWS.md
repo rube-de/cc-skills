@@ -198,7 +198,7 @@ fi
 
    Launch external consultants AND Claude subagents simultaneously:
 
-   **Layer 1: External Consultants (120s timeout each)**
+   **Layer 1: External Consultants (120s default or $TIMEOUT)**
 
    All receive the SAME prompt (same concern lens, same context):
    | Consultant | PR Review Weight |
@@ -208,7 +208,7 @@ fi
    | GLM | 0.75 |
    | Kimi | 0.80 |
 
-   **Layer 2: Claude Subagents (parallel, 120s timeout each)**
+   **Layer 2: Claude Subagents (parallel, 120s default or $TIMEOUT)**
 
    Launches enabled subagents from `$ENABLED_SUBAGENTS` via `$SUBAGENT_BACKEND`:
 
@@ -372,8 +372,8 @@ fi
 
    Quick mode runs up to 2 enabled agents:
    - **External Slot**:
-     - If `get-quick` returns an external consultant name (`gemini`, `codex`, `glm`, `kimi`): launch `Task(council:[name]-consultant, timeout=120s)`.
-     - If `get-quick` returns `none`: if `claude-deep-review` is enabled in `$ENABLED_SUBAGENTS`, launch `Task(council:claude-deep-review, model=$DEEP_MODEL, timeout=120s)` as the external substitute.
+     - If `get-quick` returns an external consultant name (`gemini`, `codex`, `glm`, `kimi`): launch `Task(council:[name]-consultant, timeout=[timeout]s)`.
+     - If `get-quick` returns `none`: if `claude-deep-review` is enabled in `$ENABLED_SUBAGENTS`, launch `Task(council:claude-deep-review, model=$DEEP_MODEL, timeout=[timeout]s)` as the external substitute.
    - **Codebase Depth Slot**:
      - Launch `Task(council:claude-codebase-context, model=sonnet)` only if enabled in `$ENABLED_SUBAGENTS`.
    - If neither participant is enabled, abort with: "No external consultants or Claude subagents enabled for quick triage."
@@ -388,17 +388,18 @@ fi
 
    ```text
    # External slot (if resolved to external consultant):
-   Task(council:[selected-consultant]-consultant, timeout=120s):
+   Task(council:[selected-consultant]-consultant, timeout=[timeout]s):
    "Quick review of [artifact]. Return JSON: {consultant, success, confidence, severity, findings, summary}"
 
    # Or External slot (if fallback to claude-deep-review):
-   Task(council:claude-deep-review, model=$DEEP_MODEL, timeout=120s):
+   Task(council:claude-deep-review, model=$DEEP_MODEL, timeout=[timeout]s):
    "Quick review of [artifact] for security, bugs, performance. Return JSON."
 
    # Codebase depth slot (if enabled in $ENABLED_SUBAGENTS):
    Task(council:claude-codebase-context, model=sonnet):
    "Quick review of [artifact] against conventions, CLAUDE.md, git history. Return JSON."
    ```
+   (Where `[timeout]` uses the resolved numeric `$TIMEOUT` value from Step 0, default 120.)
 2. **Validate Responses and Evaluate**
 
    First, validate both responses (see SKILL.md "Response Validation" for full algorithm):
