@@ -134,8 +134,8 @@ Inspect `$ARGUMENTS`:
 When invoked without subcommands (or during first-run setup):
 
 **Scope Handling**:
-- If `$ARGUMENTS` contains the standalone token `--global`: set `SCOPE_FLAG="--global"` and skip Step 6.
-- Otherwise: prompt user for scope in Step 6 (set `SCOPE_FLAG="--global"` if user chooses global scope, or leave empty for project scope).
+- If `$ARGUMENTS` contains the standalone token `--global`: target global scope (pass `--global` explicitly to script commands) and skip Step 6.
+- Otherwise: prompt user for scope in Step 6 (pass `--global` if user chooses global scope, or omit for project scope). Note that shell variables do not persist across separate tool calls, so pass `--global` explicitly as an argument on each command rather than relying on an environment variable.
 
 1. **Run Capability Detection**:
    ```bash
@@ -144,8 +144,9 @@ When invoked without subcommands (or during first-run setup):
 
 2. **Read Existing Config (or defaults)**:
    ```bash
-   "$CONFIG_SCRIPT" read $SCOPE_FLAG
+   "$CONFIG_SCRIPT" read [--global]
    ```
+   (Pass `--global` if global scope was specified in arguments.)
 
 3. **Present Status**:
    Display detected capabilities and current enablement state to the user:
@@ -171,16 +172,17 @@ When invoked without subcommands (or during first-run setup):
 7. **Save Configuration**:
    Apply user choices using `council-config.sh write <consultant> <true|false>`:
    ```bash
-   "$CONFIG_SCRIPT" write gemini <bool> $SCOPE_FLAG
-   "$CONFIG_SCRIPT" write codex <bool> $SCOPE_FLAG
-   "$CONFIG_SCRIPT" write glm <bool> $SCOPE_FLAG
-   "$CONFIG_SCRIPT" write kimi <bool> $SCOPE_FLAG
-   "$CONFIG_SCRIPT" set-quick <quick_choice> $SCOPE_FLAG
+   "$CONFIG_SCRIPT" write gemini <bool> [--global]
+   "$CONFIG_SCRIPT" write codex <bool> [--global]
+   "$CONFIG_SCRIPT" write glm <bool> [--global]
+   "$CONFIG_SCRIPT" write kimi <bool> [--global]
+   "$CONFIG_SCRIPT" set-quick <quick_choice> [--global]
    ```
+   (Pass `--global` explicitly on each command if global scope was chosen.)
 
 8. **Verify & Display Summary**:
    Run:
    ```bash
-   "$CONFIG_SCRIPT" show $SCOPE_FLAG
+   "$CONFIG_SCRIPT" show [--global]
    ```
    Inform the user that `/council` will now dynamically dispatch only the enabled consultants.

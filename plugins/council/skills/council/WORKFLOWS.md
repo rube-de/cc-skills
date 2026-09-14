@@ -125,9 +125,9 @@ fi
 
    Before launching consultants, collect historical context for modified files:
    ```bash
-   # Get list of changed files
+   # Get list of changed files (resolve remote default branch independently of prior tool calls)
+   BASE_BRANCH="$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')"
    CHANGED_FILES=$(git diff --name-only "${BASE_BRANCH:-main}...HEAD")
-
    # For each changed file, gather blame + recent history
    for file in $CHANGED_FILES; do
      echo "=== History: $file ==="
