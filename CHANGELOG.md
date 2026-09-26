@@ -1,3 +1,10 @@
+# [2.15.0](https://github.com/rube-de/cc-skills/compare/v2.14.0...v2.15.0) (2026-09-26)
+
+
+### Features
+
+* **council:** add consultant subscription config and dynamic dispatch ([#262](https://github.com/rube-de/cc-skills/issues/262)) ([ac46784](https://github.com/rube-de/cc-skills/commit/ac4678453a5ca19c80bd2cfc6505439539b8b817))
+
 # [2.14.0](https://github.com/rube-de/cc-skills/compare/v2.13.0...v2.14.0) (2026-09-03)
 
 
