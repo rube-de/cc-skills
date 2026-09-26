@@ -6,7 +6,7 @@
 
 | Plugin | Category | Skill Triggers |
 |--------|----------|----------------|
-| council | Code Review | `/council`, `/council:review-plan` |
+| council | Code Review | `/council`, `/council:config`, `/council:review-plan` |
 | cdt | Development | `/cdt` |
 | pm | Productivity | `/pm`, `/pm:brainstorm`, `/pm:next`, `/pm:update`, `/pm:review` |
 | plugin-dev | Development | `/plugin-dev`, `/plugin-dev:create`, `/plugin-dev:develop` |

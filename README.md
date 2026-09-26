@@ -169,9 +169,10 @@ cc-skills/
 ├── plugins/
 │   ├── council/             # AI council code reviews
 │   │   ├── agents/          # Consultant agents + Claude subagents
+│   │   ├── commands/        # Configuration command (/council:config)
 │   │   ├── hooks/           # Pre/post tool-use hooks
-│   │   ├── scripts/         # Validation scripts
-│   │   └── skills/          # council, council-reference
+│   │   ├── scripts/         # Validation and config scripts
+│   │   └── skills/          # council, council-reference, review-plan
 │   ├── cdt/                 # Multi-agent dev team
 │   │   ├── agents/          # Researcher subagent
 │   │   ├── commands/        # Task workflow commands
