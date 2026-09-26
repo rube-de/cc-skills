@@ -79,7 +79,7 @@ fi
    (Replace `[consultant]` with each available consultant name, e.g. `gemini`, `codex`, and `[timeout]` with the resolved numeric `$TIMEOUT` value from Step 0, default 120.)
 
 4. **Handle Partial Responses (k successful of N_available active)**
-   - N_available == 0: Proceed with Claude subagents only
+   - N_available == 0: If Layer 2 (Claude subagents) available, proceed with Claude subagents only; else abort with error: "No reviewers available (all consultants and subagents disabled or unavailable)"
    - k == N_available (k > 0): Full synthesis
    - k == 1 (N_available > 1): Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation"
    - k / N_available >= 0.66 (k > 1): Proceed with note: "[X] consultant unavailable"

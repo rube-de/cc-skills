@@ -47,7 +47,7 @@ else
 fi
 ```
 
-If the user explicitly invoked `/council config`, execute the configuration management commands using `council-config.sh` (via Bash) and `AskUserQuestion` for interactive selections (matching the `/council:config` workflow) instead of running a review.
+If the user explicitly invoked `/council config`, invoke the `/council:config` command workflow (see `plugins/council/commands/config.md`) using `council-config.sh` (via Bash) and `AskUserQuestion` for interactive selections, instead of running a review.
 
 ### Step 1: Check CLI Availability for Enabled Consultants
 
@@ -179,7 +179,7 @@ Evaluated dynamically against `N_available` (the count of available external con
 
 | Condition | Action |
 |-----------|--------|
-| N_available == 0 | External layer skipped by config (or no external tools available). Proceed with Layer 2 (Claude subagents) only |
+| N_available == 0 | External layer skipped by config (or no external tools available). If Layer 2 (Claude subagents) available, proceed with Layer 2 only; else abort with error: "No reviewers available (all consultants and subagents disabled or unavailable)" |
 | k == N_available (k > 0) | Full synthesis |
 | k == 1 (N_available > 1) | Proceed in single-consultant mode with strong warning: "Single external consultant only — no cross-model validation" |
 | k / N_available >= 0.66 (k > 1) | Proceed with note: "[X] consultant unavailable" |

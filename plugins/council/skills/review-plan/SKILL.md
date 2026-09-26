@@ -22,7 +22,7 @@ digraph review_plan {
 
   locate [label="Step 1: Locate Plan"];
   verify [label="Step 2: Codebase Verification"];
-  launch [label="Step 3: Launch Consultants\n(2 consultants in parallel)"];
+  launch [label="Step 3: Launch Consultants\n(up to 2 configured reviewers in parallel)"];
   synthesize [label="Step 4: Deduplicate & Synthesize"];
   present [label="Step 5: Present Structured Output"];
   decide [label="Step 6: User Decision"];
