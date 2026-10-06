@@ -1,3 +1,10 @@
+## [2.15.3](https://github.com/rube-de/cc-skills/compare/v2.15.2...v2.15.3) (2026-10-06)
+
+
+### Bug Fixes
+
+* gate irreversible and external-facing actions behind explicit confirmation ([#273](https://github.com/rube-de/cc-skills/issues/273)) ([6783c23](https://github.com/rube-de/cc-skills/commit/6783c23f312e20b6787e6d7e9124a9106ea4e189)), closes [#266](https://github.com/rube-de/cc-skills/issues/266)
+
 ## [2.15.2](https://github.com/rube-de/cc-skills/compare/v2.15.1...v2.15.2) (2026-10-06)
 
 ## [2.15.1](https://github.com/rube-de/cc-skills/compare/v2.15.0...v2.15.1) (2026-10-06)
