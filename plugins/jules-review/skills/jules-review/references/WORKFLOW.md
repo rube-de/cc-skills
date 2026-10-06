@@ -198,7 +198,7 @@ AskUserQuestion:
 | Cancel | Post nothing: no reviews API call, no `gh pr comment`. Go to SKILL.md Step 7 |
 | No answer (tool unavailable, empty answer, or error) | Same as Cancel |
 
-The confirmed `$EVENT` is final for this run. Retries in §7 and the fallback in §8 reuse it and never change it to `APPROVE` or `REQUEST_CHANGES`.
+The confirmed `$EVENT` stays unchanged for retries in §7 and the fallback in §8; they never change it to `APPROVE` or `REQUEST_CHANGES`. The only change allowed is a downgrade to `COMMENT`, and only after the user explicitly approves it in §7 "Handling a Rejected Review Event".
 
 ## 7. Post the Review
 
@@ -242,6 +242,8 @@ If the `gh api` call fails because of invalid inline comments (line not in diff)
 
 1. **First retry**: Remove only the invalid comment(s) from the array and retry with remaining valid comments
 2. **Second retry**: If still failing, post review with empty comments array (all findings in body)
+
+If a retry fails for a different reason, or the second retry fails, classify that new error with **Classify a Failed Post First** again. Don't loop: if the empty-comments retry fails with another inline-comment error, treat it as rule 4 there.
 
 ```bash
 # First: filter out the invalid comment and retry
@@ -287,6 +289,8 @@ In fallback mode:
 - All findings go into the comment body
 - Note to user: "Posted as PR comment (review API unavailable)"
 
+If `gh pr comment` itself fails, stop: report the raw error and print the review body so the user still has the content. Don't retry.
+
 ## Error Handling Summary
 
 | Error | Recovery |
@@ -296,6 +300,8 @@ In fallback mode:
 | `APPROVE` / `REQUEST_CHANGES` rejected (422) | Ask: downgrade to COMMENT or cancel; never escalate |
 | Review API 403/401 | Fall back to `gh pr comment` (only after §6 confirmation) |
 | User cancels, or no answer in §6 | Post nothing; print the review body |
+| `gh pr comment` fallback fails | Stop; report the raw error and print the review body |
+| A retry fails | Re-classify the new error (§7 "Classify a Failed Post First") |
 | `gh` CLI not found | Abort with install instructions |
 | No PR found | Abort with clear error |
 | Council returns no output | Abort with error, suggest retrying |

@@ -136,8 +136,8 @@ else
   command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
 fi
 if command -v gitleaks >/dev/null 2>&1; then
-  if ! gitleaks detect --source . --no-git 2>/dev/null; then
-    echo "WARNING: Potential secrets detected. Aborting council."
+  if ! gitleaks detect --source . --no-git; then
+    echo "WARNING: gitleaks reported potential secrets or failed to run (see its output above). Aborting council."
     exit 1
   fi
 elif [ -z "$(printf '%s' "$AVAILABLE_CONSULTANTS" | tr -d '[:space:]')" ]; then
@@ -148,7 +148,7 @@ else
 fi
 ```
 
-- **Exit 1** (secrets detected): abort and warn the user. Do not send plan content to external consultants.
+- **Exit 1** (gitleaks found secrets or failed to run): abort and warn the user, quoting gitleaks' output. Do not send plan content to external consultants.
 - **Exit 2** (`gitleaks` missing): show the notice, then ask before contacting any consultant:
 
   ```

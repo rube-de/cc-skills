@@ -3,7 +3,7 @@ name: oasis-dev
 description: >-
   Help developers build on Oasis Network: Sapphire confidential EVM, ROFL off-chain apps,
   CLI operations, SDK patterns (Rust, Go, TypeScript, Python), and ParaTime development.
-allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit]
+allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit, AskUserQuestion]
 user-invocable: true
 metadata:
   author: rube-de
@@ -19,6 +19,8 @@ Comprehensive assistance for building on the Oasis Network: Sapphire confidentia
 Use this skill when the user mentions: "oasis", "sapphire", "sapphire paratime", "rofl", "oasis cli", "oasis sdk", "oasis network", "confidential evm", "oasis-sdk", "sapphire-paratime", "oasisprotocol", "oasis rofl", "paratime", "emerald", "cipher", "rose token", "oasis wallet", "sapphire contracts", "oasis node", "oasis core".
 
 Also activate when the user is working in repos: `oasisprotocol/sapphire-paratime`, `oasisprotocol/oasis-sdk`, `oasisprotocol/cli`.
+
+> **Before running any command listed under [Destructive Commands](#destructive-commands)** (including the transfer, `rofl create`, and `rofl deploy` examples below), follow that section's confirm-first rule.
 
 ## MCP Context
 
@@ -134,8 +136,8 @@ These commands sign or broadcast on-chain transactions, move or destroy funds, e
 Before running any of them:
 
 1. State the exact target and scope: `--network` (mainnet or testnet), `--paratime`, `--account`, recipient or validator address, and amount with its denomination (9 decimals on consensus, 18 on Sapphire/Emerald).
-2. Get explicit confirmation from the user for that exact command.
-3. `-y` skips the CLI's signing and broadcast confirmations (see [references/CLI.md](references/CLI.md) Common Flags). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
+2. Get explicit confirmation from the user for that exact command via `AskUserQuestion` (options: **Run** / **Cancel**). On Cancel, or if no answer can be obtained, don't run it.
+3. `-y` answers yes to every yes/no prompt and accepts the proposed default for other prompts, including signing and broadcast confirmations and the `oasis wallet remove` confirmation (see [references/CLI.md](references/CLI.md) Common Flags). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
 
 ## Key Concepts
 

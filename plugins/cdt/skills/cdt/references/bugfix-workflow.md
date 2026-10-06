@@ -329,6 +329,8 @@ If tester reports failures or stub scan finds issues: message developer with det
 
    Run exactly one of the branches below, matching the answer, then stop. Each cleanup command derives `BRANCH_SLUG` in the same Bash call and refuses an empty slug: `BRANCH_SLUG=$(git branch --show-current | tr '/' '-'); [ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`.
 
+   If `git push` or `gh pr create` exits non-zero: stop that branch, print the raw error, keep `.dev/cdt/$BRANCH_SLUG` (no cleanup), and tell the user the push or PR was not completed. Never print the success message after a failure.
+
    **If Create PR:**
    1. Push branch: `git push -u origin <branch>`
    2. Create PR:
@@ -355,7 +357,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --cached --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Do NOT push. Do NOT create PR.
-4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
+4. Clean up branch state (guarded): `BRANCH_SLUG=$(git branch --show-current | tr '/' '-'); [ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
 5. Print: "Bugfix committed locally on branch [name]. Use `git push` when ready."
 
 ## Anti-Patterns (Lead MUST avoid)

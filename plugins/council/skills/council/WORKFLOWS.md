@@ -61,7 +61,7 @@ if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >
 fi
 ```
 
-Then run the **Secret Scanning Gate** from SKILL.md (Configuration & Pre-Flight Checks, Step 2) as its own Bash call. If it stops the council (exit 1: secrets detected; exit 2: `gitleaks` missing without `--allow-unscanned`), launch no consultant or subagent in any workflow below, including quick-mode escalation, and return its output verbatim.
+Then run the **Secret Scanning Gate** from SKILL.md (Configuration & Pre-Flight Checks, Step 2) as its own Bash call. If it stops the council (exit 1: gitleaks found secrets or failed to run; exit 2: `gitleaks` missing without `--allow-unscanned`), launch no consultant or subagent in any workflow below, including quick-mode escalation, and return its output verbatim.
 
 ---
 

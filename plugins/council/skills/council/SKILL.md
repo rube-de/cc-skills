@@ -80,8 +80,8 @@ else
   command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
 fi
 if command -v gitleaks >/dev/null 2>&1; then
-  if ! gitleaks detect --source . --no-git 2>/dev/null; then
-    echo "WARNING: Potential secrets detected. Aborting council."
+  if ! gitleaks detect --source . --no-git; then
+    echo "WARNING: gitleaks reported potential secrets or failed to run (see its output above). Aborting council."
     exit 1
   fi
 elif [ -z "$(printf '%s' "$AVAILABLE_CONSULTANTS" | tr -d '[:space:]')" ]; then
@@ -96,7 +96,7 @@ else
 fi
 ```
 
-- Exit 1 (secrets detected) or exit 2 (gitleaks missing, no `--allow-unscanned`): stop. Launch no consultant or subagent. Return the printed output verbatim as the council result.
+- Exit 1 (gitleaks found secrets or failed to run) or exit 2 (gitleaks missing, no `--allow-unscanned`): stop. Launch no consultant or subagent. Return the printed output verbatim as the council result.
 - Exit 0 with the "no external (non-Claude) consultants" line, but the participants you are about to launch include an external consultant: if `--allow-unscanned` was a leading flag, print the allow-branch `NOTICE:` line and proceed; otherwise print the `else` branch's stop lines and stop.
 - Exit 0 otherwise: proceed. If the `NOTICE:` line was printed, repeat it at the top of the final report.
 

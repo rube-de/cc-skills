@@ -1,6 +1,6 @@
 ---
 name: cdt
-description: "Multi-agent development workflow using Agent Teams. Supports five modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), auto (plan → dev, no gate), and bugfix (tester + developer + reviewer TDD triad → fix, then PR after user confirmation). Use when tasks benefit from collaborative agent teammates with peer messaging."
+description: "Multi-agent development workflow using Agent Teams. Supports five modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), auto (plan → dev, no gate), and bugfix (tester + developer + reviewer TDD triad → fix, then asks whether to create a PR, push only, or commit locally; no answer means local only). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
 compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
 allowed-tools: Read Grep Glob Bash Task Teammate TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch Skill

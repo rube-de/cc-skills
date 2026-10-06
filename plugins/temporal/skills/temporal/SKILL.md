@@ -4,7 +4,7 @@ description: >-
   Help developers use Temporal for durable execution workflows. Covers CLI commands,
   SDK patterns (Go, TypeScript, Python, Java), workflow orchestration, and architectural
   decisions.
-allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit]
+allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit, AskUserQuestion]
 user-invocable: true
 metadata:
   author: rube-de
@@ -18,6 +18,8 @@ Comprehensive assistance for the Temporal durable execution platform: CLI operat
 ## Triggers
 
 Use this skill when the user mentions: "temporal", "durable execution", "workflow orchestration", "temporal cli", "temporal sdk", "temporal worker", "temporal activity", "temporal workflow", "temporal schedule", "temporal signal", "temporal query".
+
+> **Before running any command listed under [Destructive Commands](#destructive-commands)** (including the cancel/signal examples below), follow that section's confirm-first rule.
 
 ## Quick Start
 
@@ -78,8 +80,8 @@ These commands stop, rewrite, or purge workflow state on a Temporal cluster. The
 Before running any of them:
 
 1. State the exact target and scope: `--address` or `--env` profile, namespace, and workflow ID plus run ID, schedule ID, or the full `--query` with the number of matching workflows (`temporal workflow count --query ...`).
-2. Get explicit confirmation from the user for that exact command.
-3. Single-workflow and schedule commands run without any CLI prompt: your confirmation is the only gate. Batch (`--query`) operations, `operator namespace delete`, and `operator search-attribute remove` prompt; `--yes` / `-y` skips that prompt (workflow commands accept it only together with `--query`). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
+2. Get explicit confirmation from the user for that exact command via `AskUserQuestion` (options: **Run** / **Cancel**). On Cancel, or if no answer can be obtained, don't run it.
+3. Single-workflow and schedule commands run without any CLI prompt, except `temporal workflow delete`, which prompts on CLI v1.9.0 and later. Your confirmation is the gate either way. Batch (`--query`) operations, `operator namespace delete`, and `operator search-attribute remove` prompt; `--yes` / `-y` skips those prompts where supported (workflow batch commands accept it only together with `--query`). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
 
 ## When to Use Temporal
 

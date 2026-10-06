@@ -41,7 +41,7 @@
 /council review security     → All 4 external focus on security + both Claude subagents
 /council review bugs quality → Run bugs round, then quality round, merge results
 /council review --blind      → Claude subagents via CLI (no tool access), equal footing
-/council review --allow-unscanned → Proceed without gitleaks (leading flag only; only after the user approved skipping the secret scan)
+/council review --allow-unscanned → Proceed when gitleaks is missing (leading flag only; user-approved only; an installed gitleaks still scans and detections still abort)
 ```
 
 ### Review Architecture (Dual-Layer)
