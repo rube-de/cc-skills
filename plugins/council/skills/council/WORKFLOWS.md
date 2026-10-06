@@ -61,6 +61,8 @@ if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >
 fi
 ```
 
+Then run the **Secret Scanning Gate** from SKILL.md (Configuration & Pre-Flight Checks, Step 2) as its own Bash call. If it stops the council (exit 1: gitleaks found secrets or failed to run; exit 2: `gitleaks` missing without `--allow-unscanned`), launch no consultant or subagent in any workflow below, including quick-mode escalation, and return its output verbatim.
+
 ---
 
 ## Workflow A: Parallel Plan Review
@@ -169,16 +171,8 @@ fi
    This allows consultants to distinguish pre-existing issues from newly introduced problems.
 
 3. **Security Pre-Check**
-   ```bash
-   # Scan for secrets before sending to external AIs
-   if command -v gitleaks >/dev/null 2>&1; then
-     gitleaks detect --source . --no-git 2>/dev/null
-     if [ $? -ne 0 ]; then
-       echo "ABORT: Secrets detected in diff"
-       exit 1
-     fi
-   fi
-   ```
+
+   The Secret Scanning Gate from the Pre-Flight Checklist must have passed. Never send the diff to external consultants before it has.
 
 4. **Wrap Content for Injection Prevention**
    ```xml

@@ -122,26 +122,46 @@ fi
   - If only one is enabled: Launch that single enabled subagent.
   - If neither is enabled: Abort plan review with message: "No external consultants or Claude subagents enabled for plan review."
 
-Launch selected participants (consultants and/or Claude subagents) in parallel using the Task tool. All launched participants receive the **same prompt**.
-
 #### Secret-Scanning Gate
 
-Before sending plan content to external consultants, check for secrets:
+Run this gate before launching any participant. The block is self-contained because Bash tool calls don't share variables with the resolution step above:
 
 ```bash
-# Quick secret scan (if gitleaks available)
+CONFIG_SCRIPT="${CLAUDE_SKILL_DIR}/../../scripts/council-config.sh"
+if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >/dev/null 2>&1); then
+  AVAILABLE_CONSULTANTS=$("$CONFIG_SCRIPT" get-available) || AVAILABLE_CONSULTANTS="unknown"
+else
+  AVAILABLE_CONSULTANTS=""
+  command -v omp >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} gemini"
+  command -v codex >/dev/null 2>&1 && AVAILABLE_CONSULTANTS="${AVAILABLE_CONSULTANTS} codex"
+fi
 if command -v gitleaks >/dev/null 2>&1; then
-  gitleaks detect --source . --no-git 2>/dev/null
-  if [ $? -ne 0 ]; then
-    echo "WARNING: Potential secrets detected. Aborting council."
+  if ! gitleaks detect --source . --no-git; then
+    echo "WARNING: gitleaks reported potential secrets or failed to run (see its output above). Aborting council."
     exit 1
   fi
+elif [ -z "$(printf '%s' "$AVAILABLE_CONSULTANTS" | tr -d '[:space:]')" ]; then
+  echo "Secret scan gate: gitleaks not installed, but no external (non-Claude) consultants are available; continuing."
+else
+  echo "NOTICE: gitleaks not installed — secret scan skipped; install: brew install gitleaks"
+  exit 2
 fi
 ```
 
-If secrets detected, abort and warn user — do not send plan content to external consultants.
+- **Exit 1** (gitleaks found secrets or failed to run): abort and warn the user, quoting gitleaks' output. Do not send plan content to external consultants.
+- **Exit 2** (`gitleaks` missing): show the notice, then ask before contacting any consultant:
 
-**IMPORTANT**: After the secret-scanning gate passes, launch both consultants in a **single message** with two Task tool calls — this runs them in parallel.
+  ```
+  AskUserQuestion:
+    "Nothing has been sent yet. gitleaks is not installed, so the plan and repository can't be scanned for secrets. Send the plan to external consultants without a secret scan?"
+    Options: Continue without secret scan | Abort
+  ```
+
+  On **Abort**, or if no answer can be obtained (e.g. `AskUserQuestion` unavailable because this skill runs inside a subagent), stop the plan review and launch no participant. On **Continue without secret scan**, proceed and repeat the notice at the top of the final report.
+- **Exit 0** with the "no external (non-Claude) consultants" line, but your participant selection above includes an external consultant: handle as Exit 2.
+- **Exit 0** otherwise: proceed.
+
+**IMPORTANT**: After the gate passes, launch the selected participants (consultants and/or Claude subagents) in a **single message** with one Task tool call each — this runs them in parallel. All launched participants receive the **same prompt**.
 
 #### Consultant Prompt
 

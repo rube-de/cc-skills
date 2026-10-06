@@ -3,7 +3,7 @@ name: doppler
 description: >-
   Manage secrets with Doppler: CLI operations, project/config/environment management,
   secrets injection, CI/CD integrations, and security best practices.
-allowed-tools: [Read, Bash, Grep, Glob, WebSearch, WebFetch, Write, Edit]
+allowed-tools: [Read, Bash, Grep, Glob, WebSearch, WebFetch, Write, Edit, AskUserQuestion]
 user-invocable: true
 metadata:
   author: rube-de
@@ -17,6 +17,8 @@ Comprehensive assistance for the Doppler secrets management platform: CLI operat
 ## Triggers
 
 Use this skill when the user mentions: "doppler", "secrets management", "doppler cli", "doppler secrets", "doppler run", "doppler setup", "doppler configs", "doppler projects", "secret injection", "doppler environments", "service tokens".
+
+> **Before running any command listed under [Destructive Commands](#destructive-commands)** (including the delete/set examples below), follow that section's confirm-first rule.
 
 ## Quick Start
 
@@ -72,6 +74,29 @@ doppler setup --project my-app --config dev --no-interactive
 | Check current setup | `doppler configure debug` |
 | Open dashboard | `doppler open` |
 | View who is authenticated | `doppler me` |
+
+## Destructive Commands
+
+These commands delete, overwrite, or lock shared secrets and structure. Other people and deployed services depend on them.
+
+| Command | Effect |
+|---------|--------|
+| `doppler projects delete` | Deletes the project and every environment, config, and secret in it |
+| `doppler environments delete` | Deletes the environment and all its configs |
+| `doppler configs delete` | Deletes the config and its secrets |
+| `doppler secrets delete` | Deletes secrets from a config |
+| `doppler secrets set` / `doppler secrets upload` | Overwrites existing values when a key already exists |
+| `doppler configs lock` / `doppler configs unlock` | Lock prevents renaming or deleting the config; unlock removes that protection and re-enables deletion |
+| `doppler projects update --name`, `doppler environments rename --slug`, `doppler configs update --name` | Breaks `-p` / `-c` references in CI and `doppler setup` that use the old identifier |
+| `doppler configs tokens revoke` | Immediately invalidates a service token; every service or CI job using it fails |
+| `doppler import` | Bulk-creates projects in the workplace |
+| `doppler configure reset` | Wipes all local CLI configuration and scoped tokens |
+
+Before running any of them:
+
+1. State the exact target and scope: project, environment, config, and secret names, and whether the config is production (e.g. `prd`).
+2. Get explicit confirmation from the user for that exact command via `AskUserQuestion` (options: **Run** / **Cancel**). On Cancel, or if no answer can be obtained, don't run it.
+3. `secrets set`, `secrets upload`, `import`, and `configs tokens revoke` have no `--yes` and never prompt: your confirmation is the only gate. Where the CLI prompts, `--yes` skips that prompt. Add it only after the user has confirmed the exact command; never add it on the user's behalf.
 
 ## Secrets Injection Patterns
 

@@ -3,7 +3,7 @@ name: oasis-dev
 description: >-
   Help developers build on Oasis Network: Sapphire confidential EVM, ROFL off-chain apps,
   CLI operations, SDK patterns (Rust, Go, TypeScript, Python), and ParaTime development.
-allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit]
+allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit, AskUserQuestion]
 user-invocable: true
 metadata:
   author: rube-de
@@ -19,6 +19,8 @@ Comprehensive assistance for building on the Oasis Network: Sapphire confidentia
 Use this skill when the user mentions: "oasis", "sapphire", "sapphire paratime", "rofl", "oasis cli", "oasis sdk", "oasis network", "confidential evm", "oasis-sdk", "sapphire-paratime", "oasisprotocol", "oasis rofl", "paratime", "emerald", "cipher", "rose token", "oasis wallet", "sapphire contracts", "oasis node", "oasis core".
 
 Also activate when the user is working in repos: `oasisprotocol/sapphire-paratime`, `oasisprotocol/oasis-sdk`, `oasisprotocol/cli`.
+
+> **Before running any command listed under [Destructive Commands](#destructive-commands)** (including the transfer, `rofl create`, and `rofl deploy` examples below), follow that section's confirm-first rule.
 
 ## MCP Context
 
@@ -109,6 +111,33 @@ oasis rofl deploy
 | Use Go SDK with Sapphire | Import `sapphire "github.com/oasisprotocol/sapphire-paratime/clients/go"` |
 | Use JS/TS with Sapphire | `npm install @oasisprotocol/sapphire-paratime` |
 | Verify ROFL origin on-chain | `Subcall.roflEnsureAuthorizedOrigin(roflAppID)` in Solidity |
+
+## Destructive Commands
+
+These commands sign or broadcast on-chain transactions, move or destroy funds, expose keys, or tear down ROFL deployments. On-chain effects can't be reversed.
+
+| Command | Effect |
+|---------|--------|
+| `oasis account transfer` / `deposit` / `withdraw` | Moves tokens between accounts or layers |
+| `oasis account delegate` / `undelegate` / `allow` | Stakes, unstakes (with debonding), or grants an allowance |
+| `oasis account burn` | Destroys tokens permanently |
+| `oasis account entity register` / `deregister`, `oasis account node-unfreeze`, `oasis account amend-commission-schedule` | Changes validator entity, node, or commission state on consensus |
+| `oasis transaction sign` / `submit` | Produces or broadcasts an arbitrary signed transaction |
+| `oasis network governance cast-vote` | Casts an on-chain governance vote |
+| `oasis network set-rpc` | Points signing traffic at a different endpoint |
+| `oasis wallet export` | Prints the private key or mnemonic |
+| `oasis wallet remove` | Deletes the local key; funds are lost without a backup |
+| `oasis rofl create` / `update` / `deploy` / `remove` | On-chain app registration (escrows a deposit), config changes, paid machine rental, or app removal |
+| `oasis rofl set-admin` / `oasis rofl machine set-admin` | Transfers app or machine admin rights on-chain; a wrong address loses control |
+| `oasis rofl machine stop` / `remove` / `top-up`, and `--wipe-storage` on `machine stop` / `machine restart` / `deploy` | Takes a live instance down, cancels the rental, spends funds, or wipes persistent storage |
+| `oasis rofl secret rm` / `import` / `set --force` | Deletes or overwrites app secrets in the manifest (applied on the next `rofl update`) |
+| Contract deploys to `sapphire_mainnet` (Hardhat, `forge create`) | Spends real ROSE |
+
+Before running any of them:
+
+1. State the exact target and scope: `--network` (mainnet or testnet), `--paratime`, `--account`, recipient or validator address, and amount with its denomination (9 decimals on consensus, 18 on Sapphire/Emerald).
+2. Get explicit confirmation from the user for that exact command via `AskUserQuestion` (options: **Run** / **Cancel**). On Cancel, or if no answer can be obtained, don't run it.
+3. `-y` answers yes to every yes/no prompt and accepts the proposed default for other prompts, including signing and broadcast confirmations and the `oasis wallet remove` confirmation (see [references/CLI.md](references/CLI.md) Common Flags). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
 
 ## Key Concepts
 

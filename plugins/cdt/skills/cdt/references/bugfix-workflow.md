@@ -319,22 +319,45 @@ If tester reports failures or stub scan finds issues: message developer with det
 **Default (no `--no-pr` flag):**
 1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --cached --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
-3. Push branch: `git push -u origin <branch>`
-4. Create PR:
-   - Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`
-   - Build PR body with: bug summary, root cause (from spec or discovered), what was fixed, regression test added
-   - If `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty: read `ISSUE_NO`, validate numeric, include `Closes #$ISSUE_NO` in PR body
-   - `gh pr create --title "fix: <bug summary>" --body "$PR_BODY"`
-5. After PR creation, if `".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path"` exists, move issue to "In Review":
-   `"$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path")/sync-github-issue.sh" review`
-6. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
-7. Print PR URL
+3. Ask the user before anything leaves the machine:
+   ```
+   AskUserQuestion:
+     "Bugfix complete and reviewed. Ready to push branch <branch> and create a PR?"
+     Options: Create PR (Recommended) | Commit & push only | Commit locally only
+   ```
+   If no answer can be obtained, treat it as **Commit locally only**.
+
+   Run exactly one of the branches below, matching the answer, then stop. Each cleanup command derives `BRANCH_SLUG` in the same Bash call and refuses an empty slug: `BRANCH_SLUG=$(git branch --show-current | tr '/' '-'); [ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`.
+
+   If `git push` or `gh pr create` exits non-zero: stop that branch, print the raw error, keep `.dev/cdt/$BRANCH_SLUG` (no cleanup), and tell the user the push or PR was not completed. Never print the success message after a failure.
+
+   **If Create PR:**
+   1. Push branch: `git push -u origin <branch>`
+   2. Create PR:
+      - Derive `BRANCH_SLUG=$(git branch --show-current | tr '/' '-')`
+      - Build PR body with: bug summary, root cause (from spec or discovered), what was fixed, regression test added
+      - If `".dev/cdt/$BRANCH_SLUG/.cdt-issue"` exists and is non-empty: read `ISSUE_NO`, validate numeric, include `Closes #$ISSUE_NO` in PR body
+      - `gh pr create --title "fix: <bug summary>" --body "$PR_BODY"`
+   3. After PR creation, if `".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path"` exists, move issue to "In Review":
+      `"$(cat ".dev/cdt/$BRANCH_SLUG/.cdt-scripts-path")/sync-github-issue.sh" review`
+   4. Clean up branch state (guarded command above)
+   5. Print PR URL
+
+   **If Commit & push only:**
+   1. Push branch: `git push -u origin <branch>`
+   2. Clean up branch state (guarded command above)
+   3. Print: "Bugfix pushed to branch [name]. No PR created."
+
+   **If Commit locally only, or no answer:**
+   1. Do NOT push. Do NOT create PR.
+   2. Clean up branch state (guarded command above)
+   3. Print: "Bugfix committed locally on branch [name]. Use `git push` when ready."
 
 **`--no-pr` flag:**
 1. Stage only files modified during this workflow — do NOT use `git add -A` or `git add .` (verify with `git diff --cached --name-only` that only workflow-related files are staged)
 2. Commit if needed: `git commit -m "chore: final cleanup for <bug summary>"`
 3. Do NOT push. Do NOT create PR.
-4. Clean up branch state: `rm -rf ".dev/cdt/$BRANCH_SLUG"`
+4. Clean up branch state (guarded): `BRANCH_SLUG=$(git branch --show-current | tr '/' '-'); [ -n "$BRANCH_SLUG" ] && rm -rf ".dev/cdt/$BRANCH_SLUG"`
 5. Print: "Bugfix committed locally on branch [name]. Use `git push` when ready."
 
 ## Anti-Patterns (Lead MUST avoid)
@@ -344,7 +367,7 @@ If tester reports failures or stub scan finds issues: message developer with det
 - Fixing bugs yourself when developer↔tester cycles haven't been exhausted
 - Reviewing code yourself instead of waiting for reviewer verdict
 - Relaying failure messages between tester↔developer (they message each other directly)
-- Asking the user for approval mid-workflow (this is automated)
+- Asking the user for approval mid-workflow (this is automated; on the success path the only user gate is the § 11 push/PR confirmation)
 
 ## Rules
 

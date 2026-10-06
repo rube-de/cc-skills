@@ -4,7 +4,7 @@ description: >-
   Help developers use Temporal for durable execution workflows. Covers CLI commands,
   SDK patterns (Go, TypeScript, Python, Java), workflow orchestration, and architectural
   decisions.
-allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit]
+allowed-tools: [Read, Grep, Glob, Bash, WebSearch, WebFetch, Write, Edit, AskUserQuestion]
 user-invocable: true
 metadata:
   author: rube-de
@@ -18,6 +18,8 @@ Comprehensive assistance for the Temporal durable execution platform: CLI operat
 ## Triggers
 
 Use this skill when the user mentions: "temporal", "durable execution", "workflow orchestration", "temporal cli", "temporal sdk", "temporal worker", "temporal activity", "temporal workflow", "temporal schedule", "temporal signal", "temporal query".
+
+> **Before running any command listed under [Destructive Commands](#destructive-commands)** (including the cancel/signal examples below), follow that section's confirm-first rule.
 
 ## Quick Start
 
@@ -56,6 +58,30 @@ npm install @temporalio/client @temporalio/worker @temporalio/workflow @temporal
 | Debug stuck workflow | Check history with `temporal workflow show`, look for pending activities |
 | Set up scheduled runs | `temporal schedule create --schedule-id my-sched --cron '0 * * * *' ...` |
 | Test workflows | Use SDK test utilities with time-skipping and activity mocking |
+
+## Destructive Commands
+
+These commands stop, rewrite, or purge workflow state on a Temporal cluster. The effects can't be undone from the CLI.
+
+| Command | Effect |
+|---------|--------|
+| `temporal workflow terminate` | Stops the workflow immediately, with no cleanup logic |
+| `temporal workflow cancel` | Requests cancellation; the workflow runs its cancellation path |
+| `temporal workflow reset` | Terminates the current run and starts a new one from the reset point; activities after that point run again (duplicate side effects) |
+| `temporal workflow delete` | Deletes the execution and its event history, terminating it first if it's running |
+| `temporal workflow signal` / `temporal workflow update` | Changes live business state (e.g. an approval signal) on non-local clusters |
+| `temporal activity complete` / `temporal activity fail` | Records an activity result from outside the worker; permanent in history |
+| `temporal schedule delete` / `update` / `toggle` / `trigger` | Removes or rewrites a schedule, pauses it, or starts a real run |
+| `temporal operator namespace update --retention` | Shortening retention purges closed-workflow history |
+| `temporal operator namespace delete` | Deletes the namespace and every workflow in it |
+| `temporal operator search-attribute remove` | Removes a custom search attribute that queries and visibility depend on |
+| `terminate` / `cancel` / `reset` / `signal` / `delete` with `--query` | Batch operation: applies to every matching workflow (`workflow list` / `count --query` are read-only and exempt) |
+
+Before running any of them:
+
+1. State the exact target and scope: `--address` or `--env` profile, namespace, and workflow ID plus run ID, schedule ID, or the full `--query` with the number of matching workflows (`temporal workflow count --query ...`).
+2. Get explicit confirmation from the user for that exact command via `AskUserQuestion` (options: **Run** / **Cancel**). On Cancel, or if no answer can be obtained, don't run it.
+3. Single-workflow and schedule commands run without any CLI prompt, except `temporal workflow delete`, which prompts on CLI v1.9.0 and later. Your confirmation is the gate either way. Batch (`--query`) operations, `operator namespace delete`, and `operator search-attribute remove` prompt; `--yes` / `-y` skips those prompts where supported (workflow batch commands accept it only together with `--query`). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
 
 ## When to Use Temporal
 

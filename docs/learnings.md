@@ -900,6 +900,19 @@ If out-of-scope items remain, use `AskUserQuestion` to ask:
 
 > Source: [Issue #44](https://github.com/rube-de/cc-skills/issues/44) — DLC `pr-check` auto-created tracking issues without consent. Fixed to match the user-gated pattern used by the PM plugin.
 
+### `AskUserQuestion` doesn't exist inside `context: fork` skills — put gates inline or behind an explicit flag
+
+Claude Code removes `AskUserQuestion` from every subagent, and a skill with `context: fork` runs as a regular subagent (backgrounded by default). Listing `AskUserQuestion` in that skill's `allowed-tools` doesn't bring it back. Any "ask the user before X" step in a forked skill can't run. The model either skips the gate or treats the missing answer as consent.
+
+Two patterns that work:
+
+- **Run the skill inline** (no `context: fork`) when the gate is the point of the step. `jules-review` dropped `context: fork` so it can confirm the review event before posting. It still calls `council`, which stays forked, so consultant output stays isolated.
+- **Stop and require an explicit flag** when the skill must stay forked. `council` stops with a notice when `gitleaks` is missing. The user re-invokes with `--allow-unscanned`, and skills and agents that call council must not add the flag on their own.
+
+Treat "no answer obtainable" as the safe branch (cancel, abort, commit locally), never as approval.
+
+> Source: [Issue #266](https://github.com/rube-de/cc-skills/issues/266); [Claude Code — Subagents: Available tools](https://code.claude.com/docs/en/sub-agents); [Claude Code — Skills: Run skills in a subagent](https://code.claude.com/docs/en/skills); [anthropics/claude-code#34592](https://github.com/anthropics/claude-code/issues/34592) (closed as not planned).
+
 ### Read-only analysis skills omit `Edit` (and, outside a narrow exception, `Write`) from allowed-tools
 
 When a DLC sub-skill only analyzes code (no modifications), exclude `Edit` from `allowed-tools` always, and exclude `Write` too unless it's narrowly needed for scratch-file composition of untrusted content — see the Issue #245 exception below, which the `pr-validity` example immediately below already reflects. This makes the skill's read-only intent unambiguous. Compare:

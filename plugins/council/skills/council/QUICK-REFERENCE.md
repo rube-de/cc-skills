@@ -41,6 +41,7 @@
 /council review security     → All 4 external focus on security + both Claude subagents
 /council review bugs quality → Run bugs round, then quality round, merge results
 /council review --blind      → Claude subagents via CLI (no tool access), equal footing
+/council review --allow-unscanned → Proceed when gitleaks is missing (leading flag only; user-approved only; an installed gitleaks still scans and detections still abort)
 ```
 
 ### Review Architecture (Dual-Layer)
@@ -74,6 +75,8 @@ if [ -x "$CONFIG_SCRIPT" ] && (command -v jq >/dev/null 2>&1 || command -v jaq >
   "$CONFIG_SCRIPT" check-cli || true
 fi
 ```
+
+Then run the Secret Scanning Gate (SKILL.md Step 2). It stops the council when secrets are detected, or when `gitleaks` is missing and `--allow-unscanned` was not passed.
 
 Configure active consultants anytime with `/council:config` (or `/council config`).
 ## Expertise Weights
@@ -341,7 +344,7 @@ git diff | codex exec --sandbox read-only -c approval_policy=never "review chang
 Before sending to external AIs:
 
 - [ ] Pre-flight CLI check passed
-- [ ] No secrets in content (gitleaks scan)
+- [ ] Secret Scanning Gate passed (gitleaks clean, or user-approved `--allow-unscanned`)
 - [ ] Content wrapped in XML delimiters
 - [ ] Timeout set (120s default)
 - [ ] Rate limit strategy selected (parallel vs staggered)

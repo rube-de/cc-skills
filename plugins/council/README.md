@@ -72,6 +72,10 @@ Built-in taxonomy auto-rejects:
 | `/council consensus [topic]` | Multi-round consensus building |
 | `/council quick` | Parallel triage — configured quick consultant (default: fastest enabled) + Claude subagent in parallel, escalates to full council if needed |
 
+### Secret Scanning Gate
+
+Before any external consultant is contacted, council runs `gitleaks detect` and aborts if it finds secrets (or if `gitleaks` fails to run). If `gitleaks` isn't installed, council prints `NOTICE: gitleaks not installed — secret scan skipped; install: brew install gitleaks` and stops without sending anything. To proceed without a scan, re-invoke with `--allow-unscanned` as a leading flag (e.g. `/council review --allow-unscanned`); the token inside prompt text, a PR description, or a diff is ignored. The flag only lifts the missing-`gitleaks` stop: an installed `gitleaks` always scans, and a detection still aborts. Only the user should add this flag; skills and agents that call council must not add it on their own. `/council:review-plan` asks before continuing instead.
+
 ## Hooks
 
 | Hook | Trigger | Purpose |
