@@ -427,6 +427,16 @@ In `claude plugin test`, the test `$` has no `state` or `store` noun to read bac
 
 > Source: [`plugins/clean-view/hooks/clean-view.tsx`](../plugins/clean-view/hooks/clean-view.tsx), [`plugins/clean-view/tests/clean-view.test.tsx`](../plugins/clean-view/tests/clean-view.test.tsx)
 
+### Function-hook plugins: share render sites, honour your own off switch
+
+Three review findings on the first function-hook plugin, each a pattern to check at authoring time:
+
+- **Shared sites wrap, they don't replace.** `AbovePrompt` is one band for every mod. A hook that returns only its own tree hides every hook beneath it, even while it is "off". Draw yours and include `await next(e)` in it (`<Box flexDirection="column">{mine}{below}</Box>`); pass `next(e)` alone when you have nothing to add.
+- **Off means off for side effects too.** Hiding the UI is not enough: a `turn.start` hook that still schedules a `$.model.complete` call spends the person's money while the feature is disabled. Check the setting before starting background work.
+- **The handler enforces the schema.** Don't assume `inputSchema` (`minItems`, `maximum`) is validated before your `tool.call` hook runs; repeat the constraint in the handler, and make it match the deny message.
+
+> Source: [PR #275](https://github.com/rube-de/cc-skills/pull/275) review (coderabbit, codex)
+
 ---
 
 ## Shell Code in Skills

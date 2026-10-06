@@ -45,20 +45,22 @@ type Seen = {
   tick: number
   isEnabled: boolean | undefined
   stored: Record<string, unknown>
+  titleRequests: number
 }
 
 type Options = {
   stored?: Record<string, unknown>
   toolPrefix?: string
+  bandBelow?: string
   answerTool?: (e: ToolCallInput) => ToolCallResult
 }
 
 // What the engine would do beneath the plugin, answered from memory.
 function world(
   on: On,
-  { stored = {}, toolPrefix = 'mcp__clean-view__', answerTool = () => ({ result: 'ok' }) }: Options = {},
+  { stored = {}, toolPrefix = 'mcp__clean-view__', bandBelow, answerTool = () => ({ result: 'ok' }) }: Options = {},
 ) {
-  const seen: Seen = { checklist: null, tick: 0, isEnabled: undefined, stored: { ...stored } }
+  const seen: Seen = { checklist: null, tick: 0, isEnabled: undefined, stored: { ...stored }, titleRequests: 0 }
   on('state.set', { plugin: 'clean-view' }, ($, e, next) => {
     if (e.key === 'checklist') seen.checklist = e.value as CleanViewChecklist | null
     if (e.key === 'tick') seen.tick = e.value as number
@@ -80,13 +82,22 @@ function world(
   on('classic.StopFailure', () => ({}))
   on('tool.register', ($, e) => ({ value: { tool: `${toolPrefix}${e.name}` } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
-  on('model.complete', () => ({
-    value: {
-      isAnswered: true as const,
-      text: 'Build my landing page',
-      usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
-    },
-  }))
+  on('model.complete', () => {
+    seen.titleRequests += 1
+    return {
+      value: {
+        isAnswered: true as const,
+        text: 'Build my landing page',
+        usage: { input_tokens: 0, output_tokens: 0, cache_read_input_tokens: 0, cache_creation_input_tokens: 0 },
+      },
+    }
+  })
+  // What the band holds beneath Clean View: another mod's row, or nothing.
+  on('ui.render', { component: 'AbovePrompt' }, ($, e) => {
+    const { Box, Text } = $.ui.resolve(e)
+
+    return bandBelow === undefined ? <Box /> : <Text>{bandBelow}</Text>
+  })
   on('ui.render', { component: 'ToolUse' }, ($, e) => {
     const { Text } = $.ui.resolve(e)
 
@@ -174,6 +185,38 @@ describe('checklist', () => {
       'Add the contact form',
     ])
     expect(seen.checklist?.tasks.map(task => task.status)).toEqual(['done', 'done', 'active', 'upcoming'])
+  })
+
+  test('a one-step plan is refused and the gate stays up', async ($, on) => {
+    world(on)
+    await startJob($)
+
+    const planned = await $.tool.call({ tool: PLAN, steps: ['Do it'] })
+    expect(planned.deny).toContain('2 to 8')
+
+    const ran = await $.tool.call({ tool: 'Bash', command: 'ls' })
+    expect(ran.deny).toContain(PLAN)
+  })
+
+  test('another mod drawing in the band still shows, on or off', async ($, on) => {
+    world(on, { bandBelow: 'Other mod row' })
+    await startJob($)
+
+    for (const surface of SURFACES) {
+      const ui = await $.ui.mount({ ...band(), surface })
+      expect(await ui.find({ type: 'Text', text: 'Understand your request' })).toBeDefined()
+      expect(await ui.find({ type: 'Text', text: 'Other mod row' })).toBeDefined()
+      await ui.unmount()
+    }
+
+    await $.command.run({
+      command: 'simple',
+      args: 'off',
+      origin: { kind: 'composer' },
+      presentation: { isFullscreen: false, columns: 80 },
+    })
+    const off = await $.ui.mount({ ...band(), surface: 'terminal' })
+    expect(await off.find({ type: 'Text', text: 'Other mod row' })).toBeDefined()
   })
 
   test('narrow bands size the name column so rows never wrap', async ($, on) => {
@@ -273,7 +316,13 @@ describe('needs you, stuck and done', () => {
     await $.tool.call({ tool: PLAN, steps: ['Build the page', 'Check it works'] })
     await $.tool.call({ tool: PROGRESS, task: 'Check it works', percent: 100 })
     await clock.advance(134_000)
-    await $.turn.complete({ answer: 'Done!', durationMs: 134_000, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    await $.turn.complete({
+      answer: 'Done!',
+      durationMs: 134_000,
+      isAborted: false,
+      turnId: 'turn-1',
+      reason: 'answer',
+    })
 
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
     expect(await ui.find({ type: 'Text', text: 'took 2m 14s' })).toBeDefined()
@@ -289,7 +338,13 @@ describe('needs you, stuck and done', () => {
     const { seen } = world(on)
     await startJob($)
     await $.tool.call({ tool: PLAN, steps: ['Build the page', 'Check it works'] })
-    await $.turn.complete({ answer: 'Which colour?', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    await $.turn.complete({
+      answer: 'Which colour?',
+      durationMs: 10,
+      isAborted: false,
+      turnId: 'turn-1',
+      reason: 'answer',
+    })
 
     expect(seen.checklist?.phase).toBe('needsYou')
     expect(seen.checklist?.needsYouReason).toBe('Claude is waiting for your reply')
@@ -429,6 +484,15 @@ describe('animation and naming', () => {
     await $.turn.complete({ answer: 'ok', durationMs: 1000, isAborted: false, turnId: 'turn-1', reason: 'answer' })
     await clock.advance(1000)
     expect(seen.tick).toBe(later)
+  })
+
+  test('nothing is tracked or named while Clean View is off', async ($, on) => {
+    const { clock, seen } = world(on, { stored: { cleanViewEnabled: false } })
+    await startJob($)
+    await clock.advance(1000)
+
+    expect(seen.checklist).toBeNull()
+    expect(seen.titleRequests).toBe(0)
   })
 
   test('Haiku names the job in the background', async ($, on) => {

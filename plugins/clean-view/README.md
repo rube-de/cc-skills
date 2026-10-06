@@ -43,7 +43,7 @@ Both work while Claude is busy, and the choice is remembered after a restart.
 |------|-----------|
 | Plan first | Claude is asked to lay out 2 to 8 plain-English steps (`plan_steps`) before anything else, and other tools are refused until it has. A to-do list (TodoWrite, TaskCreate) also counts as a plan. Subagents are never gated. Off while Clean View is off. |
 | Progress | Claude reports progress per step (`report_progress`); 100% checks a step off and starts the next. |
-| Job name | Each new request sends one small Haiku call, at low effort, to name the job in 2 to 6 words. |
+| Job name | While Clean View is on, each new request sends one small Haiku call, at low effort, to name the job in 2 to 6 words. |
 | Hidden rows | `ToolUse`, `ToolResult` and `ToolGroup` rows, and the "run in background" hint. |
 | States | Working, **Needs you** (permission prompt, question, waiting for your reply), Stuck (you said no, repeated failures, API errors in one plain sentence), Stopped (Esc), All done (shrinks to one line after 5 seconds). |
 

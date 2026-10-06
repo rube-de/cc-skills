@@ -2,6 +2,7 @@ import { atom, read, update } from 'claude-code'
 import type {
   EngineInterface,
   On,
+  RenderInput,
   RenderNode,
   Timer,
   ToolCallInput,
@@ -144,6 +145,11 @@ export function registerCleanView(on: On) {
     if (isCommand || e.text.trim() === '') {
       return next(e)
     }
+    // While off there is no job to show, so no checklist to keep and no title to ask Haiku for.
+    if (!(await read($, enabledAtom))) {
+      await change($, () => null)
+      return next(e)
+    }
 
     const now = await $.clock.now()
     const job = await change($, current =>
@@ -271,59 +277,73 @@ export function registerCleanView(on: On) {
     if (e.props.hasSurvey) {
       return next(e)
     }
-    const { Box, Text, Button } = $.ui.resolve(e)
-    const isEnabled = await read($, enabledAtom)
-    const job = isEnabled ? await read($, checklistAtom) : null
-    const label = isEnabled ? '● Clean View: ON' : '○ Clean View: OFF'
-    const toggle = <Button key="toggle" label={label} onPress={() => setEnabled($, 'toggle')} />
-
-    if (job === null) {
-      return (
-        <Box flexDirection="row" justifyContent="flex-end">
-          {toggle}
-        </Box>
-      )
-    }
-
-    const frame = isAnimated(job.phase) ? await read($, tickAtom) : 0
-    const now = await $.clock.now()
-    const columns = e.props.bodyColumns
-    const header = (
-      <Box flexDirection="row" justifyContent="space-between">
-        <Box width={Math.max(1, columns - label.length - 5)}>
-          <Text wrap="truncate-end">{headline(Text, job, now)}</Text>
-        </Box>
-        {toggle}
-      </Box>
-    )
-    if (job.isCollapsed) {
-      return header
-    }
-
-    // mark (2) + name + gap (1) + meter (10) + gap (2) + label (7)
-    const nameWidth = Math.min(MAX_NAME_LENGTH + 1, Math.max(6, columns - 22))
-    const firstUpcoming = job.tasks.findIndex(task => task.status === 'upcoming')
+    // The band is shared with other mods: Clean View sits on top of whatever the hooks beneath draw.
+    const { Box } = $.ui.resolve(e)
+    const band = await drawBand($, e)
+    const below = await next(e)
 
     return (
       <Box flexDirection="column">
-        {header}
-        {job.tasks.map((task, index) => (
-          <Box key={`row-${task.id}`} flexDirection="row">
-            <Box width={2}>{mark(Text, task, job.phase)}</Box>
-            <Box width={nameWidth}>
-              <Text wrap="truncate-end" bold={task.status === 'active'} dimColor={task.status !== 'active'}>
-                {task.name}
-              </Text>
-            </Box>
-            <Text> </Text>
-            {meter(Text, task, job.phase, frame)}
-            <Text>  </Text>
-            <Text dimColor={task.status !== 'active'}>{statusLabel(task, index === firstUpcoming)}</Text>
-          </Box>
-        ))}
+        {band}
+        {below}
       </Box>
     )
   })
+}
+
+async function drawBand($: Engine, e: RenderInput<'AbovePrompt'>) {
+  const { Box, Text, Button } = $.ui.resolve(e)
+  const isEnabled = await read($, enabledAtom)
+  const job = isEnabled ? await read($, checklistAtom) : null
+  const label = isEnabled ? '● Clean View: ON' : '○ Clean View: OFF'
+  const toggle = <Button key="toggle" label={label} onPress={() => setEnabled($, 'toggle')} />
+
+  if (job === null) {
+    return (
+      <Box flexDirection="row" justifyContent="flex-end">
+        {toggle}
+      </Box>
+    )
+  }
+
+  const frame = isAnimated(job.phase) ? await read($, tickAtom) : 0
+  const now = await $.clock.now()
+  const columns = e.props.bodyColumns
+  const header = (
+    <Box flexDirection="row" justifyContent="space-between">
+      <Box width={Math.max(1, columns - label.length - 5)}>
+        <Text wrap="truncate-end">{headline(Text, job, now)}</Text>
+      </Box>
+      {toggle}
+    </Box>
+  )
+  if (job.isCollapsed) {
+    return header
+  }
+
+  // mark (2) + name + gap (1) + meter (10) + gap (2) + label (7)
+  const nameWidth = Math.min(MAX_NAME_LENGTH + 1, Math.max(6, columns - 22))
+  const firstUpcoming = job.tasks.findIndex(task => task.status === 'upcoming')
+
+  return (
+    <Box flexDirection="column">
+      {header}
+      {job.tasks.map((task, index) => (
+        <Box key={`row-${task.id}`} flexDirection="row">
+          <Box width={2}>{mark(Text, task, job.phase)}</Box>
+          <Box width={nameWidth}>
+            <Text wrap="truncate-end" bold={task.status === 'active'} dimColor={task.status !== 'active'}>
+              {task.name}
+            </Text>
+          </Box>
+          <Text> </Text>
+          {meter(Text, task, job.phase, frame)}
+          <Text>  </Text>
+          <Text dimColor={task.status !== 'active'}>{statusLabel(task, index === firstUpcoming)}</Text>
+        </Box>
+      ))}
+    </Box>
+  )
 }
 
 async function registerTools($: Engine) {
@@ -369,7 +389,7 @@ async function registerTools($: Engine) {
 
 async function planSteps($: Engine, e: ToolCallInput): Promise<ToolCallResult> {
   const steps = stringList(argsOf(e).steps).slice(0, MAX_STEPS).map(cleanName)
-  if (steps.length === 0) {
+  if (steps.length < 2) {
     return { deny: 'plan_steps needs "steps": a list of 2 to 8 short step names.' }
   }
   const answer = { result: `Planned ${steps.length} steps. The first one has started.` }
