@@ -1,5 +1,36 @@
 # Temporal Concepts & Architecture
 
+## Contents
+
+- What Is Temporal
+- Architecture
+- Core Concepts
+  - Workflows
+  - Activities
+  - Task Queues
+  - Namespaces
+  - Schedules
+  - Nexus
+- Deterministic Execution
+- Use Cases
+  - Microservice Orchestration
+  - Saga Pattern (Distributed Transactions)
+  - Long-Running Processes
+  - Data Pipelines
+  - Scheduled Jobs (Cron Replacement)
+  - Infrastructure Provisioning
+  - Human-in-the-Loop
+- When NOT to Use Temporal
+- Design Patterns
+  - Saga (Compensating Transactions)
+  - Entity Workflow
+  - Polling
+  - Fan-Out / Fan-In
+  - Human-in-the-Loop
+  - Batch Processing
+- Deployment
+- Comparison with Alternatives
+
 Core concepts, architecture, design patterns, and decision guidance for the Temporal durable execution platform.
 
 ## What Is Temporal

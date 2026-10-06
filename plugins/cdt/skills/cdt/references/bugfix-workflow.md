@@ -1,5 +1,24 @@
 # Bugfix Workflow
 
+## Contents
+
+- 0. Git Check
+- 0a. Issue Detection
+- 1. Parse Arguments & Assemble Bug Spec
+- 1a. Compose Team Name
+- 2. Create Team
+- 3. Create Tasks
+- 4. Spawn Teammates
+- 5. RED — Tester Writes Failing Test
+- 6. GREEN — Developer Implements Fix
+- 7. REFACTOR — Developer Cleans Up
+- 8. REVIEW — Reviewer Validates
+- 9. Final Verification
+- 10. Cleanup
+- 11. Wrap Up
+- Anti-Patterns (Lead MUST avoid)
+- Rules
+
 Detailed execution steps for the TDD-driven bugfix workflow. The Lead reads this before running bugfix mode.
 
 ## 0. Git Check

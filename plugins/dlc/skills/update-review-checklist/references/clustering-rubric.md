@@ -1,5 +1,12 @@
 # Clustering Rubric
 
+## Contents
+
+- Hard-Skip Patterns (Step 3)
+- Severity Weights
+- Clustering Rules (Step 4)
+- Severity-Label Detection (reference for the helper script)
+
 Read this in Step 3 to apply the hard-skip filter and again in Step 4 to cluster surviving comments by theme.
 
 ## Hard-Skip Patterns (Step 3)

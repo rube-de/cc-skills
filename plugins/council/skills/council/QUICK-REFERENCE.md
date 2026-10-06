@@ -1,5 +1,22 @@
 # Council Quick Reference
 
+## Contents
+
+- Invocation (Explicit Only)
+- Pre-Flight & Configuration Check
+- Expertise Weights
+- Workflow Selection
+- Review Workflow Flow
+- Partial Success Modes
+- Structured Response Schema
+- Confidence Scoring (Review Workflows)
+- Synthesis Formula
+- Output Template (General)
+- Output Template (Review Workflows)
+- CLI Commands
+- Pre-Launch Checklist
+- Anti-Pattern Quick Check
+
 ## Invocation (Explicit Only)
 
 | Command | Action | API Calls |

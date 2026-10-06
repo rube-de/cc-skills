@@ -1,5 +1,23 @@
 # Skill Developer Workflow — Phase Definitions
 
+## Contents
+
+- Global State & Limits
+- Phase 0: Setup
+- Phase 1: Context Gathering
+- Phase 2: Plan Creation
+- Phase 3-4: Plan Validation Loop
+- Phase 4.5: Baseline Capture (RED)
+- Phase 5-7: Implementation Loop (GREEN)
+- Phase 7.5: Verify + Benchmark (GREEN → REFACTOR)
+- Phase 8-9: Review Loop
+- Phase 10: Finalization
+- Summary
+- Changes
+- Phase 11: Cleanup
+- Error Handling
+- Human Escalation Triggers
+
 Detailed step-by-step procedures for skill development with TDD extension points.
 
 ---

@@ -1,5 +1,26 @@
 # Council Workflow Details
 
+## Contents
+
+- Pre-Flight Checklist (All Workflows)
+- Workflow A: Parallel Plan Review
+- Workflow B: Code Review (`/council review`)
+- Workflow C: Parallel Triage (Efficient)
+- Workflow D: Adversarial Review
+- Workflow E: Consensus Building (Multi-Round)
+- Workflow F: Concern-Specific Review
+- Anti-Patterns to Avoid
+  - ❌ Serial Consultation
+  - ❌ Leading Questions
+  - ❌ Ignoring Disagreement
+  - ❌ Skipping Synthesis
+  - ❌ Over-consulting
+  - ❌ Confirmation Bias Don't weight consultants who agree with your initial assumption.
+  - ❌ Authority Fallacy "Gemini said X" isn't an argument. The reasoning matters.
+  - ❌ Consensus = Correctness 4 AIs agreeing may mean shared blind spot, not truth.
+  - ❌ Endless Rounds If Round 3 doesn't resolve it, more rounds won't help. Escalate to human.
+  - ❌ Ignoring Rate Limits If hitting rate limits, stop and wait. Don't keep hammering.
+
 ## Pre-Flight Checklist (All Workflows)
 
 Before ANY workflow, execute:

@@ -1,5 +1,19 @@
 # Agent-Optimized Issue Templates
 
+## Contents
+
+- Formatting Rules
+- Bug Report
+- Feature Request
+- Epic
+- Sub-Issue (Child of Epic)
+- Refactor
+- New Project
+- Chore
+- Research Spike
+- Labels Reference
+- Agent Execution Tags
+
 These templates are designed for **LLM agent execution**. Every section is a contract — agents
 parse headers to understand structure. Humans benefit from the clarity as a side effect.
 

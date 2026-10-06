@@ -1,5 +1,27 @@
 # Temporal CLI Reference
 
+## Contents
+
+- Installation
+- Local Development Server
+- Environment Configuration
+- Workflow Operations
+  - Start a Workflow
+  - List Workflows
+  - Describe Workflow
+  - Show Event History
+  - Cancel Workflow
+  - Terminate Workflow
+  - Signal Workflow
+  - Query Workflow
+  - Update Workflow
+  - Reset Workflow
+- Activity Operations
+- Schedules
+- Task Queue Operations
+- Batch Operations
+- Operator Commands
+
 Complete reference for the `temporal` CLI tool.
 
 ## Installation

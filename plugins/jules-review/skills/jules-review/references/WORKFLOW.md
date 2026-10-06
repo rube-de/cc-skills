@@ -1,5 +1,16 @@
 # PR Review Posting Workflow
 
+## Contents
+
+- 1. Parse Council Findings
+- 2. Map Verdict to GitHub Review Event
+- 3. Determine Diff-Valid Lines
+- 4. Build Inline Comments Array
+- 5. Build Review Body
+- 6. Post the Review
+- 7. Fallback: gh pr comment
+- Error Handling Summary
+
 Detailed logic for posting council findings as a structured GitHub PR review with inline line comments.
 
 ## 1. Parse Council Findings

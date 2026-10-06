@@ -1,5 +1,11 @@
 # Follow-up issue, decision-aware replies, and PR summary
 
+## Contents
+
+- Step 5a: Follow-up Issue Creation
+- Step 5b: Decision-Aware Replies
+- Step 5c: PR Summary Comment
+
 This reference covers the three post-reply steps that only fire when unresolved items remain after Steps 3 and 3.5. You arrive here from SKILL.md Step 5 when any of the following exist:
 
 - **Discussion-Tracked** items (user chose "Create follow-up issue" in the Discussion workflow)

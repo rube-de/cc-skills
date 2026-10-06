@@ -1,5 +1,24 @@
 # Oasis CLI Reference
 
+## Contents
+
+- Installation
+- Wallet Management
+- Account Operations
+  - Show Account
+  - Transfer Tokens
+  - Deposit / Withdraw (Consensus <-> ParaTime)
+  - Delegate / Undelegate Stake
+  - Allow / Withdraw from Allowance
+  - Output to File (Unsigned)
+- Network Management
+- ParaTime Management
+- ROFL (Runtime OFfchain Logic)
+- Transaction Tools
+- Address Book
+- Common Flags
+- Network Endpoints
+
 Complete command reference for the Oasis CLI (`oasis`).
 
 ## Installation

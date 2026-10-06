@@ -1,5 +1,24 @@
 # Temporal SDK Patterns
 
+## Contents
+
+- Project Setup
+- Workflow Definition
+- Activity Implementation
+  - Go
+  - TypeScript
+  - Python
+  - Java
+  - Retry Configuration
+  - Activity Timeouts
+- Worker Setup
+- Client Usage
+- Signals, Queries, and Updates
+- Error Handling
+- Testing
+- Advanced Patterns
+- Versioning
+
 Cross-language patterns for Go, TypeScript, Python, and Java.
 
 ## Project Setup

@@ -1,5 +1,25 @@
 # Plan Workflow
 
+## Contents
+
+- 0. Git Check
+- 0a. Derive Branch Slug
+- 0b. Issue Detection
+- 1. Generate Timestamp
+- 1a. Compose Team Name
+- 2. Orient
+- 3. Create Team
+- 4. Create Tasks
+- 4a. Initialize Directives
+- 5a. Research (if needed)
+- 5b. Launch Architect + PM (parallel)
+- 6. Coordinate
+- 7. Verify Plan
+- 8. Cleanup
+- 9. Present
+- Anti-Patterns (Lead MUST avoid)
+- Rules
+
 Detailed execution steps for the planning phase. The Lead reads this before running plan mode.
 
 ## 0. Git Check

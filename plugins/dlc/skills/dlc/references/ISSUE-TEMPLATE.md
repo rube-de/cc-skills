@@ -1,5 +1,13 @@
 # DLC Issue Template
 
+## Contents
+
+- Title Format
+- Label
+- Issue Body Structure
+- Issue Creation Command
+- Failure Fallback
+
 GitHub issues created by DLC skills follow this exact format.
 
 ## Title Format

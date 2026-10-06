@@ -1,5 +1,23 @@
 # Dev Workflow
 
+## Contents
+
+- 0. Git Check
+- 0a. Issue Detection
+- 1. Parse Plan
+- 2. Generate Timestamp
+- 2a. Compose Team Name
+- 3. Create Team
+- 4. Create Tasks
+- 5. Spawn Teammates
+- 6. Execute Waves
+- 7. Final Verification
+- 8. Cleanup
+- 9. Write Session Log
+- 10. Wrap Up
+- Anti-Patterns (Lead MUST avoid)
+- Rules
+
 Detailed execution steps for the development phase. The Lead reads this before running dev mode.
 
 ## 0. Git Check

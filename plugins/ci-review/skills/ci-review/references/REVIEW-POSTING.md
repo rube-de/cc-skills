@@ -1,5 +1,14 @@
 # Review Posting Reference
 
+## Contents
+
+- 1. Always Use Event "COMMENT"
+- 2. Build Inline Comments
+- 3. Build Review Body
+- 4. Construct the JSON Payload
+- 5. Deterministic Posting via `post-review.sh`
+- 6. Error Summary
+
 How to post CI review findings as an atomic GitHub PR review with inline comments.
 
 ## 1. Always Use Event "COMMENT"

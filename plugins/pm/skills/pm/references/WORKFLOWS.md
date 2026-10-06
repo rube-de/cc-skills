@@ -1,5 +1,22 @@
 # Question Flows
 
+## Contents
+
+- Bug Report Flow
+- Feature Request Flow
+  - Round 0 — Story Framing (AskUserQuestion)
+  - Round 1 — Scope + Priority (AskUserQuestion)
+  - Round 2 — User Story (Conversation)
+  - Breadth Analysis (internal PM step — not a user question)
+  - Round 3 — Boundaries (AskUserQuestion)
+  - Codebase Exploration
+- Epic Flow
+- Refactor Flow
+- New Project Flow
+- Chore / Research Spike Flow
+- Requirements Challenge Checklist
+- Flow Selection Decision Tree
+
 Type-specific discovery workflows. Each flow uses `AskUserQuestion` for structured choices
 and conversation for open-ended details.
 
