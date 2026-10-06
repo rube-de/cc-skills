@@ -403,6 +403,7 @@ Always run `bun scripts/validate-plugins.mjs` after any file move or rename. It 
 - Orphaned plugin directories not registered in `marketplace.json`
 - Missing `SKILL.md` files or invalid frontmatter
 - Source path mismatches
+- A per-plugin `.claude-plugin/plugin.json` that pins `version`: at install time it overrides the marketplace entry, and semantic-release only bumps the entry. ci-review's manifest kept `1.59.1` through every 2.x release, so installs never saw a new version. Leave `version` out and let the marketplace entry carry it.
 
 > Source: [`scripts/validate-plugins.mjs`](../scripts/validate-plugins.mjs) — see also CI config in [`.github/workflows/`](../.github/workflows/)
 

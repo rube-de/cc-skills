@@ -114,6 +114,8 @@ This checks:
 1. All entries pass JSON Schema validation
 2. All source paths exist on disk
 3. No orphaned plugin directories without marketplace entries
+4. SKILL.md frontmatter has a kebab-case `name` and a `description`
+5. No `.claude-plugin/plugin.json` pins a `version` (at install it would override the marketplace entry, which semantic-release bumps)
 
 ## Common Mistakes
 

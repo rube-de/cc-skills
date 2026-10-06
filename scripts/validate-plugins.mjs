@@ -174,6 +174,31 @@ if (skillErrors.length === 0) {
   hasErrors = true;
 }
 
+// 5. Per-plugin plugin.json must not pin a version
+// At install time a plugin.json version wins over the marketplace entry,
+// and semantic-release only bumps the entry, so a pinned one goes stale.
+const pinnedVersions = [];
+
+plugins.forEach((plugin) => {
+  const manifestFile = join(resolve(rootDir, plugin.source), ".claude-plugin/plugin.json");
+  if (!existsSync(manifestFile)) return;
+
+  const manifest = JSON.parse(readFileSync(manifestFile, "utf-8"));
+  if (manifest.version !== undefined) {
+    pinnedVersions.push(
+      `${relative(rootDir, manifestFile)}: declares version "${manifest.version}", which overrides the marketplace entry ("${plugin.version}") at install; remove it`
+    );
+  }
+});
+
+if (pinnedVersions.length === 0) {
+  console.log("  ✓ No plugin.json pins a version");
+} else {
+  console.log("  ✗ plugin.json version pinned:");
+  pinnedVersions.forEach((e) => console.log(`    - ${e}`));
+  hasErrors = true;
+}
+
 // Summary
 if (hasErrors) {
   console.log("1 error(s) found.");

@@ -1,5 +1,8 @@
 {
   "name": "ci-review",
-  "version": "1.59.1",
-  "description": "CI-optimized code review: multi-agent parallel review with confidence scoring and atomic GitHub PR review posting via gh api"
+  "description": "CI-optimized code review: multi-agent parallel review with confidence scoring and atomic GitHub PR review posting via gh api",
+  "author": {
+    "name": "rube-de",
+    "url": "https://github.com/rube-de"
+  }
 }
