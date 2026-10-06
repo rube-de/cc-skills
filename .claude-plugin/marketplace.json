@@ -227,6 +227,26 @@
         "ideation",
         "feature-spec"
       ]
+    },
+    {
+      "name": "clean-view",
+      "description": "Clean View - A calm checklist above the prompt for non-technical users: hides tool calls, diffs and command output while showing the plan, the current step and its progress (function-hook mod, Claude Code 2.1.291+)",
+      "version": "2.15.3",
+      "source": "./plugins/clean-view",
+      "category": "productivity",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "clean-view",
+        "checklist",
+        "progress",
+        "non-technical",
+        "ui",
+        "mod",
+        "function-hooks"
+      ]
     }
   ]
 }

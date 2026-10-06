@@ -412,6 +412,31 @@ All plugin metadata lives in `.claude-plugin/marketplace.json`. Don't duplicate 
 
 > Source: [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json) — validated against [`marketplace.schema.json`](../scripts/marketplace.schema.json)
 
+### Function-hook plugins: read your tool names back, and fail open
+
+A plugin's own tools are listed as `mcp__<plugin>__<name>`, but the name the engine actually assigned comes back from `$.tool.register`. Hardcoding it breaks a gate that whitelists the tool: if the installed name differs, the gate refuses the very tool it tells the model to call, and the session is locked. Store the returned names and route on them; set the gate only after registration succeeded.
+
+```ts
+// BAD — a renamed install denies its own plan tool
+const PLAN = 'mcp__clean-view__plan_steps'
+// GOOD
+tools = { plan: (await $.tool.register(spec)).tool, ... }
+```
+
+In `claude plugin test`, the test `$` has no `state` or `store` noun to read back. Spy on writes with an `on('state.set', ...)` hook beneath the plugin, and answer `store.get`/`store.set` yourself: combining `mock.store(on)` with your own `store.set` hook fails the load with `on("store.set") registered twice`.
+
+> Source: [`plugins/clean-view/hooks/clean-view.tsx`](../plugins/clean-view/hooks/clean-view.tsx), [`plugins/clean-view/tests/clean-view.test.tsx`](../plugins/clean-view/tests/clean-view.test.tsx)
+
+### Function-hook plugins: share render sites, honour your own off switch
+
+Three review findings on the first function-hook plugin, each a pattern to check at authoring time:
+
+- **Shared sites wrap, they don't replace.** `AbovePrompt` is one band for every mod. A hook that returns only its own tree hides every hook beneath it, even while it is "off". Draw yours and include `await next(e)` in it (`<Box flexDirection="column">{mine}{below}</Box>`); pass `next(e)` alone when you have nothing to add.
+- **Off means off for side effects too.** Hiding the UI is not enough: a `turn.start` hook that still schedules a `$.model.complete` call spends the person's money while the feature is disabled. Check the setting before starting background work.
+- **The handler enforces the schema.** Don't assume `inputSchema` (`minItems`, `maximum`) is validated before your `tool.call` hook runs; repeat the constraint in the handler, and make it match the deny message.
+
+> Source: [PR #275](https://github.com/rube-de/cc-skills/pull/275) review (coderabbit, codex)
+
 ---
 
 ## Shell Code in Skills

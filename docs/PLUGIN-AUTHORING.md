@@ -102,6 +102,25 @@ Define hooks in `hooks/hooks.json`:
 
 Hook types: `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`.
 
+### Function-hook plugins (mods)
+
+A plugin can instead ship a TypeScript hooks module that runs inside Claude Code (Claude Code 2.1.291+, early-access API): it can draw UI above the prompt, register tools and slash commands, gate tool calls and rewrite the system prompt. [`plugins/clean-view/`](../plugins/clean-view/) is the reference:
+
+```
+clean-view/
+├── .claude-plugin/plugin.json   # "types": "./types/index.d.ts"
+├── hooks/
+│   ├── hooks.json               # { "modules": ["./register.tsx"] }
+│   └── register.tsx             # export const register: Register = on => { ... }
+├── tests/*.test.tsx             # run with `claude plugin test`
+├── types/index.d.ts             # PluginState contract for $.state
+└── tsconfig.json                # extends ./.claude-plugin/types/tsconfig.json
+```
+
+- Leave `version` out of `plugin.json`: the marketplace entry carries it and semantic-release bumps it.
+- `.claude-plugin/types/` is written by Claude Code on load and is gitignored.
+- `bun scripts/validate-plugins.mjs` only checks that `hooks/` exists. Also run `claude plugin validate plugins/<name>` and `claude plugin test plugins/<name>`; CI does not run them yet.
+
 ## Validation
 
 Always validate before committing:
