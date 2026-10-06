@@ -1,3 +1,10 @@
+## [2.16.1](https://github.com/rube-de/cc-skills/compare/v2.16.0...v2.16.1) (2026-10-06)
+
+
+### Bug Fixes
+
+* **ci-review:** stop plugin.json pinning a stale version ([#276](https://github.com/rube-de/cc-skills/issues/276)) ([94cf08e](https://github.com/rube-de/cc-skills/commit/94cf08e1f8ff5ef34acf40ae4b4a6943b235bb60))
+
 # [2.16.0](https://github.com/rube-de/cc-skills/compare/v2.15.3...v2.16.0) (2026-10-06)
 
 
