@@ -50,3 +50,17 @@ Accumulated lessons from developing skills and plugins live in [`docs/learnings.
 **Update it automatically**: When you fix a bug, discover a pitfall, or learn something non-obvious about skill authoring, plugin structure, or agent teams — append it to `docs/learnings.md` with a `> Source:` linking to the relevant file, PR, or docs page. Don't wait to be asked.
 
 **PR review feedback is a learning trigger**: When you fix issues raised by PR reviewers (Copilot, external reviewers, council), add the underlying pattern to `docs/learnings.md` — not just the fix, but the *generalizable mistake* so it's caught at authoring time next round. Include the bad/good pattern and link to the PR. If the fix touches multiple files for the same root cause, document the root cause once (not per file).
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context (`GLOSSARY.md` + `docs/adr/` at the repo root). See `docs/agents/domain.md`.
