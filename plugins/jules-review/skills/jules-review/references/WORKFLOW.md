@@ -7,13 +7,16 @@
 - 3. Determine Diff-Valid Lines
 - 4. Build Inline Comments Array
 - 5. Build Review Body
-- 6. Post the Review
-- 7. Fallback: gh pr comment
+- 6. Confirm Before Posting
+- 7. Post the Review
+- 8. Fallback: gh pr comment
 - Error Handling Summary
 
 Detailed logic for posting council findings as a structured GitHub PR review with inline line comments.
 
 ## 1. Parse Council Findings
+
+Only parse a valid council result: SKILL.md Step 5 "Check the Council Result" must have passed. A stopped, failed, or unparseable council run never reaches this section, so it can never turn into zero findings and a proposed `APPROVE`.
 
 After the council completes, extract findings from its output. Each finding has:
 
@@ -39,7 +42,7 @@ If a finding has no `location` or an unparseable location, treat it as a body-on
 
 ## 2. Map Verdict to GitHub Review Event
 
-Scan all findings and determine the review event:
+Scan all findings and determine the **proposed** review event. It isn't final until the user confirms it in §6:
 
 | Condition | GitHub Event |
 |-----------|-------------|
@@ -164,7 +167,40 @@ If there are no findings at all, the body should be:
 No issues found. This PR looks good.
 ```
 
-## 6. Post the Review
+If the user downgrades to `COMMENT` (in §6 or §7), rewrite every body variant you post, both `$REVIEW_BODY` and `$REVIEW_BODY_WITH_ALL_FINDINGS`: change the header to `## Council Review — COMMENT`, and replace `No issues found. This PR looks good.` with `No issues found by the council.` so the comment doesn't read as an approval.
+
+## 6. Confirm Before Posting
+
+Never call the reviews API (§7) or `gh pr comment` (§8) before the user answers this question in the current run.
+
+Show the user:
+
+- PR number and title
+- Proposed event (`$EVENT`)
+- Finding counts: total, and critical / high / medium / low
+- How many findings go inline vs. into the review body
+- Council participation as reported (e.g. `3/4 consultants`)
+- Whether the secret scan was skipped (`--allow-unscanned`)
+
+Then ask:
+
+```
+AskUserQuestion:
+  "Post this council review to PR #<number> as <EVENT>?"
+  Options (EVENT is APPROVE or REQUEST_CHANGES): Post as <EVENT> | Downgrade to COMMENT | Cancel
+  Options (EVENT is COMMENT):                     Post as COMMENT | Cancel
+```
+
+| Answer | Action |
+|--------|--------|
+| Post as `<EVENT>` | Continue to §7 with `$EVENT` unchanged |
+| Downgrade to COMMENT | Set `EVENT="COMMENT"`, rewrite the body header (see §5), continue to §7 |
+| Cancel | Post nothing: no reviews API call, no `gh pr comment`. Go to SKILL.md Step 7 |
+| No answer (tool unavailable, empty answer, or error) | Same as Cancel |
+
+The confirmed `$EVENT` is final for this run. Retries in §7 and the fallback in §8 reuse it and never change it to `APPROVE` or `REQUEST_CHANGES`.
+
+## 7. Post the Review
 
 ### Primary Method: gh api
 
@@ -190,6 +226,15 @@ REVIEW_URL=$(echo "$PAYLOAD" | gh api \
 
 echo "Review posted: $REVIEW_URL"
 ```
+
+### Classify a Failed Post First
+
+GitHub returns HTTP 422 both for a rejected review event and for invalid inline comments. Read the error message before retrying:
+
+1. Message rejects the event (e.g. `Can not approve your own pull request`, `Can not request changes on your own pull request`): go straight to **Handling a Rejected Review Event**. Skip the inline-comment retries.
+2. Message points at a comment path, line, or position in the diff: use **Handling Inline Comment Failures**.
+3. 401/403: use §8.
+4. Any other error: stop, report the raw GitHub error, print the review body, and post nothing (no §8 fallback).
 
 ### Handling Inline Comment Failures
 
@@ -225,9 +270,13 @@ echo "$PAYLOAD" | gh api \
   --input -
 ```
 
-## 7. Fallback: gh pr comment
+### Handling a Rejected Review Event
 
-If the review API fails entirely (permissions, auth issues), fall back to posting a regular PR comment:
+GitHub rejects `APPROVE` and `REQUEST_CHANGES` in some cases, e.g. when the authenticated user authored the PR (HTTP 422). Don't retry with the same or a different non-`COMMENT` event. Ask via `AskUserQuestion`: **Downgrade to COMMENT** / **Cancel**. On downgrade, set `EVENT="COMMENT"`, rewrite every body variant (see §5), and post again. On Cancel or no answer, post nothing.
+
+## 8. Fallback: gh pr comment
+
+If the review API fails entirely (permissions, auth issues) after the user confirmed in §6, fall back to posting a regular PR comment. Never use this fallback after Cancel or without an answer:
 
 ```bash
 gh pr comment <PR#> --body "$REVIEW_BODY_WITH_ALL_FINDINGS"
@@ -244,7 +293,10 @@ In fallback mode:
 |-------|----------|
 | Invalid inline comment line | Remove that comment, retry with remaining |
 | All inline comments invalid | Post review with empty comments array (all findings in body) |
-| Review API 403/401 | Fall back to `gh pr comment` |
+| `APPROVE` / `REQUEST_CHANGES` rejected (422) | Ask: downgrade to COMMENT or cancel; never escalate |
+| Review API 403/401 | Fall back to `gh pr comment` (only after §6 confirmation) |
+| User cancels, or no answer in §6 | Post nothing; print the review body |
 | `gh` CLI not found | Abort with install instructions |
 | No PR found | Abort with clear error |
 | Council returns no output | Abort with error, suggest retrying |
+| Council stopped (gitleaks notice, secrets detected, error) or no valid reviewer results | Abort, post nothing (SKILL.md Step 5) |

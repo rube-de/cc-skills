@@ -57,6 +57,30 @@ npm install @temporalio/client @temporalio/worker @temporalio/workflow @temporal
 | Set up scheduled runs | `temporal schedule create --schedule-id my-sched --cron '0 * * * *' ...` |
 | Test workflows | Use SDK test utilities with time-skipping and activity mocking |
 
+## Destructive Commands
+
+These commands stop, rewrite, or purge workflow state on a Temporal cluster. The effects can't be undone from the CLI.
+
+| Command | Effect |
+|---------|--------|
+| `temporal workflow terminate` | Stops the workflow immediately, with no cleanup logic |
+| `temporal workflow cancel` | Requests cancellation; the workflow runs its cancellation path |
+| `temporal workflow reset` | Terminates the current run and starts a new one from the reset point; activities after that point run again (duplicate side effects) |
+| `temporal workflow delete` | Deletes the execution and its event history, terminating it first if it's running |
+| `temporal workflow signal` / `temporal workflow update` | Changes live business state (e.g. an approval signal) on non-local clusters |
+| `temporal activity complete` / `temporal activity fail` | Records an activity result from outside the worker; permanent in history |
+| `temporal schedule delete` / `update` / `toggle` / `trigger` | Removes or rewrites a schedule, pauses it, or starts a real run |
+| `temporal operator namespace update --retention` | Shortening retention purges closed-workflow history |
+| `temporal operator namespace delete` | Deletes the namespace and every workflow in it |
+| `temporal operator search-attribute remove` | Removes a custom search attribute that queries and visibility depend on |
+| `terminate` / `cancel` / `reset` / `signal` / `delete` with `--query` | Batch operation: applies to every matching workflow (`workflow list` / `count --query` are read-only and exempt) |
+
+Before running any of them:
+
+1. State the exact target and scope: `--address` or `--env` profile, namespace, and workflow ID plus run ID, schedule ID, or the full `--query` with the number of matching workflows (`temporal workflow count --query ...`).
+2. Get explicit confirmation from the user for that exact command.
+3. Single-workflow and schedule commands run without any CLI prompt: your confirmation is the only gate. Batch (`--query`) operations, `operator namespace delete`, and `operator search-attribute remove` prompt; `--yes` / `-y` skips that prompt (workflow commands accept it only together with `--query`). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
+
 ## When to Use Temporal
 
 **Good fit:**

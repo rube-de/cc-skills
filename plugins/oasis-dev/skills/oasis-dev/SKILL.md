@@ -110,6 +110,33 @@ oasis rofl deploy
 | Use JS/TS with Sapphire | `npm install @oasisprotocol/sapphire-paratime` |
 | Verify ROFL origin on-chain | `Subcall.roflEnsureAuthorizedOrigin(roflAppID)` in Solidity |
 
+## Destructive Commands
+
+These commands sign or broadcast on-chain transactions, move or destroy funds, expose keys, or tear down ROFL deployments. On-chain effects can't be reversed.
+
+| Command | Effect |
+|---------|--------|
+| `oasis account transfer` / `deposit` / `withdraw` | Moves tokens between accounts or layers |
+| `oasis account delegate` / `undelegate` / `allow` | Stakes, unstakes (with debonding), or grants an allowance |
+| `oasis account burn` | Destroys tokens permanently |
+| `oasis account entity register` / `deregister`, `oasis account node-unfreeze`, `oasis account amend-commission-schedule` | Changes validator entity, node, or commission state on consensus |
+| `oasis transaction sign` / `submit` | Produces or broadcasts an arbitrary signed transaction |
+| `oasis network governance cast-vote` | Casts an on-chain governance vote |
+| `oasis network set-rpc` | Points signing traffic at a different endpoint |
+| `oasis wallet export` | Prints the private key or mnemonic |
+| `oasis wallet remove` | Deletes the local key; funds are lost without a backup |
+| `oasis rofl create` / `update` / `deploy` / `remove` | On-chain app registration (escrows a deposit), config changes, paid machine rental, or app removal |
+| `oasis rofl set-admin` / `oasis rofl machine set-admin` | Transfers app or machine admin rights on-chain; a wrong address loses control |
+| `oasis rofl machine stop` / `remove` / `top-up`, and `--wipe-storage` on `machine stop` / `machine restart` / `deploy` | Takes a live instance down, cancels the rental, spends funds, or wipes persistent storage |
+| `oasis rofl secret rm` / `import` / `set --force` | Deletes or overwrites app secrets in the manifest (applied on the next `rofl update`) |
+| Contract deploys to `sapphire_mainnet` (Hardhat, `forge create`) | Spends real ROSE |
+
+Before running any of them:
+
+1. State the exact target and scope: `--network` (mainnet or testnet), `--paratime`, `--account`, recipient or validator address, and amount with its denomination (9 decimals on consensus, 18 on Sapphire/Emerald).
+2. Get explicit confirmation from the user for that exact command.
+3. `-y` skips the CLI's signing and broadcast confirmations (see [references/CLI.md](references/CLI.md) Common Flags). Add it only after the user has confirmed the exact command; never add it on the user's behalf.
+
 ## Key Concepts
 
 ### ParaTimes

@@ -1,6 +1,6 @@
 ---
 allowed-tools: [Read, Grep, Glob, Bash, Task, Teammate, TaskCreate, TaskUpdate, TaskList, TaskGet, AskUserQuestion, TeamCreate, SendMessage, TeamDelete, Skill]
-description: "TDD-driven bugfix workflow: tester writes failing test (RED) → developer fixes (GREEN) → developer refactors (REFACTOR) → reviewer validates. Accepts issue number, description, or both. Auto-creates PR unless --no-pr flag is passed."
+description: "TDD-driven bugfix workflow: tester writes failing test (RED) → developer fixes (GREEN) → developer refactors (REFACTOR) → reviewer validates. Accepts issue number, description, or both. Asks before pushing and creating a PR; --no-pr commits locally without asking."
 ---
 
 > **ROLE: Coordinator only.**
@@ -42,7 +42,7 @@ Workflow: bugfix
  Roles: tester [tm], developer [tm], reviewer [tm], researcher [sa]
  Pipeline: RED → GREEN → REFACTOR → REVIEW
  Coordinator role: orchestration only — no direct file edits
- PR: auto (pass --no-pr to commit only)
+ PR: ask before push (pass --no-pr to commit only)
 ```
 
 ## Execution
