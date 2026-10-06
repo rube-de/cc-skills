@@ -1,5 +1,21 @@
 # Doppler CLI Reference
 
+## Contents
+
+- Authentication
+- Setup & Configuration
+- Projects
+- Environments
+- Configs
+- Secrets
+- Running Commands with Secrets
+- Activity & Audit
+- Import
+- Utility Commands
+- Global Flags
+- OIDC
+- Flags (Feature Flags)
+
 Complete command reference for the Doppler CLI.
 
 ## Authentication

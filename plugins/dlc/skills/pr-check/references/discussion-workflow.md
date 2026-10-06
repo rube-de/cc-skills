@@ -1,5 +1,12 @@
 # Discussion items: classification and action routing
 
+## Contents
+
+- 1. Read Context
+- 2. Classify Discussion Item
+- 3. Present to User, Auto-Implement, or Auto-Reply
+- 4. Execute Chosen Action
+
 This reference covers the four-phase workflow for **Discussion unresolved** comments identified during categorization (SKILL.md Step 2). You arrive here from SKILL.md Step 3.5 when the PR has at least one Discussion item. If there are no Discussion items, SKILL.md skips this reference entirely.
 
 For each Discussion item, follow a four-phase workflow.

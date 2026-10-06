@@ -1,5 +1,22 @@
 # Sapphire ParaTime Development
 
+## Contents
+
+- Key Properties
+- Network Info
+- Hardhat Setup
+- NPM Packages
+- JavaScript/TypeScript SDK
+- Go SDK
+- Python SDK
+- Sapphire Contracts (Solidity)
+- Cross-Chain: Oasis Privacy Layer (OPL)
+- Foundry Integration
+- Remix IDE
+- Contract Verification
+- Testing
+- Common Pitfalls
+
 Sapphire is the confidential EVM-compatible ParaTime on the Oasis Network, providing end-to-end encrypted smart contract execution.
 
 ## Key Properties
