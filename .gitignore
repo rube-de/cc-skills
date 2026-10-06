@@ -20,3 +20,6 @@ pnevma.toml
 # Auto-generated plans
 docs/plans/
 
+
+# Function-hook plugin types (written by Claude Code on load)
+plugins/*/.claude-plugin/types/

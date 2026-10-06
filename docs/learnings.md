@@ -412,6 +412,21 @@ All plugin metadata lives in `.claude-plugin/marketplace.json`. Don't duplicate 
 
 > Source: [`.claude-plugin/marketplace.json`](../.claude-plugin/marketplace.json) — validated against [`marketplace.schema.json`](../scripts/marketplace.schema.json)
 
+### Function-hook plugins: read your tool names back, and fail open
+
+A plugin's own tools are listed as `mcp__<plugin>__<name>`, but the name the engine actually assigned comes back from `$.tool.register`. Hardcoding it breaks a gate that whitelists the tool: if the installed name differs, the gate refuses the very tool it tells the model to call, and the session is locked. Store the returned names and route on them; set the gate only after registration succeeded.
+
+```ts
+// BAD — a renamed install denies its own plan tool
+const PLAN = 'mcp__clean-view__plan_steps'
+// GOOD
+tools = { plan: (await $.tool.register(spec)).tool, ... }
+```
+
+In `claude plugin test`, the test `$` has no `state` or `store` noun to read back. Spy on writes with an `on('state.set', ...)` hook beneath the plugin, and answer `store.get`/`store.set` yourself: combining `mock.store(on)` with your own `store.set` hook fails the load with `on("store.set") registered twice`.
+
+> Source: [`plugins/clean-view/hooks/clean-view.tsx`](../plugins/clean-view/hooks/clean-view.tsx), [`plugins/clean-view/tests/clean-view.test.tsx`](../plugins/clean-view/tests/clean-view.test.tsx)
+
 ---
 
 ## Shell Code in Skills
