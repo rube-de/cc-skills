@@ -12,6 +12,8 @@
 - Phase 7.5: Verify + Benchmark (GREEN → REFACTOR)
 - Phase 8-9: Review Loop
 - Phase 10: Finalization
+- Summary
+- Changes
 - Phase 11: Cleanup
 - Error Handling
 - Human Escalation Triggers
