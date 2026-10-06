@@ -1,3 +1,10 @@
+# [2.16.0](https://github.com/rube-de/cc-skills/compare/v2.15.3...v2.16.0) (2026-10-06)
+
+
+### Features
+
+* **clean-view:** add Clean View function-hook plugin ([#275](https://github.com/rube-de/cc-skills/issues/275)) ([1bc7c63](https://github.com/rube-de/cc-skills/commit/1bc7c633d88e8a09c67650b10d20b9dc7beff18c))
+
 ## [2.15.3](https://github.com/rube-de/cc-skills/compare/v2.15.2...v2.15.3) (2026-10-06)
 
 
