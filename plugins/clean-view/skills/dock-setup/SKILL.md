@@ -15,7 +15,7 @@ user-invocable: true
 
 While Agent Dock helpers run, the dock writes their live count to `<config>/agent-dock/agents-now/<session_id>.json`. `<config>` is `$CLAUDE_CONFIG_DIR`, or `~/.claude` when that is unset. This skill installs a small add-on, `<config>/agent-dock/statusline.sh`, and points a status line at it.
 
-The add-on wraps the person's own status line instead of editing their script. `statusline.sh '<their command>'` runs their command and adds `◇ N agents` to the end of its first line while helpers work. With no status line of their own, `statusline.sh` alone shows just the segment. Every settings file the skill changes is listed in `<config>/agent-dock/installs` with the `refreshInterval` its status line had before, so an uninstall finds them all, other projects included, and puts each one back exactly. Each line is the file's absolute path, a tab, and that value: a number, or `none` when there was no `refreshInterval`.
+The add-on wraps the person's own status line instead of editing their script. `statusline.sh '<their command>'` runs their command and adds `◇ N agents` to the end of its first line while helpers work. With no status line of their own, `statusline.sh` alone shows just the segment. Every settings file the skill changes is listed in `<config>/agent-dock/installs` with what its status line was before, so an uninstall finds them all, other projects included, and puts each one back exactly. Each line is the file's absolute path, a tab, and that value: a number when the block had that `refreshInterval`, `none` when the block had no `refreshInterval`, `new` when the file had no `statusLine` block and the install added it, or `new-file` when the install created the file.
 
 ## Workflow
 
@@ -39,15 +39,21 @@ The add-on wraps the person's own status line instead of editing their script. `
    - **This project only**: the base is the status line in force here (step 1's order), because a project's own status line replaces the global one rather than adding to it.
    - **Either install**: if the base already starts with the add-on's command, tell the person it is already set up and stop. With no base, the new command is the add-on's command alone. Otherwise it is the add-on's command, a space and the base in single quotes, with each `'` inside the base written as `'\''`.
    - **Either install**: the block also gets `"refreshInterval": 2`, unless it already has one of 2 or less. Claude Code otherwise redraws the status line only when the conversation changes, and the count would freeze while Claude waits for helpers.
-   - **Remove**: the files to check are the global settings, this project's `.claude/settings.local.json`, and every path listed in `$CONFIG/agent-dock/installs` (each line's part before the tab) that still exists (`cat "$CONFIG/agent-dock/installs"`). In each one whose `statusLine.command` starts with the add-on's command, the base is its single-quoted argument with `'\''` turned back into `'`. With no argument, the add-on stood alone, so the change removes the whole `statusLine` block. Otherwise it restores the base and puts `refreshInterval` back to the value the file's `installs` line records: `none` removes the key, a number replaces it. When the file has no line there, or its line has no tab and value (an older install), leave `refreshInterval` as it is: the person may have set it themselves. Read the recorded value with:
+   - **Remove**: the files to check are the global settings, this project's `.claude/settings.local.json`, and every path listed in `$CONFIG/agent-dock/installs` (each line's part before the tab) that still exists (`cat "$CONFIG/agent-dock/installs"`). In each one whose `statusLine.command` starts with the add-on's command, the base is its single-quoted argument with `'\''` turned back into `'`. With no argument, the add-on stood alone, so the change removes the whole `statusLine` block whatever the file's value is; a `new-file` value still matters to step 8. Otherwise the change follows the value the file's `installs` line records:
+     - a number or `none`: restore the base and put `refreshInterval` back to the recorded value. `none` removes the key, a number replaces it.
+     - `new`: remove the whole `statusLine` block, whatever the command holds. The base came from another file, and copying it here would pin this project to a stale command.
+     - `new-file`: remove the whole `statusLine` block. If the file then holds nothing else (`{}`), step 8 deletes it.
+     - `unknown` (an older line with no tab and value) or not listed: restore the base and leave `refreshInterval` as it is, because the person may have set it themselves.
+
+     Read the recorded value with:
      ```bash
      CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
      FILE="<the settings file, as an absolute path>"
-     awk -F'\t' -v f="$FILE" '$1 == f { print ($2 == "" ? "unknown" : $2) }' "$CONFIG/agent-dock/installs" 2>/dev/null
+     F="$FILE" awk -F'\t' '$1 == ENVIRON["F"] { print ($2 == "" ? "unknown" : $2) }' "$CONFIG/agent-dock/installs" 2>/dev/null
      ```
-     It prints a number, `none`, `unknown` (an older install), or nothing (not listed). If no file has the add-on, the settings need no change; still run step 8 to clear the add-on's files.
+     It prints a number, `none`, `new`, `new-file`, `unknown` (an older install), or nothing (not listed). If no file has the add-on, the settings need no change; still run step 8 to clear the add-on's files.
 
-4. **Confirm.** Show each file, its old `statusLine` block and the new one; for Remove, also list the files step 8 deletes. Ask with AskUserQuestion, "Change the status line like this?", options **Apply** and **Cancel**. On Cancel, stop and change nothing.
+4. **Confirm.** Show each file, its old `statusLine` block and the new one; for Remove, also list the files step 8 deletes, including any `new-file` settings file that the removal leaves as `{}`. Ask with AskUserQuestion, "Change the status line like this?", options **Apply** and **Cancel**. On Cancel, stop and change nothing.
 
 5. **Install the add-on.** Skip this step for Remove. Run:
    ```bash
@@ -64,13 +70,13 @@ The add-on wraps the person's own status line instead of editing their script. `
    if command -v jq >/dev/null 2>&1; then jq empty "$FILE" && echo "valid JSON"; else echo "jq not installed: read the file back to check it"; fi
    git check-ignore -q .claude/settings.local.json 2>/dev/null && echo "local settings are git-ignored"
    ```
-   If you created `.claude/settings.local.json` and git does not ignore it, tell the person and offer to add it to `.gitignore`. For Remove, repeat the edit and the check for every file from step 3. For an install, record the file and the `refreshInterval` its `statusLine` block had before this change (from step 1; `none` for a new file or a block without one), so a later uninstall puts it back. A line already there for the file is replaced. `installs` is the skill's own file, never a symlink, so writing it through `installs.new` and `mv` is safe here:
+   If you created `.claude/settings.local.json` and git does not ignore it, tell the person and offer to add it to `.gitignore`. For Remove, repeat the edit and the check for every file from step 3. For an install, record the file and its state before this change, so a later uninstall puts it back: `new-file` when you created the file in this run, `new` when the file existed without a `statusLine` block, otherwise the block's old `refreshInterval` (a number) or `none`, from step 1. A line already there for the file is replaced. `installs` is the skill's own file, never a symlink, so writing it through `installs.new` and `mv` is safe here:
    ```bash
    CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
    FILE="<the settings file you changed, as an absolute path>"
-   BEFORE="<its old refreshInterval, or none>"
+   BEFORE="<new-file, new, its old refreshInterval, or none>"
    LIST="$CONFIG/agent-dock/installs"
-   { awk -F'\t' -v f="$FILE" '$1 != f' "$LIST" 2>/dev/null; printf '%s\t%s\n' "$FILE" "$BEFORE"; } > "$LIST.new" && mv "$LIST.new" "$LIST"
+   { F="$FILE" awk -F'\t' '$1 != ENVIRON["F"]' "$LIST" 2>/dev/null; printf '%s\t%s\n' "$FILE" "$BEFORE"; } > "$LIST.new" && mv "$LIST.new" "$LIST"
    cat "$LIST"
    ```
 
@@ -94,5 +100,11 @@ The add-on wraps the person's own status line instead of editing their script. `
    ls -la "$CONFIG/agent-dock" 2>&1
    ```
    A folder that stays holds a count file of a session whose helpers are running right now; the dock deletes it when they finish. While the Clean View plugin stays installed, the dock still writes those files, and nothing reads them.
+   Then delete each settings file that step 3 read as `new-file`, only when it is now empty (`installs` is gone by now, so go by what step 3 read):
+   ```bash
+   FILE="<a settings file recorded as new-file>"
+   jq -e 'length == 0' "$FILE" >/dev/null 2>&1 && rm -f "$FILE" && echo "removed $FILE"
+   ```
+   Without jq, read the file and delete it only if it holds just `{}`; never delete a settings file that has any other key.
 
 9. **Report.** Tell the person what changed and where. After an install, the count shows within a couple of seconds, and only while helpers work; to take it out again, they run `/clean-view:dock-setup uninstall`. After a Remove, every status line is back as it was.
