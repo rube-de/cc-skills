@@ -1,3 +1,10 @@
+# [2.17.0](https://github.com/rube-de/cc-skills/compare/v2.16.1...v2.17.0) (2026-10-08)
+
+
+### Features
+
+* **clean-view:** add Agent Dock mod and dock-setup skill ([#277](https://github.com/rube-de/cc-skills/issues/277)) ([3fc1fb0](https://github.com/rube-de/cc-skills/commit/3fc1fb0d02a4160efa6869aeaed5615e27859a54))
+
 ## [2.16.1](https://github.com/rube-de/cc-skills/compare/v2.16.0...v2.16.1) (2026-10-06)
 
 
