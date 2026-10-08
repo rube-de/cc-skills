@@ -455,11 +455,13 @@ function agentCalls(content: readonly unknown[]): Array<{ id: string; descriptio
   return calls
 }
 
+// Helpers no person's request asked the dock to split (a slash command's, a
+// skill's, a later notification turn's) are drawn but never capped, held,
+// moved to Haiku or nudged: such a mission runs at size 1.
 async function missionFor($: Engine): Promise<DockMission> {
-  const size = await read($, sizeAtom)
   const now = await $.clock.now()
 
-  return newMission(`mission-${now}-${++missionCount}`, lastJob ?? FALLBACK_JOB, size, now)
+  return newMission(`mission-${now}-${++missionCount}`, lastJob ?? FALLBACK_JOB, 1, now)
 }
 
 // Gives the call a card, or refuses it once the request has its team.

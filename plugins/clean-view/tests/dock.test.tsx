@@ -369,6 +369,40 @@ describe('splitting', () => {
     expect(seen.spawnPrompts[0]).toContain(`As you work, call ${PROGRESS}`)
   })
 
+  test("a slash command's helpers are drawn but never capped, moved or nudged", async ($, on) => {
+    const { clock, seen } = world($, on)
+    await begin($)
+    await dock($, '3')
+    await clock.settle()
+    const command = await $.prompt.submit({ text: '/review 277', wait: false, origin: { kind: 'composer' } })
+    expect(command.context ?? []).toEqual([])
+
+    await writeAgentCalls($, ['a', 'b', 'c', 'd'])
+    for (const id of ['a', 'b', 'c', 'd']) {
+      expect((await launch($, id)).result).toBe('Launched.')
+    }
+    expect(missionOf(seen)?.size).toBe(1)
+    expect(missionOf(seen)?.cards).toHaveLength(4)
+    expect(seen.spawnModels).toEqual([undefined, undefined, undefined, undefined])
+    expect(seen.spawnPrompts[0]).toBe('Check the prices at a.')
+    expect((await $.classic.Stop({ stop_hook_active: false })).block).toBeUndefined()
+  })
+
+  test('a request whose helpers all finished still caps a later call in the same turn', async ($, on) => {
+    const { clock, seen } = world($, on, { isBackground: false })
+    await begin($)
+    await dock($, '3')
+    await clock.settle()
+    await request($)
+
+    for (const id of ['a', 'b', 'c']) {
+      await launch($, id)
+    }
+    expect(missionOf(seen)?.cards.every(card => card.status === 'done')).toBe(true)
+    const fourth = await launch($, 'd')
+    expect(fourth.deny).toBe('Team Size is 3: this request already has 3 helpers. Finish with the helpers you have.')
+  })
+
   test('at size 1 helpers keep their model and prompt', async ($, on) => {
     const { seen } = world($, on)
     await begin($)

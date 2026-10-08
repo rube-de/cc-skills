@@ -15,7 +15,7 @@ user-invocable: true
 
 While Agent Dock helpers run, the dock writes their live count to `<config>/agent-dock/agents-now/<session_id>.json`. `<config>` is `$CLAUDE_CONFIG_DIR`, or `~/.claude` when that is unset. This skill installs a small add-on, `<config>/agent-dock/statusline.sh`, and points a status line at it.
 
-The add-on wraps the person's own status line instead of editing their script. `statusline.sh '<their command>'` runs their command and adds `◇ N agents` to the end of its first line while helpers work. With no status line of their own, `statusline.sh` alone shows just the segment. Every settings file the skill changes is listed in `<config>/agent-dock/installs`, so an uninstall finds them all, other projects included.
+The add-on wraps the person's own status line instead of editing their script. `statusline.sh '<their command>'` runs their command and adds `◇ N agents` to the end of its first line while helpers work. With no status line of their own, `statusline.sh` alone shows just the segment. Every settings file the skill changes is listed in `<config>/agent-dock/installs` with the `refreshInterval` its status line had before, so an uninstall finds them all, other projects included, and puts each one back exactly. Each line is the file's absolute path, a tab, and that value: a number, or `none` when there was no `refreshInterval`.
 
 ## Workflow
 
@@ -39,7 +39,13 @@ The add-on wraps the person's own status line instead of editing their script. `
    - **This project only**: the base is the status line in force here (step 1's order), because a project's own status line replaces the global one rather than adding to it.
    - **Either install**: if the base already starts with the add-on's command, tell the person it is already set up and stop. With no base, the new command is the add-on's command alone. Otherwise it is the add-on's command, a space and the base in single quotes, with each `'` inside the base written as `'\''`.
    - **Either install**: the block also gets `"refreshInterval": 2`, unless it already has one of 2 or less. Claude Code otherwise redraws the status line only when the conversation changes, and the count would freeze while Claude waits for helpers.
-   - **Remove**: the files to check are the global settings, this project's `.claude/settings.local.json`, and every path listed in `$CONFIG/agent-dock/installs` that still exists (`cat "$CONFIG/agent-dock/installs"`). In each one whose `statusLine.command` starts with the add-on's command, the base is its single-quoted argument with `'\''` turned back into `'`. With no argument, the add-on stood alone, so the change removes the whole `statusLine` block. Otherwise it restores the base and drops `refreshInterval` if it is 2, the value this skill sets. If no file has the add-on, the settings need no change; still run step 8 to clear the add-on's files.
+   - **Remove**: the files to check are the global settings, this project's `.claude/settings.local.json`, and every path listed in `$CONFIG/agent-dock/installs` (each line's part before the tab) that still exists (`cat "$CONFIG/agent-dock/installs"`). In each one whose `statusLine.command` starts with the add-on's command, the base is its single-quoted argument with `'\''` turned back into `'`. With no argument, the add-on stood alone, so the change removes the whole `statusLine` block. Otherwise it restores the base and puts `refreshInterval` back to the value the file's `installs` line records: `none` removes the key, a number replaces it. When the file has no line there, or its line has no tab and value (an older install), leave `refreshInterval` as it is: the person may have set it themselves. Read the recorded value with:
+     ```bash
+     CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+     FILE="<the settings file, as an absolute path>"
+     awk -F'\t' -v f="$FILE" '$1 == f { print ($2 == "" ? "unknown" : $2) }' "$CONFIG/agent-dock/installs" 2>/dev/null
+     ```
+     It prints a number, `none`, `unknown` (an older install), or nothing (not listed). If no file has the add-on, the settings need no change; still run step 8 to clear the add-on's files.
 
 4. **Confirm.** Show each file, its old `statusLine` block and the new one; for Remove, also list the files step 8 deletes. Ask with AskUserQuestion, "Change the status line like this?", options **Apply** and **Cancel**. On Cancel, stop and change nothing.
 
@@ -52,18 +58,20 @@ The add-on wraps the person's own status line instead of editing their script. `
    ls -la "$CONFIG/agent-dock/statusline.sh"
    ```
 
-6. **Write the settings.** Edit the settings file in place with the Edit tool. Set `statusLine` to the block from step 3: `{ "type": "command", "command": "<new command>", "refreshInterval": 2 }`, keeping any other keys it already had (`padding`, say). Never write the file through a temp file and `mv`: settings files are often symlinks into a dotfiles repo, and replacing one breaks the link. For **This project only** with no `.claude/settings.local.json` yet, create it holding just the `statusLine` block. Then run:
+6. **Write the settings.** Edit the settings file in place with the Edit tool. Set `statusLine` to the block from step 3: `{ "type": "command", "command": "<new command>", "refreshInterval": 2 }`, keeping any other keys it already had (`padding`, say). Never write the file through a temp file and `mv`: settings files are often symlinks into a dotfiles repo, and replacing one breaks the link. When the file does not exist yet (`$CONFIG/settings.json` for **Global**, `.claude/settings.local.json` for **This project only**), the Edit tool has nothing to edit: create it with the Write tool holding just `{ "statusLine": <the block> }`. Then run:
    ```bash
    FILE="<the settings file you changed>"
    if command -v jq >/dev/null 2>&1; then jq empty "$FILE" && echo "valid JSON"; else echo "jq not installed: read the file back to check it"; fi
    git check-ignore -q .claude/settings.local.json 2>/dev/null && echo "local settings are git-ignored"
    ```
-   If you created `.claude/settings.local.json` and git does not ignore it, tell the person and offer to add it to `.gitignore`. For Remove, repeat the edit and the check for every file from step 3. For an install, record the file so a later uninstall finds it:
+   If you created `.claude/settings.local.json` and git does not ignore it, tell the person and offer to add it to `.gitignore`. For Remove, repeat the edit and the check for every file from step 3. For an install, record the file and the `refreshInterval` its `statusLine` block had before this change (from step 1; `none` for a new file or a block without one), so a later uninstall puts it back. A line already there for the file is replaced. `installs` is the skill's own file, never a symlink, so writing it through `installs.new` and `mv` is safe here:
    ```bash
    CONFIG="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
    FILE="<the settings file you changed, as an absolute path>"
-   touch "$CONFIG/agent-dock/installs"
-   grep -qxF "$FILE" "$CONFIG/agent-dock/installs" || printf '%s\n' "$FILE" >> "$CONFIG/agent-dock/installs"
+   BEFORE="<its old refreshInterval, or none>"
+   LIST="$CONFIG/agent-dock/installs"
+   { awk -F'\t' -v f="$FILE" '$1 != f' "$LIST" 2>/dev/null; printf '%s\t%s\n' "$FILE" "$BEFORE"; } > "$LIST.new" && mv "$LIST.new" "$LIST"
+   cat "$LIST"
    ```
 
 7. **Check it.** Skip this step for Remove. Run this, which reads the new command back from the settings file so its quotes stay intact:

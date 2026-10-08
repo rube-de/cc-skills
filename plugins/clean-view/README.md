@@ -54,23 +54,23 @@ A second mod in the same plugin. Pick a **Team Size** and every request you send
 ```
 ◆  A G E N T   D O C K                                           ● L I V E
 ────────────────────────────────────────────────────────────────────────────
-T E A M   S I Z E   ╭  1  3  5  10 [20] 50  100  │  Custom  ╮
-Splits each request across 20 helpers  ·  20 at a time  ·  Fast & Cheap
+T E A M   S I Z E   ╭  1  3  5  10  20 [50] 100  │  Custom  ╮
+Splits each request across 50 helpers  ·  20 at a time  ·  Fast & Cheap
 
 M I S S I O N   Research bakery pricing                         45%   1:12
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-● 12 working    ○ 8 queued    ✓ 30 done    ✕ 0 stuck
+● 20 working    ○ 10 queued    ✓ 20 done    ✕ 0 stuck
 ```
 
 | Command | Effect |
 |---------|--------|
-| `/dock` | Open the dock, or fold it to a badge under the prompt (`12 working · 8 queued · 30 done`) |
+| `/dock` | Open the dock, or fold it to a badge under the prompt (`20 working · 10 queued · 20 done`) |
 | `/dock 10` | Set the Team Size (1 to 100) and open the dock |
 | **◆ Dock** | The button at the right of the prompt footer opens it too |
 
 - **Size 1**: nothing is added to your requests. Claude decides how many helpers to use, and skills that launch their own agents work as before. The dock still shows any helpers they launch.
 - **Size above 1**: each request carries an instruction to split the work into exactly N pieces, one helper per piece, all launched at once. A helper past N is refused. If Claude uses fewer than N, it gets one follow-up asking it to split the rest.
-- **Not split**: slash commands and skills, and a request you send while helpers from the last one are still running (it joins their mission).
+- **Not split**: slash commands and skills (their helpers show in the dock but are never capped, held, moved to Haiku or nudged), and a request you send while helpers from the last one are still running (it joins their mission).
 - **Big teams**: a size above 20 asks you to confirm first, and a new session always starts back at 1.
 - **Helper model**: *Fast & Cheap* runs helpers on Haiku (only when the size is above 1 and the call names no model). *Same as me* leaves the model alone.
 - **Queueing**: Claude Code refuses an Agent call past `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (default 20) instead of queueing it. The dock holds those calls until a slot frees up. "At a time" is the lower of that limit and `CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY` (default 10). Set both to 20 in the `env` block of your user settings for waves of 20.
