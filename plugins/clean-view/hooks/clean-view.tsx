@@ -80,6 +80,11 @@ let areToolsReady = false
 let isExpansionPending = false
 let lastApiTrouble: string | null = null
 
+// The dock tells helpers to call these by the names the engine gave them.
+export function cleanViewTools(): { plan: string; progress: string } {
+  return tools
+}
+
 export function registerCleanView(on: On) {
   on('session.start', async ($, e, next) => {
     const saved = await $.store.get(STORE_KEY)

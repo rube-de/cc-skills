@@ -230,7 +230,7 @@
     },
     {
       "name": "clean-view",
-      "description": "Clean View - A calm checklist above the prompt for non-technical users: hides tool calls, diffs and command output while showing the plan, the current step and its progress (function-hook mod, Claude Code 2.1.291+)",
+      "description": "Clean View - A calm checklist above the prompt for non-technical users: hides tool calls, diffs and command output while showing the plan, the current step and its progress; plus the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards (function-hook mods, Claude Code 2.1.291+)",
       "version": "2.16.1",
       "source": "./plugins/clean-view",
       "category": "productivity",
