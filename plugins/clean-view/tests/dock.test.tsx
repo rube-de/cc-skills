@@ -255,6 +255,13 @@ describe('team size', () => {
     expect(seen.state.dockTeamSize).toBe(10)
   })
 
+  test('a saved helper model is read back from dock.helperModel', async ($, on) => {
+    const { seen } = world($, on, { stored: { 'dock.helperModel': 'same' } })
+    await begin($)
+
+    expect(seen.state.dockHelperModel).toBe('same')
+  })
+
   test('/dock with a bad number explains the range', async ($, on) => {
     const { seen } = world($, on)
     await begin($)

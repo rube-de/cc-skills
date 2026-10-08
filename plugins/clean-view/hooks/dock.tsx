@@ -75,7 +75,7 @@ const DOCK_COLUMNS = 78
 const FRAME_MS = 200
 const TILE_WIDTH = 17
 const SIZE_KEY = 'dock.teamSize'
-const MODEL_KEY = 'panel.helperModel'
+const MODEL_KEY = 'dock.helperModel'
 const FALLBACK_JOB = 'Helpers at work'
 // Prompts a person sent; a background task's notification is not a new request.
 const PERSON_ORIGINS = new Set(['composer', 'bridge', 'sdk'])
