@@ -12,6 +12,7 @@ import type {
 
 import type { CleanViewChecklist, CleanViewPhase, CleanViewTask } from '../types'
 import { MAX_NAME_LENGTH, cleanName } from './clean-name'
+import { clampPercent, formatDuration } from './progress'
 
 type Engine = EngineInterface
 type Checklist = CleanViewChecklist
@@ -729,29 +730,10 @@ function stringList(value: unknown): string[] {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string' && item.trim() !== '') : []
 }
 
-function clampPercent(value: unknown): number {
-  const percent = Number(value)
-
-  return Number.isFinite(percent) ? Math.round(Math.min(100, Math.max(0, percent))) : 0
-}
-
 function createdTaskId(result: unknown): string | null {
   const id = (result as { task?: { id?: unknown } } | null | undefined)?.task?.id
 
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null
-}
-
-function formatDuration(ms: number): string {
-  const seconds = Math.max(0, Math.floor(ms / 1000))
-  if (seconds < 60) {
-    return `${seconds}s`
-  }
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) {
-    return `${minutes}m ${seconds % 60}s`
-  }
-
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
 }
 
 type TextElement = ReturnType<Engine['ui']['resolve']>['Text']

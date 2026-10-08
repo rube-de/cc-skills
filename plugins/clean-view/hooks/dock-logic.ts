@@ -1,5 +1,6 @@
 import type { DockCard, DockCardStatus, DockHelperModel, DockMission } from '../types'
 import { cleanName } from './clean-name'
+import { formatDuration } from './progress'
 
 export const SIZES = [1, 3, 5, 10, 20, 50, 100] as const
 export const MAX_SIZE = 100
@@ -206,20 +207,6 @@ export function formatClock(ms: number): string {
   return `${minutes}:${String(seconds % 60).padStart(2, '0')}`
 }
 
-// 134_000 → "2m 14s"
-export function formatDuration(ms: number): string {
-  const seconds = Math.max(0, Math.floor(ms / 1000))
-  if (seconds < 60) {
-    return `${seconds}s`
-  }
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) {
-    return `${minutes}m ${seconds % 60}s`
-  }
-
-  return `${Math.floor(minutes / 60)}h ${minutes % 60}m`
-}
-
 export function summary(mission: DockMission): string {
   const total = mission.cards.length
   const stuck = counts(mission.cards).stuck
@@ -335,12 +322,6 @@ export function ended(card: DockCard, status: 'done' | 'stuck', now: number): Do
 
 export function reported(card: DockCard, percent: number): DockCard {
   return isFinished(card.status) ? card : { ...card, percent, hasReported: true }
-}
-
-export function clampPercent(value: unknown): number {
-  const percent = Number(value)
-
-  return Number.isFinite(percent) ? Math.round(Math.min(100, Math.max(0, percent))) : 0
 }
 
 // The main turn ended: a mission whose helpers have all finished is complete,

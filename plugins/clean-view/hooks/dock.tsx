@@ -26,7 +26,6 @@ import {
   capMessage,
   cardTime,
   cardsPerRow,
-  clampPercent,
   closedOut,
   confirmMessage,
   countDir,
@@ -67,6 +66,7 @@ import {
   withoutCard,
 } from './dock-logic'
 import type { MeterPart } from './dock-logic'
+import { clampPercent } from './progress'
 
 type Engine = EngineInterface
 
