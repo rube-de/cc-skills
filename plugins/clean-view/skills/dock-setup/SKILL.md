@@ -1,6 +1,6 @@
 ---
 name: dock-setup
-description: "Add the Agent Dock's live helper count (\"◇ N agents\") to Claude Code's status line, globally or for this project only, or uninstall it again. Use when the user runs /dock-setup or /dock-setup uninstall, or asks to show the agent count, helper count or Agent Dock in the status line, or to remove or uninstall it."
+description: "Add the Agent Dock's live helper count (\"◇ N agents\") to Claude Code's status line, globally or for this project only, or uninstall it again. Use when the user runs /clean-view:dock-setup or /clean-view:dock-setup uninstall, or asks to show the agent count, helper count or Agent Dock in the status line, or to remove or uninstall it."
 argument-hint: "[uninstall]"
 allowed-tools:
   - Bash
