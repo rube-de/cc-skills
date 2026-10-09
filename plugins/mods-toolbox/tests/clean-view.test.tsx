@@ -53,12 +53,20 @@ type Options = {
   toolPrefix?: string
   bandBelow?: string
   answerTool?: (e: ToolCallInput) => ToolCallResult
+  // Background helpers the engine reports running; the test adds and removes ids.
+  helpers?: Set<string>
 }
 
 // What the engine would do beneath the plugin, answered from memory.
 function world(
   on: On,
-  { stored = {}, toolPrefix = 'mcp__mods-toolbox__', bandBelow, answerTool = () => ({ result: 'ok' }) }: Options = {},
+  {
+    stored = {},
+    toolPrefix = 'mcp__mods-toolbox__',
+    bandBelow,
+    answerTool = () => ({ result: 'ok' }),
+    helpers = new Set<string>(),
+  }: Options = {},
 ) {
   const seen: Seen = { checklist: null, tick: 0, isEnabled: undefined, stored: { ...stored }, titleRequests: 0 }
   on('state.set', { plugin: 'mods-toolbox' }, ($, e, next) => {
@@ -81,6 +89,9 @@ function world(
   on('tool.describe', ($, e) => ({ description: e.description }))
   on('classic.Notification', () => ({}))
   on('classic.StopFailure', () => ({}))
+  on('agent.list', () => ({
+    value: [...helpers].map(id => ({ id, description: id, type: 'general-purpose', status: 'running' as const })),
+  }))
   on('tool.register', ($, e) => ({ value: { tool: `${toolPrefix}${e.name}` } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('model.complete', () => {
@@ -354,6 +365,54 @@ describe('needs you, stuck and done', () => {
     await $.turn.start({ text: 'Blue please', turnId: 'turn-2' })
     expect(seen.checklist?.phase).toBe('working')
     expect(seen.checklist?.tasks.map(task => task.name)).toEqual(['Build the page', 'Check it works'])
+  })
+
+  test('a turn that ends with helpers still out keeps working, and their report carries the job on', async ($, on) => {
+    const helpers = new Set(['a', 'b', 'c'])
+    const { seen } = world(on, { helpers })
+    await startJob($)
+    await $.tool.call({ tool: PLAN, steps: ['List the docs', 'Check the docs', 'Combine the findings'] })
+    await $.tool.call({ tool: PROGRESS, task: 'List the docs', percent: 100 })
+    await $.turn.complete({ answer: 'Waiting for 3 helpers.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+
+    expect(seen.checklist?.phase).toBe('working')
+    expect(seen.checklist?.needsYouReason).toBeNull()
+    expect(seen.checklist?.waitingOnHelpers).toBe(3)
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    expect(await ui.find({ type: 'Text', text: 'waiting for 3 helpers to finish' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Needs you' })).toBeUndefined()
+
+    helpers.clear()
+    await $.turn.start({ text: '<task-notification>Check the docs: done</task-notification>', turnId: 'turn-2' })
+    expect(seen.checklist?.phase).toBe('working')
+    expect(seen.checklist?.waitingOnHelpers).toBe(0)
+    expect(seen.checklist?.tasks.map(task => task.status)).toEqual(['done', 'active', 'upcoming'])
+
+    await $.tool.call({ tool: PROGRESS, task: 'Combine the findings', percent: 100 })
+    await $.turn.complete({ answer: 'Here is the list.', durationMs: 10, isAborted: false, turnId: 'turn-2', reason: 'answer' })
+    expect(seen.checklist?.phase).toBe('done')
+  })
+
+  test('the waiting count follows the helpers, and a job whose helpers all left stops waiting', async ($, on) => {
+    const helpers = new Set(['a', 'b'])
+    const { clock, seen } = world(on, { helpers })
+    await startJob($)
+    await $.tool.call({ tool: PLAN, steps: ['Check the docs', 'Combine the findings'] })
+    await $.turn.complete({ answer: 'Waiting for 2 helpers.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    expect(seen.checklist?.waitingOnHelpers).toBe(2)
+
+    helpers.delete('a')
+    await clock.advance(5000)
+    expect(seen.checklist?.waitingOnHelpers).toBe(1)
+
+    // No turn picks the job up: one quiet check is not enough, two are.
+    helpers.delete('b')
+    await clock.advance(5000)
+    expect(seen.checklist?.phase).toBe('working')
+    await clock.advance(5000)
+    expect(seen.checklist?.phase).toBe('needsYou')
+    expect(seen.checklist?.needsYouReason).toBe('Claude is waiting for your reply')
+    expect(seen.checklist?.waitingOnHelpers).toBe(0)
   })
 
   test('slash commands do not start a job', async ($, on) => {

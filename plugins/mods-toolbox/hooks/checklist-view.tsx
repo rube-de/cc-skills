@@ -73,7 +73,7 @@ export function checklistView(
 function headline(Text: TextElement, job: CleanViewChecklist, now: number): RenderNode[] {
   switch (job.phase) {
     case 'working':
-      return [<Text bold>{job.title}</Text>, ` · ${formatDuration(now - job.startedAt)}`]
+      return [<Text bold>{job.title}</Text>, ` · ${formatDuration(now - job.startedAt)}`, waitingFor(job.waitingOnHelpers)]
     case 'needsYou':
       return [
         <Text backgroundColor="warning" color="inverseText" bold>
@@ -91,6 +91,16 @@ function headline(Text: TextElement, job: CleanViewChecklist, now: number): Rend
         ` · ${job.title} · took ${formatDuration((job.finishedAt ?? now) - job.startedAt)}`,
       ]
   }
+}
+
+// Claude's turn ended but its background helpers are still out; it goes on
+// when they report.
+function waitingFor(helpers: number | undefined): string {
+  if (helpers === undefined || helpers <= 0) {
+    return ''
+  }
+
+  return ` · waiting for ${helpers === 1 ? '1 helper' : `${helpers} helpers`} to finish`
 }
 
 function mark(Text: TextElement, task: CleanViewTask, phase: CleanViewPhase) {

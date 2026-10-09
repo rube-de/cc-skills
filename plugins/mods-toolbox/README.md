@@ -57,7 +57,7 @@ Both work while Claude is busy, and the choice is remembered after a restart.
 | Progress | Claude reports progress per step (`report_progress`); 100% checks a step off and starts the next. While Clean View is off, both tools stay registered but Claude's own calls change nothing, and `plan_steps` waits behind ToolSearch. `report_progress` stays in front because helpers' reports still reach the Agent Dock. |
 | Job name | While Clean View is on, each new request sends one small Haiku call, at low effort, to name the job in 2 to 6 words. |
 | Hidden rows | `ToolUse`, `ToolResult` and `ToolGroup` rows, and the "run in background" hint. |
-| States | Working, **Needs you** (permission prompt, question, waiting for your reply), Stuck (you said no, repeated failures, API errors in one plain sentence), Stopped (Esc), All done (shrinks to one line after 5 seconds). |
+| States | Working (also while background helpers are still out: `· waiting for 3 helpers to finish`), **Needs you** (permission prompt, question, waiting for your reply), Stuck (you said no, repeated failures, API errors in one plain sentence), Stopped (Esc), All done (shrinks to one line after 5 seconds). |
 
 ## Agent Dock
 

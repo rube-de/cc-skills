@@ -12,6 +12,7 @@ import type {
 import type { CleanViewChecklist, CleanViewTask } from '../types'
 import { API_TROUBLE, WAITING_FOR_REPLY, checklistView, isAnimated } from './checklist-view'
 import { cleanName } from './clean-name'
+import { ACTIVE_STATUSES } from './dock-logic'
 import { clampPercent } from './progress'
 
 type Engine = EngineInterface
@@ -36,6 +37,10 @@ const FRAME_MS = 250
 const COLLAPSE_AFTER_MS = 5000
 const FAILURES_BEFORE_STUCK = 3
 const MAX_STEPS = 8
+const HELPER_CHECK_MS = 5000
+// Checks in a row that find no helper out before the job stops waiting, so the
+// turn their reports start has time to begin.
+const QUIET_CHECKS = 2
 
 const DEFAULT_TITLE = 'Working on your request'
 const NEEDS_OK = 'Claude needs your OK to continue'
@@ -77,6 +82,8 @@ const TITLE_PROMPT =
 let tools = { plan: 'mcp__mods-toolbox__plan_steps', progress: 'mcp__mods-toolbox__report_progress' }
 let ticker: Timer | null = null
 let collapseTimer: Timer | null = null
+let helperWatch: Timer | null = null
+let quietChecks = 0
 let areToolsReady = false
 let isExpansionPending = false
 let lastApiTrouble: string | null = null
@@ -93,6 +100,7 @@ export function registerCleanView(on: On) {
 
     const job = await read($, checklistAtom)
     syncTicker($, job)
+    syncHelperWatch($, job)
     scheduleCollapse($, job, await $.clock.now())
 
     await $.command.register({
@@ -164,9 +172,10 @@ export function registerCleanView(on: On) {
     }
 
     const now = await $.clock.now()
+    // The person's answer, or the helpers' reports, carry the same job on.
     const job = await change($, current =>
-      current !== null && isWaitingOnPerson(current)
-        ? { ...working(current), turnId: e.turnId, failedInARow: 0, finishedAt: null, isCollapsed: false }
+      current !== null && (isWaitingOnPerson(current) || isWaitingOnHelpers(current))
+        ? { ...working(current), turnId: e.turnId, failedInARow: 0, finishedAt: null, isCollapsed: false, waitingOnHelpers: 0 }
         : newJob(e.turnId, e.turnId, now),
     )
     if (job?.jobId === e.turnId) {
@@ -249,7 +258,10 @@ export function registerCleanView(on: On) {
     }
     const now = await $.clock.now()
     const trouble = lastApiTrouble
-    const job = await change($, current => (isTurnRunning(current) ? finished(current, e, now, trouble) : current))
+    const helpers = isTurnRunning(await read($, checklistAtom)) ? ((await runningHelpers($)) ?? 0) : 0
+    const job = await change($, current =>
+      isTurnRunning(current) ? finished(current, e, now, trouble, helpers) : current,
+    )
     scheduleCollapse($, job, now)
 
     return next(e)
@@ -431,8 +443,54 @@ async function needsYou($: Engine, reason: string) {
 async function change($: Engine, fn: (job: Checklist | null) => Checklist | null): Promise<Checklist | null> {
   const job = await update($, checklistAtom, fn)
   syncTicker($, job)
+  syncHelperWatch($, job)
 
   return job
+}
+
+// Between turns the helpers' count follows the engine, and a job whose helpers
+// all left without a report starting a turn ends the way a turn without them
+// would, so it never waits for good.
+function syncHelperWatch($: Engine, job: Checklist | null) {
+  const shouldWatch = job !== null && isWaitingOnHelpers(job)
+  if (shouldWatch && helperWatch === null) {
+    quietChecks = 0
+    helperWatch = $.clock.every(HELPER_CHECK_MS, () => {
+      void recheckHelpers($)
+    })
+  } else if (!shouldWatch && helperWatch !== null) {
+    helperWatch.cancel()
+    helperWatch = null
+  }
+}
+
+async function recheckHelpers($: Engine) {
+  const helpers = await runningHelpers($)
+  if (helpers === null) {
+    return
+  }
+  quietChecks = helpers === 0 ? quietChecks + 1 : 0
+  const now = await $.clock.now()
+  const job = await change($, current => {
+    if (current === null || !isWaitingOnHelpers(current)) {
+      return current
+    }
+    if (helpers > 0) {
+      return helpers === current.waitingOnHelpers ? current : { ...current, waitingOnHelpers: helpers }
+    }
+
+    return quietChecks < QUIET_CHECKS ? current : settled(current, now)
+  })
+  scheduleCollapse($, job, now)
+}
+
+// Helpers the engine still runs for this session; null when it can't say.
+async function runningHelpers($: Engine): Promise<number | null> {
+  try {
+    return (await $.agent.list()).filter(agent => ACTIVE_STATUSES.has(agent.status)).length
+  } catch {
+    return null
+  }
 }
 
 function syncTicker($: Engine, job: Checklist | null) {
@@ -503,6 +561,7 @@ function newJob(jobId: string, turnId: string, now: number): Checklist {
     stuckReason: null,
     failedInARow: 0,
     turnId,
+    waitingOnHelpers: 0,
     startedAt: now,
     finishedAt: null,
     isCollapsed: false,
@@ -631,8 +690,8 @@ function withOneActive(tasks: CleanViewTask[]): CleanViewTask[] {
   return next < 0 ? tasks : tasks.map((task, index) => (index === next ? { ...task, status: 'active' } : task))
 }
 
-function finished(job: Checklist, e: TurnCompleteInput, now: number, trouble: string | null): Checklist {
-  const ended: Checklist = { ...job, turnId: null, needsYouReason: null }
+function finished(job: Checklist, e: TurnCompleteInput, now: number, trouble: string | null, helpers: number): Checklist {
+  const ended: Checklist = { ...job, turnId: null, needsYouReason: null, waitingOnHelpers: 0 }
   if (e.reason === 'error') {
     return { ...ended, phase: 'stuck', stuckReason: trouble ?? API_TROUBLE }
   }
@@ -646,6 +705,18 @@ function finished(job: Checklist, e: TurnCompleteInput, now: number, trouble: st
   if (e.reason === 'aborted') {
     return { ...ended, phase: 'stopped', stuckReason: null, finishedAt: now }
   }
+  // Claude ends its turn while background helpers run, and goes on when they
+  // report: it is not waiting for the person.
+  if (helpers > 0) {
+    return { ...ended, phase: 'working', stuckReason: null, waitingOnHelpers: helpers }
+  }
+
+  return settled(ended, now)
+}
+
+// A job with no turn and no helper left: unfinished steps wait for the person.
+function settled(job: Checklist, now: number): Checklist {
+  const ended: Checklist = { ...job, waitingOnHelpers: 0 }
   if (job.planSource !== null && job.tasks.some(task => task.status !== 'done')) {
     return { ...ended, phase: 'needsYou', stuckReason: null, needsYouReason: WAITING_FOR_REPLY }
   }
@@ -691,6 +762,10 @@ function isOwnTool(tool: string): boolean {
 
 function isTurnRunning(job: Checklist | null): job is Checklist {
   return job !== null && job.turnId !== null
+}
+
+function isWaitingOnHelpers(job: Checklist): boolean {
+  return job.turnId === null && job.waitingOnHelpers > 0
 }
 
 function isWaitingOnPerson(job: Checklist): boolean {

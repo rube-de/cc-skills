@@ -24,6 +24,9 @@ export type CleanViewChecklist = {
   failedInARow: number
   // The main turn working on this job right now; null between turns.
   turnId: string | null
+  // Background helpers still out between turns: their reports start the next
+  // turn, so the job keeps working. 0 otherwise.
+  waitingOnHelpers: number
   startedAt: number
   finishedAt: number | null
   isCollapsed: boolean
