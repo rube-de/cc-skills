@@ -1,3 +1,10 @@
+# [2.18.0](https://github.com/rube-de/cc-skills/compare/v2.17.2...v2.18.0) (2026-10-09)
+
+
+### Features
+
+* **mods-toolbox:** add the Toolbox settings popup ([#280](https://github.com/rube-de/cc-skills/issues/280)) ([5643c2c](https://github.com/rube-de/cc-skills/commit/5643c2c7000b2d0bd4891530b16df539e104cf68))
+
 ## [2.17.2](https://github.com/rube-de/cc-skills/compare/v2.17.1...v2.17.2) (2026-10-09)
 
 ## [2.17.1](https://github.com/rube-de/cc-skills/compare/v2.17.0...v2.17.1) (2026-10-09)
