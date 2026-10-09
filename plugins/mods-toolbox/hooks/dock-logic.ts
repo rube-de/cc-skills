@@ -17,6 +17,10 @@ export const BAD_CUSTOM = 'Type a whole number from 1 to 100'
 export const STOPPED = 'Stopped before this helper started.'
 export const HELPERS_SKIP_PLAN = 'Helpers skip the plan. Just call report_progress as you work.'
 export const TOO_NARROW = 'The window is too narrow to show the Agent Dock. Widen it or watch the status bar.'
+// The dock's pane and the Toolbox popup ask the same way.
+export const BIG_TEAM_QUESTION = 'Big team: this uses your plan quickly. Continue?'
+export const CUSTOM_QUESTION = 'How many helpers? '
+export const CUSTOM_PLACEHOLDER = '1 to 100'
 
 export const CORAL = '#FF7A66'
 export const GOLD = '#F2C14E'
@@ -160,11 +164,14 @@ export function isLive(mission: DockMission | null): mission is DockMission {
   return mission !== null && mission.finishedAt === null
 }
 
-export function badgeText(mission: DockMission | null, size: number): string {
-  if (mission === null || mission.cards.length === 0) {
-    return `◆ Dock · team of ${size}`
+// Only while a helper works or waits, as for the count file: an idle team needs
+// no line under the prompt, and the engine draws every mod status line with a
+// warning glyph.
+export function badgeText(mission: DockMission | null): string | undefined {
+  const tally = counts(mission?.cards ?? [])
+  if (tally.working + tally.queued === 0) {
+    return undefined
   }
-  const tally = counts(mission.cards)
   const parts = [`${tally.working} working`, `${tally.queued} queued`, `${tally.done} done`]
   if (tally.stuck > 0) {
     parts.push(`${tally.stuck} stuck`)

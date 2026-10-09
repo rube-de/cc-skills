@@ -4,6 +4,7 @@ Function-hook mods that change how Claude Code looks while it works:
 
 - **[Clean View](#clean-view)**: one calm checklist above the prompt instead of tool calls, diffs and command output.
 - **[Agent Dock](#agent-dock)**: every request split across a team of parallel helpers you pick, each shown as a live card.
+- **[Toolbox](#toolbox)**: one popup above the prompt for both mods' settings, opened from **◆ Toolbox ▾** in the prompt footer.
 
 They ship together because the dock's helpers report through Clean View's `report_progress` tool.
 
@@ -27,7 +28,7 @@ Or at the prompt: `/plugin install mods-toolbox --marketplace rube-de/cc-skills`
 A calm, friendly Claude Code for people who aren't technical. While Claude works, tool calls, file diffs and command output are hidden, and one checklist above the prompt shows the plan, what's happening now and how far along it is.
 
 ```
-Build my landing page · 1m 12s                     [ ● Clean View: ON ]
+Build my landing page · 1m 12s
 ✓ Read your brand notes            ██████████  Done
 ▶ Build the pricing section        ██████░░░░  60%
 ○ Add the contact form             ░░░░░░░░░░  Next
@@ -38,13 +39,13 @@ Claude's written replies stay visible. Permission prompts and questions stay vis
 
 ### Turn it on and off
 
-Clean View starts on. Click **[ ● Clean View: ON ]** above the prompt, or type:
+Clean View starts on. Use the **Clean View** switch in the [Toolbox](#toolbox), or type:
 
 | Command | Effect |
 |---------|--------|
 | `/simple` | Flip it |
 | `/simple on` | Turn it on |
-| `/simple off` | Turn it off: every hidden row comes back, only the button stays |
+| `/simple off` | Turn it off: every hidden row comes back |
 
 Both work while Claude is busy, and the choice is remembered after a restart.
 
@@ -75,9 +76,9 @@ M I S S I O N   Research bakery pricing                         45%   1:12
 
 | Command | Effect |
 |---------|--------|
-| `/dock` | Open the dock, or fold it to a badge under the prompt (`20 working · 10 queued · 20 done`) |
+| `/dock` | Open the dock, or fold it. While helpers run, a folded dock shows a badge under the prompt (`20 working · 10 queued · 20 done`); an idle one shows nothing |
 | `/dock 10` | Set the Team Size (1 to 100) and open the dock |
-| **◆ Dock** | The button at the right of the prompt footer opens it too |
+| **Agent Dock** | The Toolbox's Launch entry opens it too |
 
 - **Size 1**: nothing is added to your requests. Claude decides how many helpers to use, and skills that launch their own agents work as before. The dock still shows any helpers they launch.
 - **Size above 1**: each request carries an instruction to split the work into exactly N pieces, one helper per piece, all launched at once. A helper past N is refused. If Claude uses fewer than N, it gets one follow-up asking it to split the rest.
@@ -93,9 +94,31 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 
 **Cost:** at size 50 *every* request becomes 50 agents. Keep the size at 1 unless you mean it.
 
+## Toolbox
+
+**◆ Toolbox ▾** at the right of the prompt footer, or `/toolbox`, opens one popup above the prompt with both mods' settings:
+
+```
+╭────────────────────────────────────────────────────────────────╮
+│ ◆  T O O L B O X                                             ✕ │
+│ ── S E T T I N G S ─────────────────────────────────────────── │
+│ ● Clean View    simple checklist                  ● On  ○ Off  │
+│ ◇ Team size     per request  1  3 [5] 10  20  50  100  Custom  │
+│ ◇ Helpers       model they use       Fast & Cheap  Same as me  │
+│ ── L A U N C H ─────────────────────────────────────────────── │
+│ ◆ Agent Dock  team of 5                                        │
+╰────────────────────────────────────────────────────────────────╯
+```
+
+- It always sits at the right edge. With room, Clean View's checklist keeps its rows beside it. On a narrow terminal the checklist folds to its header (`· step 2 of 3`) above it.
+- Every switch is the same setting as `/simple` and `/dock`, saved the same way. Team Size above 20 asks first, in gold, inside the popup.
+- **Agent Dock** opens the dock and closes the popup to give it room.
+- ✕ or a second press on the footer button closes it. Esc doesn't, since the band above the prompt has no close key.
+- It stays open across requests, for this session only. On VS Code and mobile, where the band isn't drawn, use `/simple` and `/dock`.
+
 ## For other mods
 
-The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/index.d.ts`](./types/index.d.ts): `cleanViewEnabled`, `checklist` and `tick`, and the dock's `dockTeamSize`, `dockMission` and the rest beside them. List `mods-toolbox` under `dependencies` in your mod's `plugin.json` to get the types laid beside it.
+The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/index.d.ts`](./types/index.d.ts): `cleanViewEnabled`, `checklist` and `tick`, the dock's `dockTeamSize`, `dockMission` and the rest beside them, and `toolboxIsOpen`. List `mods-toolbox` under `dependencies` in your mod's `plugin.json` to get the types laid beside it.
 
 ## Development
 
@@ -105,4 +128,4 @@ claude plugin validate plugins/mods-toolbox
 claude plugin test plugins/mods-toolbox
 ```
 
-`hooks/register.tsx` is the entry point: it calls `registerDock(on)` from `hooks/dock.tsx` first, so the dock's hook on a helper's `report_progress` runs before Clean View's, then `registerCleanView(on)` from `hooks/clean-view.tsx`. Every step name goes through `hooks/clean-name.ts`, and both mods take percents and durations from `hooks/progress.ts`. The dock's logic that needs no `$` (sizes, names, instruction texts, counts, meters) lives in `hooks/dock-logic.ts` so tests call it directly. Claude Code writes the API types into `.claude-plugin/types/` (gitignored) when it loads the plugin, and `tsconfig.json` extends them, so `tsc -p plugins/mods-toolbox` works after one load.
+`hooks/register.tsx` is the entry point: it calls `registerToolbox(on)` from `hooks/toolbox.tsx` first, so its band hook sits outside Clean View's, then `registerDock(on)` from `hooks/dock.tsx`, so the dock's hook on a helper's `report_progress` runs before Clean View's, then `registerCleanView(on)` from `hooks/clean-view.tsx`. The engine follows `$` only into functions of the same file, so the Toolbox draws its controls and Clean View and the dock answer their keys in their own `ui.press` and `ui.input` hooks; each file reads the shared values through its own `atom` on the same literal key. While the popup is open the Toolbox lays out the band: Clean View steps aside, and the checklist is drawn through the same `$`-free `hooks/checklist-view.tsx` both use, beside the popup or folded above it. The band's layout math is in `hooks/toolbox-logic.ts`. Every step name goes through `hooks/clean-name.ts`, and both mods take percents and durations from `hooks/progress.ts`. The dock's logic that needs no `$` (sizes, names, instruction texts, counts, meters) lives in `hooks/dock-logic.ts` so tests call it directly. Claude Code writes the API types into `.claude-plugin/types/` (gitignored) when it loads the plugin, and `tsconfig.json` extends them, so `tsc -p plugins/mods-toolbox` works after one load.

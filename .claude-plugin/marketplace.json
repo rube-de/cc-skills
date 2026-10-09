@@ -230,7 +230,7 @@
     },
     {
       "name": "mods-toolbox",
-      "description": "Mods Toolbox - Function-hook mods (Claude Code 2.1.291+): Clean View, a calm checklist above the prompt for non-technical users that hides tool calls, diffs and command output while showing the plan, the current step and its progress; and the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards",
+      "description": "Mods Toolbox - Function-hook mods (Claude Code 2.1.291+): Clean View, a calm checklist above the prompt for non-technical users that hides tool calls, diffs and command output while showing the plan, the current step and its progress; and the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards; one Toolbox popup above the prompt holds both mods' settings",
       "version": "2.17.2",
       "source": "./plugins/mods-toolbox",
       "category": "productivity",

@@ -77,6 +77,8 @@ declare module 'claude-code' {
       dockIsFolded: boolean
       dockMission: DockMission | null
       dockTick: number
+      // The Toolbox popup above the prompt; this session only.
+      toolboxIsOpen: boolean
     }
   }
 }

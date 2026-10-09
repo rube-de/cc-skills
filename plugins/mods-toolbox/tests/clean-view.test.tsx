@@ -1,4 +1,4 @@
-import type { On, ToolCallInput, ToolCallResult } from 'claude-code'
+import type { On, ToolCallArgs, ToolCallInput, ToolCallResult } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
@@ -157,7 +157,8 @@ describe('checklist', () => {
       expect(await ui.find({ type: 'Text', text: '✓' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: '▶' })).toBeDefined()
       expect((await ui.find({ type: 'Text', text: '██████░░░░' }))?.text).toBe('██████░░░░')
-      expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: ON')
+      // The switch lives in the Toolbox now, not on the band.
+      expect(await ui.find({ type: 'Button' })).toBeUndefined()
       await ui.unmount()
     }
   })
@@ -388,10 +389,11 @@ describe('gate', () => {
     const before = await $.tool.call({ tool: 'Bash', command: 'ls' })
     expect(before.deny).toContain('mcp__mods-toolbox-marketplace__plan_steps')
 
+    // A name only this test's engine gives the tool, so the generated tool types don't list it.
     const planned = await $.tool.call({
       tool: 'mcp__mods-toolbox-marketplace__plan_steps',
       steps: ['Look around', 'Make the change'],
-    })
+    } as unknown as ToolCallArgs)
     expect(planned.result).toBe('Planned 2 steps. The first one has started.')
 
     const after = await $.tool.call({ tool: 'Bash', command: 'ls' })
@@ -477,35 +479,18 @@ describe('switching', () => {
 
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
     expect(await ui.find({ type: 'Text', text: 'Understand your request' })).toBeUndefined()
-    expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: OFF')
 
     const shown = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'ToolUse', props: TOOL_ROW })
     expect(await shown.find({ type: 'Text', text: 'Bash(ls)' })).toBeDefined()
   })
 
-  test('the button flips the setting on every surface and saves it', async ($, on) => {
-    const { seen } = world(on)
-    await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
-
-    for (const surface of SURFACES) {
-      const ui = await $.ui.mount({ ...band(), surface })
-      await ui.press({ key: 'toggle' })
-      expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: OFF')
-      expect(seen.stored.cleanViewEnabled).toBe(false)
-      await ui.press({ key: 'toggle' })
-      expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: ON')
-      expect(seen.stored.cleanViewEnabled).toBe(true)
-      await ui.unmount()
-    }
-  })
-
   test('the saved setting is read back at session start', async ($, on) => {
     const { seen } = world(on, { stored: { cleanViewEnabled: false } })
-    await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
+    await startJob($)
 
     expect(seen.isEnabled).toBe(false)
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
-    expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: OFF')
+    expect(await ui.find({ type: 'Text', text: 'Understand your request' })).toBeUndefined()
   })
 })
 

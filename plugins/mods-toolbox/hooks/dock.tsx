@@ -7,7 +7,10 @@ import {
   ACTIVE_STATUSES,
   BADGE_COLORS,
   BAD_CUSTOM,
+  BIG_TEAM_QUESTION,
   CORAL,
+  CUSTOM_PLACEHOLDER,
+  CUSTOM_QUESTION,
   GOLD,
   GREEN,
   HAIRLINE,
@@ -355,19 +358,43 @@ export function registerDock(on: On) {
     return closed
   })
 
-  on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
-    const below = await next(e)
-    const { Box, Button } = $.ui.resolve(e)
+  on('ui.render', { component: 'Pane', requestId: PANE }, ($, e) => drawDock($, e))
 
-    return (
-      <Box flexDirection="row" gap={1}>
-        {below}
-        <Button key="dock-button" plain dimColor label="◆ Dock" onPress={() => toggleDock($)} />
-      </Box>
-    )
+  // The Toolbox popup draws Team Size, the helper model and the Agent Dock with
+  // the pane's own keys; their presses are the dock's to answer.
+  on('ui.press', { plugin: 'mods-toolbox', component: 'AbovePrompt', element: /^(size-|model-|big-|custom-|toolbox-dock$)/ }, async ($, e, next) => {
+    try {
+      const size = e.element.startsWith('size-') ? parseSize(e.element.slice('size-'.length)) : null
+      if (e.element === 'toolbox-dock') {
+        await showDock($)
+        // The popup's own press closes it, so the dock gets the room.
+        return next(e)
+      }
+      if (size !== null) {
+        await chooseSize($, size)
+      } else if (e.element === 'size-custom' || e.element === 'custom-cancel') {
+        await setCustomOpen($, e.element === 'size-custom')
+      } else if (e.element === 'model-fast' || e.element === 'model-same') {
+        await pickModel($, e.element === 'model-fast' ? 'fast' : 'same')
+      } else if (e.element === 'big-continue') {
+        await confirmBigTeam($)
+      } else if (e.element === 'big-cancel') {
+        await cancelBigTeam($)
+      }
+    } catch {
+      $.ui.toast('The Agent Dock could not take that. Try /dock.')
+    }
+
+    return { element: e.element }
   })
 
-  on('ui.render', { component: 'Pane', requestId: PANE }, ($, e) => drawDock($, e))
+  on('ui.input', { plugin: 'mods-toolbox', component: 'AbovePrompt', element: 'custom-size' }, async ($, e) => {
+    if (e.kind === 'submit') {
+      await submitCustom($, e.value).catch(() => $.ui.toast(BAD_CUSTOM))
+    }
+
+    return { element: e.element, value: e.value }
+  })
 }
 
 async function readCountFolder($: Engine): Promise<string | null> {
@@ -574,7 +601,7 @@ function syncTicker($: Engine, mission: DockMission | null) {
 async function refreshBadge($: Engine, known?: DockMission | null) {
   const isFolded = await read($, foldedAtom)
   const mission = known === undefined ? await read($, missionAtom) : known
-  const text = isFolded ? badgeText(mission, await read($, sizeAtom)) : undefined
+  const text = isFolded ? badgeText(mission) : undefined
   if (text !== shownStatus) {
     shownStatus = text
     $.ui.status(text)
@@ -628,7 +655,6 @@ async function commitSize($: Engine, size: number) {
   await update($, pendingAtom, () => null)
   await update($, sizeAtom, () => size)
   await $.store.set(SIZE_KEY, size)
-  await refreshBadge($)
 }
 
 async function confirmBigTeam($: Engine) {
@@ -636,6 +662,14 @@ async function confirmBigTeam($: Engine) {
   if (pending !== null) {
     await commitSize($, pending)
   }
+}
+
+async function cancelBigTeam($: Engine) {
+  await update($, pendingAtom, () => null)
+}
+
+async function setCustomOpen($: Engine, isOpen: boolean) {
+  await update($, customAtom, () => isOpen)
 }
 
 async function submitCustom($: Engine, text: string) {
@@ -655,15 +689,63 @@ async function pickModel($: Engine, model: DockHelperModel) {
 type Elements = ReturnType<Engine['ui']['resolve']>
 type TextElement = Elements['Text']
 
+async function drawCustomSize($: Engine, e: RenderInput<'Pane'>) {
+  if (!(await read($, customAtom))) {
+    return null
+  }
+  const { Box, Text, Button } = $.ui.resolve(e)
+
+  return (
+    <Box borderStyle="round" borderColor={CORAL} paddingX={1} flexDirection="row" gap={2}>
+      {e.surface === 'mobile' ? (
+        <Text>Type /dock and a number from 1 to 100</Text>
+      ) : (
+        (() => {
+          const { Input } = $.ui.resolve(e)
+          return (
+            <Input
+              key="custom-size"
+              label={CUSTOM_QUESTION}
+              placeholder={CUSTOM_PLACEHOLDER}
+              submitLabel="set"
+              autoFocus
+              onSubmit={value => submitCustom($, value)}
+            />
+          )
+        })()
+      )}
+      <Button key="custom-cancel" plain label="Cancel" onPress={() => setCustomOpen($, false)} />
+    </Box>
+  )
+}
+
+async function drawBigTeamConfirm($: Engine, e: RenderInput<'Pane'>) {
+  const pending = await read($, pendingAtom)
+  if (pending === null) {
+    return null
+  }
+  const { Box, Text, Button } = $.ui.resolve(e)
+
+  return (
+    <Box borderStyle="round" borderColor={GOLD} paddingX={1} flexDirection="column">
+      <Text color={GOLD}>{BIG_TEAM_QUESTION}</Text>
+      <Box flexDirection="row" gap={2}>
+        <Button key="big-continue" variant="primary" autoFocus label={`Continue with ${pending}`} onPress={() => confirmBigTeam($)} />
+        <Button key="big-cancel" label="Cancel" onPress={() => cancelBigTeam($)} />
+      </Box>
+    </Box>
+  )
+}
+
 async function drawDock($: Engine, e: RenderInput<'Pane'>) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const columns = Math.max(24, e.props.bodyColumns)
-  const [size, model, pending, isCustomOpen, mission] = await Promise.all([
+  const [size, model, mission, customBox, confirmBox] = await Promise.all([
     read($, sizeAtom),
     read($, modelAtom),
-    read($, pendingAtom),
-    read($, customAtom),
     read($, missionAtom),
+    drawCustomSize($, e),
+    drawBigTeamConfirm($, e),
   ])
   const now = await $.clock.now()
   // Only a live mission reads the clock, so nothing redraws while idle.
@@ -675,29 +757,6 @@ async function drawDock($: Engine, e: RenderInput<'Pane'>) {
     </Text>
   )
   const isPreset = (SIZES as readonly number[]).includes(size)
-
-  const customBox = isCustomOpen ? (
-    <Box borderStyle="round" borderColor={CORAL} paddingX={1} flexDirection="row" gap={2}>
-      {e.surface === 'mobile' ? (
-        <Text>Type /dock and a number from 1 to 100</Text>
-      ) : (
-        (() => {
-          const { Input } = $.ui.resolve(e)
-          return (
-            <Input
-              key="custom-size"
-              label="How many helpers? "
-              placeholder="1 to 100"
-              submitLabel="set"
-              autoFocus
-              onSubmit={value => submitCustom($, value)}
-            />
-          )
-        })()
-      )}
-      <Button key="custom-cancel" plain label="Cancel" onPress={() => update($, customAtom, () => false)} />
-    </Box>
-  ) : null
 
   return (
     <Box flexDirection="column">
@@ -722,7 +781,7 @@ async function drawDock($: Engine, e: RenderInput<'Pane'>) {
         )}
         <Text color={HAIRLINE}>{' │ '}</Text>
         {isPreset ? null : chip(` ${size} `)}
-        <Button key="size-custom" plain label=" Custom " onPress={() => update($, customAtom, () => true)} />
+        <Button key="size-custom" plain label=" Custom " onPress={() => setCustomOpen($, true)} />
         <Text color={HAIRLINE}>{' ╮'}</Text>
       </Box>
       <Text color={MUTED} wrap="truncate-end">
@@ -735,15 +794,7 @@ async function drawDock($: Engine, e: RenderInput<'Pane'>) {
         {model === 'same' ? chip(' Same as me ') : <Button key="model-same" plain label=" Same as me " onPress={() => pickModel($, 'same')} />}
       </Box>
       {customBox}
-      {pending === null ? null : (
-        <Box borderStyle="round" borderColor={GOLD} paddingX={1} flexDirection="column">
-          <Text color={GOLD}>Big team: this uses your plan quickly. Continue?</Text>
-          <Box flexDirection="row" gap={2}>
-            <Button key="big-continue" variant="primary" autoFocus label={`Continue with ${pending}`} onPress={() => confirmBigTeam($)} />
-            <Button key="big-cancel" label="Cancel" onPress={() => update($, pendingAtom, () => null)} />
-          </Box>
-        </Box>
-      )}
+      {confirmBox}
       <Text> </Text>
       {mission === null ? idle(Box, Text, size) : drawMission($, e, mission, columns, now, frame)}
     </Box>
