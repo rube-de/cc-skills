@@ -229,22 +229,24 @@
       ]
     },
     {
-      "name": "clean-view",
-      "description": "Clean View - A calm checklist above the prompt for non-technical users: hides tool calls, diffs and command output while showing the plan, the current step and its progress; plus the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards (function-hook mods, Claude Code 2.1.291+)",
+      "name": "mods-toolbox",
+      "description": "Mods Toolbox - Function-hook mods (Claude Code 2.1.291+): Clean View, a calm checklist above the prompt for non-technical users that hides tool calls, diffs and command output while showing the plan, the current step and its progress; and the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards",
       "version": "2.17.1",
-      "source": "./plugins/clean-view",
+      "source": "./plugins/mods-toolbox",
       "category": "productivity",
       "author": {
         "name": "rube-de",
         "url": "https://github.com/rube-de"
       },
       "keywords": [
+        "mods",
         "clean-view",
+        "agent-dock",
         "checklist",
         "progress",
+        "parallel-agents",
         "non-technical",
         "ui",
-        "mod",
         "function-hooks"
       ]
     }

@@ -20,7 +20,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 | [jules-review](./plugins/jules-review/) | Code Review | Plugin or Skill | Review Jules AI agent PRs using council with smart quick/full mode |
 | [dlc](./plugins/dlc/) | Quality | Plugin or Skill | Dev Life Cycle quality gates: security scans, code quality, performance analysis, test coverage, and PR review compliance |
 | [feature-discovery](./plugins/feature-discovery/) | Productivity | Plugin only | Multi-agent roadmap discovery: map the product, research competitors, ideate across value lenses, then rank and spec a validated roadmap (requires the Workflow tool) |
-| [clean-view](./plugins/clean-view/) | Productivity | Plugin only | Calm view for non-technical users: hides tool calls, diffs and command output behind a progress checklist above the prompt, plus the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards (Claude Code 2.1.291+) |
+| [mods-toolbox](./plugins/mods-toolbox/) | Productivity | Plugin only | Function-hook mods: Clean View, a calm view for non-technical users that hides tool calls, diffs and command output behind a progress checklist above the prompt, and the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards (Claude Code 2.1.291+) |
 
 > **Plugin vs Skill**: Plugins use the full Claude Code plugin system (hooks, agents, commands, scripts). Skills install only SKILL.md definitions via [skills.sh](https://skills.sh). Plugins that rely on hooks, commands, or agent definitions need plugin install. See each plugin's README for details.
 
@@ -66,7 +66,7 @@ claude plugin install jules-review@rube-cc-skills
 claude plugin install ci-review@rube-cc-skills
 claude plugin install dlc@rube-cc-skills
 claude plugin install feature-discovery@rube-cc-skills
-claude plugin install clean-view@rube-cc-skills   # changes how Claude Code looks and works; not in the loops below
+claude plugin install mods-toolbox@rube-cc-skills   # changes how Claude Code looks and works; not in the loops below
 
 # Or install all at once
 for p in council cdt pm plugin-dev temporal doppler oasis-dev ci-review jules-review dlc feature-discovery; do claude plugin install "$p@rube-cc-skills"; done
@@ -203,7 +203,7 @@ cc-skills/
 │   │   └── skills/          # dlc, security, quality, perf, test, pr-check, pr-validity, git-ops
 │   ├── feature-discovery/   # Multi-agent roadmap discovery
 │   │   └── skills/          # feature-discovery + workflow script
-│   └── clean-view/          # Calm checklist view + Agent Dock (function-hook mods)
+│   └── mods-toolbox/        # Function-hook mods: Clean View checklist + Agent Dock
 │       ├── hooks/           # register.tsx + clean-view.tsx and dock.tsx hooks modules
 │       ├── skills/          # dock-setup: Agent Dock count in the status line
 │       ├── tests/           # claude plugin test suite

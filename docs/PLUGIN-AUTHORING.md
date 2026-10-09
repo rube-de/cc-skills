@@ -104,10 +104,10 @@ Hook types: `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`.
 
 ### Function-hook plugins (mods)
 
-A plugin can instead ship a TypeScript hooks module that runs inside Claude Code (Claude Code 2.1.291+, early-access API): it can draw UI above the prompt, register tools and slash commands, gate tool calls and rewrite the system prompt. [`plugins/clean-view/`](../plugins/clean-view/) is the reference:
+A plugin can instead ship a TypeScript hooks module that runs inside Claude Code (Claude Code 2.1.291+, early-access API): it can draw UI above the prompt, register tools and slash commands, gate tool calls and rewrite the system prompt. [`plugins/mods-toolbox/`](../plugins/mods-toolbox/) is the reference:
 
 ```
-clean-view/
+mods-toolbox/
 ├── .claude-plugin/plugin.json   # "types": "./types/index.d.ts"
 ├── hooks/
 │   ├── hooks.json               # { "modules": ["./register.tsx"] }

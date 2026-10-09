@@ -65,7 +65,7 @@ export type DockHelperModel = 'fast' | 'same'
 
 declare module 'claude-code' {
   interface PluginState {
-    'clean-view': {
+    'mods-toolbox': {
       cleanViewEnabled: boolean
       checklist: CleanViewChecklist | null
       tick: number

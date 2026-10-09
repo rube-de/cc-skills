@@ -419,14 +419,14 @@ A plugin's own tools are listed as `mcp__<plugin>__<name>`, but the name the eng
 
 ```ts
 // BAD — a renamed install denies its own plan tool
-const PLAN = 'mcp__clean-view__plan_steps'
+const PLAN = 'mcp__mods-toolbox__plan_steps'
 // GOOD
 tools = { plan: (await $.tool.register(spec)).tool, ... }
 ```
 
 In `claude plugin test`, the test `$` has no `state` or `store` noun to read back. Spy on writes with an `on('state.set', ...)` hook beneath the plugin, and answer `store.get`/`store.set` yourself: combining `mock.store(on)` with your own `store.set` hook fails the load with `on("store.set") registered twice`.
 
-> Source: [`plugins/clean-view/hooks/clean-view.tsx`](../plugins/clean-view/hooks/clean-view.tsx), [`plugins/clean-view/tests/clean-view.test.tsx`](../plugins/clean-view/tests/clean-view.test.tsx)
+> Source: [`plugins/mods-toolbox/hooks/clean-view.tsx`](../plugins/mods-toolbox/hooks/clean-view.tsx), [`plugins/mods-toolbox/tests/clean-view.test.tsx`](../plugins/mods-toolbox/tests/clean-view.test.tsx)
 
 ### Function-hook plugins: share render sites, honour your own off switch
 
@@ -1642,7 +1642,7 @@ Fixing one reviewer finding in a shared file led to also "fixing" adjacent, unre
 - **A mod may write outside the project**: `$.fs.write` to `~/.claude/...` works and creates folders. `$.fs` has no delete, so remove a file with `$.process.run(['rm', '-f', path])`. Probe behavior like this with a throwaway plugin whose slash command does the work: `claude -p "/probe" --plugin-dir <dir>` loads it fresh and answers the command without a model call.
 - **The status line gets no agent count**: its stdin JSON carries `session_id`, `workspace`, `cost` and the like, but nothing about running subagents. A mod that wants a count there writes a per-session file keyed by `session_id` in a global folder (session ids are unique across projects), and the status line reads it. `statusLine` also works in a project's `.claude/settings.json` or `.claude/settings.local.json`, but it replaces the global one there rather than adding to it, so wrap the person's command instead of editing their script. `subagentStatusLine` is a different thing: one row per helper in the agent panel.
 
-> Source: `plugins/clean-view/hooks/dock.tsx`, `plugins/clean-view/tests/dock.test.tsx`, `plugins/clean-view/skills/dock-setup/`; binary strings checked in `~/.local/share/claude/versions/2.1.294`.
+> Source: `plugins/mods-toolbox/hooks/dock.tsx`, `plugins/mods-toolbox/tests/dock.test.tsx`, `plugins/mods-toolbox/skills/dock-setup/`; binary strings checked in `~/.local/share/claude/versions/2.1.294`.
 
 **From PR #277 review (generalizable mistakes):**
 
@@ -1653,11 +1653,19 @@ Fixing one reviewer finding in a shared file led to also "fixing" adjacent, unre
 - **A second mod in the same plugin imports shared helpers; it doesn't copy them.** The dock's pure module copied `formatDuration` and `clampPercent` byte for byte from `clean-view.tsx`, where they were private. Don't fix it by having one mod import from the other's file: the base mod would depend on the add-on, or the pure module on a `$` module. Move the helpers into a neutral `$`-free module both import (`hooks/progress.ts`), and keep each module single-purpose (`clean-name.ts` stays names-only).
 - **Give a mod's persisted `$.store` keys one namespace.** The dock saved `dock.teamSize` next to `panel.helperModel`, because the spec named the second key. Keys can't be renamed for free once a release has saved data under them, so align them before the first release (now `dock.*`) and flag a spec-given name that breaks the pattern.
 
-> Source: [PR #277](https://github.com/rube-de/cc-skills/pull/277) review threads; `plugins/clean-view/hooks/dock.tsx` (`missionFor`), `plugins/clean-view/skills/dock-setup/SKILL.md` steps 3 and 6.
+> Source: [PR #277](https://github.com/rube-de/cc-skills/pull/277) review threads; `plugins/mods-toolbox/hooks/dock.tsx` (`missionFor`), `plugins/mods-toolbox/skills/dock-setup/SKILL.md` steps 3 and 6.
 
 **A mod's on/off switch must reach its own tools' handlers, not just the prompt and UI:**
 
 - **Tools from `$.tool.register` stay registered and callable whatever the mod's toggle says.** Clean View gated its system-prompt guide, the plan-first gate and the rendering on `enabledAtom`, but `planSteps`/`reportProgress` never read it. With Clean View off, a `plan_steps` call still built a hidden job. The tool description ("before doing anything else") still invites that call, and `tool.describe`'s `isDeferred: false` keeps the schema loaded. Bad: gate everything the person sees and leave the tool handler ungated. Good: the handler for the mod's own tools checks the toggle first and answers with a plain `result` (not `deny`, which reads as an error to retry) that says the mod is off. Leave calls that another mod in the plugin answers first (the dock's helper calls) to that mod.
 - **There is no `$.tool.unregister`; "off" means moving the tool behind ToolSearch.** `$.tool.register` only replaces a tool, so a mod can't take one back. To get a tool's schema and description out of the prompt while off, return `isDeferred: true` from `tool.describe` and call `$.ui.invalidate('tool.describe')` on every real switch: the engine caches that answer for the session, and each invalidate spends the prompt cache, so skip it when the value didn't change. Keep the no-op in the handler anyway, because a deferred tool can still be loaded and called. Don't defer a tool another mod still relies on (the dock's helpers call `report_progress` and aren't told how to load it).
 
-> Source: `plugins/clean-view/hooks/clean-view.tsx` (`tool.call` hook, `OFF_NOTE`), test "plan_steps and report_progress do nothing while Clean View is off"; branch `bugfix/clean-view-tools-noop-when-off`.
+> Source: `plugins/mods-toolbox/hooks/clean-view.tsx` (`tool.call` hook, `OFF_NOTE`), test "plan_steps and report_progress do nothing while Clean View is off"; branch `bugfix/clean-view-tools-noop-when-off`.
+
+## Renaming a function-hook plugin (clean-view → mods-toolbox)
+
+- **Name a plugin for the family of mods it holds, not for its first mod.** `clean-view` became misleading the moment the Agent Dock moved in beside it. The plugin name is load-bearing in four places, so renaming it later is a breaking change for everyone who installed it: the install id (`<name>@<marketplace>`, so people uninstall the old one and install the new one), every `atom({ plugin: '<name>' })` and the `PluginState['<name>']` key in `types/index.d.ts` (miss one and that atom's state silently stops working), the `mcp__<name>__*` tool names (and any permission rules that list them), and the skill namespace (`/<name>:skill`). `$.store` values are kept per plugin, so saved settings start over. Pick the umbrella name before the first release, while you're the only one who installed it.
+- **Rename the plugin key, not the mod's own identifiers.** A blanket `s/clean-view/mods-toolbox/` breaks `import … from './clean-view'` and rewrites history in learnings and branch names. Replace by role: the quoted plugin key, the `mcp__<name>__` prefix, `plugins/<name>` paths, `<name>@` and `/<name>:`. Leave mod files, functions and state keys (`clean-view.tsx`, `registerCleanView`, `cleanViewEnabled`) alone.
+- **Don't run `tsc -p plugins/<name>` before `.claude-plugin/types/` exists.** The plugin's `tsconfig.json` only extends the generated one, which carries `noEmit`. Without it, `tsc` falls back to defaults and writes a `.js` beside every `.ts`/`.tsx`. A headless `claude -p --plugin-dir <dir>` load does not write the types folder. The copy Claude Code wrote into the install cache (`~/.claude/plugins/cache/<marketplace>/<name>/<version>/.claude-plugin/types/`) doesn't depend on the plugin's name, so copying it in works for a type-check.
+
+> Source: `plugins/mods-toolbox/types/index.d.ts`, `plugins/mods-toolbox/hooks/clean-view.tsx` and `dock.tsx` (atoms, tool-name fallback), `plugins/mods-toolbox/README.md` ("Coming from `clean-view`"); branch `refactor/rename-clean-view-to-mods-toolbox`.
