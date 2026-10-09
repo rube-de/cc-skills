@@ -44,7 +44,7 @@ export function parseSize(text: string): number | null {
   return size >= 1 && size <= MAX_SIZE ? size : null
 }
 
-// A big team never carries over: a new session starts it at 1.
+/** A big team never carries over: a new session starts it at 1. */
 export function restoreSize(saved: unknown): number {
   return typeof saved === 'number' && Number.isInteger(saved) && saved >= 1 && saved <= BIG_TEAM ? saved : 1
 }
@@ -63,7 +63,7 @@ export function parseLimit(raw: string | undefined, fallback: number): number {
   return Number.isInteger(limit) && limit > 0 ? limit : fallback
 }
 
-// Helpers running at once: Claude Code refuses an Agent call past either limit.
+/** Helpers running at once: Claude Code refuses an Agent call past either limit. */
 export function atATime(subagentLimit: string | undefined, toolLimit: string | undefined): number {
   return Math.min(parseLimit(subagentLimit, DEFAULT_SUBAGENT_LIMIT), parseLimit(toolLimit, DEFAULT_TOOL_LIMIT))
 }
@@ -79,7 +79,7 @@ export function taskName(description: string): string {
   return cleanName(description)
 }
 
-// "Price check: Panera" → PA, "Read the docs" → RT.
+/** "Price check: Panera" → PA, "Read the docs" → RT. */
 export function initials(task: string): string {
   const subject = task.includes(':') ? task.slice(task.indexOf(':') + 1) : task
   const words = subject.match(/[\p{L}\p{N}]+/gu) ?? task.match(/[\p{L}\p{N}]+/gu) ?? []
@@ -150,7 +150,7 @@ export function isFinished(status: DockCardStatus): boolean {
   return status === 'done' || status === 'stuck'
 }
 
-// A stuck helper is over too, so it counts as a full share of the bar.
+/** A stuck helper is over too, so it counts as a full share of the bar. */
 export function missionPercent(cards: readonly DockCard[]): number {
   if (cards.length === 0) {
     return 0
@@ -164,9 +164,11 @@ export function isLive(mission: DockMission | null): mission is DockMission {
   return mission !== null && mission.finishedAt === null
 }
 
-// Only while a helper works or waits, as for the count file: an idle team needs
-// no line under the prompt, and the engine draws every mod status line with a
-// warning glyph.
+/**
+ * Only while a helper works or waits, as for the count file: an idle team needs
+ * no line under the prompt, and the engine draws every mod status line with a
+ * warning glyph.
+ */
 export function badgeText(mission: DockMission | null): string | undefined {
   const tally = counts(mission?.cards ?? [])
   if (tally.working + tally.queued === 0) {
@@ -182,7 +184,7 @@ export function badgeText(mission: DockMission | null): string | undefined {
 
 export type CountFile = { working: number; queued: number; done: number; stuck: number; job: string; updatedAt: number }
 
-// What the status line reads for this session; null while no helper runs.
+/** What the status line reads for this session; null while no helper runs. */
 export function countFile(mission: DockMission | null, now: number): CountFile | null {
   if (mission === null) {
     return null
@@ -195,7 +197,7 @@ export function countFile(mission: DockMission | null, now: number): CountFile |
   return { working: tally.working, queued: tally.queued, done: tally.done, stuck: tally.stuck, job: mission.job, updatedAt: now }
 }
 
-// The global folder the status line reads, beside Claude Code's own settings.
+/** The global folder the status line reads, beside Claude Code's own settings. */
 export function countDir(configDir: string | undefined, home: string | undefined): string | null {
   const base = configDir !== undefined && configDir !== '' ? configDir : home !== undefined && home !== '' ? `${home}/.claude` : null
 
@@ -206,7 +208,7 @@ export function countPath(dir: string, sessionId: string): string {
   return `${dir}/${sessionId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`
 }
 
-// 72_000 → "1:12"
+/** 72_000 → "1:12" */
 export function formatClock(ms: number): string {
   const seconds = Math.max(0, Math.floor(ms / 1000))
   const minutes = Math.floor(seconds / 60)
@@ -253,7 +255,7 @@ export function newCard(id: string, description: string, index: number): DockCar
   }
 }
 
-// At a team size above 1 no card is drawn past the size: those calls are refused.
+/** At a team size above 1 no card is drawn past the size: those calls are refused. */
 export function withQueued(
   mission: DockMission,
   calls: ReadonlyArray<{ id: string; description: string }>,
@@ -278,7 +280,7 @@ export function withAgent(mission: DockMission, agentId: string, change: (card: 
   return { ...mission, cards: mission.cards.map(card => (card.agentId === agentId ? change(card) : card)) }
 }
 
-// Helpers the engine reports finished whose own turn.complete never reached the dock.
+/** Helpers the engine reports finished whose own turn.complete never reached the dock. */
 export function reconciled(mission: DockMission, statuses: ReadonlyMap<string, string>, now: number): DockMission {
   const cards = mission.cards.map(card => {
     const status = card.status === 'working' && card.agentId !== null ? statuses.get(card.agentId) : undefined
@@ -299,9 +301,11 @@ export function hasActiveHelper(mission: DockMission, statuses: ReadonlyMap<stri
   return mission.cards.some(card => !isFinished(card.status) && card.agentId !== null && ACTIVE_STATUSES.has(statuses.get(card.agentId) ?? ''))
 }
 
-// Closes a mission the engine has no helper running for, so a missed finish
-// never leaves the next request unsplit. A helper that started and is gone
-// counts as done; one that never started counts as stuck.
+/**
+ * Closes a mission the engine has no helper running for, so a missed finish
+ * never leaves the next request unsplit. A helper that started and is gone
+ * counts as done; one that never started counts as stuck.
+ */
 export function closedOut(mission: DockMission, statuses: ReadonlyMap<string, string>, now: number): DockMission | null {
   const settled = reconciled(mission, statuses, now)
   const cards = settled.cards.map(card =>
@@ -331,8 +335,10 @@ export function reported(card: DockCard, percent: number): DockCard {
   return isFinished(card.status) ? card : { ...card, percent, hasReported: true }
 }
 
-// The main turn ended: a mission whose helpers have all finished is complete,
-// and one that never launched a helper goes back to standing by.
+/**
+ * The main turn ended: a mission whose helpers have all finished is complete,
+ * and one that never launched a helper goes back to standing by.
+ */
 export function afterMainTurn(mission: DockMission, isAborted: boolean, now: number): DockMission | null {
   const cards = isAborted ? mission.cards.map(card => (card.status === 'queued' ? ended(card, 'stuck', now) : card)) : mission.cards
   if (cards.length === 0) {
@@ -349,7 +355,7 @@ export function spaced(text: string): string {
     .join('   ')
 }
 
-// A color run along a gradient: `cells` cells split into up to `steps` runs.
+/** A color run along a gradient: `cells` cells split into up to `steps` runs. */
 export function gradientRuns(cells: number, from: string, to: string, steps = 8): Array<{ cells: number; color: string }> {
   if (cells <= 0) {
     return []
@@ -385,8 +391,10 @@ function rgb(hex: string): [number, number, number] {
 
 export type MeterPart = { text: string; color: string }
 
-// Cells of one meter: done in coral to gold, a reported percent in green, a
-// three-cell sweep while a helper has not reported yet, a hairline queued.
+/**
+ * Cells of one meter: done in coral to gold, a reported percent in green, a
+ * three-cell sweep while a helper has not reported yet, a hairline queued.
+ */
 export function meter(card: DockCard, cells: number, frame: number): MeterPart[] {
   if (cells <= 0) {
     return []
@@ -422,8 +430,10 @@ export function meter(card: DockCard, cells: number, frame: number): MeterPart[]
   ])
 }
 
-// The mission bar: finished helpers sweep coral to gold, working ones
-// shimmer green, the rest is a hairline.
+/**
+ * The mission bar: finished helpers sweep coral to gold, working ones
+ * shimmer green, the rest is a hairline.
+ */
 export function missionBar(cards: readonly DockCard[], cells: number, frame: number): MeterPart[] {
   if (cells <= 0) {
     return []
@@ -473,8 +483,10 @@ export function rows<T>(items: readonly T[], perRow: number): T[][] {
   return out
 }
 
-// The idle row: one seat per team member, up to 25, in a fixed shimmer of
-// bright and soft seats (no clock runs while idle).
+/**
+ * The idle row: one seat per team member, up to 25, in a fixed shimmer of
+ * bright and soft seats (no clock runs while idle).
+ */
 export function seats(size: number): Array<{ color: string; isSoft: boolean }> {
   return Array.from({ length: Math.min(size, MAX_SEATS) }, (_, index) => ({
     color: BADGE_COLORS[index % BADGE_COLORS.length]!,

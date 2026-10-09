@@ -211,7 +211,9 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
     model === 'same' ? chip(' Same as me ', CORAL, INK) : pick('model-same', ' Same as me '),
   ]
 
-  // The band is drawn on the terminal and desktop alone, and both take typing.
+  // The engine raises AbovePrompt on the terminal and desktop alone, so the
+  // popup never shows on mobile or VS Code; the surface check only narrows the
+  // element table to one that has Input.
   let customBox: RenderNode | null = null
   if (isCustomOpen && e.surface !== 'mobile' && e.surface !== 'vscode') {
     const { Input } = $.ui.resolve(e)

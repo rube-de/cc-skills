@@ -81,7 +81,7 @@ let areToolsReady = false
 let isExpansionPending = false
 let lastApiTrouble: string | null = null
 
-// The dock tells helpers to call these by the names the engine gave them.
+/** The dock tells helpers to call these by the names the engine gave them. */
 export function cleanViewTools(): { plan: string; progress: string } {
   return tools
 }
