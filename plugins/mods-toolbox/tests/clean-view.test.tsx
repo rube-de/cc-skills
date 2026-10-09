@@ -393,6 +393,25 @@ describe('needs you, stuck and done', () => {
     expect(seen.checklist?.phase).toBe('done')
   })
 
+  // As the dock's mission does: what the person types while helpers are out joins the job they work on.
+  test('a request typed while helpers are out keeps their checklist', async ($, on) => {
+    const helpers = new Set(['a', 'b'])
+    const { seen } = world(on, { helpers })
+    await startJob($)
+    await $.tool.call({ tool: PLAN, steps: ['Check the docs', 'Combine the findings'] })
+    await $.turn.complete({ answer: 'Waiting for 2 helpers.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    const jobId = seen.checklist?.jobId
+
+    await $.turn.start({ text: 'Also check the README', turnId: 'turn-2' })
+    expect(seen.checklist?.jobId).toBe(jobId)
+    expect(seen.checklist?.turnId).toBe('turn-2')
+    expect(seen.checklist?.phase).toBe('working')
+    expect(seen.checklist?.tasks.map(task => task.name)).toEqual(['Check the docs', 'Combine the findings'])
+
+    await $.turn.complete({ answer: 'Added it.', durationMs: 10, isAborted: false, turnId: 'turn-2', reason: 'answer' })
+    expect(seen.checklist?.waitingOnHelpers).toBe(2)
+  })
+
   test('the waiting count follows the helpers, and a job whose helpers all left stops waiting', async ($, on) => {
     const helpers = new Set(['a', 'b'])
     const { clock, seen } = world(on, { helpers })
