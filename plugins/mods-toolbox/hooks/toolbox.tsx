@@ -87,7 +87,7 @@ export function registerToolbox(on: On) {
       return next(e)
     }
     const { Box } = $.ui.resolve(e)
-    const layout = bandLayout(e.props.bodyColumns, true)
+    const layout = bandLayout(e.props.bodyColumns)
     const [checklist, popup, below] = await Promise.all([
       drawChecklist($, e, layout),
       drawPopup($, e, layout.popupWidth),

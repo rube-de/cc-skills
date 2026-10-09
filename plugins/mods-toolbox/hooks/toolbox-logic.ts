@@ -11,10 +11,7 @@ export type BandLayout = {
   isSideBySide: boolean
 }
 
-export function bandLayout(columns: number, isOpen: boolean): BandLayout {
-  if (!isOpen) {
-    return { popupWidth: 0, checklistColumns: columns, isSideBySide: false }
-  }
+export function bandLayout(columns: number): BandLayout {
   const popupWidth = Math.min(POPUP_WIDTH, columns)
   const beside = columns - popupWidth - BAND_GAP
   const isSideBySide = beside >= CHECKLIST_MIN
