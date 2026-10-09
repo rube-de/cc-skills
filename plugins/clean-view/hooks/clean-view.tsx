@@ -44,6 +44,7 @@ const SAID_NO = 'you said no to a step, so Claude paused'
 const KEEPS_FAILING = 'a step keeps failing, Claude is trying another way'
 const REFUSED = "Claude couldn't help with that request"
 const API_TROUBLE = 'something went wrong talking to Claude, try again'
+const OFF_NOTE = 'Clean View is off, so there is no checklist to update. Carry on without it.'
 
 // The words Claude Code hands the model when the person rejects a permission prompt.
 const PERSON_SAID_NO = /doesn't want to proceed|tool use was rejected/i
@@ -123,10 +124,16 @@ export function registerCleanView(on: On) {
     return { text: isOn ? 'Clean View is on.' : 'Clean View is off.' }
   })
 
+  // While off, plan_steps waits behind ToolSearch so its "before anything else" doesn't nudge Claude.
+  // report_progress stays in front: the dock's helpers call it whether Clean View is on or not.
   on('tool.describe', async ($, e, next) => {
     const described = await next(e)
+    const tool = String(e.tool)
+    if (!isOwnTool(tool)) {
+      return described
+    }
 
-    return isOwnTool(String(e.tool)) ? { ...described, isDeferred: false } : described
+    return { ...described, isDeferred: tool === tools.plan && !(await read($, enabledAtom)) }
   })
 
   on('prompt.compose', async ($, e, next) => {
@@ -172,11 +179,12 @@ export function registerCleanView(on: On) {
 
   on('tool.call', async ($, e, next) => {
     const tool = String(e.tool)
-    if (tool === tools.plan) {
-      return planSteps($, e)
-    }
-    if (tool === tools.progress) {
-      return reportProgress($, e)
+    if (isOwnTool(tool)) {
+      // While off there is no checklist, so a stray call has nothing to update.
+      if (!(await read($, enabledAtom))) {
+        return { result: OFF_NOTE }
+      }
+      return tool === tools.plan ? planSteps($, e) : reportProgress($, e)
     }
     if (e.agentId !== undefined) {
       return next(e)
@@ -434,7 +442,13 @@ async function reportProgress($: Engine, e: ToolCallInput): Promise<ToolCallResu
 }
 
 async function setEnabled($: Engine, wanted: boolean | 'toggle'): Promise<boolean> {
+  const wasOn = await read($, enabledAtom)
   const isOn = await update($, enabledAtom, current => (wanted === 'toggle' ? !current : wanted))
+  // The engine keeps tool.describe's answer for the session; asking again moves plan_steps.
+  // Only on a real change, since each ask spends the prompt cache.
+  if (isOn !== wasOn) {
+    $.ui.invalidate('tool.describe')
+  }
   await $.store.set(STORE_KEY, isOn)
   $.ui.toast(isOn ? 'Clean View is on: you see the plan, not the details' : 'Clean View is off: every detail is showing')
 

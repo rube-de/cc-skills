@@ -78,6 +78,7 @@ function world(
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('prompt.compose', () => ({ sections: [] }))
   on('tool.call', ($, e) => answerTool(e))
+  on('tool.describe', ($, e) => ({ description: e.description }))
   on('classic.Notification', () => ({}))
   on('classic.StopFailure', () => ({}))
   on('tool.register', ($, e) => ({ value: { tool: `${toolPrefix}${e.name}` } }))
@@ -409,6 +410,43 @@ describe('gate', () => {
 
     const ran = await $.tool.call({ tool: 'Bash', command: 'ls' })
     expect(ran.result).toBe('ok')
+  })
+
+  test('plan_steps and report_progress do nothing while Clean View is off', async ($, on) => {
+    const { seen } = world(on, { stored: { cleanViewEnabled: false } })
+    await startJob($)
+
+    const planned = await $.tool.call({ tool: PLAN, steps: ['Look around', 'Make the change'] })
+    expect(planned.result).toContain('Clean View is off')
+    const progressed = await $.tool.call({ tool: PROGRESS, task: 'Look around', percent: 50 })
+    expect(progressed.result).toContain('Clean View is off')
+
+    expect(seen.checklist).toBeNull()
+    expect(seen.titleRequests).toBe(0)
+  })
+
+  test('plan_steps waits behind ToolSearch while off; report_progress stays in front', async ($, on) => {
+    world(on)
+    await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
+    const placed = async (tool: string) =>
+      (await $.tool.describe({ tool, description: 'x', provider: { plugin: PLUGIN, tier: 'user' } })).isDeferred
+    const simple = (args: string) =>
+      $.command.run({
+        command: 'simple',
+        args,
+        origin: { kind: 'composer' },
+        presentation: { isFullscreen: false, columns: 80 },
+      })
+
+    expect(await placed(PLAN)).toBe(false)
+    expect(await placed(PROGRESS)).toBe(false)
+
+    await simple('off')
+    expect(await placed(PLAN)).toBe(true)
+    expect(await placed(PROGRESS)).toBe(false)
+
+    await simple('on')
+    expect(await placed(PLAN)).toBe(false)
   })
 })
 
