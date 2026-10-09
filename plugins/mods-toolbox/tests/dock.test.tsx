@@ -63,7 +63,7 @@ function world($: Engine, on: On, { stored = {}, env, isBackground = true }: Opt
   on('turn.complete', ($, e) => ({ text: e.answer }))
   on('prompt.compose', () => ({ sections: [] }))
   on('prompt.submit', ($, e) => ({ text: e.text, context: e.context }))
-  // The footer's own mode labels, beneath the dock's button.
+  // The footer's own mode labels, beneath the Toolbox button.
   on('ui.render', { component: 'SessionMode' }, ($, e) => {
     const { Text } = $.ui.resolve(e)
 
@@ -631,7 +631,7 @@ describe('status line count', () => {
 })
 
 describe('pane', () => {
-  test('/dock folds to the badge and back', async ($, on) => {
+  test('/dock folds to the badge while helpers run, and to nothing when idle', async ($, on) => {
     const { clock, seen } = world($, on)
     await begin($)
 
@@ -643,7 +643,7 @@ describe('pane', () => {
     await dock($, '')
     await clock.settle()
     expect(seen.open.has(PANE)).toBe(false)
-    expect(seen.status).toBe('◆ Dock · team of 1')
+    expect(seen.status).toBeUndefined()
 
     await dock($, '3')
     await clock.settle()
@@ -658,19 +658,12 @@ describe('pane', () => {
     await clock.settle()
     expect(seen.open.has(PANE)).toBe(true)
     expect(seen.status).toBeUndefined()
-  })
 
-  test('the status bar button opens the dock', async ($, on) => {
-    const { seen } = world($, on)
-    await begin($)
-
-    for (const surface of SURFACES) {
-      seen.open.clear()
-      const ui = await $.ui.mount({ plugin: PLUGIN, surface, component: 'SessionMode', props: { modes: [] } })
-      await ui.press({ key: 'dock-button' })
-      expect(seen.open.has(PANE)).toBe(true)
-      await ui.unmount()
-    }
+    await dock($, '')
+    await clock.settle()
+    expect(seen.status).toBe('1 working · 0 queued · 0 done')
+    await helperDone($, 'agent-a')
+    expect(seen.status).toBeUndefined()
   })
 
   test('idle shows the team standing by on every surface', async ($, on) => {

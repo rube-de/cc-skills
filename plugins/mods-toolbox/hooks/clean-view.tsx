@@ -3,16 +3,17 @@ import type {
   EngineInterface,
   On,
   RenderInput,
-  RenderNode,
   Timer,
   ToolCallInput,
   ToolCallResult,
   TurnCompleteInput,
 } from 'claude-code'
 
-import type { CleanViewChecklist, CleanViewPhase, CleanViewTask } from '../types'
-import { MAX_NAME_LENGTH, cleanName } from './clean-name'
-import { clampPercent, formatDuration } from './progress'
+import type { CleanViewChecklist, CleanViewTask } from '../types'
+import { API_TROUBLE, WAITING_FOR_REPLY, checklistView, isAnimated } from './checklist-view'
+import { cleanName } from './clean-name'
+import { ACTIVE_STATUSES } from './dock-logic'
+import { clampPercent } from './progress'
 
 type Engine = EngineInterface
 type Checklist = CleanViewChecklist
@@ -20,6 +21,8 @@ type Checklist = CleanViewChecklist
 const enabledAtom = atom({ plugin: 'mods-toolbox', key: 'cleanViewEnabled' } as const, true)
 const checklistAtom = atom({ plugin: 'mods-toolbox', key: 'checklist' } as const, null)
 const tickAtom = atom({ plugin: 'mods-toolbox', key: 'tick' } as const, 0)
+// The Toolbox's: while its popup is open it draws the checklist beside it.
+const toolboxOpenAtom = atom({ plugin: 'mods-toolbox', key: 'toolboxIsOpen' } as const, false)
 
 const STORE_KEY = 'cleanViewEnabled'
 const ALWAYS_ALLOWED = new Set([
@@ -32,18 +35,19 @@ const ALWAYS_ALLOWED = new Set([
 
 const FRAME_MS = 250
 const COLLAPSE_AFTER_MS = 5000
-const METER_CELLS = 10
 const FAILURES_BEFORE_STUCK = 3
 const MAX_STEPS = 8
+const HELPER_CHECK_MS = 5000
+// Checks in a row that find no helper out before the job stops waiting, so the
+// turn their reports start has time to begin.
+const QUIET_CHECKS = 2
 
 const DEFAULT_TITLE = 'Working on your request'
 const NEEDS_OK = 'Claude needs your OK to continue'
 const HAS_QUESTION = 'Claude has a question for you'
-const WAITING_FOR_REPLY = 'Claude is waiting for your reply'
 const SAID_NO = 'you said no to a step, so Claude paused'
 const KEEPS_FAILING = 'a step keeps failing, Claude is trying another way'
 const REFUSED = "Claude couldn't help with that request"
-const API_TROUBLE = 'something went wrong talking to Claude, try again'
 const OFF_NOTE = 'Clean View is off, so there is no checklist to update. Carry on without it.'
 
 // The words Claude Code hands the model when the person rejects a permission prompt.
@@ -78,11 +82,13 @@ const TITLE_PROMPT =
 let tools = { plan: 'mcp__mods-toolbox__plan_steps', progress: 'mcp__mods-toolbox__report_progress' }
 let ticker: Timer | null = null
 let collapseTimer: Timer | null = null
+let helperWatch: Timer | null = null
+let quietChecks = 0
 let areToolsReady = false
 let isExpansionPending = false
 let lastApiTrouble: string | null = null
 
-// The dock tells helpers to call these by the names the engine gave them.
+/** The dock tells helpers to call these by the names the engine gave them. */
 export function cleanViewTools(): { plan: string; progress: string } {
   return tools
 }
@@ -94,6 +100,7 @@ export function registerCleanView(on: On) {
 
     const job = await read($, checklistAtom)
     syncTicker($, job)
+    syncHelperWatch($, job)
     scheduleCollapse($, job, await $.clock.now())
 
     await $.command.register({
@@ -165,9 +172,10 @@ export function registerCleanView(on: On) {
     }
 
     const now = await $.clock.now()
+    // The person's answer, or the helpers' reports, carry the same job on.
     const job = await change($, current =>
-      current !== null && isWaitingOnPerson(current)
-        ? { ...working(current), turnId: e.turnId, failedInARow: 0, finishedAt: null, isCollapsed: false }
+      current !== null && (isWaitingOnPerson(current) || isWaitingOnHelpers(current))
+        ? { ...working(current), turnId: e.turnId, failedInARow: 0, finishedAt: null, isCollapsed: false, waitingOnHelpers: 0 }
         : newJob(e.turnId, e.turnId, now),
     )
     if (job?.jobId === e.turnId) {
@@ -250,7 +258,10 @@ export function registerCleanView(on: On) {
     }
     const now = await $.clock.now()
     const trouble = lastApiTrouble
-    const job = await change($, current => (isTurnRunning(current) ? finished(current, e, now, trouble) : current))
+    const helpers = isTurnRunning(await read($, checklistAtom)) ? ((await runningHelpers($)) ?? 0) : 0
+    const job = await change($, current =>
+      isTurnRunning(current) ? finished(current, e, now, trouble, helpers) : current,
+    )
     scheduleCollapse($, job, now)
 
     return next(e)
@@ -288,12 +299,12 @@ export function registerCleanView(on: On) {
   )
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey) {
+    if (e.props.hasSurvey || (await read($, toolboxOpenAtom))) {
       return next(e)
     }
     // The band is shared with other mods: Clean View sits on top of whatever the hooks beneath draw.
     const { Box } = $.ui.resolve(e)
-    const band = await drawBand($, e)
+    const band = await drawChecklist($, e)
     const below = await next(e)
 
     return (
@@ -303,61 +314,29 @@ export function registerCleanView(on: On) {
       </Box>
     )
   })
+
+  // The Toolbox popup draws the switch; flipping it is Clean View's own business.
+  on('ui.press', { plugin: 'mods-toolbox', component: 'AbovePrompt', element: /^cv-(on|off)$/ }, async ($, e) => {
+    try {
+      await setEnabled($, e.element === 'cv-on')
+    } catch {
+      $.ui.toast('Clean View could not switch. Try /simple.')
+    }
+
+    return { element: e.element }
+  })
 }
 
-async function drawBand($: Engine, e: RenderInput<'AbovePrompt'>) {
-  const { Box, Text, Button } = $.ui.resolve(e)
-  const isEnabled = await read($, enabledAtom)
-  const job = isEnabled ? await read($, checklistAtom) : null
-  const label = isEnabled ? '● Clean View: ON' : '○ Clean View: OFF'
-  const toggle = <Button key="toggle" label={label} onPress={() => setEnabled($, 'toggle')} />
-
+// Nothing while Clean View is off or idle.
+async function drawChecklist($: Engine, e: RenderInput<'AbovePrompt'>) {
+  const job = (await read($, enabledAtom)) ? await read($, checklistAtom) : null
   if (job === null) {
-    return (
-      <Box flexDirection="row" justifyContent="flex-end">
-        {toggle}
-      </Box>
-    )
+    return null
   }
-
+  const { Box, Text } = $.ui.resolve(e)
   const frame = isAnimated(job.phase) ? await read($, tickAtom) : 0
-  const now = await $.clock.now()
-  const columns = e.props.bodyColumns
-  const header = (
-    <Box flexDirection="row" justifyContent="space-between">
-      <Box width={Math.max(1, columns - label.length - 5)}>
-        <Text wrap="truncate-end">{headline(Text, job, now)}</Text>
-      </Box>
-      {toggle}
-    </Box>
-  )
-  if (job.isCollapsed) {
-    return header
-  }
 
-  // mark (2) + name + gap (1) + meter (10) + gap (2) + label (7)
-  const nameWidth = Math.min(MAX_NAME_LENGTH + 1, Math.max(6, columns - 22))
-  const firstUpcoming = job.tasks.findIndex(task => task.status === 'upcoming')
-
-  return (
-    <Box flexDirection="column">
-      {header}
-      {job.tasks.map((task, index) => (
-        <Box key={`row-${task.id}`} flexDirection="row">
-          <Box width={2}>{mark(Text, task, job.phase)}</Box>
-          <Box width={nameWidth}>
-            <Text wrap="truncate-end" bold={task.status === 'active'} dimColor={task.status !== 'active'}>
-              {task.name}
-            </Text>
-          </Box>
-          <Text> </Text>
-          {meter(Text, task, job.phase, frame)}
-          <Text>  </Text>
-          <Text dimColor={task.status !== 'active'}>{statusLabel(task, index === firstUpcoming)}</Text>
-        </Box>
-      ))}
-    </Box>
-  )
+  return checklistView(Box, Text, job, { columns: e.props.bodyColumns, isFolded: false, now: await $.clock.now(), frame })
 }
 
 async function registerTools($: Engine) {
@@ -464,8 +443,54 @@ async function needsYou($: Engine, reason: string) {
 async function change($: Engine, fn: (job: Checklist | null) => Checklist | null): Promise<Checklist | null> {
   const job = await update($, checklistAtom, fn)
   syncTicker($, job)
+  syncHelperWatch($, job)
 
   return job
+}
+
+// Between turns the helpers' count follows the engine, and a job whose helpers
+// all left without a report starting a turn ends the way a turn without them
+// would, so it never waits for good.
+function syncHelperWatch($: Engine, job: Checklist | null) {
+  const shouldWatch = job !== null && isWaitingOnHelpers(job)
+  if (shouldWatch && helperWatch === null) {
+    quietChecks = 0
+    helperWatch = $.clock.every(HELPER_CHECK_MS, () => {
+      void recheckHelpers($)
+    })
+  } else if (!shouldWatch && helperWatch !== null) {
+    helperWatch.cancel()
+    helperWatch = null
+  }
+}
+
+async function recheckHelpers($: Engine) {
+  const helpers = await runningHelpers($)
+  if (helpers === null) {
+    return
+  }
+  quietChecks = helpers === 0 ? quietChecks + 1 : 0
+  const now = await $.clock.now()
+  const job = await change($, current => {
+    if (current === null || !isWaitingOnHelpers(current)) {
+      return current
+    }
+    if (helpers > 0) {
+      return helpers === current.waitingOnHelpers ? current : { ...current, waitingOnHelpers: helpers }
+    }
+
+    return quietChecks < QUIET_CHECKS ? current : settled(current, now)
+  })
+  scheduleCollapse($, job, now)
+}
+
+// Helpers the engine still runs for this session; null when it can't say.
+async function runningHelpers($: Engine): Promise<number | null> {
+  try {
+    return (await $.agent.list()).filter(agent => ACTIVE_STATUSES.has(agent.status)).length
+  } catch {
+    return null
+  }
 }
 
 function syncTicker($: Engine, job: Checklist | null) {
@@ -536,6 +561,7 @@ function newJob(jobId: string, turnId: string, now: number): Checklist {
     stuckReason: null,
     failedInARow: 0,
     turnId,
+    waitingOnHelpers: 0,
     startedAt: now,
     finishedAt: null,
     isCollapsed: false,
@@ -664,8 +690,8 @@ function withOneActive(tasks: CleanViewTask[]): CleanViewTask[] {
   return next < 0 ? tasks : tasks.map((task, index) => (index === next ? { ...task, status: 'active' } : task))
 }
 
-function finished(job: Checklist, e: TurnCompleteInput, now: number, trouble: string | null): Checklist {
-  const ended: Checklist = { ...job, turnId: null, needsYouReason: null }
+function finished(job: Checklist, e: TurnCompleteInput, now: number, trouble: string | null, helpers: number): Checklist {
+  const ended: Checklist = { ...job, turnId: null, needsYouReason: null, waitingOnHelpers: 0 }
   if (e.reason === 'error') {
     return { ...ended, phase: 'stuck', stuckReason: trouble ?? API_TROUBLE }
   }
@@ -679,6 +705,18 @@ function finished(job: Checklist, e: TurnCompleteInput, now: number, trouble: st
   if (e.reason === 'aborted') {
     return { ...ended, phase: 'stopped', stuckReason: null, finishedAt: now }
   }
+  // Claude ends its turn while background helpers run, and goes on when they
+  // report: it is not waiting for the person.
+  if (helpers > 0) {
+    return { ...ended, phase: 'working', stuckReason: null, waitingOnHelpers: helpers }
+  }
+
+  return settled(ended, now)
+}
+
+// A job with no turn and no helper left: unfinished steps wait for the person.
+function settled(job: Checklist, now: number): Checklist {
+  const ended: Checklist = { ...job, waitingOnHelpers: 0 }
   if (job.planSource !== null && job.tasks.some(task => task.status !== 'done')) {
     return { ...ended, phase: 'needsYou', stuckReason: null, needsYouReason: WAITING_FOR_REPLY }
   }
@@ -726,14 +764,14 @@ function isTurnRunning(job: Checklist | null): job is Checklist {
   return job !== null && job.turnId !== null
 }
 
+function isWaitingOnHelpers(job: Checklist): boolean {
+  return job.turnId === null && job.waitingOnHelpers > 0
+}
+
 function isWaitingOnPerson(job: Checklist): boolean {
   const isPaused = job.phase === 'needsYou' || job.phase === 'stuck'
 
   return isPaused && job.planSource !== null && job.tasks.some(task => task.status !== 'done')
-}
-
-function isAnimated(phase: CleanViewPhase): boolean {
-  return phase === 'working' || phase === 'needsYou'
 }
 
 function argsOf(e: ToolCallInput): Record<string, unknown> {
@@ -748,73 +786,4 @@ function createdTaskId(result: unknown): string | null {
   const id = (result as { task?: { id?: unknown } } | null | undefined)?.task?.id
 
   return typeof id === 'string' || typeof id === 'number' ? String(id) : null
-}
-
-type TextElement = ReturnType<Engine['ui']['resolve']>['Text']
-
-function headline(Text: TextElement, job: Checklist, now: number): RenderNode[] {
-  switch (job.phase) {
-    case 'working':
-      return [<Text bold>{job.title}</Text>, ` · ${formatDuration(now - job.startedAt)}`]
-    case 'needsYou':
-      return [
-        <Text backgroundColor="warning" color="inverseText" bold>
-          {' Needs you '}
-        </Text>,
-        ` ${job.needsYouReason ?? WAITING_FOR_REPLY}`,
-      ]
-    case 'stuck':
-      return [<Text color="warning">⚠ Stuck:</Text>, ` ${job.stuckReason ?? API_TROUBLE}`]
-    case 'stopped':
-      return [<Text color="warning">■ Stopped</Text>, ` · ${job.title} · you pressed Esc`]
-    case 'done':
-      return [
-        <Text color="success">✓ All done</Text>,
-        ` · ${job.title} · took ${formatDuration((job.finishedAt ?? now) - job.startedAt)}`,
-      ]
-  }
-}
-
-function mark(Text: TextElement, task: CleanViewTask, phase: CleanViewPhase) {
-  if (task.status === 'done') {
-    return <Text color="success">✓</Text>
-  }
-  if (task.status === 'upcoming') {
-    return <Text dimColor>○</Text>
-  }
-
-  return <Text bold>{phase === 'needsYou' ? '‖' : '▶'}</Text>
-}
-
-function meter(Text: TextElement, task: CleanViewTask, phase: CleanViewPhase, frame: number) {
-  if (task.status === 'done') {
-    return <Text color="success">{'█'.repeat(METER_CELLS)}</Text>
-  }
-  if (task.status === 'upcoming') {
-    return <Text dimColor>{'░'.repeat(METER_CELLS)}</Text>
-  }
-  if (task.hasReported || !isAnimated(phase)) {
-    const filled = Math.round(task.percent / 10)
-
-    return <Text>{'█'.repeat(filled) + '░'.repeat(METER_CELLS - filled)}</Text>
-  }
-  // No percent yet: a three-cell block sweeps across the meter.
-  const start = (frame % (METER_CELLS + 3)) - 3
-  let cells = ''
-  for (let cell = 0; cell < METER_CELLS; cell++) {
-    cells += cell >= start && cell < start + 3 ? '█' : '░'
-  }
-
-  return <Text>{cells}</Text>
-}
-
-function statusLabel(task: CleanViewTask, isNext: boolean): string {
-  if (task.status === 'done') {
-    return 'Done'
-  }
-  if (task.status === 'active') {
-    return task.hasReported ? `${task.percent}%` : 'Working'
-  }
-
-  return isNext ? 'Next' : 'Up next'
 }

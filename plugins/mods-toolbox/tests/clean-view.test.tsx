@@ -1,4 +1,4 @@
-import type { On, ToolCallInput, ToolCallResult } from 'claude-code'
+import type { On, ToolCallArgs, ToolCallInput, ToolCallResult } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
@@ -53,12 +53,20 @@ type Options = {
   toolPrefix?: string
   bandBelow?: string
   answerTool?: (e: ToolCallInput) => ToolCallResult
+  // Background helpers the engine reports running; the test adds and removes ids.
+  helpers?: Set<string>
 }
 
 // What the engine would do beneath the plugin, answered from memory.
 function world(
   on: On,
-  { stored = {}, toolPrefix = 'mcp__mods-toolbox__', bandBelow, answerTool = () => ({ result: 'ok' }) }: Options = {},
+  {
+    stored = {},
+    toolPrefix = 'mcp__mods-toolbox__',
+    bandBelow,
+    answerTool = () => ({ result: 'ok' }),
+    helpers = new Set<string>(),
+  }: Options = {},
 ) {
   const seen: Seen = { checklist: null, tick: 0, isEnabled: undefined, stored: { ...stored }, titleRequests: 0 }
   on('state.set', { plugin: 'mods-toolbox' }, ($, e, next) => {
@@ -81,6 +89,9 @@ function world(
   on('tool.describe', ($, e) => ({ description: e.description }))
   on('classic.Notification', () => ({}))
   on('classic.StopFailure', () => ({}))
+  on('agent.list', () => ({
+    value: [...helpers].map(id => ({ id, description: id, type: 'general-purpose', status: 'running' as const })),
+  }))
   on('tool.register', ($, e) => ({ value: { tool: `${toolPrefix}${e.name}` } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('model.complete', () => {
@@ -157,7 +168,8 @@ describe('checklist', () => {
       expect(await ui.find({ type: 'Text', text: '✓' })).toBeDefined()
       expect(await ui.find({ type: 'Text', text: '▶' })).toBeDefined()
       expect((await ui.find({ type: 'Text', text: '██████░░░░' }))?.text).toBe('██████░░░░')
-      expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: ON')
+      // The switch lives in the Toolbox now, not on the band.
+      expect(await ui.find({ type: 'Button' })).toBeUndefined()
       await ui.unmount()
     }
   })
@@ -355,6 +367,73 @@ describe('needs you, stuck and done', () => {
     expect(seen.checklist?.tasks.map(task => task.name)).toEqual(['Build the page', 'Check it works'])
   })
 
+  test('a turn that ends with helpers still out keeps working, and their report carries the job on', async ($, on) => {
+    const helpers = new Set(['a', 'b', 'c'])
+    const { seen } = world(on, { helpers })
+    await startJob($)
+    await $.tool.call({ tool: PLAN, steps: ['List the docs', 'Check the docs', 'Combine the findings'] })
+    await $.tool.call({ tool: PROGRESS, task: 'List the docs', percent: 100 })
+    await $.turn.complete({ answer: 'Waiting for 3 helpers.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+
+    expect(seen.checklist?.phase).toBe('working')
+    expect(seen.checklist?.needsYouReason).toBeNull()
+    expect(seen.checklist?.waitingOnHelpers).toBe(3)
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    expect(await ui.find({ type: 'Text', text: 'waiting for 3 helpers to finish' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Needs you' })).toBeUndefined()
+
+    helpers.clear()
+    await $.turn.start({ text: '<task-notification>Check the docs: done</task-notification>', turnId: 'turn-2' })
+    expect(seen.checklist?.phase).toBe('working')
+    expect(seen.checklist?.waitingOnHelpers).toBe(0)
+    expect(seen.checklist?.tasks.map(task => task.status)).toEqual(['done', 'active', 'upcoming'])
+
+    await $.tool.call({ tool: PROGRESS, task: 'Combine the findings', percent: 100 })
+    await $.turn.complete({ answer: 'Here is the list.', durationMs: 10, isAborted: false, turnId: 'turn-2', reason: 'answer' })
+    expect(seen.checklist?.phase).toBe('done')
+  })
+
+  // As the dock's mission does: what the person types while helpers are out joins the job they work on.
+  test('a request typed while helpers are out keeps their checklist', async ($, on) => {
+    const helpers = new Set(['a', 'b'])
+    const { seen } = world(on, { helpers })
+    await startJob($)
+    await $.tool.call({ tool: PLAN, steps: ['Check the docs', 'Combine the findings'] })
+    await $.turn.complete({ answer: 'Waiting for 2 helpers.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    const jobId = seen.checklist?.jobId
+
+    await $.turn.start({ text: 'Also check the README', turnId: 'turn-2' })
+    expect(seen.checklist?.jobId).toBe(jobId)
+    expect(seen.checklist?.turnId).toBe('turn-2')
+    expect(seen.checklist?.phase).toBe('working')
+    expect(seen.checklist?.tasks.map(task => task.name)).toEqual(['Check the docs', 'Combine the findings'])
+
+    await $.turn.complete({ answer: 'Added it.', durationMs: 10, isAborted: false, turnId: 'turn-2', reason: 'answer' })
+    expect(seen.checklist?.waitingOnHelpers).toBe(2)
+  })
+
+  test('the waiting count follows the helpers, and a job whose helpers all left stops waiting', async ($, on) => {
+    const helpers = new Set(['a', 'b'])
+    const { clock, seen } = world(on, { helpers })
+    await startJob($)
+    await $.tool.call({ tool: PLAN, steps: ['Check the docs', 'Combine the findings'] })
+    await $.turn.complete({ answer: 'Waiting for 2 helpers.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    expect(seen.checklist?.waitingOnHelpers).toBe(2)
+
+    helpers.delete('a')
+    await clock.advance(5000)
+    expect(seen.checklist?.waitingOnHelpers).toBe(1)
+
+    // No turn picks the job up: one quiet check is not enough, two are.
+    helpers.delete('b')
+    await clock.advance(5000)
+    expect(seen.checklist?.phase).toBe('working')
+    await clock.advance(5000)
+    expect(seen.checklist?.phase).toBe('needsYou')
+    expect(seen.checklist?.needsYouReason).toBe('Claude is waiting for your reply')
+    expect(seen.checklist?.waitingOnHelpers).toBe(0)
+  })
+
   test('slash commands do not start a job', async ($, on) => {
     const { seen } = world(on)
     await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
@@ -388,10 +467,11 @@ describe('gate', () => {
     const before = await $.tool.call({ tool: 'Bash', command: 'ls' })
     expect(before.deny).toContain('mcp__mods-toolbox-marketplace__plan_steps')
 
+    // A name only this test's engine gives the tool, so the generated tool types don't list it.
     const planned = await $.tool.call({
       tool: 'mcp__mods-toolbox-marketplace__plan_steps',
       steps: ['Look around', 'Make the change'],
-    })
+    } as unknown as ToolCallArgs)
     expect(planned.result).toBe('Planned 2 steps. The first one has started.')
 
     const after = await $.tool.call({ tool: 'Bash', command: 'ls' })
@@ -477,35 +557,18 @@ describe('switching', () => {
 
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
     expect(await ui.find({ type: 'Text', text: 'Understand your request' })).toBeUndefined()
-    expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: OFF')
 
     const shown = await $.ui.mount({ plugin: PLUGIN, surface: 'terminal', component: 'ToolUse', props: TOOL_ROW })
     expect(await shown.find({ type: 'Text', text: 'Bash(ls)' })).toBeDefined()
   })
 
-  test('the button flips the setting on every surface and saves it', async ($, on) => {
-    const { seen } = world(on)
-    await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
-
-    for (const surface of SURFACES) {
-      const ui = await $.ui.mount({ ...band(), surface })
-      await ui.press({ key: 'toggle' })
-      expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: OFF')
-      expect(seen.stored.cleanViewEnabled).toBe(false)
-      await ui.press({ key: 'toggle' })
-      expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: ON')
-      expect(seen.stored.cleanViewEnabled).toBe(true)
-      await ui.unmount()
-    }
-  })
-
   test('the saved setting is read back at session start', async ($, on) => {
     const { seen } = world(on, { stored: { cleanViewEnabled: false } })
-    await $.session.start({ cwd: '/tmp', surface: 'terminal', isInteractive: true })
+    await startJob($)
 
     expect(seen.isEnabled).toBe(false)
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
-    expect((await ui.find({ type: 'Button', key: 'toggle' }))?.text).toContain('Clean View: OFF')
+    expect(await ui.find({ type: 'Text', text: 'Understand your request' })).toBeUndefined()
   })
 })
 
