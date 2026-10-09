@@ -17,7 +17,7 @@
 | jules-review | Code Review | `/jules-review` |
 | dlc | Quality | `/dlc`, `/dlc:security`, `/dlc:quality`, `/dlc:perf`, `/dlc:test`, `/dlc:pr-check`, `/dlc:pr-validity`, `/dlc:git-ops`, `/dlc:babysit` |
 | feature-discovery | Productivity | `/feature-discovery` |
-| clean-view | Productivity | `/simple`, `/dock` (function-hook mods), `/clean-view:dock-setup` |
+| mods-toolbox | Productivity | `/simple`, `/dock` (function-hook mods), `/mods-toolbox:dock-setup` |
 
 ## Navigation
 

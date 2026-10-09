@@ -80,14 +80,14 @@ const FALLBACK_JOB = 'Helpers at work'
 // Prompts a person sent; a background task's notification is not a new request.
 const PERSON_ORIGINS = new Set(['composer', 'bridge', 'sdk'])
 
-const sizeRef = { plugin: 'clean-view', key: 'dockTeamSize' } as const
+const sizeRef = { plugin: 'mods-toolbox', key: 'dockTeamSize' } as const
 const sizeAtom = atom(sizeRef, 1)
-const modelAtom = atom({ plugin: 'clean-view', key: 'dockHelperModel' } as const, 'fast')
-const pendingAtom = atom({ plugin: 'clean-view', key: 'dockPendingSize' } as const, null)
-const customAtom = atom({ plugin: 'clean-view', key: 'dockIsCustomOpen' } as const, false)
-const foldedAtom = atom({ plugin: 'clean-view', key: 'dockIsFolded' } as const, false)
-const missionAtom = atom({ plugin: 'clean-view', key: 'dockMission' } as const, null)
-const tickAtom = atom({ plugin: 'clean-view', key: 'dockTick' } as const, 0)
+const modelAtom = atom({ plugin: 'mods-toolbox', key: 'dockHelperModel' } as const, 'fast')
+const pendingAtom = atom({ plugin: 'mods-toolbox', key: 'dockPendingSize' } as const, null)
+const customAtom = atom({ plugin: 'mods-toolbox', key: 'dockIsCustomOpen' } as const, false)
+const foldedAtom = atom({ plugin: 'mods-toolbox', key: 'dockIsFolded' } as const, false)
+const missionAtom = atom({ plugin: 'mods-toolbox', key: 'dockMission' } as const, null)
+const tickAtom = atom({ plugin: 'mods-toolbox', key: 'dockTick' } as const, 0)
 
 // Module state a reload may drop: session.start puts the clock and limits back.
 let ticker: Timer | null = null

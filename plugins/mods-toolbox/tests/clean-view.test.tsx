@@ -5,9 +5,9 @@ import type { Engine } from 'claude-code/testing'
 import { cleanName } from '../hooks/clean-name'
 import type { CleanViewChecklist } from '../types'
 
-const PLUGIN = 'clean-view'
-const PLAN = 'mcp__clean-view__plan_steps'
-const PROGRESS = 'mcp__clean-view__report_progress'
+const PLUGIN = 'mods-toolbox'
+const PLAN = 'mcp__mods-toolbox__plan_steps'
+const PROGRESS = 'mcp__mods-toolbox__report_progress'
 const SURFACES = ['terminal', 'desktop'] as const
 const LABELS = ['Done', 'Working', 'Next', 'Up next', /^\d+%$/]
 
@@ -58,10 +58,10 @@ type Options = {
 // What the engine would do beneath the plugin, answered from memory.
 function world(
   on: On,
-  { stored = {}, toolPrefix = 'mcp__clean-view__', bandBelow, answerTool = () => ({ result: 'ok' }) }: Options = {},
+  { stored = {}, toolPrefix = 'mcp__mods-toolbox__', bandBelow, answerTool = () => ({ result: 'ok' }) }: Options = {},
 ) {
   const seen: Seen = { checklist: null, tick: 0, isEnabled: undefined, stored: { ...stored }, titleRequests: 0 }
-  on('state.set', { plugin: 'clean-view' }, ($, e, next) => {
+  on('state.set', { plugin: 'mods-toolbox' }, ($, e, next) => {
     if (e.key === 'checklist') seen.checklist = e.value as CleanViewChecklist | null
     if (e.key === 'tick') seen.tick = e.value as number
     if (e.key === 'cleanViewEnabled') seen.isEnabled = e.value as boolean
@@ -382,14 +382,14 @@ describe('gate', () => {
   })
 
   test('the gate follows the names the engine gave the tools', async ($, on) => {
-    world(on, { toolPrefix: 'mcp__clean-view-marketplace__' })
+    world(on, { toolPrefix: 'mcp__mods-toolbox-marketplace__' })
     await startJob($)
 
     const before = await $.tool.call({ tool: 'Bash', command: 'ls' })
-    expect(before.deny).toContain('mcp__clean-view-marketplace__plan_steps')
+    expect(before.deny).toContain('mcp__mods-toolbox-marketplace__plan_steps')
 
     const planned = await $.tool.call({
-      tool: 'mcp__clean-view-marketplace__plan_steps',
+      tool: 'mcp__mods-toolbox-marketplace__plan_steps',
       steps: ['Look around', 'Make the change'],
     })
     expect(planned.result).toBe('Planned 2 steps. The first one has started.')

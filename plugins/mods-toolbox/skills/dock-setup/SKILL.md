@@ -1,6 +1,6 @@
 ---
 name: dock-setup
-description: "Add the Agent Dock's live helper count (\"◇ N agents\") to Claude Code's status line, globally or for this project only, or uninstall it again. Use when the user runs /clean-view:dock-setup or /clean-view:dock-setup uninstall, or asks to show the agent count, helper count or Agent Dock in the status line, or to remove or uninstall it."
+description: "Add the Agent Dock's live helper count (\"◇ N agents\") to Claude Code's status line, globally or for this project only, or uninstall it again. Use when the user runs /mods-toolbox:dock-setup or /mods-toolbox:dock-setup uninstall, or asks to show the agent count, helper count or Agent Dock in the status line, or to remove or uninstall it."
 argument-hint: "[uninstall]"
 allowed-tools:
   - Bash
@@ -99,7 +99,7 @@ The add-on wraps the person's own status line instead of editing their script. `
    rmdir "$CONFIG/agent-dock/agents-now" "$CONFIG/agent-dock" 2>/dev/null
    ls -la "$CONFIG/agent-dock" 2>&1
    ```
-   A folder that stays holds a count file of a session whose helpers are running right now; the dock deletes it when they finish. While the Clean View plugin stays installed, the dock still writes those files, and nothing reads them.
+   A folder that stays holds a count file of a session whose helpers are running right now; the dock deletes it when they finish. While the mods-toolbox plugin stays installed, the dock still writes those files, and nothing reads them.
    Then delete each settings file that step 3 read as `new-file`, only when it is now empty (`installs` is gone by now, so go by what step 3 read):
    ```bash
    FILE="<a settings file recorded as new-file>"
@@ -107,4 +107,4 @@ The add-on wraps the person's own status line instead of editing their script. `
    ```
    Without jq, read the file and delete it only if it holds just `{}`; never delete a settings file that has any other key.
 
-9. **Report.** Tell the person what changed and where. After an install, the count shows within a couple of seconds, and only while helpers work; to take it out again, they run `/clean-view:dock-setup uninstall`. After a Remove, every status line is back as it was.
+9. **Report.** Tell the person what changed and where. After an install, the count shows within a couple of seconds, and only while helpers work; to take it out again, they run `/mods-toolbox:dock-setup uninstall`. After a Remove, every status line is back as it was.

@@ -17,9 +17,9 @@ import { clampPercent, formatDuration } from './progress'
 type Engine = EngineInterface
 type Checklist = CleanViewChecklist
 
-const enabledAtom = atom({ plugin: 'clean-view', key: 'cleanViewEnabled' } as const, true)
-const checklistAtom = atom({ plugin: 'clean-view', key: 'checklist' } as const, null)
-const tickAtom = atom({ plugin: 'clean-view', key: 'tick' } as const, 0)
+const enabledAtom = atom({ plugin: 'mods-toolbox', key: 'cleanViewEnabled' } as const, true)
+const checklistAtom = atom({ plugin: 'mods-toolbox', key: 'checklist' } as const, null)
+const tickAtom = atom({ plugin: 'mods-toolbox', key: 'tick' } as const, 0)
 
 const STORE_KEY = 'cleanViewEnabled'
 const ALWAYS_ALLOWED = new Set([
@@ -75,7 +75,7 @@ const TITLE_PROMPT =
 // session.start puts the timers back from the checklist.
 // The engine names the two tools when it registers them (mcp__<plugin>__<name>);
 // these defaults hold until it has.
-let tools = { plan: 'mcp__clean-view__plan_steps', progress: 'mcp__clean-view__report_progress' }
+let tools = { plan: 'mcp__mods-toolbox__plan_steps', progress: 'mcp__mods-toolbox__report_progress' }
 let ticker: Timer | null = null
 let collapseTimer: Timer | null = null
 let areToolsReady = false

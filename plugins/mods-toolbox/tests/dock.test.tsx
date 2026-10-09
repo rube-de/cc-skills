@@ -5,10 +5,10 @@ import type { Engine } from 'claude-code/testing'
 import { jobName, parseSize, restoreSize } from '../hooks/dock-logic'
 import type { DockMission } from '../types'
 
-const PLUGIN = 'clean-view'
+const PLUGIN = 'mods-toolbox'
 const PANE = 'agent-dock'
-const PLAN = 'mcp__clean-view__plan_steps'
-const PROGRESS = 'mcp__clean-view__report_progress'
+const PLAN = 'mcp__mods-toolbox__plan_steps'
+const PROGRESS = 'mcp__mods-toolbox__report_progress'
 const SURFACES = ['terminal', 'desktop'] as const
 const REQUEST = 'Research bakery pricing for five shops, then sum it up'
 const JOB = 'Research bakery pricing for five shops'
@@ -70,7 +70,7 @@ function world($: Engine, on: On, { stored = {}, env, isBackground = true }: Opt
     return <Text>{e.props.modes.join(' & ')}</Text>
   })
   on('classic.Stop', () => ({}))
-  on('tool.register', ($, e) => ({ value: { tool: `mcp__clean-view__${e.name}` } }))
+  on('tool.register', ($, e) => ({ value: { tool: `mcp__mods-toolbox__${e.name}` } }))
   on('command.register', ($, e) => ({ value: { command: e.name } }))
   on('model.complete', () => ({
     value: {

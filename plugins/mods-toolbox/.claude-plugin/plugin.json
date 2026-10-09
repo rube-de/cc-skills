@@ -1,0 +1,10 @@
+{
+  "name": "mods-toolbox",
+  "description": "Function-hook mods: Clean View, a calm checklist above the prompt instead of tool calls, diffs and command output, and the Agent Dock, a team of parallel helpers shown as live cards",
+  "author": {
+    "name": "rube-de",
+    "url": "https://github.com/rube-de"
+  },
+  "license": "MIT",
+  "types": "./types/index.d.ts"
+}
