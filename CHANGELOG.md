@@ -1,3 +1,10 @@
+## [2.17.1](https://github.com/rube-de/cc-skills/compare/v2.17.0...v2.17.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **clean-view:** make plan_steps and report_progress no-ops while off ([#278](https://github.com/rube-de/cc-skills/issues/278)) ([ee7c68e](https://github.com/rube-de/cc-skills/commit/ee7c68e29b0af1c05793699c438c1c8b58c40676))
+
 # [2.17.0](https://github.com/rube-de/cc-skills/compare/v2.16.1...v2.17.0) (2026-10-08)
 
 
