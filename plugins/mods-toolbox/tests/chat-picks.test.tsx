@@ -102,6 +102,9 @@ function world(
       await new Promise<void>(resolve => seen.idle.push(resolve))
     }
     const isUltracode = e.args.startsWith('ultracode')
+    if (isUltracode && !/^ultracode( on| off)?$/i.test(e.args)) {
+      return { text: `Invalid argument: ${e.args}. Valid options are: low, medium, high, xhigh, max, auto, ultracode [on|off]` }
+    }
     if (failingCommand === (isUltracode ? 'ultracode' : e.command)) {
       return {
         text: isUltracode
@@ -210,6 +213,9 @@ describe('naming and arguments', () => {
     expect(ultracodeAsked('ultracode on')).toBe(true)
     expect(ultracodeAsked(' Ultracode OFF ')).toBe(false)
     expect(ultracodeAsked('high')).toBeNull()
+    // Claude Code refuses these as invalid arguments, not for the plan.
+    expect(ultracodeAsked('ultracode onn')).toBeNull()
+    expect(ultracodeAsked('ultracode on extra')).toBeNull()
   })
 })
 
@@ -237,8 +243,10 @@ describe('model config rows', () => {
     expect(seen.runs).toEqual(['/model sonnet[1m]'])
     expect(seen.state.chatModelPending).toBeNull()
 
+    // Sonnet has no effort of its own in settings, so the general one holds.
+    expect(seen.state.chatEffort).toBe('high')
     await ui.redraw()
-    expect(await ui.find({ type: 'Text', text: 'Sonnet 5.5 · 1M' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Sonnet 5.5 · 1M · high' })).toBeDefined()
     expect(await ui.find({ type: 'Button', key: 'chat-model-sonnet' })).toBeUndefined()
     expect(await ui.find({ type: 'Button', key: 'chat-model-opus' })).toBeDefined()
   })
@@ -343,7 +351,26 @@ describe('model config rows', () => {
     })
     expect(seen.state.chatModel).toBe('claude-fable-5-1')
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
-    expect(await ui.find({ type: 'Text', text: 'Fable 5.1' })).toBeDefined()
+    expect(await ui.find({ type: 'Text', text: 'Fable 5.1 · high' })).toBeDefined()
+  })
+
+  test("a new model brings its own effort; the same model keeps the one shown", async ($, on) => {
+    const { seen } = world(on, {
+      settings: {
+        effortLevel: 'high',
+        modelSettings: { 'claude-opus-5-5': { effortLevel: 'xhigh' }, 'claude-sonnet-5-5': { effortLevel: 'low' } },
+      },
+    })
+    await openToolbox($)
+    const typed = { origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 140 } } as const
+
+    await $.command.run({ command: 'model', args: 'sonnet', ...typed })
+    expect(seen.state.chatEffort).toBe('low')
+
+    // A bare /model only shows the model, so a turn's effort stays.
+    await $.classic.Stop({ stop_hook_active: false, effort: { level: 'medium' } })
+    await $.command.run({ command: 'model', args: '', ...typed })
+    expect(seen.state.chatEffort).toBe('medium')
   })
 
   test('a reload while a pick waits leaves nothing stuck pending', async ($, on) => {
@@ -418,5 +445,15 @@ describe('model config rows', () => {
     expect(seen.state.chatUltracode).toBe('on')
     // Ultracode leaves the effort level where it was.
     expect(seen.state.chatEffort).toBe('xhigh')
+  })
+
+  test('a mistyped /effort ultracode leaves the toggle where it was', async ($, on) => {
+    const { seen } = world(on)
+    await openToolbox($)
+
+    await $.command.run({ command: 'effort', args: 'ultracode onn', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 140 } })
+    expect(seen.state.chatUltracode).not.toBe('unavailable')
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    expect(await ui.find({ type: 'Button', key: 'chat-ultracode-on' })).toBeDefined()
   })
 })

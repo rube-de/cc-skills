@@ -11,6 +11,7 @@ type Effort = ChatEffort
 
 const LONG_CONTEXT = '[1m]'
 
+/** A level /effort takes and a turn reports; `auto` and `ultracode` are not levels. */
 export function isEffort(value: unknown): value is Effort {
   return typeof value === 'string' && (EFFORTS as readonly string[]).includes(value)
 }
@@ -72,14 +73,21 @@ export function effortTaken(text: string | undefined): boolean {
   return text === undefined || text.trim() === '' || /effort level to/i.test(text)
 }
 
-/** `/effort ultracode [on|off]` as asked: true for on (bare turns it on), false for off, null for any other /effort. */
+/**
+ * `/effort ultracode [on|off]` as asked: true for on (bare turns it on), false
+ * for off, null for any other /effort. Claude Code refuses anything else, such
+ * as `ultracode onn`, as an invalid argument, which says nothing about the plan.
+ */
 export function ultracodeAsked(args: string): boolean | null {
-  const [first, second] = args.trim().toLowerCase().split(/\s+/)
-  if (first !== 'ultracode') {
+  const [first, second, ...rest] = args.trim().toLowerCase().split(/\s+/)
+  if (first !== 'ultracode' || rest.length > 0) {
     return null
   }
+  if (second === undefined || second === 'on') {
+    return true
+  }
 
-  return second !== 'off'
+  return second === 'off' ? false : null
 }
 
 /** Whether `/effort ultracode` took, judged as effortTaken is. */

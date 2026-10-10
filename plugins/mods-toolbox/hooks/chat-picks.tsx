@@ -31,6 +31,7 @@ const ultracodePendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatUltracodeP
 
 const KEY = /^chat-(model|effort|ultracode)-(.+)$/
 
+/** Answers the Toolbox's `chat-*` presses and keeps the model, effort and Ultracode it draws current. */
 export function registerChatPicks(on: On) {
   // Clean View holds the bare session.start, the dock its cwd matcher and the
   // Toolbox its surface one.
@@ -60,20 +61,22 @@ export function registerChatPicks(on: On) {
 
   // The person's /model and /config's model row move the chat too, not only the Toolbox.
   on('command.run', { command: 'model' }, async ($, e, next) => {
+    const before = await read($, modelAtom)
     const ran = await next(e)
-    await refreshModel($)
+    await followModel($, before)
 
     return ran
   })
 
   on('config.set', { key: 'model' }, async ($, e, next) => {
+    const before = await read($, modelAtom)
     const set = await next(e)
-    await refreshModel($)
+    await followModel($, before)
 
     return set
   })
 
-  // The person's own /effort, and the Toolbox's, which comes through here too.
+  // The person's own /effort moves the popup too.
   on('command.run', { command: 'effort' }, async ($, e, next) => {
     const ran = await next(e)
     const ultracode = ultracodeAsked(e.args)
@@ -128,6 +131,21 @@ async function refreshModel($: Engine): Promise<string | null> {
   }
 }
 
+// Each model keeps its own effort, so after a switch the last one seen no longer
+// holds: the new model's comes from settings, as Claude Code takes it.
+async function followModel($: Engine, before: string | null): Promise<string | null> {
+  const model = await refreshModel($)
+  if (model !== null && model !== before) {
+    const effort = await $.settings.read().then(
+      settings => effortFromSettings(settings, model),
+      () => null,
+    )
+    await update($, effortAtom, () => effort)
+  }
+
+  return model
+}
+
 async function switchModel($: Engine, family: string) {
   const known = FAMILIES.find(candidate => candidate === family)
   if (known === undefined) {
@@ -137,7 +155,7 @@ async function switchModel($: Engine, family: string) {
   try {
     const current = (await read($, modelAtom)) ?? (await $.session.model())
     const ran = await $.command.run({ command: 'model', args: modelArgs(known, current, (await read($, optionsAtom)) ?? []) })
-    const model = await refreshModel($)
+    const model = await followModel($, current)
     if (model === null || familyOf(model) !== known) {
       $.ui.toast(refusal(ran.text, 'The model could not switch. Try /model.'))
     }
