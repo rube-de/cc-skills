@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput, RenderNode } from 'claude-code'
 
+import { EFFORTS, familyOf, modelLabel, offeredFamilies } from './chat-picks-logic'
 import { checklistView, isAnimated } from './checklist-view'
 import {
   BIG_TEAM_QUESTION,
@@ -29,14 +30,23 @@ const sizeAtom = atom({ plugin: 'mods-toolbox', key: 'dockTeamSize' } as const, 
 const modelAtom = atom({ plugin: 'mods-toolbox', key: 'dockHelperModel' } as const, 'fast')
 const pendingAtom = atom({ plugin: 'mods-toolbox', key: 'dockPendingSize' } as const, null)
 const customAtom = atom({ plugin: 'mods-toolbox', key: 'dockIsCustomOpen' } as const, false)
+// The model config rows' values (model and effort), written by chat-picks.tsx.
+const chatOptionsAtom = atom({ plugin: 'mods-toolbox', key: 'chatModelOptions' } as const, null)
+const chatModelAtom = atom({ plugin: 'mods-toolbox', key: 'chatModel' } as const, null)
+const chatEffortAtom = atom({ plugin: 'mods-toolbox', key: 'chatEffort' } as const, null)
+const chatModelPendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatModelPending' } as const, null)
+const chatEffortPendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatEffortPending' } as const, null)
+const chatUltracodeAtom = atom({ plugin: 'mods-toolbox', key: 'chatUltracode' } as const, 'off')
+const chatUltracodePendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatUltracodePending' } as const, null)
 
 const NAME_WIDTH = 14
 
 type Option = { label: string; node: RenderNode }
 
 // The engine follows `$` only into this file, so the popup draws the controls
-// and Clean View and the dock answer their own keys in their `ui.press` and
-// `ui.input` hooks; by the time a press would reach this closure it is answered.
+// and Clean View, the dock and the chat picks answer their own keys in their
+// `ui.press` and `ui.input` hooks; by the time a press would reach this closure
+// it is answered.
 const answeredByOwner = () => undefined
 
 export function registerToolbox(on: On) {
@@ -45,7 +55,7 @@ export function registerToolbox(on: On) {
     try {
       await $.command.register({
         name: 'toolbox',
-        description: 'Open or close the Toolbox: Clean View, Team Size, helper model and the Agent Dock',
+        description: "Open or close the Toolbox: Claude's model and effort, Clean View, Team Size, helper model and the Agent Dock",
         immediate: true,
       })
     } catch {
@@ -141,13 +151,35 @@ async function drawChecklist($: Engine, e: RenderInput<'AbovePrompt'>, layout: B
 async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number) {
   const { Box, Text, Button } = $.ui.resolve(e)
   const inner = Math.max(1, width - 4)
-  const [isCleanView, size, model, pending, isCustomOpen] = await Promise.all([
+  const [
+    isCleanView,
+    size,
+    model,
+    pending,
+    isCustomOpen,
+    chatOptions,
+    chatModel,
+    effort,
+    modelPending,
+    effortPending,
+    ultracode,
+    ultracodePending,
+  ] = await Promise.all([
     read($, cleanViewAtom),
     read($, sizeAtom),
     read($, modelAtom),
     read($, pendingAtom),
     read($, customAtom),
+    read($, chatOptionsAtom),
+    read($, chatModelAtom),
+    read($, chatEffortAtom),
+    read($, chatModelPendingAtom),
+    read($, chatEffortPendingAtom),
+    read($, chatUltracodeAtom),
+    read($, chatUltracodePendingAtom),
   ])
+  // chat-picks.tsx keeps the model read back; asking the engine covers a start it missed.
+  const modelId = chatModel ?? (await $.session.model().catch(() => ''))
 
   const chip = (label: string, background: string, color?: string): Option => ({
     label,
@@ -195,11 +227,19 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
     )
   }
 
-  // The filled dot follows the chosen side, as on a radio button.
-  const cleanView = [
-    isCleanView ? chip(' ● On ', GREEN, INK) : pick('cv-on', ' ○ On '),
-    isCleanView ? pick('cv-off', ' ○ Off ') : chip(' ● Off ', HAIRLINE),
-  ]
+  // On and Off: the filled dot follows the chosen side, as on a radio button,
+  // and a side waiting for its command to run shows in gold.
+  const onOff = (keyPrefix: string, isOn: boolean, pendingSide: 'on' | 'off' | null = null): Option[] => {
+    const side = (value: 'on' | 'off', label: string, background: string): Option =>
+      pendingSide === value
+        ? chip(` ● ${label} `, GOLD, INK)
+        : pendingSide === null && isOn === (value === 'on')
+          ? chip(` ● ${label} `, background, value === 'on' ? INK : undefined)
+          : pick(`${keyPrefix}-${value}`, ` ○ ${label} `)
+
+    return [side('on', 'On', GREEN), side('off', 'Off', HAIRLINE)]
+  }
+  const cleanView = onOff('cv', isCleanView)
   const isPreset = (SIZES as readonly number[]).includes(size)
   const sizes = [
     ...SIZES.map(option => (option === size ? chip(` ${option} `, CORAL, INK) : pick(`size-${option}`, ` ${option} `))),
@@ -210,6 +250,24 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
     model === 'fast' ? chip(' Fast & Cheap ', CORAL, INK) : pick('model-fast', ' Fast & Cheap '),
     model === 'same' ? chip(' Same as me ', CORAL, INK) : pick('model-same', ' Same as me '),
   ]
+
+  // A pick waiting for /model or /effort shows in gold until it has run.
+  const choice = (key: string, label: string, isChosen: boolean, isPending: boolean): Option =>
+    isPending ? chip(label, GOLD, INK) : isChosen ? chip(label, CORAL, INK) : pick(key, label)
+  const titled = (word: string) => ` ${word.charAt(0).toUpperCase()}${word.slice(1)} `
+  const shownFamily = modelPending ?? familyOf(modelId)
+  const models = offeredFamilies(chatOptions ?? undefined).map(family =>
+    choice(`chat-model-${family}`, titled(family), family === shownFamily, family === modelPending),
+  )
+  const efforts = EFFORTS.map(level =>
+    choice(`chat-effort-${level}`, titled(level === 'xhigh' ? 'XHigh' : level), level === (effortPending ?? effort), level === effortPending),
+  )
+  const isUltracodeOn = ultracode === 'on'
+  const ultracodes = onOff('chat-ultracode', isUltracodeOn, ultracodePending)
+  const isWaiting = e.props.isWorking && (modelPending !== null || effortPending !== null || ultracodePending !== null)
+  const meta = [modelId === '' ? null : modelLabel(modelId), effort, isUltracodeOn ? 'ultracode' : null]
+    .filter(Boolean)
+    .join(' · ')
 
   // The engine raises AbovePrompt on the terminal and desktop alone, so the
   // popup never shows on mobile or VS Code; the surface check only narrows the
@@ -249,8 +307,18 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
         <Text color={CORAL} bold>
           {`◆  ${spaced('TOOLBOX')}`}
         </Text>
-        <Button key="toolbox-close" plain role="dismiss" label="✕" onPress={() => update($, toolboxOpenAtom, () => false)} />
+        <Box flexDirection="row" gap={2}>
+          {meta === '' ? null : <Text color={MUTED}>{meta}</Text>}
+          <Button key="toolbox-close" plain role="dismiss" label="✕" onPress={() => update($, toolboxOpenAtom, () => false)} />
+        </Box>
       </Box>
+      {rule('MODEL CONFIG')}
+      {models.length === 0 ? null : row(<Text color={MUTED}>◇</Text>, 'Model', 'saved as default', models)}
+      {row(<Text color={MUTED}>◇</Text>, 'Effort', 'thinking depth', efforts)}
+      {ultracode === 'unavailable'
+        ? null
+        : row(<Text color={isUltracodeOn ? GREEN : MUTED}>{isUltracodeOn ? '●' : '○'}</Text>, 'Ultracode', 'workflows on every task', ultracodes)}
+      {isWaiting ? <Text color={GOLD}>{'◷ switches when Claude is done working'}</Text> : null}
       {rule('SETTINGS')}
       {row(<Text color={isCleanView ? GREEN : MUTED}>{isCleanView ? '●' : '○'}</Text>, 'Clean View', 'simple checklist', cleanView)}
       {row(<Text color={MUTED}>◇</Text>, 'Team size', 'per request', sizes)}

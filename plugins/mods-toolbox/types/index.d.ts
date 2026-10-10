@@ -66,6 +66,11 @@ export type DockMission = {
 
 export type DockHelperModel = 'fast' | 'same'
 
+export type ChatEffort = 'low' | 'medium' | 'high' | 'xhigh' | 'max'
+
+// Ultracode (`/effort ultracode on|off`, Max plans); unavailable once the command refused it.
+export type ChatUltracode = 'on' | 'off' | 'unavailable'
+
 declare module 'claude-code' {
   interface PluginState {
     'mods-toolbox': {
@@ -82,6 +87,18 @@ declare module 'claude-code' {
       dockTick: number
       // The Toolbox popup above the prompt; this session only.
       toolboxIsOpen: boolean
+      // The aliases /config's model row offers; empty when it has none or is locked.
+      chatModelOptions: string[] | null
+      // The session's model id, read back after /model, /config and the Toolbox change it.
+      chatModel: string | null
+      // The session's effort as last seen (a turn's Stop, /effort); null when unknown.
+      chatEffort: ChatEffort | null
+      // A family or level the Toolbox asked /model or /effort for, waiting to run.
+      chatModelPending: string | null
+      chatEffortPending: ChatEffort | null
+      // Ultracode for this session as last set; off until someone turns it on.
+      chatUltracode: ChatUltracode
+      chatUltracodePending: 'on' | 'off' | null
     }
   }
 }

@@ -96,11 +96,15 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 
 ## Toolbox
 
-**◆ Toolbox ▾** at the right of the prompt footer, or `/toolbox`, opens one popup above the prompt with both mods' settings:
+**◆ Toolbox ▾** at the right of the prompt footer, or `/toolbox`, opens one popup above the prompt with Claude's model and effort and both mods' settings:
 
 ```
 ╭────────────────────────────────────────────────────────────────╮
-│ ◆  T O O L B O X                                             ✕ │
+│ ◆  T O O L B O X                       Opus 5.5 · 1M · high  ✕ │
+│ ── M O D E L   C O N F I G ─────────────────────────────────── │
+│ ◇ Model         saved as default   Haiku  Sonnet [Opus] Fable  │
+│ ◇ Effort        thinking depth  Low  Medium [High] XHigh  Max  │
+│ ○ Ultracode     workflows on every task           ○ On  ● Off  │
 │ ── S E T T I N G S ─────────────────────────────────────────── │
 │ ● Clean View    simple checklist                  ● On  ○ Off  │
 │ ◇ Team size     per request  1  3 [5] 10  20  50  100  Custom  │
@@ -110,6 +114,11 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 ╰────────────────────────────────────────────────────────────────╯
 ```
 
+- **Model config** switches the model and effort the way typing `/model` and `/effort` does: for this chat now, and saved as your default for new sessions (in your user `settings.json`; effort per model). Claude Code runs those commands only when Claude isn't working, so a pick made mid-task shows in gold with `◷ switches when Claude is done working`. Each switch adds the command's one-line confirmation to the chat.
+- **Model** offers the families your `/config` model row lists, and keeps 1M context when the chat is on it. The row is left out when your organization locks the model.
+- **Ultracode** (Max plans) runs `/effort ultracode on` or `off`: dynamic workflows on every task, which Claude Code reports as for this session only. No API reads it, so the row starts at Off and follows the toggle and a typed `/effort ultracode`. If Claude Code refuses it, as on a plan without Ultracode, the refusal shows as a toast and the row goes for the rest of the session. A mistyped `/effort ultracode` leaves the row as it was.
+- **Effort** shows the level the last answer ran at. Before the first answer it comes from `settings.json`, so a session started with `--effort` shows the real level after its first answer. Each model has its own effort, so after a model switch the row shows the new model's from `settings.json` (its own level, else the general one), the way Claude Code picks it.
+- A switch Claude Code refuses shows its reason as a toast, and the row keeps what's really running. A typed `/model` or `/effort`, or the `/config` model row, moves the popup too.
 - It always sits at the right edge. With room, Clean View's checklist keeps its rows beside it. On a narrow terminal the checklist folds to its header (`· step 2 of 3`) above it.
 - Every switch is the same setting as `/simple` and `/dock`, saved the same way. Team Size above 20 asks first, in gold, inside the popup.
 - **Agent Dock** opens the dock and closes the popup to give it room.
@@ -118,7 +127,7 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 
 ## For other mods
 
-The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/index.d.ts`](./types/index.d.ts): `cleanViewEnabled`, `checklist` and `tick`, the dock's `dockTeamSize`, `dockMission` and the rest beside them, and `toolboxIsOpen`. List `mods-toolbox` under `dependencies` in your mod's `plugin.json` to get the types laid beside it.
+The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/index.d.ts`](./types/index.d.ts): `cleanViewEnabled`, `checklist` and `tick`, the dock's `dockTeamSize`, `dockMission` and the rest beside them, and the Toolbox's `toolboxIsOpen`, `chatModel` (the session's model id) and `chatEffort` (its effort as last seen). List `mods-toolbox` under `dependencies` in your mod's `plugin.json` to get the types laid beside it.
 
 ## Development
 
@@ -128,4 +137,4 @@ claude plugin validate plugins/mods-toolbox
 claude plugin test plugins/mods-toolbox
 ```
 
-`hooks/register.tsx` is the entry point: it calls `registerToolbox(on)` from `hooks/toolbox.tsx` first, so its band hook sits outside Clean View's, then `registerDock(on)` from `hooks/dock.tsx`, so the dock's hook on a helper's `report_progress` runs before Clean View's, then `registerCleanView(on)` from `hooks/clean-view.tsx`. The engine follows `$` only into functions of the same file, so the Toolbox draws its controls and Clean View and the dock answer their keys in their own `ui.press` and `ui.input` hooks; each file reads the shared values through its own `atom` on the same literal key. While the popup is open the Toolbox lays out the band: Clean View steps aside, and the checklist is drawn through the same `$`-free `hooks/checklist-view.tsx` both use, beside the popup or folded above it. The band's layout math is in `hooks/toolbox-logic.ts`. Every step name goes through `hooks/clean-name.ts`, and both mods take percents and durations from `hooks/progress.ts`. The dock's logic that needs no `$` (sizes, names, instruction texts, counts, meters) lives in `hooks/dock-logic.ts` so tests call it directly. Claude Code writes the API types into `.claude-plugin/types/` (gitignored) when it loads the plugin, and `tsconfig.json` extends them, so `tsc -p plugins/mods-toolbox` works after one load.
+`hooks/register.tsx` is the entry point: it calls `registerToolbox(on)` from `hooks/toolbox.tsx` first, so its band hook sits outside Clean View's, then `registerChatPicks(on)` from `hooks/chat-picks.tsx`, which runs `/model` and `/effort` for the popup's model config rows and keeps the effort last seen, then `registerDock(on)` from `hooks/dock.tsx`, so the dock's hook on a helper's `report_progress` runs before Clean View's, then `registerCleanView(on)` from `hooks/clean-view.tsx`. The engine follows `$` only into functions of the same file, so the Toolbox draws its controls and Clean View, the dock and the chat picks answer their keys in their own `ui.press` and `ui.input` hooks; each file reads the shared values through its own `atom` on the same literal key. While the popup is open the Toolbox lays out the band: Clean View steps aside, and the checklist is drawn through the same `$`-free `hooks/checklist-view.tsx` both use, beside the popup or folded above it. The band's layout math is in `hooks/toolbox-logic.ts`, and the model names and `/model` arguments in `hooks/chat-picks-logic.ts`. Every step name goes through `hooks/clean-name.ts`, and both mods take percents and durations from `hooks/progress.ts`. The dock's logic that needs no `$` (sizes, names, instruction texts, counts, meters) lives in `hooks/dock-logic.ts` so tests call it directly. Claude Code writes the API types into `.claude-plugin/types/` (gitignored) when it loads the plugin, and `tsconfig.json` extends them, so `tsc -p plugins/mods-toolbox` works after one load.
