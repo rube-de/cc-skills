@@ -1,3 +1,10 @@
+# [2.19.0](https://github.com/rube-de/cc-skills/compare/v2.18.0...v2.19.0) (2026-10-10)
+
+
+### Features
+
+* **mods-toolbox:** add model, effort and Ultracode rows to the Toolbox ([#283](https://github.com/rube-de/cc-skills/issues/283)) ([8e3f2a4](https://github.com/rube-de/cc-skills/commit/8e3f2a4c107e17b1435b55848aa5d1164d90e1bb))
+
 # [2.18.0](https://github.com/rube-de/cc-skills/compare/v2.17.2...v2.18.0) (2026-10-09)
 
 
