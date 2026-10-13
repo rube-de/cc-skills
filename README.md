@@ -20,7 +20,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 | [jules-review](./plugins/jules-review/) | Code Review | Plugin or Skill | Review Jules AI agent PRs using council with smart quick/full mode |
 | [dlc](./plugins/dlc/) | Quality | Plugin or Skill | Dev Life Cycle quality gates: security scans, code quality, performance analysis, test coverage, and PR review compliance |
 | [feature-discovery](./plugins/feature-discovery/) | Productivity | Plugin only | Multi-agent roadmap discovery: map the product, research competitors, ideate across value lenses, then rank and spec a validated roadmap (requires the Workflow tool) |
-| [mods-toolbox](./plugins/mods-toolbox/) | Productivity | Plugin only | Function-hook mods: Clean View, a calm view for non-technical users that hides tool calls, diffs and command output behind a progress checklist above the prompt, and the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards, with one Toolbox popup for their settings and Claude's model and effort (Claude Code 2.1.291+) |
+| [mods-toolbox](./plugins/mods-toolbox/) | Productivity | Plugin only | Function-hook mods: Clean View, a calm view for non-technical users that hides tool calls, diffs and command output behind a progress checklist above the prompt, the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards, and the Status Line Dock, which builds the status line from blocks with a live preview, with one Toolbox popup for their settings and Claude's model and effort (Claude Code 2.1.291+) |
 
 > **Plugin vs Skill**: Plugins use the full Claude Code plugin system (hooks, agents, commands, scripts). Skills install only SKILL.md definitions via [skills.sh](https://skills.sh). Plugins that rely on hooks, commands, or agent definitions need plugin install. See each plugin's README for details.
 
@@ -203,9 +203,9 @@ cc-skills/
 │   │   └── skills/          # dlc, security, quality, perf, test, pr-check, pr-validity, git-ops
 │   ├── feature-discovery/   # Multi-agent roadmap discovery
 │   │   └── skills/          # feature-discovery + workflow script
-│   └── mods-toolbox/        # Function-hook mods: Clean View checklist + Agent Dock + Toolbox popup
-│       ├── hooks/           # register.tsx + clean-view.tsx and dock.tsx hooks modules
-│       ├── skills/          # dock-setup: Agent Dock count in the status line
+│   └── mods-toolbox/        # Function-hook mods: Clean View checklist + Agent Dock + Status Line Dock + Toolbox popup
+│       ├── hooks/           # register.tsx + clean-view.tsx, dock.tsx and status-line-dock.tsx hooks modules
+│       ├── renderer/        # sh + jq status line renderer the Status Line Dock installs
 │       ├── tests/           # claude plugin test suite
 │       └── types/           # $.state contract for other mods
 ├── scripts/

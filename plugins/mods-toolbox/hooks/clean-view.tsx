@@ -21,8 +21,8 @@ type Checklist = CleanViewChecklist
 const enabledAtom = atom({ plugin: 'mods-toolbox', key: 'cleanViewEnabled' } as const, true)
 const checklistAtom = atom({ plugin: 'mods-toolbox', key: 'checklist' } as const, null)
 const tickAtom = atom({ plugin: 'mods-toolbox', key: 'tick' } as const, 0)
-// The Toolbox's: while its popup is open it draws the checklist beside it.
-const toolboxOpenAtom = atom({ plugin: 'mods-toolbox', key: 'toolboxIsOpen' } as const, false)
+// The Toolbox's: while its popup or the Status Line Dock is up, that draws the checklist.
+const bandViewAtom = atom({ plugin: 'mods-toolbox', key: 'bandView' } as const, null)
 
 const STORE_KEY = 'cleanViewEnabled'
 const ALWAYS_ALLOWED = new Set([
@@ -299,7 +299,7 @@ export function registerCleanView(on: On) {
   )
 
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey || (await read($, toolboxOpenAtom))) {
+    if (e.props.hasSurvey || (await read($, bandViewAtom)) !== null) {
       return next(e)
     }
     // The band is shared with other mods: Clean View sits on top of whatever the hooks beneath draw.

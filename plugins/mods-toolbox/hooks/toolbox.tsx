@@ -1,6 +1,7 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface, On, RenderInput, RenderNode } from 'claude-code'
 
+import type { BandView, StatusLineSetup } from '../types'
 import { EFFORTS, familyOf, modelLabel, offeredFamilies } from './chat-picks-logic'
 import { checklistView, isAnimated } from './checklist-view'
 import {
@@ -16,12 +17,14 @@ import {
   SIZES,
   spaced,
 } from './dock-logic'
+import { layoutSummary } from './status-line-logic'
 import { BAND_GAP, bandLayout } from './toolbox-logic'
 import type { BandLayout } from './toolbox-logic'
 
 type Engine = EngineInterface
 
-const toolboxOpenAtom = atom({ plugin: 'mods-toolbox', key: 'toolboxIsOpen' } as const, false)
+// The band shows the popup or the Status Line Dock, never both.
+const bandViewAtom = atom({ plugin: 'mods-toolbox', key: 'bandView' } as const, null)
 // Clean View's and the dock's values, read on the same keys their files write.
 const cleanViewAtom = atom({ plugin: 'mods-toolbox', key: 'cleanViewEnabled' } as const, true)
 const checklistAtom = atom({ plugin: 'mods-toolbox', key: 'checklist' } as const, null)
@@ -38,6 +41,8 @@ const chatModelPendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatModelPendi
 const chatEffortPendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatEffortPending' } as const, null)
 const chatUltracodeAtom = atom({ plugin: 'mods-toolbox', key: 'chatUltracode' } as const, 'off')
 const chatUltracodePendingAtom = atom({ plugin: 'mods-toolbox', key: 'chatUltracodePending' } as const, null)
+// The Status Line Dock's, for its Launch entry.
+const statusLineSetupAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineSetup' } as const, null)
 
 const NAME_WIDTH = 14
 
@@ -49,13 +54,15 @@ type Option = { label: string; node: RenderNode }
 // it is answered.
 const answeredByOwner = () => undefined
 
+const toggleView = (view: BandView | null): BandView | null => (view === 'toolbox' ? null : 'toolbox')
+
 export function registerToolbox(on: On) {
   // Clean View holds the bare session.start and the dock its cwd matcher.
   on('session.start', { surface: /^/ }, async ($, e, next) => {
     try {
       await $.command.register({
         name: 'toolbox',
-        description: "Open or close the Toolbox: Claude's model and effort, Clean View, Team Size, helper model and the Agent Dock",
+        description: "Open or close the Toolbox: Claude's model and effort, Clean View, Team Size, helper model, the Agent Dock and the Status Line Dock",
         immediate: true,
       })
     } catch {
@@ -66,20 +73,20 @@ export function registerToolbox(on: On) {
   })
 
   on('command.run', { command: 'toolbox' }, async $ => {
-    const isOpen = await update($, toolboxOpenAtom, current => !current)
+    const view = await update($, bandViewAtom, toggleView)
 
-    return { text: isOpen ? 'Toolbox open above the prompt.' : 'Toolbox closed.' }
+    return { text: view === 'toolbox' ? 'Toolbox open above the prompt.' : 'Toolbox closed.' }
   })
 
   on('ui.render', { component: 'SessionMode' }, async ($, e, next) => {
     const below = await next(e)
     const { Box, Button, Text } = $.ui.resolve(e)
-    const isOpen = await read($, toolboxOpenAtom)
+    const isOpen = (await read($, bandViewAtom)) === 'toolbox'
 
     return (
       <Box flexDirection="row" gap={1}>
         {below}
-        <Button key="toolbox-button" plain onPress={() => update($, toolboxOpenAtom, current => !current)}>
+        <Button key="toolbox-button" plain onPress={() => update($, bandViewAtom, toggleView)}>
           <Text color={CORAL}>◆</Text>
           {` Toolbox ${isOpen ? '▴' : '▾'}`}
         </Button>
@@ -93,7 +100,7 @@ export function registerToolbox(on: On) {
   // under a sized Box, so they go below, never in the row. The popup always sits
   // at the right edge, with or without a checklist beside it.
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
-    if (e.props.hasSurvey || !(await read($, toolboxOpenAtom))) {
+    if (e.props.hasSurvey || (await read($, bandViewAtom)) !== 'toolbox') {
       return next(e)
     }
     const { Box } = $.ui.resolve(e)
@@ -164,6 +171,7 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
     effortPending,
     ultracode,
     ultracodePending,
+    statusLineSetup,
   ] = await Promise.all([
     read($, cleanViewAtom),
     read($, sizeAtom),
@@ -177,6 +185,7 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
     read($, chatEffortPendingAtom),
     read($, chatUltracodeAtom),
     read($, chatUltracodePendingAtom),
+    read($, statusLineSetupAtom),
   ])
   // chat-picks.tsx keeps the model read back; asking the engine covers a start it missed.
   const modelId = chatModel ?? (await $.session.model().catch(() => ''))
@@ -309,7 +318,7 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
         </Text>
         <Box flexDirection="row" gap={2}>
           {meta === '' ? null : <Text color={MUTED}>{meta}</Text>}
-          <Button key="toolbox-close" plain role="dismiss" label="✕" onPress={() => update($, toolboxOpenAtom, () => false)} />
+          <Button key="toolbox-close" plain role="dismiss" label="✕" onPress={() => update($, bandViewAtom, () => null)} />
         </Box>
       </Box>
       {rule('MODEL CONFIG')}
@@ -326,14 +335,27 @@ async function drawPopup($: Engine, e: RenderInput<'AbovePrompt'>, width: number
       {confirmBox}
       {row(<Text color={MUTED}>◇</Text>, 'Helpers', 'model they use', helpers)}
       {rule('LAUNCH')}
-      <Box flexDirection="row">
+      <Box flexDirection="column">
         {/* The dock opens itself, then lets the press through to close the popup. */}
-        <Button key="toolbox-dock" plain onPress={() => update($, toolboxOpenAtom, () => false)}>
+        <Button key="toolbox-dock" plain onPress={() => update($, bandViewAtom, () => null)}>
           <Text color={CORAL}>◆</Text>
           {' Agent Dock  '}
           <Text color={MUTED}>{`team of ${size}`}</Text>
         </Button>
+        {/* The Status Line Dock takes the band over from the popup. */}
+        <Button key="toolbox-status-line" plain onPress={answeredByOwner}>
+          <Text color={CORAL}>◆</Text>
+          {' Status Line Dock  '}
+          <Text color={MUTED}>{statusLineNote(statusLineSetup)}</Text>
+        </Button>
       </Box>
     </Box>
   )
+}
+
+// The Layout in force here, or that there is none yet.
+function statusLineNote(setup: StatusLineSetup | null): string {
+  const installed = setup === null ? null : setup.project.isInstalled ? setup.project : setup.global.isInstalled ? setup.global : null
+
+  return installed === null || installed.layout === null ? 'not set up' : layoutSummary(installed.layout)
 }

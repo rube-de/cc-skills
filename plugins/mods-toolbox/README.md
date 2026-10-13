@@ -4,7 +4,8 @@ Function-hook mods that change how Claude Code looks while it works:
 
 - **[Clean View](#clean-view)**: one calm checklist above the prompt instead of tool calls, diffs and command output.
 - **[Agent Dock](#agent-dock)**: every request split across a team of parallel helpers you pick, each shown as a live card.
-- **[Toolbox](#toolbox)**: one popup above the prompt for both mods' settings, opened from **◆ Toolbox ▾** in the prompt footer.
+- **[Status Line Dock](#status-line-dock)**: Claude Code's status line built from blocks you pick, with a live preview.
+- **[Toolbox](#toolbox)**: one popup above the prompt for the mods' settings, opened from **◆ Toolbox ▾** in the prompt footer.
 
 They ship together because the dock's helpers report through Clean View's `report_progress` tool.
 
@@ -88,11 +89,44 @@ M I S S I O N   Research bakery pricing                         45%   1:12
 - **Queueing**: Claude Code refuses an Agent call past `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` (default 20) instead of queueing it. The dock holds those calls until a slot frees up. "At a time" is the lower of that limit and `CLAUDE_CODE_MAX_TOOL_USE_CONCURRENCY` (default 10). Set both to 20 in the `env` block of your user settings for waves of 20.
 - **Progress**: helpers are asked to call `report_progress` at about 25, 50, 75 and 100%, and each card's meter follows its own helper.
 
-**Status line count:** run `/mods-toolbox:dock-setup` to add `◇ N agents` to your status line, either globally or for one project only. While helpers run, the dock writes the live count to `~/.claude/agent-dock/agents-now/<session id>.json` (under `$CLAUDE_CONFIG_DIR` when set) and removes the file when they finish or the session ends. The skill installs a small add-on, `~/.claude/agent-dock/statusline.sh`, that wraps your own status line command and adds the segment to its first line, so your script stays untouched. It also sets the status line to refresh every 2 seconds (`refreshInterval`), so the count keeps moving while Claude waits for helpers. `/mods-toolbox:dock-setup uninstall` undoes it in every project the skill touched (it keeps a list), puts each status line back as it was, removes any status line block or settings file the setup itself created, and deletes the add-on.
+**Status line count:** the [Status Line Dock](#status-line-dock)'s Agents block shows `◇ N agents` while helpers run. The dock writes the live count to `~/.claude/agent-dock/agents-now/<session id>.json` (under `$CLAUDE_CONFIG_DIR` when set) and removes the file when they finish or the session ends.
 
 Every face is a colored two-letter badge. Past 12 helpers the cards shrink to one-line tiles so 50 or 100 still fit. The animation clock runs only while a request is live, so the idle seats are a still row with no twinkle.
 
 **Cost:** at size 50 *every* request becomes 50 agents. Keep the size at 1 unless you mean it.
+
+## Status Line Dock
+
+Builds Claude Code's status line from blocks, with a live preview, and installs it for every project or for this one. Open it with **◆ Status Line Dock** in the Toolbox's Launch section, or `/status-dock`. It takes the band above the prompt, full width, right above the real status line:
+
+```
+╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ◆  S T A T U S   L I N E   D O C K                   Global · installed · 2 lines · 9 blocks  ✕ │
+│ Mode      Replace [Extend]     Scope  [Global] This project     Icons  [Glyph] Emoji  None     │
+│ Keeps  ~/.claude/statusline.sh                                                                 │
+│ ── B L O C K S ─────────────────────────────────────────────────────────────────────────────── │
+│ Line 1    Folder  Branch [Model] Effort                                                        │
+│ Line 2    Context  Cost  Lines changed  Session time  Agents                                   │
+│ Off       Version  Style  Rate limits                                                          │
+│ ── P R E V I E W ────────────────────────────────────────────── at 180 columns · nothing drops │
+│ 📁 ~/code/app  🌿 main ✗  🤖 Opus 5.5                                                           │
+│ ⌂ ~/code/app  ⎇ main ✗  ◆ Opus 5.5  ◎ high                                                     │
+│ ███░░░░░░░ 34%  $0.53  +42 -18  ◷ 2m15s  ◇ 3 agents                                            │
+│ h: ←  l: →  k: ↑  j: ↓  o: on/off  i: icons  a: Apply  u: Uninstall  ctrl+x tab, then the keys │
+╰────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+- **Blocks**: Folder (at most 30 columns: a longer path keeps whole folders from its end, as `.../oasis/flexvaults-service`), Branch (✗ while there are uncommitted changes), Model (with the context size short, as `Opus 5.5(1M)`), Effort, Version, Style (the output style), Context (bar and % used), Cost, Lines changed, Session time, Rate limits (5-hour and 7-day) and Agents (the Agent Dock's helpers working right now). A block Claude Code has no figure for yet is left out of the line.
+- **Keys**: `ctrl+x tab` hands the band the keys. Tab to a block and Enter, or a click, selects it; one that is Off is turned on too, at the end of the last line in use. Then `h` and `l` move it along its line, `k` and `j` move it between Line 1, Line 2 and Off, `o` turns it off or on, `i` cycles the icons (Glyph, Emoji, None, also chips to click), `a` applies, `r` reverts edits not applied yet and `u` uninstalls. Letters only: a digit typed into an empty prompt would press a band button.
+- **Replace or Extend**: Replace makes the blocks the whole status line. Extend keeps the status line you had on top (the Base status line) and adds the blocks below it. One wrapped by the Agent Dock's old add-on is unwrapped: the Base is your own command, and the Agents block shows the count.
+- **Global or This project**: Global sets `statusLine` in your user `settings.json`; This project sets it in `.claude/settings.local.json`, with a reminder to keep that out of git. Each scope has its own Layout, and a project's starts from the global one. In Extend, a project with no status line of its own keeps following the one it inherits, read on every refresh, so a later change there still shows. When that is the Dock's own global line, the project keeps what the global Layout keeps instead, so no block shows twice.
+- **Install**: the first Apply asks in gold, showing the command now and the new one. It writes only the `statusLine` block, in the file's own indentation, writes through a settings file that is a symlink into a dotfiles repo, and sets `refreshInterval` to 2 seconds unless yours is already 1 or 2. Once installed, Apply saves only the Layout, and the status line picks it up at its next refresh.
+- **Preview**: runs the same renderer the status line runs, on the Layout you're editing, with this session's real figures: once installed, the input Claude Code last gave it. Blocks with no figure yet show sample ones, named under the preview. The rule above it gives your terminal's width and which blocks drop there: a line too wide loses whole blocks from its end rather than a cut-off one.
+- **Uninstall** asks, saying what goes back, then puts the `statusLine` block back exactly as the install found it (or takes it out, or deletes the settings file the install created), and deletes `~/.claude/mods-toolbox/` once no scope uses it. A status line you changed by hand since is left alone.
+- **Left alone**: a settings file with comments, which isn't plain JSON, and a status line your organization's managed settings set.
+- **Needs `jq`** (macOS 15 ships `/usr/bin/jq`); without it the status line reads `status line needs jq`. The renderer and Layouts live in `~/.claude/mods-toolbox/` (under `$CLAUDE_CONFIG_DIR` when set), so the status line keeps working if the plugin goes; use Uninstall first to take it out. [ADR 0001](../../docs/adrs/0001-status-line-shell-renderer.md) says why it's a shell script.
+
+**Coming from `/mods-toolbox:dock-setup`:** that skill is gone. Open the Dock and Install: it unwraps the add-on, and deletes it once no other project's settings run it.
 
 ## Toolbox
 
@@ -111,6 +145,7 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 │ ◇ Helpers       model they use       Fast & Cheap  Same as me  │
 │ ── L A U N C H ─────────────────────────────────────────────── │
 │ ◆ Agent Dock  team of 5                                        │
+│ ◆ Status Line Dock  2 lines · 9 blocks                         │
 ╰────────────────────────────────────────────────────────────────╯
 ```
 
@@ -121,13 +156,13 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 - A switch Claude Code refuses shows its reason as a toast, and the row keeps what's really running. A typed `/model` or `/effort`, or the `/config` model row, moves the popup too.
 - It always sits at the right edge. With room, Clean View's checklist keeps its rows beside it. On a narrow terminal the checklist folds to its header (`· step 2 of 3`) above it.
 - Every switch is the same setting as `/simple` and `/dock`, saved the same way. Team Size above 20 asks first, in gold, inside the popup.
-- **Agent Dock** opens the dock and closes the popup to give it room.
+- **Agent Dock** opens the dock and closes the popup to give it room. **Status Line Dock** opens in the popup's place: the band shows one of them at a time.
 - ✕ or a second press on the footer button closes it. Esc doesn't, since the band above the prompt has no close key.
 - It stays open across requests, for this session only. On VS Code and mobile, where the band isn't drawn, use `/simple` and `/dock`.
 
 ## For other mods
 
-The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/index.d.ts`](./types/index.d.ts): `cleanViewEnabled`, `checklist` and `tick`, the dock's `dockTeamSize`, `dockMission` and the rest beside them, and the Toolbox's `toolboxIsOpen`, `chatModel` (the session's model id) and `chatEffort` (its effort as last seen). List `mods-toolbox` under `dependencies` in your mod's `plugin.json` to get the types laid beside it.
+The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/index.d.ts`](./types/index.d.ts): `cleanViewEnabled`, `checklist` and `tick`, the dock's `dockTeamSize`, `dockMission` and the rest beside them, the Toolbox's `bandView` (`'toolbox'`, `'statusLineDock'` or `null`), `chatModel` (the session's model id) and `chatEffort` (its effort as last seen), and the Status Line Dock's `statusLineSetup`. List `mods-toolbox` under `dependencies` in your mod's `plugin.json` to get the types laid beside it.
 
 ## Development
 
@@ -135,6 +170,7 @@ The checklist lives in `$.state` under the `mods-toolbox` key, typed in [`types/
 claude --plugin-dir plugins/mods-toolbox    # run it from this checkout
 claude plugin validate plugins/mods-toolbox
 claude plugin test plugins/mods-toolbox
+bun test plugins/mods-toolbox/renderer      # the status line renderer, run as a real shell script
 ```
 
-`hooks/register.tsx` is the entry point: it calls `registerToolbox(on)` from `hooks/toolbox.tsx` first, so its band hook sits outside Clean View's, then `registerChatPicks(on)` from `hooks/chat-picks.tsx`, which runs `/model` and `/effort` for the popup's model config rows and keeps the effort last seen, then `registerDock(on)` from `hooks/dock.tsx`, so the dock's hook on a helper's `report_progress` runs before Clean View's, then `registerCleanView(on)` from `hooks/clean-view.tsx`. The engine follows `$` only into functions of the same file, so the Toolbox draws its controls and Clean View, the dock and the chat picks answer their keys in their own `ui.press` and `ui.input` hooks; each file reads the shared values through its own `atom` on the same literal key. While the popup is open the Toolbox lays out the band: Clean View steps aside, and the checklist is drawn through the same `$`-free `hooks/checklist-view.tsx` both use, beside the popup or folded above it. The band's layout math is in `hooks/toolbox-logic.ts`, and the model names and `/model` arguments in `hooks/chat-picks-logic.ts`. Every step name goes through `hooks/clean-name.ts`, and both mods take percents and durations from `hooks/progress.ts`. The dock's logic that needs no `$` (sizes, names, instruction texts, counts, meters) lives in `hooks/dock-logic.ts` so tests call it directly. Claude Code writes the API types into `.claude-plugin/types/` (gitignored) when it loads the plugin, and `tsconfig.json` extends them, so `tsc -p plugins/mods-toolbox` works after one load.
+`hooks/register.tsx` is the entry point: it calls `registerToolbox(on)` from `hooks/toolbox.tsx` first, then `registerStatusLineDock(on)` from `hooks/status-line-dock.tsx`, so both band hooks sit outside Clean View's, then `registerChatPicks(on)` from `hooks/chat-picks.tsx`, which runs `/model` and `/effort` for the popup's model config rows and keeps the effort last seen, then `registerDock(on)` from `hooks/dock.tsx`, so the dock's hook on a helper's `report_progress` runs before Clean View's, then `registerCleanView(on)` from `hooks/clean-view.tsx`. The engine follows `$` only into functions of the same file, so the Toolbox draws its controls and Clean View, the dock and the chat picks answer their keys in their own `ui.press` and `ui.input` hooks; each file reads the shared values through its own `atom` on the same literal key. While the popup is open the Toolbox lays out the band: Clean View steps aside, and the checklist is drawn through the same `$`-free `hooks/checklist-view.tsx` both use, beside the popup or folded above it. The band's layout math is in `hooks/toolbox-logic.ts`, and the model names and `/model` arguments in `hooks/chat-picks-logic.ts`. Every step name goes through `hooks/clean-name.ts`, and both mods take percents and durations from `hooks/progress.ts`. The dock's logic that needs no `$` (sizes, names, instruction texts, counts, meters) lives in `hooks/dock-logic.ts` so tests call it directly, and the Status Line Dock's (Layout edits, what the settings files hold, install and uninstall changes, the preview's input, colors to styled runs) in `hooks/status-line-logic.ts`. The status line itself is `renderer/statusline.sh` and `renderer/statusline.jq`; `claude plugin test` can't spawn a shell, so `renderer/statusline.spec.ts` runs under `bun test`, under `sh` and `dash`. Claude Code writes the API types into `.claude-plugin/types/` (gitignored) when it loads the plugin, and `tsconfig.json` extends them, so `tsc -p plugins/mods-toolbox` works after one load.
