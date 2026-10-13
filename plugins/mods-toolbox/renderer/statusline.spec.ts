@@ -198,6 +198,11 @@ describe('width', () => {
     expect(styled('簡潔', 16)).toBe('Opus 5.5  簡潔\n')
     // "Opus 5.5  Café" is 14 wide in 15 codepoints.
     expect(styled('Cafe\u0301', 16)).toBe('Opus 5.5  Cafe\u0301\n')
+    // Emoji in the Basic Multilingual Plane, and a text symbol made emoji by VS16, are two wide too.
+    expect(styled('✅', 13)).toBe('Opus 5.5\n')
+    expect(styled('✅', 14)).toBe('Opus 5.5  ✅\n')
+    expect(styled('\u2764\uFE0F', 13)).toBe('Opus 5.5\n')
+    expect(styled('\u2764\uFE0F', 14)).toBe('Opus 5.5  \u2764\uFE0F\n')
   })
 
   test('a wide folder is cut by cells', () => {

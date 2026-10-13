@@ -19,29 +19,50 @@ def icon_table: {
 # Every emoji above is drawn two cells wide; every glyph one.
 def icon_width($style): if $style == "emoji" then 2 else 1 end;
 
-# The cells one codepoint takes, as wcwidth counts them for the common cases:
-# combining marks, joiners and variation selectors none; CJK, Hangul,
-# fullwidth forms and emoji two. The icons above keep icon_width.
-def cell_width:
-  if (. >= 768 and . <= 879) or (. >= 8203 and . <= 8207) or (. >= 8400 and . <= 8447)
-    or (. >= 65024 and . <= 65039) or (. >= 917760 and . <= 917999) then 0
-  elif (. >= 4352 and . <= 4447) or (. >= 11904 and . <= 42191) or (. >= 44032 and . <= 55203)
-    or (. >= 63744 and . <= 64255) or (. >= 65040 and . <= 65049) or (. >= 65072 and . <= 65135)
-    or (. >= 65280 and . <= 65376) or (. >= 65504 and . <= 65510)
-    or (. >= 127744 and . <= 129791) or (. >= 131072 and . <= 262141) then 2
-  else 1 end;
+# The cells a character takes, as wcwidth counts them for the common cases.
+# Codepoint ranges in decimal, since jq has no hex: combining marks, joiners and
+# variation selectors take none; CJK, Hangul, fullwidth forms and every emoji
+# Unicode draws as emoji by default take two. The icons above keep icon_width.
+def zero_ranges: [
+    [768, 879], [8203, 8207], [8400, 8447], [65024, 65039], [917760, 917999]
+  ];
 
-def cells: explode | map(cell_width) | add // 0;
+def wide_ranges: [
+    [4352, 4447], [8986, 8987], [9193, 9196], [9200, 9200], [9203, 9203], [9725, 9726],
+    [9748, 9749], [9800, 9811], [9855, 9855], [9875, 9875], [9889, 9889], [9898, 9899],
+    [9917, 9918], [9924, 9925], [9934, 9934], [9940, 9940], [9962, 9962], [9970, 9971],
+    [9973, 9973], [9978, 9978], [9981, 9981], [9989, 9989], [9994, 9995], [10024, 10024],
+    [10060, 10060], [10062, 10062], [10067, 10069], [10071, 10071], [10133, 10135], [10160, 10160],
+    [10175, 10175], [11035, 11036], [11088, 11088], [11093, 11093], [11904, 42191], [44032, 55203],
+    [63744, 64255], [65040, 65049], [65072, 65135], [65280, 65376], [65504, 65510], [127744, 129791],
+    [131072, 262141]
+  ];
 
-# The end of a string, at most $max cells wide.
+def in_ranges($ranges): . as $c | any($ranges[]; $c >= .[0] and $c <= .[1]);
+
+def cell_width: if in_ranges(zero_ranges) then 0 elif in_ranges(wide_ranges) then 2 else 1 end;
+
+# Each codepoint's cells, in context: VS16 (65039) turns the narrow symbol
+# before it into a two-wide emoji, as in "❤️".
+def widths:
+  . as $cs
+  | [range(0; length) as $i
+      | if $cs[$i] == 65039 and $i > 0 and ($cs[$i - 1] | cell_width) == 1 then 1 else $cs[$i] | cell_width end];
+
+def cells: explode | widths | add // 0;
+
+# The end of a string, at most $max cells wide, never starting on a mark that
+# belongs to the character before the cut.
 def last_cells($max):
-  explode | reverse
-  | reduce .[] as $c ({ kept: [], used: 0, full: false };
+  explode as $cs
+  | ($cs | widths) as $ws
+  | reduce range(($cs | length) - 1; -1; -1) as $i ({ start: ($cs | length), used: 0, full: false };
       if .full then .
-      else ($c | cell_width) as $w
-        | if .used + $w > $max then .full = true else .kept += [$c] | .used += $w end
-      end)
-  | .kept | reverse | implode;
+      elif .used + $ws[$i] > $max then .full = true
+      else .start = $i | .used += $ws[$i] end)
+  | .start
+  | until(. >= ($cs | length) or ($cs[.] | cell_width) > 0; . + 1)
+  | $cs[.:] | implode;
 
 def two_digits: tostring | if length < 2 then "0" + . else . end;
 
