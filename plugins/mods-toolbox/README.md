@@ -7,7 +7,7 @@ Function-hook mods that change how Claude Code looks while it works:
 - **[Status Line Dock](#status-line-dock)**: Claude Code's status line built from blocks you pick, with a live preview.
 - **[Toolbox](#toolbox)**: one popup above the prompt for the mods' settings, opened from **◆ Toolbox ▾** in the prompt footer.
 
-They ship together because the dock's helpers report through Clean View's `report_progress` tool.
+They ship together because the dock's helpers report through Clean View's `report_progress` tool, and the Status Line Dock's Agents block shows the Agent Dock's helper count.
 
 ## Requirements
 
@@ -97,7 +97,7 @@ Every face is a colored two-letter badge. Past 12 helpers the cards shrink to on
 
 ## Status Line Dock
 
-Builds Claude Code's status line from blocks, with a live preview, and installs it for every project or for this one. Open it with **◆ Status Line Dock** in the Toolbox's Launch section, or `/status-dock`. It takes the band above the prompt, full width, right above the real status line:
+Builds Claude Code's status line from blocks, with a live preview, and installs it for every project or for this one. Open it with **◆ Status Line Dock** in the Toolbox's Launch section, or `/status-dock`. It takes the band above the prompt, full width, right above the real status line, so it shows in the terminal and the desktop app but not in VS Code or on mobile, which don't draw the band:
 
 ```
 ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -158,7 +158,7 @@ Builds Claude Code's status line from blocks, with a live preview, and installs 
 - Every switch is the same setting as `/simple` and `/dock`, saved the same way. Team Size above 20 asks first, in gold, inside the popup.
 - **Agent Dock** opens the dock and closes the popup to give it room. **Status Line Dock** opens in the popup's place: the band shows one of them at a time.
 - ✕ or a second press on the footer button closes it. Esc doesn't, since the band above the prompt has no close key.
-- It stays open across requests, for this session only. On VS Code and mobile, where the band isn't drawn, use `/simple` and `/dock`.
+- It stays open across requests, for this session only. On VS Code and mobile, where the band isn't drawn, use `/simple` and `/dock`; the Status Line Dock has no command-only form, so set the status line up from the terminal or the desktop app.
 
 ## For other mods
 
