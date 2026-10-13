@@ -661,7 +661,9 @@ async function drawDock($: Engine, e: RenderInput<'AbovePrompt'>) {
           </Box>
         ) : (
           <Box flexDirection="column">
-            <Text color={GOLD}>{`Put back the status line ${state.file} had before the Dock?`}</Text>
+            <Text color={GOLD}>
+              {state.isRecorded ? `Put back the status line ${state.file} had before the Dock?` : `Take the Dock's status line out of ${state.file}?`}
+            </Text>
             {state.restores === null ? null : (
               <Text color={MUTED} wrap="truncate-end">
                 {`back to  ${state.restores}`}

@@ -386,6 +386,7 @@ describe('install and uninstall', () => {
 
     await ui.press({ key: 'sl-scope-global' })
     await ui.press({ key: 'sl-uninstall' })
+    expect(JSON.stringify(await ui.drawn())).toContain(`Take the Dock's status line out of ${USER_SETTINGS}?`)
     expect(JSON.stringify(await ui.drawn())).toContain('back to  no status line: there is no record here of the one before')
     await ui.press({ key: 'sl-confirm' })
     expect(seen.files[USER_SETTINGS]).toBe('{}\n')

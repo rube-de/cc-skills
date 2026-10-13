@@ -424,6 +424,7 @@ export function setupFrom(files: SetupFiles): StatusLineSetup {
     layout,
     base,
     restores: restoreText(isInstalled, records[file], scopeName === 'project' ? inherited : null),
+    isRecorded: records[file] !== undefined,
     problem,
   })
 

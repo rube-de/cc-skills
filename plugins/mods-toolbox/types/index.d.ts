@@ -120,6 +120,8 @@ export type StatusLineScopeState = {
   base: StatusLineBase | null
   // What an uninstall puts back, as the confirm says it; null when this scope isn't installed.
   restores: string | null
+  // Whether this machine keeps a record of the install, so Uninstall can put back what was there.
+  isRecorded: boolean
   // Why the settings file cannot be changed (it is not plain JSON), or null.
   problem: string | null
 }
