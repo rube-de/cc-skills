@@ -1,3 +1,10 @@
+# [2.20.0](https://github.com/rube-de/cc-skills/compare/v2.19.0...v2.20.0) (2026-10-13)
+
+
+### Features
+
+* **mods-toolbox:** add the Status Line Dock ([#284](https://github.com/rube-de/cc-skills/issues/284)) ([fac18c4](https://github.com/rube-de/cc-skills/commit/fac18c4ed08702a531a57ec85e73a7fff194a104))
+
 # [2.19.0](https://github.com/rube-de/cc-skills/compare/v2.18.0...v2.19.0) (2026-10-10)
 
 
