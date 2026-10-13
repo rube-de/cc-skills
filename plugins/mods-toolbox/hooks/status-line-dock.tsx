@@ -83,8 +83,8 @@ export function registerStatusLineDock(on: On) {
     }
     try {
       const where = await currentPaths($)
-      await loadSetup($, where)
-      await keepRendererCurrent($, where)
+      const setup = await loadSetup($, where)
+      await keepRendererCurrent($, where, setup)
       await sweepCaptures($, where)
       if ((await read($, bandViewAtom)) === 'statusLineDock') {
         syncPreviewTimer($, true)
@@ -196,10 +196,12 @@ async function remove($: Engine, ...targets: string[]) {
 
 // Settings files point at the copy under the config folder, since the plugin's
 // own folder carries its version. Each session puts the shipped one there while
-// any install uses it, so an update reaches every status line.
-async function keepRendererCurrent($: Engine, where: Paths, isInstalling = false) {
+// any install or settings file uses it, so an update reaches every status line
+// and a settings file from another machine's dotfiles finds its renderer here.
+async function keepRendererCurrent($: Engine, where: Paths, setup: StatusLineSetup, isInstalling = false) {
   const records = parseRecords(await readText($, where.records))
-  if (!isInstalling && Object.keys(records).length === 0) {
+  const isUsed = Object.keys(records).length > 0 || setup.global.isInstalled || setup.project.isInstalled
+  if (!isInstalling && !isUsed) {
     return
   }
   for (const [shipped, copy] of [
@@ -331,7 +333,7 @@ async function install($: Engine) {
     return
   }
 
-  await keepRendererCurrent($, where, true)
+  await keepRendererCurrent($, where, current.setup, true)
   await $.fs.write(state.layoutFile, layoutText(plan.layout))
   await $.fs.write(where.records, recordsText({ ...records, [plan.file]: plan.record }))
   // Written last: the status line only switches once its renderer and Layout are there.
@@ -375,30 +377,39 @@ async function uninstall($: Engine) {
   const state = current.setup[current.scope]
   const records = parseRecords(await readText($, where.records))
   const record = records[state.file]
-  const plan = record === undefined ? null : uninstallPlan(await readText($, state.file), state.file, record)
-  if (plan !== null && 'problem' in plan) {
+  const plan = uninstallPlan(await readText($, state.file), state.file, record)
+  if ('problem' in plan) {
     $.ui.toast(plan.problem)
     return
   }
-  if (plan?.text === null) {
+  if (plan.text === null) {
     await remove($, state.file)
-  } else if (plan?.text !== undefined) {
+  } else if (plan.text !== undefined) {
     await $.fs.write(state.file, plan.text)
   }
 
   const { [state.file]: _gone, ...rest } = records
-  if (Object.keys(rest).length === 0) {
+  const other = current.setup[current.scope === 'global' ? 'project' : 'global']
+  if (Object.keys(rest).length === 0 && !other.isInstalled) {
     // Nothing runs the renderer any more: everything the installs put under the config folder goes.
     await remove($, `${where.config}/mods-toolbox`)
   } else {
     await remove($, state.layoutFile)
-    await $.fs.write(where.records, recordsText(rest))
+    if (record !== undefined) {
+      await $.fs.write(where.records, recordsText(rest))
+    }
   }
 
   await update($, draftsAtom, drafts => ({ ...drafts, [current.scope]: null }))
   await loadSetup($, where)
   await refreshPreview($)
-  $.ui.toast(record === undefined ? 'No status line from this Dock to take out here.' : `Status line in ${state.file} put back as it was.`)
+  $.ui.toast(
+    plan.text === undefined
+      ? `The status line in ${state.file} is no longer this Dock's, so it stays.`
+      : record === undefined
+        ? `Status line taken out of ${state.file}.`
+        : `Status line in ${state.file} put back as it was.`,
+  )
 }
 
 // --- Preview ----------------------------------------------------------------

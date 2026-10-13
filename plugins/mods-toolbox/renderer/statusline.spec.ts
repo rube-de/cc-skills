@@ -160,6 +160,22 @@ describe('blocks', () => {
     rmSync(join(dir, 'config', 'mods-toolbox', 'cache'), { recursive: true, force: true })
     expect(render({ layout: layoutOf({ lines: [['branch']] }), input })).toBe('⎇ trunk ✗\n')
   })
+
+  test("a repo's own core.fsmonitor never runs", () => {
+    const repo = join(dir, 'repo')
+    const ran = join(dir, 'fsmonitor-ran')
+    const hook = join(dir, 'fsmonitor')
+    mkdirSync(repo)
+    writeFileSync(hook, `#!/bin/sh\ntouch '${ran}'\n`, { mode: 0o755 })
+    const git = (...args: string[]) => Bun.spawnSync(['git', '-C', repo, ...args], { env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null' } })
+    git('init', '-q', '-b', 'trunk')
+    git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'one')
+    git('config', 'core.fsmonitor', hook)
+    writeFileSync(join(repo, 'new.txt'), 'x')
+
+    expect(render({ layout: layoutOf({ lines: [['branch']] }), input: { ...INPUT, workspace: { current_dir: repo } } })).toBe('⎇ trunk ✗\n')
+    expect(existsSync(ran)).toBe(false)
+  })
 })
 
 describe('width', () => {
@@ -172,6 +188,22 @@ describe('width', () => {
   test('emoji count two cells', () => {
     // "🤖 Opus 5.5" is 11 wide.
     expect(render({ layout: layoutOf({ icons: 'emoji', lines: [['model', 'effort']] }), columns: 13 })).toBe('🤖 Opus 5.5\n')
+  })
+
+  test('wide text counts two cells a character, and combining marks none', () => {
+    const styled = (name: string, columns: number) =>
+      render({ layout: layoutOf({ icons: 'none', lines: [['model', 'style']] }), input: { ...INPUT, output_style: { name } }, columns })
+    // "Opus 5.5  簡潔" is 14 wide in 12 codepoints.
+    expect(styled('簡潔', 15)).toBe('Opus 5.5\n')
+    expect(styled('簡潔', 16)).toBe('Opus 5.5  簡潔\n')
+    // "Opus 5.5  Café" is 14 wide in 15 codepoints.
+    expect(styled('Cafe\u0301', 16)).toBe('Opus 5.5  Cafe\u0301\n')
+  })
+
+  test('a wide folder is cut by cells', () => {
+    const folder = (current_dir: string) => render({ layout: layoutOf({ lines: [['folder']] }), input: { ...INPUT, workspace: { current_dir } } })
+    expect(folder('/srv/プロジェクト/アプリケーション/サービス')).toBe('⌂ .../アプリケーション/サービス\n')
+    expect(folder(`/srv/${'ア'.repeat(20)}`)).toBe(`⌂ ...${'ア'.repeat(13)}\n`)
   })
 
   test('the preview names what dropped', () => {

@@ -97,7 +97,9 @@ if [ "$wants_git" = 1 ] && [ -n "$cwd" ] && command -v git >/dev/null 2>&1; then
     if [ $((now - stamp)) -gt 5 ]; then
       git_branch=$(git -C "$root" branch --show-current 2>/dev/null)
       [ -z "$git_branch" ] && git_branch=$(git -C "$root" rev-parse --short HEAD 2>/dev/null)
-      if [ -n "$(git --no-optional-locks -C "$root" status --porcelain 2>/dev/null | head -n 1)" ]; then
+      # A repo's own core.fsmonitor names a program git status runs: an unpacked
+      # archive's .git/config could run anything on every refresh.
+      if [ -n "$(git --no-optional-locks -c core.fsmonitor=false -C "$root" status --porcelain 2>/dev/null | head -n 1)" ]; then
         git_dirty=1
       else
         git_dirty=0

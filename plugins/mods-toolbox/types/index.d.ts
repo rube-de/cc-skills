@@ -118,7 +118,7 @@ export type StatusLineScopeState = {
   layout: StatusLineLayout | null
   // What Extend keeps on top if this scope is installed now.
   base: StatusLineBase | null
-  // What an uninstall puts back, as the confirm says it; null with no record of the install.
+  // What an uninstall puts back, as the confirm says it; null when this scope isn't installed.
   restores: string | null
   // Why the settings file cannot be changed (it is not plain JSON), or null.
   problem: string | null

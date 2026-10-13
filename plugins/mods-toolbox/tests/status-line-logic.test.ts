@@ -321,6 +321,11 @@ describe('uninstall', () => {
     expect(uninstallPlan(now, file, record(null, true))).toEqual({ text: settings(undefined, { theme: 'dark' }) })
   })
 
+  test('with no record of the install, as from another machine, the block just goes', () => {
+    expect(uninstallPlan(settings({ command: OURS_GLOBAL }, { theme: 'dark' }), file, undefined)).toEqual({ text: settings(undefined, { theme: 'dark' }) })
+    expect(uninstallPlan(settings({ command: OURS_GLOBAL }), file, undefined)).toEqual({ text: '{}\n' })
+  })
+
   test('a status line someone set since is theirs and stays', () => {
     expect(uninstallPlan(settings({ command: 'newer' }), file, record({ command: 'mine' }))).toEqual({ text: undefined })
   })
@@ -331,14 +336,16 @@ describe('uninstall', () => {
       const setup = setupFrom(files({ records: JSON.stringify({ version: 1, installs }), ...more }))
       return { global: setup.global.restores, project: setup.project.restores }
     }
-    expect(restores({ [file]: record({ type: 'command', command: 'mine' }) })).toEqual({ global: 'mine', project: null })
-    expect(restores({ [file]: record(null) }).global).toBe('no status line')
-    expect(restores({ [local]: record(null) }, { user: settings({ command: OURS_GLOBAL }) }).project).toBe(
+    const ours = settings({ command: OURS_GLOBAL })
+    expect(restores({ [file]: record({ type: 'command', command: 'mine' }) }, { user: ours })).toEqual({ global: 'mine', project: null })
+    expect(restores({ [file]: record(null) }, { user: ours }).global).toBe('no status line')
+    expect(restores({ [local]: record(null) }, { user: ours, local: ours }).project).toBe(
       'no status line of its own, so the global one shows again',
     )
-    expect(restores({ [local]: record(null) }, { project: settings({ command: 'team' }) }).project).toBe(
+    expect(restores({ [local]: record(null) }, { project: settings({ command: 'team' }), local: ours }).project).toBe(
       'no status line of its own, so the one in .claude/settings.json shows again',
     )
+    expect(restores({}, { user: ours })).toEqual({ global: 'no status line: there is no record here of the one before', project: null })
   })
 })
 

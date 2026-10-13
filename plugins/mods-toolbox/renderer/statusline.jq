@@ -3,7 +3,7 @@
 # count, the Base status line's output) as arguments. Prints the status line,
 # or under $preview one JSON object the Dock's preview reads.
 #
-# Width is counted here, in codepoints, because sh counts bytes in the C locale.
+# Width is counted here, in terminal cells, because sh counts bytes in the C locale.
 
 def color($code; $text):
   if $color == "1" then "\u001b[\($code)m\($text)\u001b[0m" else $text end;
@@ -18,6 +18,30 @@ def icon_table: {
 
 # Every emoji above is drawn two cells wide; every glyph one.
 def icon_width($style): if $style == "emoji" then 2 else 1 end;
+
+# The cells one codepoint takes, as wcwidth counts them for the common cases:
+# combining marks, joiners and variation selectors none; CJK, Hangul,
+# fullwidth forms and emoji two. The icons above keep icon_width.
+def cell_width:
+  if (. >= 768 and . <= 879) or (. >= 8203 and . <= 8207) or (. >= 8400 and . <= 8447)
+    or (. >= 65024 and . <= 65039) or (. >= 917760 and . <= 917999) then 0
+  elif (. >= 4352 and . <= 4447) or (. >= 11904 and . <= 42191) or (. >= 44032 and . <= 55203)
+    or (. >= 63744 and . <= 64255) or (. >= 65040 and . <= 65049) or (. >= 65072 and . <= 65135)
+    or (. >= 65280 and . <= 65376) or (. >= 65504 and . <= 65510)
+    or (. >= 127744 and . <= 129791) or (. >= 131072 and . <= 262141) then 2
+  else 1 end;
+
+def cells: explode | map(cell_width) | add // 0;
+
+# The end of a string, at most $max cells wide.
+def last_cells($max):
+  explode | reverse
+  | reduce .[] as $c ({ kept: [], used: 0, full: false };
+      if .full then .
+      else ($c | cell_width) as $w
+        | if .used + $w > $max then .full = true else .kept += [$c] | .used += $w end
+      end)
+  | .kept | reverse | implode;
 
 def two_digits: tostring | if length < 2 then "0" + . else . end;
 
@@ -42,16 +66,16 @@ def shorten_home:
 
 # At most $max wide: the front goes, and whole folders from the end stay after ".../".
 def cut_front($max):
-  if length <= $max then .
+  if cells <= $max then .
   else
     split("/") as $parts
     | reduce range(($parts | length) - 2; 0; -1) as $i ({ kept: $parts[-1], full: false };
         if .full then .
         else "\($parts[$i])/\(.kept)" as $longer
-          | if ($longer | length) + 4 > $max then .full = true else .kept = $longer end
+          | if ($longer | cells) + 4 > $max then .full = true else .kept = $longer end
         end)
     | .kept as $kept
-    | if ($kept | length) + 4 <= $max then ".../" + $kept else "..." + ($kept | .[3 - $max:]) end
+    | if ($kept | cells) + 4 <= $max then ".../" + $kept else "..." + ($kept | last_cells($max - 3)) end
   end;
 
 # "Opus 5.5 (1M context)" reads "Opus 5.5(1M)".
@@ -117,7 +141,7 @@ def block($id; $input):
       | {
           id: $id,
           text: ((if $icon == "" then "" else $icon + " " end) + color(.code; .plain) + (if $tail == "" then "" else color(.tail_code; $tail) end)),
-          width: ((if $icon == "" then 0 else icon_width($layout.icons // "glyph") + 1 end) + (.plain | length) + ($tail | length))
+          width: ((if $icon == "" then 0 else icon_width($layout.icons // "glyph") + 1 end) + (.plain | cells) + ($tail | cells))
         }
     end;
 

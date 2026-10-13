@@ -377,6 +377,28 @@ describe('install and uninstall', () => {
     expect(JSON.stringify(await ui.drawn())).toContain('Global · not installed')
   })
 
+  test('with no record here, Uninstall takes the Dock line out, and keeps the renderer while the project runs it', async ($, on) => {
+    const ours = json({ statusLine: { type: 'command', command: COMMAND } })
+    const { seen } = world(on, { files: { [USER_SETTINGS]: ours, [LOCAL_SETTINGS]: ours } })
+    await begin($)
+    await statusDock($)
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+
+    await ui.press({ key: 'sl-scope-global' })
+    await ui.press({ key: 'sl-uninstall' })
+    expect(JSON.stringify(await ui.drawn())).toContain('back to  no status line: there is no record here of the one before')
+    await ui.press({ key: 'sl-confirm' })
+    expect(seen.files[USER_SETTINGS]).toBe('{}\n')
+    expect(seen.files[`${OWN}/statusline.sh`]).toBe('shipped statusline.sh')
+    expect(seen.toasts).toContain(`Status line taken out of ${USER_SETTINGS}.`)
+
+    await ui.press({ key: 'sl-scope-project' })
+    await ui.press({ key: 'sl-uninstall' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(seen.files[LOCAL_SETTINGS]).toBe('{}\n')
+    expect(Object.keys(seen.files).filter(path => path.startsWith(OWN))).toEqual([])
+  })
+
   test("a status line from managed settings can't be changed here", async ($, on) => {
     world(on, { policy: { statusLine: { type: 'command', command: 'company' } } })
     await begin($)
@@ -404,6 +426,13 @@ describe('session start', () => {
     const { seen } = world(on)
     await begin($)
     expect(seen.files[`${OWN}/statusline.sh`]).toBeUndefined()
+  })
+
+  test("a settings file from another machine's dotfiles gets its renderer, with no record here", async ($, on) => {
+    const { seen } = world(on, { files: { [USER_SETTINGS]: json({ statusLine: { type: 'command', command: COMMAND } }) } })
+    await begin($)
+    expect(seen.files[`${OWN}/statusline.sh`]).toBe('shipped statusline.sh')
+    expect(seen.files[`${OWN}/statusline.jq`]).toBe('shipped statusline.jq')
   })
 
   test('an installed renderer is brought up to the shipped one', async ($, on) => {

@@ -350,20 +350,21 @@ export type SetupFiles = {
   isLocked: boolean
 }
 
-// What an uninstall puts back, as the confirm says it; null with no record of the install.
-function restoreText(record: InstallRecord | undefined, inherited: string | null): string | null {
-  if (record === undefined) {
+// What an uninstall puts back, as the confirm says it; null when the scope isn't installed.
+function restoreText(isInstalled: boolean, record: InstallRecord | undefined, inherited: string | null): string | null {
+  if (!isInstalled) {
     return null
   }
-  const { before } = record
+  const before = record?.before ?? null
   if (isRecord(before) && typeof before.command === 'string' && before.command.trim() !== '') {
     return before.command
   }
   if (before !== null) {
     return 'its statusLine block as it was'
   }
+  const none = inherited === null ? 'no status line' : `no status line of its own, so ${inherited} shows again`
 
-  return inherited === null ? 'no status line' : `no status line of its own, so ${inherited} shows again`
+  return record === undefined ? `${none}: there is no record here of the one before` : none
 }
 
 /** What the settings files and Layouts hold, read the way Claude Code picks a status line. */
@@ -422,7 +423,7 @@ export function setupFrom(files: SetupFiles): StatusLineSetup {
     isInstalled,
     layout,
     base,
-    restores: restoreText(records[file], scopeName === 'project' ? inherited : null),
+    restores: restoreText(isInstalled, records[file], scopeName === 'project' ? inherited : null),
     problem,
   })
 
@@ -601,8 +602,12 @@ export type UninstallPlan = {
   text: string | null | undefined
 }
 
-/** Puts back what the install found. A status line someone changed since is theirs, and stays. */
-export function uninstallPlan(settingsText: string | null, file: string, record: InstallRecord): UninstallPlan | { problem: string } {
+/**
+ * Puts back what the install found. With no record of the install, as when the
+ * settings file came from another machine's dotfiles, the statusLine block just
+ * goes. A status line someone changed since is theirs, and stays.
+ */
+export function uninstallPlan(settingsText: string | null, file: string, record: InstallRecord | undefined): UninstallPlan | { problem: string } {
   const parsed = parseSettings(settingsText, file)
   if (parsed.problem !== null) {
     return { problem: parsed.problem }
@@ -611,8 +616,9 @@ export function uninstallPlan(settingsText: string | null, file: string, record:
     return { text: undefined }
   }
   const { statusLine: _ours, ...rest } = parsed.settings
-  const restored = record.before === null ? rest : { ...parsed.settings, statusLine: record.before }
-  if (record.createdFile && Object.keys(restored).length === 0) {
+  const before = record?.before ?? null
+  const restored = before === null ? rest : { ...parsed.settings, statusLine: before }
+  if (record?.createdFile === true && Object.keys(restored).length === 0) {
     return { text: null }
   }
 
