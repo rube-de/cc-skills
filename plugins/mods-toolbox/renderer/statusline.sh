@@ -33,6 +33,7 @@ fi
 
 session=""
 cwd=""
+project=""
 wants_git=0
 mode=replace
 base_kind=""
@@ -41,6 +42,7 @@ base_path=""
 eval "$(printf '%s' "$input" | jq -r --argjson layout "$layout" '
   "session=\(.session_id // "" | @sh)",
   "cwd=\(.workspace.current_dir // .cwd // "" | @sh)",
+  "project=\(.workspace.project_dir // "" | @sh)",
   "wants_git=\(if [($layout.lines // [])[][]] | index("branch") then 1 else 0 end)",
   "mode=\($layout.mode // "replace" | @sh)",
   "base_kind=\($layout.base.kind // "" | @sh)",
@@ -97,12 +99,16 @@ if [ "$wants_git" = 1 ] && [ -n "$cwd" ] && command -v git >/dev/null 2>&1; then
     if [ $((now - stamp)) -gt 5 ]; then
       git_branch=$(git -C "$root" branch --show-current 2>/dev/null)
       [ -z "$git_branch" ] && git_branch=$(git -C "$root" rev-parse --short HEAD 2>/dev/null)
-      # A repo's own core.fsmonitor names a program git status runs: an unpacked
-      # archive's .git/config could run anything on every refresh.
-      if [ -n "$(git --no-optional-locks -c core.fsmonitor=false -C "$root" status --porcelain 2>/dev/null | head -n 1)" ]; then
+      # git status runs programs a repo's own config names (core.fsmonitor, clean
+      # filters), so it runs only in the repo the session started in, which Claude
+      # Code trusted and runs git status in itself. A repo the session moved into,
+      # such as an unpacked archive, shows its branch alone.
+      trusted=""
+      [ -n "$project" ] && trusted=$(git -C "$project" rev-parse --show-toplevel 2>/dev/null)
+      git_dirty=0
+      if [ -n "$trusted" ] && [ "$root" = "$trusted" ] &&
+        [ -n "$(git --no-optional-locks -c core.fsmonitor=false -C "$root" status --porcelain 2>/dev/null | head -n 1)" ]; then
         git_dirty=1
-      else
-        git_dirty=0
       fi
       mkdir -p "$cache_dir" 2>/dev/null && printf '%s\t%s\t%s\n' "$now" "$git_branch" "$git_dirty" >"$cache"
     fi

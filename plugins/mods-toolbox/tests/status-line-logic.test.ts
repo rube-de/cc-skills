@@ -369,6 +369,7 @@ describe('preview', () => {
     captured: null,
     sessionId: 'session-1',
     cwd: '/Users/me/code/app',
+    root: '/Users/me/code/app',
     modelId: 'claude-opus-5-5[1m]',
     version: '2.1.296',
     effort: 'high',

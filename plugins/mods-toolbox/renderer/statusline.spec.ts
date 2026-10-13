@@ -153,7 +153,7 @@ describe('blocks', () => {
     const git = (...args: string[]) => Bun.spawnSync(['git', '-C', repo, ...args], { env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null' } })
     git('init', '-q', '-b', 'trunk')
     git('-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '--allow-empty', '-m', 'one')
-    const input = { ...INPUT, workspace: { current_dir: repo } }
+    const input = { ...INPUT, workspace: { current_dir: repo, project_dir: repo } }
     expect(render({ layout: layoutOf({ lines: [['branch']] }), input })).toBe('⎇ trunk\n')
 
     writeFileSync(join(repo, 'new.txt'), 'x')
@@ -173,7 +173,27 @@ describe('blocks', () => {
     git('config', 'core.fsmonitor', hook)
     writeFileSync(join(repo, 'new.txt'), 'x')
 
-    expect(render({ layout: layoutOf({ lines: [['branch']] }), input: { ...INPUT, workspace: { current_dir: repo } } })).toBe('⎇ trunk ✗\n')
+    expect(render({ layout: layoutOf({ lines: [['branch']] }), input: { ...INPUT, workspace: { current_dir: repo, project_dir: repo } } })).toBe('⎇ trunk ✗\n')
+    expect(existsSync(ran)).toBe(false)
+  })
+
+  test('a repo the session moved into shows its branch alone, and its clean filter never runs', () => {
+    const project = join(dir, 'project')
+    const repo = join(project, 'unpacked')
+    const ran = join(dir, 'filter-ran')
+    mkdirSync(repo, { recursive: true })
+    const git = (cwd: string, ...args: string[]) => Bun.spawnSync(['git', '-C', cwd, ...args], { env: { ...process.env, GIT_CONFIG_GLOBAL: '/dev/null' } })
+    git(project, 'init', '-q', '-b', 'main')
+    git(repo, 'init', '-q', '-b', 'trunk')
+    writeFileSync(join(repo, '.gitattributes'), '* filter=evil\n')
+    writeFileSync(join(repo, 'file.txt'), 'one\n')
+    git(repo, '-c', 'filter.evil.clean=cat', 'add', '.')
+    git(repo, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'one')
+    git(repo, 'config', 'filter.evil.clean', `touch '${ran}'; cat`)
+    writeFileSync(join(repo, 'file.txt'), 'two\n')
+
+    const input = { ...INPUT, workspace: { current_dir: repo, project_dir: project } }
+    expect(render({ layout: layoutOf({ lines: [['branch']] }), input })).toBe('⎇ trunk\n')
     expect(existsSync(ran)).toBe(false)
   })
 })

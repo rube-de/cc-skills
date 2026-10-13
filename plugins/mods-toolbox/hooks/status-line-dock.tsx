@@ -474,6 +474,7 @@ async function runPreview($: Engine) {
     captured,
     sessionId,
     cwd,
+    root: where.root,
     modelId: model,
     version,
     effort,

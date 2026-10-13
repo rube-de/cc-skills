@@ -632,6 +632,8 @@ export type PreviewFacts = {
   captured: Record<string, unknown> | null
   sessionId: string
   cwd: string
+  // The folder the session started in: the renderer runs git status only in its repo.
+  root: string
   modelId: string | null
   version: string | null
   effort: ChatEffort | null
@@ -686,7 +688,7 @@ export function previewInput(facts: PreviewFacts): { input: Record<string, unkno
   const built: Record<string, unknown> = {
     session_id: facts.sessionId,
     cwd: facts.cwd,
-    workspace: { current_dir: facts.cwd },
+    workspace: { current_dir: facts.cwd, project_dir: facts.root },
     ...(facts.modelId === null ? {} : { model: { id: facts.modelId, display_name: displayName(facts.modelId) } }),
     ...(facts.version === null ? {} : { version: facts.version }),
     ...(facts.effort === null ? {} : { effort: { level: facts.effort } }),
