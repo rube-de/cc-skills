@@ -352,7 +352,7 @@ describe('settings', () => {
     const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
     await ui.press({ key: 'toolbox-dock' })
     expect(seen.open.has(PANE)).toBe(true)
-    expect(seen.state.toolboxIsOpen).toBe(false)
+    expect(seen.state.bandView).toBe(null)
     expect(await ui.find({ type: 'Text', text: WORDMARK })).toBeUndefined()
   })
 })
