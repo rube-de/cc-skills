@@ -10,6 +10,7 @@ import type {
   StatusLineScope,
   StatusLineScopeState,
   StatusLineSetup,
+  StatusLineSkill,
 } from '../types'
 import { modelLabel } from './chat-picks-logic'
 
@@ -29,7 +30,9 @@ export const BLOCKS: ReadonlyArray<{ id: StatusLineBlockId; name: string }> = [
   { id: 'lines', name: 'Lines changed' },
   { id: 'time', name: 'Session time' },
   { id: 'limits', name: 'Rate limits' },
+  { id: 'cache', name: 'Prompt cache' },
   { id: 'agents', name: 'Agents' },
+  { id: 'skill', name: 'Skill' },
 ]
 
 export const LINE_COUNT = 2
@@ -222,6 +225,7 @@ export type Paths = {
   agentDockRecords: string
   agentDockAddon: string
   captures: string
+  skills: string
 }
 
 /** Claude Code's config folder ($CLAUDE_CONFIG_DIR, else ~/.claude) and every file the Dock reads or writes. */
@@ -242,7 +246,13 @@ export function pathsFor(configDir: string | undefined, home: string, root: stri
     agentDockRecords: `${config}/agent-dock/installs`,
     agentDockAddon: `${config}/agent-dock/statusline.sh`,
     captures: `${own}/last-input`,
+    skills: `${own}/skill-now`,
   }
+}
+
+/** A session's file in a per-session folder, named the way the renderer names it. */
+export function sessionFile(dir: string, sessionId: string): string {
+  return `${dir}/${sessionId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`
 }
 
 // 32-bit FNV-1a, so two project paths that read alike once cleaned keep apart.
@@ -642,11 +652,12 @@ export type PreviewFacts = {
   usage: {
     startedAt: number
     context: { percent?: number }
-    rateLimits: ReadonlyArray<{ kind: string; percentUsed: number }>
+    rateLimits: ReadonlyArray<{ kind: string; percentUsed: number; resetsAt?: string }>
     cost?: { usd: number }
   } | null
   now: number
   agents: number
+  skill: StatusLineSkill | null
 }
 
 const SAMPLE = {
@@ -661,7 +672,12 @@ const SAMPLE = {
   durationMs: 754_000,
   fiveHour: 23,
   sevenDay: 41,
+  // Seconds from now; the half minute keeps the countdown on its figure between refreshes.
+  fiveHourResets: 2 * 3600 + 10 * 60 + 30,
+  sevenDayResets: 3 * 86_400 + 4 * 3600 + 30,
+  cacheExpires: 47 * 60 + 30,
   agents: 3,
+  skill: { name: 'code-review', isRunning: true },
 }
 
 function at(value: unknown, ...keys: string[]): unknown {
@@ -684,8 +700,24 @@ function displayName(modelId: string): string {
 }
 
 /** The stdin the preview's renderer gets: this session's real figures, and samples for the blocks that have none yet. */
-export function previewInput(facts: PreviewFacts): { input: Record<string, unknown>; samples: StatusLineBlockId[]; agents: number } {
-  const percent = (kind: string) => facts.usage?.rateLimits.find(limit => limit.kind === kind)?.percentUsed
+export function previewInput(facts: PreviewFacts): {
+  input: Record<string, unknown>
+  samples: StatusLineBlockId[]
+  agents: number
+  skill: StatusLineSkill
+} {
+  const nowSeconds = Math.floor(facts.now / 1000)
+  // A window as the status line input has it: resets_at in epoch seconds.
+  const rateWindow = (kind: string) => {
+    const limit = facts.usage?.rateLimits.find(found => found.kind === kind)
+    if (limit === undefined) {
+      return {}
+    }
+    const resets = limit.resetsAt === undefined ? Number.NaN : Date.parse(limit.resetsAt)
+    return {
+      [kind]: { used_percentage: limit.percentUsed, ...(Number.isFinite(resets) ? { resets_at: Math.floor(resets / 1000) } : {}) },
+    }
+  }
   const built: Record<string, unknown> = {
     session_id: facts.sessionId,
     cwd: facts.cwd,
@@ -699,10 +731,7 @@ export function previewInput(facts: PreviewFacts): { input: Record<string, unkno
       ...(facts.usage === null ? {} : { total_duration_ms: Math.max(0, facts.now - facts.usage.startedAt) }),
     },
     context_window: facts.usage?.context.percent === undefined ? {} : { used_percentage: facts.usage.context.percent },
-    rate_limits: {
-      ...(percent('five_hour') === undefined ? {} : { five_hour: { used_percentage: percent('five_hour') } }),
-      ...(percent('seven_day') === undefined ? {} : { seven_day: { used_percentage: percent('seven_day') } }),
-    },
+    rate_limits: { ...rateWindow('five_hour'), ...rateWindow('seven_day') },
   }
   const { columns: _columns, ...captured } = facts.captured ?? {}
   const real = facts.captured === null ? built : captured
@@ -725,14 +754,23 @@ export function previewInput(facts: PreviewFacts): { input: Record<string, unkno
   })
   fill('time', !at(real, 'cost', 'total_duration_ms'), { cost: { total_duration_ms: SAMPLE.durationMs } })
   fill('limits', isMissing(at(real, 'rate_limits', 'five_hour')) && isMissing(at(real, 'rate_limits', 'seven_day')), {
-    rate_limits: { five_hour: { used_percentage: SAMPLE.fiveHour }, seven_day: { used_percentage: SAMPLE.sevenDay } },
+    rate_limits: {
+      five_hour: { used_percentage: SAMPLE.fiveHour, resets_at: nowSeconds + SAMPLE.fiveHourResets },
+      seven_day: { used_percentage: SAMPLE.sevenDay, resets_at: nowSeconds + SAMPLE.sevenDayResets },
+    },
+  })
+  fill('cache', isMissing(at(real, 'prompt_cache', 'expires_at')), {
+    prompt_cache: { caching_observed: true, warm: true, ttl: '1h', expires_at: nowSeconds + SAMPLE.cacheExpires },
   })
   const agents = facts.agents > 0 ? facts.agents : SAMPLE.agents
   if (facts.agents <= 0) {
     samples.push('agents')
   }
+  if (facts.skill === null) {
+    samples.push('skill')
+  }
 
-  return { input: real, samples, agents }
+  return { input: real, samples, agents, skill: facts.skill ?? SAMPLE.skill }
 }
 
 function merge(target: Record<string, unknown>, patch: Record<string, unknown>): Record<string, unknown> {

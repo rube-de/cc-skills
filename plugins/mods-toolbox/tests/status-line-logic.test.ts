@@ -70,7 +70,7 @@ describe('Layout', () => {
     expect(rows(layout())).toEqual([
       ['model', 'effort'],
       ['cost'],
-      ['folder', 'branch', 'version', 'style', 'context', 'lines', 'time', 'limits', 'agents'],
+      ['folder', 'branch', 'version', 'style', 'context', 'lines', 'time', 'limits', 'cache', 'agents', 'skill'],
     ])
   })
 
@@ -377,11 +377,12 @@ describe('preview', () => {
     usage: { startedAt: 1_000, context: { percent: 12 }, rateLimits: [{ kind: 'five_hour', percentUsed: 7 }], cost: { usd: 1.5 } },
     now: 61_000,
     agents: 2,
+    skill: { name: 'council:review-plan', isRunning: false },
     ...overrides,
   })
 
   test("this session's real figures, and samples only where there are none", () => {
-    const { input, samples, agents } = previewInput(facts())
+    const { input, samples, agents, skill } = previewInput(facts())
     expect(input).toMatchObject({
       model: { display_name: 'Opus 5.5 (1M context)' },
       effort: { level: 'high' },
@@ -389,14 +390,47 @@ describe('preview', () => {
       context_window: { used_percentage: 12 },
       rate_limits: { five_hour: { used_percentage: 7 } },
     })
-    expect(samples).toEqual(['lines'])
+    expect(samples).toEqual(['lines', 'cache'])
     expect(agents).toBe(2)
+    expect(skill).toEqual({ name: 'council:review-plan', isRunning: false })
   })
 
   test('before any answer most blocks show samples, and an idle team shows a sample count', () => {
-    const { samples, agents } = previewInput(facts({ effort: null, usage: null, agents: 0 }))
-    expect(samples).toEqual(['effort', 'context', 'cost', 'lines', 'time', 'limits', 'agents'])
+    const { samples, agents, skill } = previewInput(facts({ effort: null, usage: null, agents: 0, skill: null }))
+    expect(samples).toEqual(['effort', 'context', 'cost', 'lines', 'time', 'limits', 'cache', 'agents', 'skill'])
     expect(agents).toBe(3)
+    expect(skill).toEqual({ name: 'code-review', isRunning: true })
+  })
+
+  test('a window keeps its reset, in epoch seconds as the status line input has it', () => {
+    const usage = {
+      startedAt: 1_000,
+      context: {},
+      rateLimits: [
+        { kind: 'five_hour', percentUsed: 7, resetsAt: '2026-10-17T15:00:00.000Z' },
+        { kind: 'seven_day', percentUsed: 30, resetsAt: 'soon' },
+      ],
+    }
+    const { input } = previewInput(facts({ usage }))
+    expect(input.rate_limits).toEqual({
+      five_hour: { used_percentage: 7, resets_at: Date.parse('2026-10-17T15:00:00.000Z') / 1000 },
+      seven_day: { used_percentage: 30 },
+    })
+  })
+
+  test('sample resets and cache time count from now', () => {
+    const { input } = previewInput(facts({ usage: null, now: 1_000_000_000 }))
+    expect(input).toMatchObject({
+      rate_limits: { five_hour: { resets_at: 1_000_000 + 7830 }, seven_day: { resets_at: 1_000_000 + 273_630 } },
+      prompt_cache: { warm: true, ttl: '1h', expires_at: 1_000_000 + 2850 },
+    })
+  })
+
+  test("a cache Claude Code reported is kept, even cold", () => {
+    const captured = { prompt_cache: { warm: false, caching_observed: true, ttl: '1h', expires_at: 5 } }
+    const { input, samples } = previewInput(facts({ captured }))
+    expect(input.prompt_cache).toEqual(captured.prompt_cache)
+    expect(samples).not.toContain('cache')
   })
 
   test('the last input Claude Code gave the renderer wins over what the Dock gathers', () => {

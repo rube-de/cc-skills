@@ -25,6 +25,7 @@ import {
   recordsText,
   rows,
   sameLayout,
+  sessionFile,
   setupFrom,
   startingLayout,
   statusLineCommand,
@@ -45,6 +46,7 @@ const draftsAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineDrafts' } as c
 const selectedAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineSelected' } as const, null)
 const confirmAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineConfirm' } as const, null)
 const previewAtom = atom({ plugin: 'mods-toolbox', key: 'statusLinePreview' } as const, null)
+const skillAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineSkill' } as const, null)
 // Clean View's, the Agent Dock's and the chat picks' values, read on the keys their files write.
 const cleanViewAtom = atom({ plugin: 'mods-toolbox', key: 'cleanViewEnabled' } as const, true)
 const checklistAtom = atom({ plugin: 'mods-toolbox', key: 'checklist' } as const, null)
@@ -67,6 +69,16 @@ let isPreviewRunning = false
 let isPreviewAgain = false
 // The terminal's width as the band last measured it, until the renderer has reported Claude Code's own.
 let terminalColumns = 0
+// One grant per /command or Skill call of the main conversation in flight: the
+// first skill.prompt after it is its own and takes the grant. Not matched by
+// name, since the Skill tool takes `review-plan` where the engine resolves
+// `council:review-plan`; and used once, since a forked skill's call stays in
+// flight while its subagent runs skills of its own.
+const skillGrants: Array<{ isUsed: boolean }> = []
+// The skill file the status line reads: where it went, what it last held, in order.
+let skillPath: string | null = null
+let skillKey: string | null = null
+let skillQueue: Promise<void> = Promise.resolve()
 
 export function registerStatusLineDock(on: On) {
   // Clean View holds the bare session.start, the dock { cwd: /^/ }, the Toolbox
@@ -85,7 +97,8 @@ export function registerStatusLineDock(on: On) {
       const where = await currentPaths($)
       const setup = await loadSetup($, where)
       await keepRendererCurrent($, where, setup)
-      await sweepCaptures($, where)
+      await sweepDayOld($, where.captures)
+      await sweepDayOld($, where.skills)
       if ((await read($, bandViewAtom)) === 'statusLineDock') {
         syncPreviewTimer($, true)
       }
@@ -129,6 +142,79 @@ export function registerStatusLineDock(on: On) {
         {below}
       </Box>
     )
+  })
+
+  // The Skill block. A skill typed as /name expands inside its command.run, and
+  // one Claude calls inside its tool.call; skill.prompt alone can't tell either
+  // from a subagent's call or preload, so it counts only with a caller's grant.
+  on('command.run', async ($, e, next) => {
+    const grant = { isUsed: false }
+    skillGrants.push(grant)
+    try {
+      return await next(e)
+    } finally {
+      skillGrants.splice(skillGrants.indexOf(grant), 1)
+    }
+  })
+
+  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
+    if (e.agentId !== undefined) {
+      return next(e)
+    }
+    const grant = { isUsed: false }
+    skillGrants.push(grant)
+    try {
+      return await next(e)
+    } finally {
+      skillGrants.splice(skillGrants.indexOf(grant), 1)
+    }
+  })
+
+  on('skill.prompt', async ($, e, next) => {
+    const grant = skillGrants.findLast(open => !open.isUsed)
+    if (grant !== undefined) {
+      grant.isUsed = true
+    }
+    const expanded = await next(e)
+    if (grant !== undefined) {
+      try {
+        await update($, skillAtom, () => ({ name: e.skill, isRunning: true }))
+        await publishSkill($)
+      } catch {
+        // The block keeps the skill before this one.
+      }
+    }
+
+    return expanded
+  })
+
+  on('turn.complete', { reason: /^/ }, async ($, e, next) => {
+    if (e.agentId === undefined) {
+      try {
+        const skill = await read($, skillAtom)
+        if (skill?.isRunning === true) {
+          await update($, skillAtom, () => ({ ...skill, isRunning: false }))
+          await publishSkill($)
+        }
+      } catch {
+        // It stays bright until the next skill.
+      }
+    }
+
+    return next(e)
+  })
+
+  // After a /clear or a resume the process goes on under a new session id with
+  // no session.start, so the skill goes with the conversation that ran it.
+  on('session.end', { reason: /^/ }, async ($, e, next) => {
+    try {
+      await update($, skillAtom, () => null)
+      await publishSkill($)
+    } catch {
+      // A day later the sweep takes it.
+    }
+
+    return next(e)
   })
 }
 
@@ -215,13 +301,53 @@ async function keepRendererCurrent($: Engine, where: Paths, setup: StatusLineSet
   }
 }
 
-// Inputs the renderer kept for sessions that ended a day ago or more.
-async function sweepCaptures($: Engine, where: Paths) {
-  if (await $.fs.exists(where.captures).catch(() => false)) {
-    await $.process
-      .run(['find', where.captures, '-type', 'f', '-name', '*.json', '-mmin', CAPTURE_MAX_MINUTES, '-delete'])
-      .catch(() => undefined)
+// Per-session files (the renderer's inputs, the skills) of sessions that ended a day ago or more.
+async function sweepDayOld($: Engine, folder: string) {
+  if (await $.fs.exists(folder).catch(() => false)) {
+    await $.process.run(['find', folder, '-type', 'f', '-name', '*.json', '-mmin', CAPTURE_MAX_MINUTES, '-delete']).catch(() => undefined)
   }
+}
+
+// --- The skill file ---------------------------------------------------------
+
+// Writes are chained so an older skill never lands after a newer one.
+function publishSkill($: Engine): Promise<void> {
+  skillQueue = skillQueue.then(() => writeSkill($)).catch(() => undefined)
+
+  return skillQueue
+}
+
+// Only while an install runs the renderer: an uninstall takes the whole folder,
+// and a skill after it must not bring the folder back.
+async function writeSkill($: Engine) {
+  const where = await currentPaths($)
+  const skill = await read($, skillAtom)
+  if (skill === null || !(await $.fs.exists(where.renderer).catch(() => false))) {
+    await dropSkillFile($)
+    return
+  }
+  // A /clear goes on under a new session id, so the path can move.
+  const path = sessionFile(where.skills, await $.session.id())
+  const text = JSON.stringify(skill)
+  if (`${path}|${text}` === skillKey) {
+    return
+  }
+  if (skillPath !== null && skillPath !== path) {
+    await remove($, skillPath)
+  }
+  skillPath = path
+  skillKey = `${path}|${text}`
+  await $.fs.write(path, text)
+}
+
+async function dropSkillFile($: Engine) {
+  if (skillPath === null) {
+    return
+  }
+  const stale = skillPath
+  skillPath = null
+  skillKey = null
+  await remove($, stale)
 }
 
 // --- Editing ----------------------------------------------------------------
@@ -344,6 +470,8 @@ async function install($: Engine) {
 
   await update($, draftsAtom, drafts => ({ ...drafts, [current.scope]: null }))
   await loadSetup($, where)
+  // A skill run before the install shows from the first refresh.
+  await publishSkill($)
   await refreshPreview($)
   $.ui.toast(`Status line set in ${plan.file}.`)
   if (plan.createsFile && current.scope === 'project' && !(await isGitIgnored($, where.root, plan.file))) {
@@ -456,9 +584,9 @@ async function runPreview($: Engine) {
   }
   const where = await currentPaths($)
   const sessionId = await $.session.id()
-  const capturedText = await readText($, `${where.captures}/${sessionId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
+  const capturedText = await readText($, sessionFile(where.captures, sessionId))
   const captured = parseSettings(capturedText, 'last input').settings
-  const [cwd, model, version, effort, settings, usage, mission] = await Promise.all([
+  const [cwd, model, version, effort, settings, usage, mission, skill] = await Promise.all([
     $.session.cwd(),
     read($, chatModelAtom).then(known => known ?? $.session.model().catch(() => null)),
     $.session.version().then(
@@ -469,8 +597,9 @@ async function runPreview($: Engine) {
     $.settings.read().catch(() => ({}) as Record<string, unknown>),
     $.session.usage().catch(() => null),
     read($, missionAtom),
+    read($, skillAtom),
   ])
-  const { input, samples, agents } = previewInput({
+  const { input, samples, agents, skill: shownSkill } = previewInput({
     captured,
     sessionId,
     cwd,
@@ -482,6 +611,7 @@ async function runPreview($: Engine) {
     usage,
     now: await $.clock.now(),
     agents: counts(mission?.cards ?? []).working,
+    skill,
   })
   const capturedColumns = captured?.columns
   const columns = typeof capturedColumns === 'number' && capturedColumns > 0 ? capturedColumns : terminalColumns > 0 ? terminalColumns : 120
@@ -495,6 +625,7 @@ async function runPreview($: Engine) {
         MODS_TOOLBOX_LAYOUT: JSON.stringify(current.layout),
         MODS_TOOLBOX_PREVIEW: '1',
         MODS_TOOLBOX_AGENTS: String(agents),
+        MODS_TOOLBOX_SKILL: JSON.stringify(shownSkill),
         COLUMNS: String(columns),
       },
     })

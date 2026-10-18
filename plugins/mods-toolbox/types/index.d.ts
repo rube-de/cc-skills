@@ -86,7 +86,13 @@ export type StatusLineBlockId =
   | 'lines'
   | 'time'
   | 'limits'
+  | 'cache'
   | 'agents'
+  | 'skill'
+
+// The skill the main conversation ran last, by the name the engine resolved
+// (`council:review-plan`); running until that turn ends.
+export type StatusLineSkill = { name: string; isRunning: boolean }
 
 export type StatusLineMode = 'replace' | 'extend'
 
@@ -185,6 +191,8 @@ declare module 'claude-code' {
       statusLineSelected: StatusLineBlockId | null
       statusLineConfirm: StatusLineConfirm | null
       statusLinePreview: StatusLinePreview | null
+      // What the Skill block shows for this session; null until a skill runs or after /clear.
+      statusLineSkill: StatusLineSkill | null
       // The aliases /config's model row offers; empty when it has none or is locked.
       chatModelOptions: string[] | null
       // The session's model id, read back after /model, /config and the Toolbox change it.

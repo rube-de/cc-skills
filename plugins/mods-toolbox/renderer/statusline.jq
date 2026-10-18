@@ -1,6 +1,6 @@
 # The Status Line Dock's blocks: Claude Code's status line JSON on stdin, the
 # Layout in $layout, and what statusline.sh gathered (git, the Agent Dock's
-# count, the Base status line's output) as arguments. Prints the status line,
+# count, the last skill, the Base status line's output) as arguments. Prints the status line,
 # or under $preview one JSON object the Dock's preview reads.
 #
 # Width is counted here, in terminal cells, because sh counts bytes in the C locale.
@@ -9,10 +9,10 @@ def color($code; $text):
   if $color == "1" then "\u001b[\($code)m\($text)\u001b[0m" else $text end;
 
 def icon_table: {
-  glyph: { folder: "⌂", branch: "⎇", model: "◆", effort: "◎", style: "✎", time: "◷", limits: "◔", agents: "◇" },
+  glyph: { folder: "⌂", branch: "⎇", model: "◆", effort: "◎", style: "✎", time: "◷", limits: "◔", cache: "⟳", agents: "◇", skill: "✦" },
   emoji: {
     folder: "📁", branch: "🌿", model: "🤖", effort: "💭", version: "📟", style: "🎨",
-    context: "🧠", cost: "💰", lines: "📝", time: "⌛", limits: "📊", agents: "👥"
+    context: "🧠", cost: "💰", lines: "📝", time: "⌛", limits: "📊", cache: "💾", agents: "👥", skill: "⚡"
   }
 };
 
@@ -64,6 +64,19 @@ def last_cells($max):
   | until(. >= ($cs | length) or ($cs[.] | cell_width) > 0; . + 1)
   | $cs[.:] | implode;
 
+# The start of a string, with "…" when it is cut to fit $max cells.
+def first_cells($max):
+  if cells <= $max then .
+  else
+    explode as $cs
+    | ($cs | widths) as $ws
+    | reduce range(0; $cs | length) as $i ({ end: 0, used: 0, full: false };
+        if .full then .
+        elif .used + $ws[$i] > $max - 1 then .full = true
+        else .end = $i + 1 | .used += $ws[$i] end)
+    | ($cs[:.end] | implode) + "…"
+  end;
+
 def two_digits: tostring | if length < 2 then "0" + . else . end;
 
 def money:
@@ -75,6 +88,20 @@ def duration:
   | if $s >= 3600 then "\($s / 3600 | floor)h\($s % 3600 / 60 | floor)m"
     elif $s >= 60 then "\($s / 60 | floor)m\($s % 60)s"
     else "\($s)s" end;
+
+# Seconds still to go, short: "3d4h", "2h10m", "47m", "45s".
+def countdown:
+  floor as $s
+  | if $s >= 86400 then "\($s / 86400 | floor)d\($s % 86400 / 3600 | floor)h"
+    elif $s >= 3600 then "\($s / 3600 | floor)h\($s % 3600 / 60 | floor)m"
+    elif $s >= 60 then "\($s / 60 | floor)m"
+    else "\($s)s" end;
+
+# A prompt cache's "1h" or "5m" in seconds; an hour when it reads otherwise.
+def ttl_seconds:
+  (capture("^(?<n>[0-9]+)(?<unit>[smhd])$")? // null) as $ttl
+  | if $ttl == null then 3600
+    else ($ttl.n | tonumber) * ({ s: 1, m: 60, h: 3600, d: 86400 }[$ttl.unit]) end;
 
 def percent: round | tostring + "%";
 
@@ -141,19 +168,41 @@ def block($id; $input):
     ($input.cost.total_duration_ms // null) as $ms
     | if $ms == null or $ms == 0 then null else { plain: ($ms | duration), code: "38;5;245" } end
   elif $id == "limits" then
-    [
-      ($input.rate_limits.five_hour.used_percentage // null | if . == null then empty else { label: "5h", used: . } end),
-      ($input.rate_limits.seven_day.used_percentage // null | if . == null then empty else { label: "7d", used: . } end)
-    ] as $windows
+    # Each window's reset shows while it is still ahead.
+    (now | floor) as $now
+    | [
+        ($input.rate_limits.five_hour // null | { label: "5h", used: .used_percentage?, resets: .resets_at? }),
+        ($input.rate_limits.seven_day // null | { label: "7d", used: .used_percentage?, resets: .resets_at? })
+      ]
+    | map(select(.used != null)) as $windows
     | if ($windows | length) == 0 then null
       else {
-        plain: ($windows | map("\(.label) \(.used | percent)") | join(" · ")),
+        plain: ($windows
+          | map("\(.label) \(.used | percent)"
+            + (if (.resets | type) == "number" and .resets > $now then " ↺\(.resets - $now | countdown)" else "" end))
+          | join(" · ")),
         code: (if ($windows | map(.used) | max) >= 80 then "38;5;215" else "38;5;110" end)
       } end
+  elif $id == "cache" then
+    # Warm: the time left, amber in the last sixth of its TTL. Cold once it lapsed.
+    (now | floor) as $now
+    | ($input.prompt_cache // null) as $cache
+    | if ($cache | type) != "object" or $cache.caching_observed == false or ($cache.expires_at | type) != "number" then null
+      else ($cache.expires_at - $now) as $left
+        | if $cache.warm == true and $left >= 1 then
+            { plain: "cache \($left | countdown)", code: (if $left <= ($cache.ttl // "" | ttl_seconds) / 6 then "38;5;215" else "38;5;158" end) }
+          else { plain: "cache cold", code: "38;5;245" } end
+      end
   elif $id == "agents" then
     ($agents | tonumber? // 0) as $count
     | if $count <= 0 then null
       else { plain: "\($count) agent\(if $count == 1 then "" else "s" end)", code: "38;5;209" } end
+  elif $id == "skill" then
+    # The skill the main conversation ran last: bright while its turn runs, gray after.
+    ($skill | fromjson? // null) as $ran
+    | ($ran | if type == "object" and (.name | type) == "string" then .name | gsub("[[:cntrl:]]"; "") else "" end) as $name
+    | if $name == "" then null
+      else { plain: ($name | first_cells(32)), code: (if $ran.isRunning == true then "38;5;81" else "38;5;245" end) } end
   else null end
   | if . == null then null
     else
