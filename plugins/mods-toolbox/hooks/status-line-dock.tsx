@@ -75,9 +75,8 @@ let terminalColumns = 0
 // calls out at once each take their own. Used once, since a forked skill's call
 // stays in flight while its subagent runs skills of its own.
 const skillGrants: Array<{ skill: string; isUsed: boolean }> = []
-// The skill file the status line reads: where it went, what it last held, in order.
+// The skill file the status line reads: where it went, and its writes in order.
 let skillPath: string | null = null
-let skillKey: string | null = null
 let skillQueue: Promise<void> = Promise.resolve()
 
 export function registerStatusLineDock(on: On) {
@@ -189,16 +188,19 @@ export function registerStatusLineDock(on: On) {
     return expanded
   })
 
+  // Written at every turn's end, not only when the skill stops running: an active
+  // session's file stays fresh for the day-old sweep, and one an uninstall or
+  // sweep took comes back.
   on('turn.complete', { reason: /^/ }, async ($, e, next) => {
     if (e.agentId === undefined) {
       try {
         const skill = await read($, skillAtom)
-        if (skill?.isRunning === true) {
+        if (skill !== null) {
           await update($, skillAtom, () => ({ ...skill, isRunning: false }))
           await publishSkill($)
         }
       } catch {
-        // It stays bright until the next skill.
+        // It stays as it was until the next turn's end.
       }
     }
 
@@ -329,16 +331,11 @@ async function writeSkill($: Engine) {
   }
   // A /clear goes on under a new session id, so the path can move.
   const path = sessionFile(where.skills, await $.session.id())
-  const text = JSON.stringify(skill)
-  if (`${path}|${text}` === skillKey) {
-    return
-  }
   if (skillPath !== null && skillPath !== path) {
     await remove($, skillPath)
   }
   skillPath = path
-  skillKey = `${path}|${text}`
-  await $.fs.write(path, text)
+  await $.fs.write(path, JSON.stringify(skill))
 }
 
 async function dropSkillFile($: Engine) {
@@ -347,7 +344,6 @@ async function dropSkillFile($: Engine) {
   }
   const stale = skillPath
   skillPath = null
-  skillKey = null
   await remove($, stale)
 }
 

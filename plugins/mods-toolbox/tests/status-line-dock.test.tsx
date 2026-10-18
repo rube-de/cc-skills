@@ -637,4 +637,33 @@ describe('skill block', () => {
     await callSkill($, 'plan')
     expect(Object.keys(seen.files).filter(path => path.startsWith(OWN))).toEqual([])
   })
+
+  test('an install after an uninstall writes the skill file again', async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    const ui = await installGlobal($)
+    await callSkill($, 'review')
+    await ui.press({ key: 'sl-uninstall' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(skillOf(seen)).toBeNull()
+
+    await ui.press({ key: 'sl-apply' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: true })
+  })
+
+  test("a skill file another session's day-old sweep took comes back at the next turn's end", async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    await installGlobal($)
+    const endTurn = (turnId: string) => $.turn.complete({ answer: 'Done.', durationMs: 10, isAborted: false, turnId, reason: 'answer' })
+    await callSkill($, 'review')
+    await endTurn('t-1')
+    delete seen.files[SKILL_FILE]
+
+    await endTurn('t-2')
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: false })
+  })
 })
