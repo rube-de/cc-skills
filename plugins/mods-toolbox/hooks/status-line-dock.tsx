@@ -60,7 +60,8 @@ const RUN_TIMEOUT_MS = 2000
 const LABEL_WIDTH = 9
 const ROW_LABELS = ['Line 1', 'Line 2', 'Off']
 const SCOPE_NAMES: Record<StatusLineScope, string> = { global: 'Global', project: 'This project' }
-const KEYS_HINT = 'ctrl+x tab, then the keys'
+// Any key no button takes, like Esc, hands the keyboard back to the prompt.
+const KEYS_HINT = 'click the Dock, then the keys · other keys go to the prompt'
 const CAPTURE_MAX_MINUTES = '+1440'
 
 // Module state a reload may drop: session.start and the next open put it back.
@@ -741,6 +742,10 @@ async function drawDock($: Engine, e: RenderInput<'AbovePrompt'>) {
     </Box>
   )
 
+  // Where the focus ring starts when the band takes the keys: the block the keys
+  // act on, where Enter only selects, rather than the ✕ first in the band. The
+  // first drawn of several wins, so it yields to the confirm box's Continue.
+  const ringStart = confirm === null ? (selected ?? rows(layout).flat()[0]) : undefined
   const blockRows = rows(layout).map((ids, index) => (
     <Box flexDirection="row" flexWrap="wrap">
       <Box width={LABEL_WIDTH}>
@@ -752,11 +757,18 @@ async function drawDock($: Engine, e: RenderInput<'AbovePrompt'>) {
       {ids.map(id =>
         // Inverse, apart from the coral of a chosen Mode or Scope.
         id === selected ? (
-          <Button key={`sl-block-${id}`} plain onPress={() => pick($, id)}>
+          <Button key={`sl-block-${id}`} plain autoFocus={id === ringStart || undefined} onPress={() => pick($, id)}>
             <Text inverse bold>{` ${blockName(id)} `}</Text>
           </Button>
         ) : (
-          <Button key={`sl-block-${id}`} plain dimColor={index === 2} label={` ${blockName(id)} `} onPress={() => pick($, id)} />
+          <Button
+            key={`sl-block-${id}`}
+            plain
+            autoFocus={id === ringStart || undefined}
+            dimColor={index === 2}
+            label={` ${blockName(id)} `}
+            onPress={() => pick($, id)}
+          />
         ),
       )}
     </Box>

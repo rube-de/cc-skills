@@ -265,6 +265,25 @@ describe('editing', () => {
     expect(JSON.stringify(await desktop.find({ type: 'Button', key: 'sl-block-model' }))).toContain('"inverse":true')
   })
 
+  test('the focus ring starts on the block the keys act on, or on Continue while the confirm box is up', async ($, on) => {
+    world(on)
+    await begin($)
+    await statusDock($)
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    const ringStart = async (key: string) => (await ui.find({ type: 'Button', key }))?.props.autoFocus
+
+    expect(await ringStart('sl-block-folder')).toBe(true)
+    expect(await ringStart('sl-close')).toBeUndefined()
+    await ui.press({ key: 'sl-block-model' })
+    expect(await ringStart('sl-block-model')).toBe(true)
+    expect(await ringStart('sl-block-folder')).toBeUndefined()
+
+    await ui.press({ key: 'sl-apply' })
+    expect(await ringStart('sl-confirm')).toBe(true)
+    expect(await ringStart('sl-block-model')).toBeUndefined()
+    expect(JSON.stringify(await ui.drawn())).toContain('click the Dock, then the keys · other keys go to the prompt')
+  })
+
   test('the icons are chips like Mode and Scope', async ($, on) => {
     const { seen } = world(on)
     await begin($)
