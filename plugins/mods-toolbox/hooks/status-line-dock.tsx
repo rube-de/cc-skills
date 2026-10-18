@@ -70,12 +70,11 @@ let isPreviewRunning = false
 let isPreviewAgain = false
 // The terminal's width as the band last measured it, until the renderer has reported Claude Code's own.
 let terminalColumns = 0
-// One grant per /command or Skill call of the main conversation in flight: the
-// first skill.prompt after it is its own and takes the grant. Not matched by
-// name, since the Skill tool takes `review-plan` where the engine resolves
-// `council:review-plan`; and used once, since a forked skill's call stays in
-// flight while its subagent runs skills of its own.
-const skillGrants: Array<{ isUsed: boolean }> = []
+// One grant per /command or Skill call of the main conversation in flight, for
+// the skill it asked for: the first skill.prompt of that skill takes it, so two
+// calls out at once each take their own. Used once, since a forked skill's call
+// stays in flight while its subagent runs skills of its own.
+const skillGrants: Array<{ skill: string; isUsed: boolean }> = []
 // The skill file the status line reads: where it went, what it last held, in order.
 let skillPath: string | null = null
 let skillKey: string | null = null
@@ -149,7 +148,7 @@ export function registerStatusLineDock(on: On) {
   // one Claude calls inside its tool.call; skill.prompt alone can't tell either
   // from a subagent's call or preload, so it counts only with a caller's grant.
   on('command.run', async ($, e, next) => {
-    const grant = { isUsed: false }
+    const grant = { skill: e.command, isUsed: false }
     skillGrants.push(grant)
     try {
       return await next(e)
@@ -162,7 +161,7 @@ export function registerStatusLineDock(on: On) {
     if (e.agentId !== undefined) {
       return next(e)
     }
-    const grant = { isUsed: false }
+    const grant = { skill: e.skill.replace(/^\//, ''), isUsed: false }
     skillGrants.push(grant)
     try {
       return await next(e)
@@ -172,7 +171,8 @@ export function registerStatusLineDock(on: On) {
   })
 
   on('skill.prompt', async ($, e, next) => {
-    const grant = skillGrants.findLast(open => !open.isUsed)
+    // The Skill tool may ask for `review-plan` where the engine resolves `council:review-plan`.
+    const grant = skillGrants.findLast(open => !open.isUsed && (e.skill === open.skill || e.skill.endsWith(`:${open.skill}`)))
     if (grant !== undefined) {
       grant.isUsed = true
     }

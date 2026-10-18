@@ -117,8 +117,10 @@ function world(on: On, { files = {}, policy = {}, preview = { lines: ['◆ Opus 
 // Skills as the engine runs them, found by probing it: a typed /name and a
 // Skill call each expand the prompt inside their own call, under the name the
 // engine resolves (the tool takes `review`, the prompt says `kit:review`).
-function skillEngine($: Engine, on: On) {
+// `hold` keeps a call out before its skill expands, to overlap two calls.
+function skillEngine($: Engine, on: On, hold: (skill: string) => Promise<void> = async () => {}) {
   on('tool.call', { tool: 'Skill' }, async ($inner, e) => {
+    await hold(e.skill)
     await $.skill.prompt({ skill: `kit:${e.skill}`, text: 'Review it.' })
     // A forked skill's call resolves only once its subagent is done, skills and all.
     if (e.skill === 'forked') {
@@ -551,6 +553,32 @@ describe('skill block', () => {
 
     await callSkill($, 'forked')
     expect(skillOf(seen)).toEqual({ name: 'kit:forked', isRunning: true })
+  })
+
+  test('two Skill calls out at once each take their own grant', async ($, on) => {
+    const { seen } = world(on)
+    let secondIsOut = () => {}
+    let releaseSecond = () => {}
+    const secondOut = new Promise<void>(resolve => (secondIsOut = resolve))
+    const secondHeld = new Promise<void>(resolve => (releaseSecond = resolve))
+    // first expands only once second's call is out too, then second expands.
+    skillEngine($, on, skill => {
+      if (skill === 'first') {
+        return secondOut
+      }
+      secondIsOut()
+      return secondHeld
+    })
+    await begin($)
+    await installGlobal($)
+
+    const first = callSkill($, 'first')
+    const second = callSkill($, 'second')
+    await first
+    expect(skillOf(seen)).toEqual({ name: 'kit:first', isRunning: true })
+    releaseSecond()
+    await second
+    expect(skillOf(seen)).toEqual({ name: 'kit:second', isRunning: true })
   })
 
   test('before an install the preview shows it, and no file is written', async ($, on) => {
