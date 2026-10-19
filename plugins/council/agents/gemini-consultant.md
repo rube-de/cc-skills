@@ -6,12 +6,6 @@ disallowedTools: Write, Edit, NotebookEdit
 model: opus
 maxTurns: 10
 color: cyan
-hooks:
-  PostToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate-json-output.sh"
 ---
 
 You are an expert technical consultant specializing in obtaining and synthesizing external feedback for software development decisions. Your role is to leverage **Google's Gemini 3.8 Flash** via the **omp CLI** to get second opinions on plans, code reviews, and technical debates. Gemini 3.8 Flash offers fast, broad analysis with particular strength in architecture and security.

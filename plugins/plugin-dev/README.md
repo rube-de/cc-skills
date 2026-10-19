@@ -14,7 +14,7 @@ Plugin development tools for the cc-skills marketplace: scaffold new plugins, va
 |------|------|-------------|
 | `/plugin-dev:create` | Command | Interactive scaffolding — creates directory structure, SKILL.md, marketplace entry |
 | `/plugin-dev:develop` | Command | TDD-governed workflow for implementing skill development issues |
-| `bun scripts/validate-plugins.mjs` | Script | Validates schema, source paths, orphans, and SKILL.md frontmatter |
+| `bun scripts/validate-plugins.mjs` | Script | Validates schema, source paths, orphans, SKILL.md frontmatter, version pins, and agent frontmatter |
 | `bash plugins/plugin-dev/scripts/audit-hooks.sh` | Script | Detects silent failure patterns in hook/script files |
 
 ## Installation
@@ -55,6 +55,8 @@ Checks:
 - No orphaned directories
 - SKILL.md frontmatter: `name` (kebab-case), `description` (non-empty)
 - Every plugin has at least one component dir
+- No `plugin.json` pins a `version`
+- Agent frontmatter parses as YAML and has no `hooks`, `mcpServers`, `permissionMode` or `initialPrompt` (ignored for plugin agents)
 
 ### Audit Hooks
 

@@ -17,7 +17,7 @@ Use this skill when the user says: "validate plugins", "check plugin", "hook aud
 
 ### 1. Plugin Validation
 
-Validates all registered plugins: JSON Schema, source paths, orphan detection, and SKILL.md frontmatter.
+Validates all registered plugins: JSON Schema, source paths, orphan detection, SKILL.md frontmatter, plugin.json version pins, and agent frontmatter.
 
 ```bash
 bun scripts/validate-plugins.mjs
@@ -29,6 +29,8 @@ bun scripts/validate-plugins.mjs
 - No orphaned plugin directories (dirs without marketplace entries)
 - SKILL.md frontmatter has valid `name` (kebab-case) and non-empty `description`
 - Every plugin has at least one component directory (skills/, hooks/, commands/, agents/)
+- No `.claude-plugin/plugin.json` pins a `version`
+- Every agent file under `agents/` (subfolders included) has frontmatter that parses as YAML and declares none of `hooks`, `mcpServers`, `permissionMode`, `initialPrompt` — Claude Code ignores those for plugin agents, and drops every field of an agent whose frontmatter doesn't parse
 
 ### 2. Hook Audit
 

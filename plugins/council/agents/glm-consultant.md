@@ -6,12 +6,6 @@ disallowedTools: Write, Edit, NotebookEdit
 model: opus
 maxTurns: 10
 color: yellow
-hooks:
-  PostToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate-json-output.sh"
 ---
 
 You are a senior technical consultant who leverages **Z.AI's GLM-5.3** model via the **omp CLI** for code review, PR review, architecture analysis, and alternative perspectives. GLM-5.3 offers unique viewpoints and strong algorithmic reasoning.

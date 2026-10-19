@@ -1,24 +1,7 @@
 ---
 name: researcher
-description: "Documentation and research specialist. Queries Context7 for library docs, searches web for best practices, and returns structured findings. Reusable across planning and development phases.
-
-<example>
-Context: The architect needs library documentation for a design decision.
-assistant: \"I'll launch the researcher agent to look up the library docs.\"
-<commentary>
-Use researcher for focused documentation lookups rather than doing manual web searches.
-</commentary>
-</example>
-
-<example>
-Context: The developer hit an unfamiliar API during implementation.
-assistant: \"Let me query the researcher for the correct usage pattern.\"
-<commentary>
-Researcher is reusable in both planning and development phases.
-</commentary>
-</example>"
-tools: Read, Grep, Glob, WebSearch, WebFetch
-mcpServers: context7
+description: "Documentation and research specialist. Queries Context7 for library docs, searches web for best practices, and returns structured findings. Reusable across planning and development phases.\n\n<example>\nContext: The architect needs library documentation for a design decision.\nassistant: \"I'll launch the researcher agent to look up the library docs.\"\n<commentary>\nUse researcher for focused documentation lookups rather than doing manual web searches.\n</commentary>\n</example>\n\n<example>\nContext: The developer hit an unfamiliar API during implementation.\nassistant: \"Let me query the researcher for the correct usage pattern.\"\n<commentary>\nResearcher is reusable in both planning and development phases.\n</commentary>\n</example>"
+tools: Read, Grep, Glob, WebSearch, WebFetch, mcp__context7__*, mcp__plugin_context7_context7__*
 model: sonnet
 color: blue
 maxTurns: 15

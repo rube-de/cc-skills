@@ -2,7 +2,7 @@
 name: cdt
 description: "Multi-agent development workflow using Agent Teams. Supports five modes: plan (architect teammate + PM teammate debate → plan.md), dev (developer teammate + code-tester teammate + qa-tester teammate + reviewer teammate iterate → code), full (plan → approval gate → dev), auto (plan → dev, no gate), and bugfix (tester + developer + reviewer TDD triad → fix, then asks whether to create a PR, push only, or commit locally; no answer means local only). Use when tasks benefit from collaborative agent teammates with peer messaging."
 license: MIT
-compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. Context7 MCP server is bundled via plugin .mcp.json and starts automatically."
+compatibility: "Requires Claude Code with CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1. The researcher uses a Context7 MCP server when one is installed (named context7, or the context7 plugin) and falls back to web search otherwise."
 allowed-tools: Read Grep Glob Bash Task Teammate TaskCreate TaskUpdate TaskList TaskGet Write Edit AskUserQuestion TeamCreate SendMessage TeamDelete WebSearch WebFetch Skill
 metadata:
   author: cdt
@@ -48,7 +48,7 @@ Plan Phase (plan/full/auto)     Dev Phase (dev/full/auto)       Bugfix Phase (bu
 
 ### Researcher (subagent — spawn via Task without team_name)
 
-Research specialist for doc lookups. Queries Context7 for library docs, searches web for best practices, returns structured findings with code examples. Bundled as `agents/researcher.md` in this plugin — Context7 MCP is auto-configured via `.mcp.json`.
+Research specialist for doc lookups. Queries Context7 for library docs, searches web for best practices, returns structured findings with code examples. Bundled as `agents/researcher.md` in this plugin. It reaches Context7 only when the user has it installed (an MCP server named `context7`, or the context7 plugin); otherwise it uses WebSearch/WebFetch.
 
 ### Tester (teammate — spawn via Teammate tool, bugfix phase)
 

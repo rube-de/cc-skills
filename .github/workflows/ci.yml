@@ -12,5 +12,6 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun scripts/validate-plugins.mjs
+      - run: bun test ./scripts
       # The Status Line Dock's renderer is a shell script; claude plugin test can't spawn it.
       - run: bun test plugins/mods-toolbox/renderer

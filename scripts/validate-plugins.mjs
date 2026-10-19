@@ -1,13 +1,36 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 
 import { readFileSync, readdirSync, existsSync, statSync } from "fs";
 import { resolve, dirname, join, relative } from "path";
 import { fileURLToPath } from "url";
+import { parseArgs } from "util";
 import Ajv from "ajv";
+import { agentFrontmatterErrors } from "./agent-frontmatter.mjs";
+
+// Bun.YAML.parse only throws on invalid YAML from Bun 1.2.23 (its release notes list
+// the fix), and the agent frontmatter check depends on that throw.
+const MIN_BUN = "1.2.23";
+if (typeof globalThis.Bun?.YAML?.parse !== "function" || !Bun.semver.satisfies(Bun.version, `>=${MIN_BUN}`)) {
+  console.error(`validate-plugins.mjs needs Bun ${MIN_BUN} or later (it parses agent frontmatter with Bun.YAML): bun scripts/validate-plugins.mjs`);
+  process.exit(1);
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const rootDir = resolve(__dirname, "..");
+
+// --root <dir> validates another checkout; the tests point it at fixtures.
+let rootDir;
+try {
+  const { values } = parseArgs({ options: { root: { type: "string" } }, strict: true });
+  rootDir = resolve(values.root ?? join(__dirname, ".."));
+} catch (err) {
+  console.error(`${err.message}\nUsage: bun scripts/validate-plugins.mjs [--root <dir>]`);
+  process.exit(1);
+}
+if (!existsSync(join(rootDir, ".claude-plugin/marketplace.json"))) {
+  console.error(`No .claude-plugin/marketplace.json under ${rootDir}`);
+  process.exit(1);
+}
 
 const marketplaceFile = join(rootDir, ".claude-plugin/marketplace.json");
 const schemaFile = join(__dirname, "marketplace.schema.json");
@@ -199,9 +222,39 @@ if (pinnedVersions.length === 0) {
   hasErrors = true;
 }
 
+// 6. Plugin agent frontmatter must parse and must not declare fields
+// Claude Code ignores for plugin agents (hooks, mcpServers, permissionMode, initialPrompt).
+const agentErrors = [];
+
+plugins.forEach((plugin) => {
+  const agentsDir = join(resolve(rootDir, plugin.source), "agents");
+  if (!existsSync(agentsDir)) return;
+
+  // Claude Code scans a plugin's agents/ recursively (agents/review/security.md
+  // registers as <plugin>:review:security), so subfolders are checked too.
+  const agentFiles = readdirSync(agentsDir, { recursive: true })
+    .filter((p) => p.endsWith(".md"))
+    .map((p) => join(agentsDir, p))
+    .filter((f) => statSync(f).isFile())
+    .sort();
+
+  for (const agentFile of agentFiles) {
+    const relPath = relative(rootDir, agentFile);
+    agentErrors.push(...agentFrontmatterErrors(readFileSync(agentFile, "utf-8"), relPath));
+  }
+});
+
+if (agentErrors.length === 0) {
+  console.log("  ✓ Plugin agent frontmatter valid");
+} else {
+  console.log("  ✗ Plugin agent frontmatter issues:");
+  agentErrors.forEach((e) => console.log(`    - ${e}`));
+  hasErrors = true;
+}
+
 // Summary
 if (hasErrors) {
-  console.log("1 error(s) found.");
+  console.log("Validation failed.");
   process.exit(1);
 } else {
   console.log("All checks passed.");
