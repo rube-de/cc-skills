@@ -1,3 +1,10 @@
+# [2.21.0](https://github.com/rube-de/cc-skills/compare/v2.20.1...v2.21.0) (2026-10-19)
+
+
+### Features
+
+* **mods-toolbox:** add Skill and Prompt cache blocks and reset countdowns to the Status Line Dock ([#294](https://github.com/rube-de/cc-skills/issues/294)) ([ea157aa](https://github.com/rube-de/cc-skills/commit/ea157aa4eccc42c0fed6349ed69f1e443fd96e6d))
+
 ## [2.20.1](https://github.com/rube-de/cc-skills/compare/v2.20.0...v2.20.1) (2026-10-13)
 
 # [2.20.0](https://github.com/rube-de/cc-skills/compare/v2.19.0...v2.20.0) (2026-10-13)
