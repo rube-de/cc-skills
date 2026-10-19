@@ -1,3 +1,10 @@
+## [2.21.1](https://github.com/rube-de/cc-skills/compare/v2.21.0...v2.21.1) (2026-10-19)
+
+
+### Bug Fixes
+
+* drop agent frontmatter fields Claude Code ignores for plugin agents ([#297](https://github.com/rube-de/cc-skills/issues/297)) ([f7cadad](https://github.com/rube-de/cc-skills/commit/f7cadada6d03f9558d72c57a941d319b718fa9f7)), closes [#282](https://github.com/rube-de/cc-skills/issues/282)
+
 # [2.21.0](https://github.com/rube-de/cc-skills/compare/v2.20.1...v2.21.0) (2026-10-19)
 
 
