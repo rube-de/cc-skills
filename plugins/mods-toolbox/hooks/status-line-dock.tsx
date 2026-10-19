@@ -25,6 +25,7 @@ import {
   recordsText,
   rows,
   sameLayout,
+  sessionFile,
   setupFrom,
   startingLayout,
   statusLineCommand,
@@ -45,6 +46,7 @@ const draftsAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineDrafts' } as c
 const selectedAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineSelected' } as const, null)
 const confirmAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineConfirm' } as const, null)
 const previewAtom = atom({ plugin: 'mods-toolbox', key: 'statusLinePreview' } as const, null)
+const skillAtom = atom({ plugin: 'mods-toolbox', key: 'statusLineSkill' } as const, null)
 // Clean View's, the Agent Dock's and the chat picks' values, read on the keys their files write.
 const cleanViewAtom = atom({ plugin: 'mods-toolbox', key: 'cleanViewEnabled' } as const, true)
 const checklistAtom = atom({ plugin: 'mods-toolbox', key: 'checklist' } as const, null)
@@ -58,7 +60,8 @@ const RUN_TIMEOUT_MS = 2000
 const LABEL_WIDTH = 9
 const ROW_LABELS = ['Line 1', 'Line 2', 'Off']
 const SCOPE_NAMES: Record<StatusLineScope, string> = { global: 'Global', project: 'This project' }
-const KEYS_HINT = 'ctrl+x tab, then the keys'
+// Any key no button takes, like Esc, hands the keyboard back to the prompt.
+const KEYS_HINT = 'click the Dock, then the keys · other keys go to the prompt'
 const CAPTURE_MAX_MINUTES = '+1440'
 
 // Module state a reload may drop: session.start and the next open put it back.
@@ -67,6 +70,14 @@ let isPreviewRunning = false
 let isPreviewAgain = false
 // The terminal's width as the band last measured it, until the renderer has reported Claude Code's own.
 let terminalColumns = 0
+// One grant per /command or Skill call of the main conversation in flight, for
+// the skill it asked for: the first skill.prompt of that skill takes it, so two
+// calls out at once each take their own. Used once, since a forked skill's call
+// stays in flight while its subagent runs skills of its own.
+const skillGrants: Array<{ skill: string; isUsed: boolean }> = []
+// The skill file the status line reads: where it went, and its writes in order.
+let skillPath: string | null = null
+let skillQueue: Promise<void> = Promise.resolve()
 
 export function registerStatusLineDock(on: On) {
   // Clean View holds the bare session.start, the dock { cwd: /^/ }, the Toolbox
@@ -85,7 +96,8 @@ export function registerStatusLineDock(on: On) {
       const where = await currentPaths($)
       const setup = await loadSetup($, where)
       await keepRendererCurrent($, where, setup)
-      await sweepCaptures($, where)
+      await sweepDayOld($, where.captures)
+      await sweepDayOld($, where.skills)
       if ((await read($, bandViewAtom)) === 'statusLineDock') {
         syncPreviewTimer($, true)
       }
@@ -129,6 +141,83 @@ export function registerStatusLineDock(on: On) {
         {below}
       </Box>
     )
+  })
+
+  // The Skill block. A skill typed as /name expands inside its command.run, and
+  // one Claude calls inside its tool.call; skill.prompt alone can't tell either
+  // from a subagent's call or preload, so it counts only with a caller's grant.
+  on('command.run', async ($, e, next) => {
+    const grant = { skill: e.command, isUsed: false }
+    skillGrants.push(grant)
+    try {
+      return await next(e)
+    } finally {
+      skillGrants.splice(skillGrants.indexOf(grant), 1)
+    }
+  })
+
+  on('tool.call', { tool: 'Skill' }, async ($, e, next) => {
+    if (e.agentId !== undefined) {
+      return next(e)
+    }
+    const grant = { skill: e.skill.replace(/^\//, ''), isUsed: false }
+    skillGrants.push(grant)
+    try {
+      return await next(e)
+    } finally {
+      skillGrants.splice(skillGrants.indexOf(grant), 1)
+    }
+  })
+
+  on('skill.prompt', async ($, e, next) => {
+    // The Skill tool may ask for `review-plan` where the engine resolves `council:review-plan`.
+    const grant = skillGrants.findLast(open => !open.isUsed && (e.skill === open.skill || e.skill.endsWith(`:${open.skill}`)))
+    if (grant !== undefined) {
+      grant.isUsed = true
+    }
+    const expanded = await next(e)
+    if (grant !== undefined) {
+      try {
+        await update($, skillAtom, () => ({ name: e.skill, isRunning: true }))
+        await publishSkill($)
+      } catch {
+        // The block keeps the skill before this one.
+      }
+    }
+
+    return expanded
+  })
+
+  // Written at every turn's end, not only when the skill stops running: an active
+  // session's file stays fresh for the day-old sweep, and one an uninstall or
+  // sweep took comes back.
+  on('turn.complete', { reason: /^/ }, async ($, e, next) => {
+    if (e.agentId === undefined) {
+      try {
+        const skill = await read($, skillAtom)
+        if (skill !== null) {
+          await update($, skillAtom, () => ({ ...skill, isRunning: false }))
+          await publishSkill($)
+        }
+      } catch {
+        // It stays as it was until the next turn's end.
+      }
+    }
+
+    return next(e)
+  })
+
+  // After a /clear or a resume the process goes on under a new session id with
+  // no session.start, so the skill goes with the conversation that ran it.
+  on('session.end', { reason: /^/ }, async ($, e, next) => {
+    try {
+      await update($, skillAtom, () => null)
+      await publishSkill($)
+    } catch {
+      // A day later the sweep takes it.
+    }
+
+    return next(e)
   })
 }
 
@@ -215,13 +304,47 @@ async function keepRendererCurrent($: Engine, where: Paths, setup: StatusLineSet
   }
 }
 
-// Inputs the renderer kept for sessions that ended a day ago or more.
-async function sweepCaptures($: Engine, where: Paths) {
-  if (await $.fs.exists(where.captures).catch(() => false)) {
-    await $.process
-      .run(['find', where.captures, '-type', 'f', '-name', '*.json', '-mmin', CAPTURE_MAX_MINUTES, '-delete'])
-      .catch(() => undefined)
+// Per-session files (the renderer's inputs, the skills) of sessions that ended a day ago or more.
+async function sweepDayOld($: Engine, folder: string) {
+  if (await $.fs.exists(folder).catch(() => false)) {
+    await $.process.run(['find', folder, '-type', 'f', '-name', '*.json', '-mmin', CAPTURE_MAX_MINUTES, '-delete']).catch(() => undefined)
   }
+}
+
+// --- The skill file ---------------------------------------------------------
+
+// Writes are chained so an older skill never lands after a newer one.
+function publishSkill($: Engine): Promise<void> {
+  skillQueue = skillQueue.then(() => writeSkill($)).catch(() => undefined)
+
+  return skillQueue
+}
+
+// Only while an install runs the renderer: an uninstall takes the whole folder,
+// and a skill after it must not bring the folder back.
+async function writeSkill($: Engine) {
+  const where = await currentPaths($)
+  const skill = await read($, skillAtom)
+  if (skill === null || !(await $.fs.exists(where.renderer).catch(() => false))) {
+    await dropSkillFile($)
+    return
+  }
+  // A /clear goes on under a new session id, so the path can move.
+  const path = sessionFile(where.skills, await $.session.id())
+  if (skillPath !== null && skillPath !== path) {
+    await remove($, skillPath)
+  }
+  skillPath = path
+  await $.fs.write(path, JSON.stringify(skill))
+}
+
+async function dropSkillFile($: Engine) {
+  if (skillPath === null) {
+    return
+  }
+  const stale = skillPath
+  skillPath = null
+  await remove($, stale)
 }
 
 // --- Editing ----------------------------------------------------------------
@@ -344,6 +467,8 @@ async function install($: Engine) {
 
   await update($, draftsAtom, drafts => ({ ...drafts, [current.scope]: null }))
   await loadSetup($, where)
+  // A skill run before the install shows from the first refresh.
+  await publishSkill($)
   await refreshPreview($)
   $.ui.toast(`Status line set in ${plan.file}.`)
   if (plan.createsFile && current.scope === 'project' && !(await isGitIgnored($, where.root, plan.file))) {
@@ -456,9 +581,9 @@ async function runPreview($: Engine) {
   }
   const where = await currentPaths($)
   const sessionId = await $.session.id()
-  const capturedText = await readText($, `${where.captures}/${sessionId.replace(/[^A-Za-z0-9._-]/g, '_')}.json`)
+  const capturedText = await readText($, sessionFile(where.captures, sessionId))
   const captured = parseSettings(capturedText, 'last input').settings
-  const [cwd, model, version, effort, settings, usage, mission] = await Promise.all([
+  const [cwd, model, version, effort, settings, usage, mission, skill] = await Promise.all([
     $.session.cwd(),
     read($, chatModelAtom).then(known => known ?? $.session.model().catch(() => null)),
     $.session.version().then(
@@ -469,8 +594,9 @@ async function runPreview($: Engine) {
     $.settings.read().catch(() => ({}) as Record<string, unknown>),
     $.session.usage().catch(() => null),
     read($, missionAtom),
+    read($, skillAtom),
   ])
-  const { input, samples, agents } = previewInput({
+  const { input, samples, agents, skill: shownSkill } = previewInput({
     captured,
     sessionId,
     cwd,
@@ -482,6 +608,7 @@ async function runPreview($: Engine) {
     usage,
     now: await $.clock.now(),
     agents: counts(mission?.cards ?? []).working,
+    skill,
   })
   const capturedColumns = captured?.columns
   const columns = typeof capturedColumns === 'number' && capturedColumns > 0 ? capturedColumns : terminalColumns > 0 ? terminalColumns : 120
@@ -495,6 +622,7 @@ async function runPreview($: Engine) {
         MODS_TOOLBOX_LAYOUT: JSON.stringify(current.layout),
         MODS_TOOLBOX_PREVIEW: '1',
         MODS_TOOLBOX_AGENTS: String(agents),
+        MODS_TOOLBOX_SKILL: JSON.stringify(shownSkill),
         COLUMNS: String(columns),
       },
     })
@@ -610,6 +738,10 @@ async function drawDock($: Engine, e: RenderInput<'AbovePrompt'>) {
     </Box>
   )
 
+  // Where the focus ring starts when the band takes the keys: the block the keys
+  // act on, where Enter only selects, rather than the ✕ first in the band. The
+  // first drawn of several wins, so it yields to the confirm box's Continue.
+  const ringStart = confirm === null ? (selected ?? rows(layout).flat()[0]) : undefined
   const blockRows = rows(layout).map((ids, index) => (
     <Box flexDirection="row" flexWrap="wrap">
       <Box width={LABEL_WIDTH}>
@@ -621,11 +753,18 @@ async function drawDock($: Engine, e: RenderInput<'AbovePrompt'>) {
       {ids.map(id =>
         // Inverse, apart from the coral of a chosen Mode or Scope.
         id === selected ? (
-          <Button key={`sl-block-${id}`} plain onPress={() => pick($, id)}>
+          <Button key={`sl-block-${id}`} plain autoFocus={id === ringStart || undefined} onPress={() => pick($, id)}>
             <Text inverse bold>{` ${blockName(id)} `}</Text>
           </Button>
         ) : (
-          <Button key={`sl-block-${id}`} plain dimColor={index === 2} label={` ${blockName(id)} `} onPress={() => pick($, id)} />
+          <Button
+            key={`sl-block-${id}`}
+            plain
+            autoFocus={id === ringStart || undefined}
+            dimColor={index === 2}
+            label={` ${blockName(id)} `}
+            onPress={() => pick($, id)}
+          />
         ),
       )}
     </Box>

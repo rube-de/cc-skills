@@ -1,4 +1,4 @@
-import type { On } from 'claude-code'
+import type { On, ToolCallInput } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 import type { Engine } from 'claude-code/testing'
 
@@ -28,7 +28,7 @@ type Seen = {
   state: Record<string, unknown>
   files: Record<string, string>
   runs: string[][]
-  previewRuns: Array<{ layout: unknown; columns: string | undefined; stdin: string }>
+  previewRuns: Array<{ layout: unknown; columns: string | undefined; stdin: string; skill: string | undefined }>
   toasts: string[]
 }
 
@@ -86,7 +86,12 @@ function world(on: On, { files = {}, policy = {}, preview = { lines: ['◆ Opus 
     let stdout = ''
     if (argv[0] === 'sh' && (argv[1] ?? '').endsWith('/renderer/statusline.sh')) {
       const env = e.init?.env ?? {}
-      seen.previewRuns.push({ layout: JSON.parse(env.MODS_TOOLBOX_LAYOUT ?? 'null'), columns: env.COLUMNS, stdin: e.init?.stdin ?? '' })
+      seen.previewRuns.push({
+        layout: JSON.parse(env.MODS_TOOLBOX_LAYOUT ?? 'null'),
+        columns: env.COLUMNS,
+        stdin: e.init?.stdin ?? '',
+        skill: env.MODS_TOOLBOX_SKILL,
+      })
       stdout = JSON.stringify({ base: [], dropped: [], ...preview })
     }
     if (argv[0] === 'rm') {
@@ -109,9 +114,51 @@ function world(on: On, { files = {}, policy = {}, preview = { lines: ['◆ Opus 
   return { seen }
 }
 
+// Skills as the engine runs them, found by probing it: a typed /name and a
+// Skill call each expand the prompt inside their own call, under the name the
+// engine resolves (the tool takes `review`, the prompt says `kit:review`).
+// `hold` keeps a call out before its skill expands, to overlap two calls.
+function skillEngine($: Engine, on: On, hold: (skill: string) => Promise<void> = async () => {}) {
+  on('tool.call', { tool: 'Skill' }, async ($inner, e) => {
+    await hold(e.skill)
+    await $.skill.prompt({ skill: `kit:${e.skill}`, text: 'Review it.' })
+    // A forked skill's call resolves only once its subagent is done, skills and all.
+    if (e.skill === 'forked') {
+      await $.skill.prompt({ skill: 'kit:nested', text: 'Nested.' })
+    }
+    return { result: `Launching skill: ${e.skill}` }
+  })
+  on('command.run', { command: /^kit:/ }, async ($inner, e) => {
+    await $.skill.prompt({ skill: e.command, text: 'Plan it.' })
+    return { text: '' }
+  })
+  on('skill.prompt', ($inner, e) => ({ text: e.text }))
+  on('session.end', ($inner, e) => ({ sessionId: e.sessionId }))
+  on('turn.complete', ($inner, e) => ({ text: e.answer }))
+}
+
 async function begin($: Engine) {
   await $.session.start({ cwd: ROOT, surface: 'terminal', isInteractive: true })
 }
+
+async function installGlobal($: Engine) {
+  await statusDock($)
+  const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+  await ui.press({ key: 'sl-apply' })
+  await ui.press({ key: 'sl-confirm' })
+
+  return ui
+}
+
+function callSkill($: Engine, skill: string, agentId?: string) {
+  return $.tool.call({ tool: 'Skill', tool_use_id: `tu-${skill}`, skill, ...(agentId === undefined ? {} : { agentId }) } as unknown as ToolCallInput)
+}
+
+function typeSkill($: Engine, command: string) {
+  return $.command.run({ command, args: '', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 140 } })
+}
+
+const SKILL_FILE = `${OWN}/skill-now/session-1.json`
 
 async function statusDock($: Engine) {
   return $.command.run({
@@ -218,6 +265,25 @@ describe('editing', () => {
     const desktop = await $.ui.mount({ ...band(), surface: 'desktop' })
     expect(await desktop.find({ type: 'Text', text: WORDMARK })).toBeDefined()
     expect(JSON.stringify(await desktop.find({ type: 'Button', key: 'sl-block-model' }))).toContain('"inverse":true')
+  })
+
+  test('the focus ring starts on the block the keys act on, or on Continue while the confirm box is up', async ($, on) => {
+    world(on)
+    await begin($)
+    await statusDock($)
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    const ringStart = async (key: string) => (await ui.find({ type: 'Button', key }))?.props.autoFocus
+
+    expect(await ringStart('sl-block-folder')).toBe(true)
+    expect(await ringStart('sl-close')).toBeUndefined()
+    await ui.press({ key: 'sl-block-model' })
+    expect(await ringStart('sl-block-model')).toBe(true)
+    expect(await ringStart('sl-block-folder')).toBeUndefined()
+
+    await ui.press({ key: 'sl-apply' })
+    expect(await ringStart('sl-confirm')).toBe(true)
+    expect(await ringStart('sl-block-model')).toBeUndefined()
+    expect(JSON.stringify(await ui.drawn())).toContain('click the Dock, then the keys · other keys go to the prompt')
   })
 
   test('the icons are chips like Mode and Scope', async ($, on) => {
@@ -445,5 +511,159 @@ describe('session start', () => {
     })
     await begin($)
     expect(seen.files[`${OWN}/statusline.sh`]).toBe('shipped statusline.sh')
+  })
+})
+
+describe('skill block', () => {
+  const skillOf = (seen: Seen) => JSON.parse(seen.files[SKILL_FILE] ?? 'null') as { name: string; isRunning: boolean } | null
+
+  test('a skill the main conversation calls shows under its resolved name, bright until its turn ends', async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    await installGlobal($)
+
+    await callSkill($, 'review')
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: true })
+
+    await $.turn.complete({ answer: 'Done.', durationMs: 10, isAborted: false, turnId: 'turn-1', reason: 'answer' })
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: false })
+  })
+
+  test("a typed /skill counts; a subagent's call and a preload don't", async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    await installGlobal($)
+
+    await typeSkill($, 'kit:plan')
+    expect(skillOf(seen)).toEqual({ name: 'kit:plan', isRunning: true })
+
+    await callSkill($, 'review', 'agent-1')
+    await $.skill.prompt({ skill: 'kit:preloaded', text: 'Preloaded.' })
+    await $.turn.complete({ answer: 'Done.', durationMs: 10, isAborted: false, turnId: 't-agent-1', agentId: 'agent-1', reason: 'answer' })
+    expect(skillOf(seen)).toEqual({ name: 'kit:plan', isRunning: true })
+  })
+
+  test("a forked skill shows, not the skills its subagent runs while the call is out", async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    await installGlobal($)
+
+    await callSkill($, 'forked')
+    expect(skillOf(seen)).toEqual({ name: 'kit:forked', isRunning: true })
+  })
+
+  test('two Skill calls out at once each take their own grant', async ($, on) => {
+    const { seen } = world(on)
+    let secondIsOut = () => {}
+    let releaseSecond = () => {}
+    const secondOut = new Promise<void>(resolve => (secondIsOut = resolve))
+    const secondHeld = new Promise<void>(resolve => (releaseSecond = resolve))
+    // first expands only once second's call is out too, then second expands.
+    skillEngine($, on, skill => {
+      if (skill === 'first') {
+        return secondOut
+      }
+      secondIsOut()
+      return secondHeld
+    })
+    await begin($)
+    await installGlobal($)
+
+    const first = callSkill($, 'first')
+    const second = callSkill($, 'second')
+    await first
+    expect(skillOf(seen)).toEqual({ name: 'kit:first', isRunning: true })
+    releaseSecond()
+    await second
+    expect(skillOf(seen)).toEqual({ name: 'kit:second', isRunning: true })
+  })
+
+  test('before an install the preview shows it, and no file is written', async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+
+    await callSkill($, 'review')
+    expect(seen.state.statusLineSkill).toEqual({ name: 'kit:review', isRunning: true })
+    expect(Object.keys(seen.files).filter(path => path.startsWith(OWN))).toEqual([])
+
+    await statusDock($)
+    expect(JSON.parse(seen.previewRuns[seen.previewRuns.length - 1]?.skill ?? 'null')).toEqual({ name: 'kit:review', isRunning: true })
+
+    // The install writes it at once.
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    await ui.press({ key: 'sl-apply' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: true })
+  })
+
+  test('with no skill run yet the preview shows a sample, named under it', async ($, on) => {
+    const { seen } = world(on)
+    await begin($)
+    await statusDock($)
+    const ui = await $.ui.mount({ ...band(), surface: 'terminal' })
+    await ui.press({ key: 'sl-block-skill' })
+
+    expect(JSON.parse(seen.previewRuns[seen.previewRuns.length - 1]?.skill ?? 'null')).toEqual({ name: 'code-review', isRunning: true })
+    expect(JSON.stringify(await ui.drawn())).toMatch(/sample figures until Claude Code has them: [^"]*Skill/)
+  })
+
+  test('a /clear takes the skill and its file along', async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    await installGlobal($)
+    await callSkill($, 'review')
+    expect(seen.files[SKILL_FILE]).toBeDefined()
+
+    await $.session.end({ reason: 'clear', sessionId: 'session-1', resume: { id: 'session-1' } })
+    expect(seen.files[SKILL_FILE]).toBeUndefined()
+    expect(seen.state.statusLineSkill).toBeNull()
+  })
+
+  test('after an uninstall a skill never brings the folder back', async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    const ui = await installGlobal($)
+    await callSkill($, 'review')
+    await ui.press({ key: 'sl-uninstall' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(Object.keys(seen.files).filter(path => path.startsWith(OWN))).toEqual([])
+
+    await callSkill($, 'plan')
+    expect(Object.keys(seen.files).filter(path => path.startsWith(OWN))).toEqual([])
+  })
+
+  test('an install after an uninstall writes the skill file again', async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    const ui = await installGlobal($)
+    await callSkill($, 'review')
+    await ui.press({ key: 'sl-uninstall' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(skillOf(seen)).toBeNull()
+
+    await ui.press({ key: 'sl-apply' })
+    await ui.press({ key: 'sl-confirm' })
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: true })
+  })
+
+  test("a skill file another session's day-old sweep took comes back at the next turn's end", async ($, on) => {
+    const { seen } = world(on)
+    skillEngine($, on)
+    await begin($)
+    await installGlobal($)
+    const endTurn = (turnId: string) => $.turn.complete({ answer: 'Done.', durationMs: 10, isAborted: false, turnId, reason: 'answer' })
+    await callSkill($, 'review')
+    await endTurn('t-1')
+    delete seen.files[SKILL_FILE]
+
+    await endTurn('t-2')
+    expect(skillOf(seen)).toEqual({ name: 'kit:review', isRunning: false })
   })
 })

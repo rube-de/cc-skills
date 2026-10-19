@@ -147,6 +147,64 @@ describe('blocks', () => {
     expect(render({ layout: layoutOf({ lines: [['agents']] }) })).toBe('◇ 1 agent\n')
   })
 
+  test('each rate window shows its reset while it is ahead', () => {
+    // The half minute keeps each countdown on its figure however long the run takes.
+    const now = Math.floor(Date.now() / 1000)
+    const limits = (rate_limits: unknown) => render({ layout: layoutOf({ lines: [['limits']] }), input: { ...INPUT, rate_limits } })
+    expect(
+      limits({ five_hour: { used_percentage: 23, resets_at: now + 2 * 3600 + 10 * 60 + 30 }, seven_day: { used_percentage: 41, resets_at: now + 3 * 86_400 + 4 * 3600 + 30 } }),
+    ).toBe('◔ 5h 23% ↺2h10m · 7d 41% ↺3d4h\n')
+    expect(limits({ five_hour: { used_percentage: 23, resets_at: now - 60 }, seven_day: { used_percentage: 41, resets_at: 'soon' } })).toBe('◔ 5h 23% · 7d 41%\n')
+    expect(limits({ seven_day: { used_percentage: 41, resets_at: now + 12 * 60 + 30 } })).toBe('◔ 7d 41% ↺12m\n')
+  })
+
+  test('the prompt cache counts down while warm, amber in the last sixth of its TTL, and reads cold after', () => {
+    const now = Math.floor(Date.now() / 1000)
+    const cache = (prompt_cache: unknown, env: Record<string, string> = {}) =>
+      render({ layout: layoutOf({ lines: [['cache']] }), input: { ...INPUT, prompt_cache }, env })
+    expect(cache({ caching_observed: true, warm: true, ttl: '1h', expires_at: now + 47 * 60 + 30 })).toBe('⟳ cache 47m\n')
+    expect(cache({ caching_observed: true, warm: true, ttl: '1h', expires_at: now + 47 * 60 + 30 }, { NO_COLOR: '' })).toBe(
+      `⟳ ${ESC}[38;5;158mcache 47m${ESC}[0m\n`,
+    )
+    expect(cache({ caching_observed: true, warm: true, ttl: '1h', expires_at: now + 5 * 60 + 30 }, { NO_COLOR: '' })).toBe(
+      `⟳ ${ESC}[38;5;215mcache 5m${ESC}[0m\n`,
+    )
+    expect(cache({ caching_observed: true, warm: true, ttl: '5m', expires_at: now + 4 * 60 + 30 }, { NO_COLOR: '' })).toBe(
+      `⟳ ${ESC}[38;5;158mcache 4m${ESC}[0m\n`,
+    )
+    expect(cache({ caching_observed: true, warm: false, ttl: '1h', expires_at: now + 600 })).toBe('⟳ cache cold\n')
+    expect(cache({ caching_observed: true, warm: true, ttl: '1h', expires_at: now - 5 })).toBe('⟳ cache cold\n')
+  })
+
+  test('no prompt cache figure, or none observed yet, leaves the block out', () => {
+    const now = Math.floor(Date.now() / 1000)
+    const cache = (prompt_cache: unknown) => render({ layout: layoutOf({ lines: [['cache', 'model']] }), input: { ...INPUT, prompt_cache } })
+    expect(cache(undefined)).toBe('◆ Opus 5.5\n')
+    expect(cache(null)).toBe('◆ Opus 5.5\n')
+    expect(cache({ caching_observed: false, warm: false, ttl: '1h', expires_at: now + 600 })).toBe('◆ Opus 5.5\n')
+  })
+
+  test("the Skill block reads the Dock's file for this session: bright while it runs, gray after", () => {
+    const skills = join(dir, 'config', 'mods-toolbox', 'skill-now')
+    mkdirSync(skills, { recursive: true })
+    const skill = (value: unknown, env: Record<string, string> = {}) => {
+      writeFileSync(join(skills, 'session-1.json'), typeof value === 'string' ? value : JSON.stringify(value))
+      return render({ layout: layoutOf({ lines: [['skill']] }), env })
+    }
+    expect(skill({ name: 'council:review-plan', isRunning: true })).toBe('✦ council:review-plan\n')
+    expect(skill({ name: 'council:review-plan', isRunning: true }, { NO_COLOR: '' })).toBe(`✦ ${ESC}[38;5;81mcouncil:review-plan${ESC}[0m\n`)
+    expect(skill({ name: 'council:review-plan', isRunning: false }, { NO_COLOR: '' })).toBe(`✦ ${ESC}[38;5;245mcouncil:review-plan${ESC}[0m\n`)
+    expect(skill({ name: 'mattpocock-skills:diagnosing-bugs-and-regressions', isRunning: true })).toBe('✦ mattpocock-skills:diagnosing-bu…\n')
+    expect(skill({ name: `bad${ESC}[2Jname`, isRunning: true })).toBe('✦ bad[2Jname\n')
+    expect(skill('not json')).toBe('')
+    expect(render({ layout: layoutOf({ lines: [['skill']] }), input: { ...INPUT, session_id: 'session-2' } })).toBe('')
+  })
+
+  test('the preview takes its skill from MODS_TOOLBOX_SKILL', () => {
+    const out = preview({ layout: layoutOf({ icons: 'emoji', lines: [['skill']] }), env: { MODS_TOOLBOX_SKILL: JSON.stringify({ name: 'code-review', isRunning: true }) } })
+    expect(out.lines).toEqual(['⚡ code-review'])
+  })
+
   test('the Git branch and its dirty mark', () => {
     const repo = join(dir, 'repo')
     mkdirSync(repo)

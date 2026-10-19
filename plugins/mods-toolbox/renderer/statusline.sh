@@ -4,8 +4,9 @@
 #   sh statusline.sh <layout.json>
 #
 # It reads the session's JSON on stdin and the Layout the Dock saved, runs the
-# Base status line in Extend mode, gathers git and the Agent Dock's count, and
-# hands it all to statusline.jq beside it, which draws the blocks.
+# Base status line in Extend mode, gathers git, the Agent Dock's count and the
+# skill the Dock last saw run, and hands it all to statusline.jq beside it,
+# which draws the blocks.
 #
 # The Dock's preview runs it too, with MODS_TOOLBOX_LAYOUT (a Layout not yet
 # applied) and MODS_TOOLBOX_PREVIEW=1: it then prints one JSON object and keeps
@@ -125,6 +126,16 @@ if [ "${MODS_TOOLBOX_PREVIEW:-}" = 1 ] && [ -n "${MODS_TOOLBOX_AGENTS:-}" ]; the
   agents=$MODS_TOOLBOX_AGENTS
 fi
 
+# The skill this session ran last, as the Status Line Dock wrote it.
+skill=""
+skill_file="$config/mods-toolbox/skill-now/$name.json"
+if [ -n "$session" ] && [ -f "$skill_file" ]; then
+  skill=$(cat "$skill_file" 2>/dev/null)
+fi
+if [ "${MODS_TOOLBOX_PREVIEW:-}" = 1 ] && [ -n "${MODS_TOOLBOX_SKILL:-}" ]; then
+  skill=$MODS_TOOLBOX_SKILL
+fi
+
 color=1
 [ -n "${NO_COLOR:-}" ] && color=0
 
@@ -134,6 +145,7 @@ printf '%s' "$input" | jq -rc \
   --arg git_branch "$git_branch" \
   --arg git_dirty "$git_dirty" \
   --arg agents "$agents" \
+  --arg skill "$skill" \
   --arg columns "${COLUMNS:-}" \
   --arg home "${HOME:-}" \
   --arg color "$color" \
