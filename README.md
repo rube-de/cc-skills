@@ -394,7 +394,7 @@ Only standard fields are allowed. These cause validation errors:
 bun scripts/validate-plugins.mjs
 ```
 
-Checks: marketplace JSON Schema, source paths exist, no orphaned plugin directories, every plugin has a component directory, SKILL.md frontmatter (kebab-case `name`, non-empty `description`), no `plugin.json` pins a `version`, and plugin agent frontmatter (parses as YAML; no `hooks`, `mcpServers`, `permissionMode` or `initialPrompt`, which Claude Code ignores for plugin agents). Needs Bun.
+Checks: marketplace JSON Schema, source paths exist, no orphaned plugin directories, every plugin has a component directory, SKILL.md frontmatter (kebab-case `name`, non-empty `description`), no `plugin.json` pins a `version`, and plugin agent frontmatter (parses as YAML; no `hooks`, `mcpServers`, `permissionMode` or `initialPrompt`, which Claude Code ignores for plugin agents). Needs Bun 1.2.23 or later.
 
 ## Release Workflow (for maintainers)
 

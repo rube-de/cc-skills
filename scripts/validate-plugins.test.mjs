@@ -59,6 +59,15 @@ describe("validate-plugins.mjs agent frontmatter check", () => {
     });
   }
 
+  test("checks agents in subfolders of agents/", () => {
+    const dir = fixture(CLEAN);
+    mkdirSync(join(dir, "plugins/demo/agents/review"));
+    writeFileSync(join(dir, "plugins/demo/agents/review/security.md"), `---\n${CLEAN}\nhooks: x\n---\n\nYou review.\n`);
+    const { exitCode, stdout } = validate(dir);
+    expect(exitCode).toBe(1);
+    expect(stdout).toContain('plugins/demo/agents/review/security.md: "hooks" is ignored for plugin agents');
+  });
+
   test("fails on frontmatter that is not valid YAML, naming the file", () => {
     const { exitCode, stdout } = validate(fixture(`name: helper\ndescription: "Line one.\n\nLine two."\ntools: Read`));
     expect(exitCode).toBe(1);

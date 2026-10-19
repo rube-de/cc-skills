@@ -29,7 +29,7 @@ Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) 
 | claude-deep-review | Opus (or Sonnet via config) | Security, bugs, performance — traces input paths, follows call chains |
 | claude-codebase-context | Sonnet | Quality, compliance, history, documentation — compares against project conventions |
 
-With the `native` backend, both subagents' Bash calls follow your session's permission rules. A plugin agent can't set its own permission mode, so commands your settings don't allow will prompt.
+With the `native` backend, both subagents' Bash calls follow your session's permission rules. A plugin agent can't set its own permission mode: a command that needs approval under those rules prompts, and one a deny rule matches is blocked without a prompt.
 
 **Layer 3 — Scoring** (noise reduction — optional / conditional via config):
 | Agent | Model | Role |

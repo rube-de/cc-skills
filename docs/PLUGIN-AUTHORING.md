@@ -135,7 +135,7 @@ This checks:
 3. No orphaned plugin directories without marketplace entries
 4. SKILL.md frontmatter has a kebab-case `name` and a `description`
 5. No `.claude-plugin/plugin.json` pins a `version` (at install it would override the marketplace entry, which semantic-release bumps)
-6. Every `agents/*.md` frontmatter parses as YAML (Claude Code loads an agent whose frontmatter doesn't parse with every field dropped) and declares none of `hooks`, `mcpServers`, `permissionMode` or `initialPrompt`, which Claude Code ignores for plugin agents. Register hooks in `hooks/hooks.json`, declare MCP servers in the plugin's `.mcp.json`, and grant a server's tools in `tools`: `mcp__plugin_<plugin>_<server>__*` for a server in the plugin's `.mcp.json`, `mcp__<server>__*` for one the user configured
+6. Every agent file under `agents/` (subfolders included, since Claude Code scans them) has frontmatter that parses as YAML (Claude Code loads an agent whose frontmatter doesn't parse with every field dropped) and declares none of `hooks`, `mcpServers`, `permissionMode` or `initialPrompt`, which Claude Code ignores for plugin agents. Register hooks in `hooks/hooks.json`, declare MCP servers in the plugin's `.mcp.json`, and grant a server's tools in `tools`: `mcp__plugin_<plugin>_<server>__*` for a server in the plugin's `.mcp.json`, `mcp__<server>__*` for one the user configured
 
 ## Common Mistakes
 

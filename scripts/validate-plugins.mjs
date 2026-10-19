@@ -7,8 +7,11 @@ import { parseArgs } from "util";
 import Ajv from "ajv";
 import { agentFrontmatterErrors } from "./agent-frontmatter.mjs";
 
-if (typeof globalThis.Bun?.YAML?.parse !== "function") {
-  console.error("validate-plugins.mjs needs a Bun with Bun.YAML (it parses agent frontmatter with it): bun scripts/validate-plugins.mjs");
+// Bun.YAML.parse only throws on invalid YAML from Bun 1.2.23 (its release notes list
+// the fix), and the agent frontmatter check depends on that throw.
+const MIN_BUN = "1.2.23";
+if (typeof globalThis.Bun?.YAML?.parse !== "function" || !Bun.semver.satisfies(Bun.version, `>=${MIN_BUN}`)) {
+  console.error(`validate-plugins.mjs needs Bun ${MIN_BUN} or later (it parses agent frontmatter with Bun.YAML): bun scripts/validate-plugins.mjs`);
   process.exit(1);
 }
 
@@ -227,9 +230,12 @@ plugins.forEach((plugin) => {
   const agentsDir = join(resolve(rootDir, plugin.source), "agents");
   if (!existsSync(agentsDir)) return;
 
-  const agentFiles = readdirSync(agentsDir, { withFileTypes: true })
-    .filter((d) => d.isFile() && d.name.endsWith(".md"))
-    .map((d) => join(agentsDir, d.name))
+  // Claude Code scans a plugin's agents/ recursively (agents/review/security.md
+  // registers as <plugin>:review:security), so subfolders are checked too.
+  const agentFiles = readdirSync(agentsDir, { recursive: true })
+    .filter((p) => p.endsWith(".md"))
+    .map((p) => join(agentsDir, p))
+    .filter((f) => statSync(f).isFile())
     .sort();
 
   for (const agentFile of agentFiles) {
