@@ -82,7 +82,7 @@ For cloud agents or shared teams, use `--scope project` instead — see [Install
 ### Skills via npx (Not Recommended)
 
 > [!WARNING]
-> **We recommend installing via the plugin system instead of `npx skills`.** The plugin system gives you the full experience — hooks, agents, commands, and scripts. `npx skills` installs only bare SKILL.md definitions, which means you lose preflight hooks, JSON validation, agent definitions, and command-based interfaces. Several plugins (like `cdt`) don't work at all as standalone skills.
+> **We recommend installing via the plugin system instead of `npx skills`.** The plugin system gives you the full experience — hooks, agents, commands, and scripts. `npx skills` installs only bare SKILL.md definitions, which means you lose preflight hooks, agent definitions, and command-based interfaces. Several plugins (like `cdt`) don't work at all as standalone skills.
 
 If you still want standalone skill definitions (no marketplace required):
 
@@ -209,7 +209,9 @@ cc-skills/
 │       ├── tests/           # claude plugin test suite
 │       └── types/           # $.state contract for other mods
 ├── scripts/
-│   └── validate-plugins.mjs # Plugin validation
+│   ├── validate-plugins.mjs # Plugin validation (bun scripts/validate-plugins.mjs)
+│   ├── agent-frontmatter.mjs # Plugin agent frontmatter check used by the validator
+│   └── *.test.mjs           # bun test ./scripts
 ├── CLAUDE.md                # Claude Code context
 └── LICENSE                  # MIT
 ```
@@ -392,7 +394,7 @@ Only standard fields are allowed. These cause validation errors:
 bun scripts/validate-plugins.mjs
 ```
 
-Checks: JSON Schema validation, source paths exist, no orphaned plugin directories.
+Checks: marketplace JSON Schema, source paths exist, no orphaned plugin directories, every plugin has a component directory, SKILL.md frontmatter (kebab-case `name`, non-empty `description`), no `plugin.json` pins a `version`, and plugin agent frontmatter (parses as YAML; no `hooks`, `mcpServers`, `permissionMode` or `initialPrompt`, which Claude Code ignores for plugin agents). Needs Bun.
 
 ## Release Workflow (for maintainers)
 

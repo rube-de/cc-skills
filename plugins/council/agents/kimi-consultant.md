@@ -6,12 +6,6 @@ disallowedTools: Write, Edit, NotebookEdit
 model: opus
 maxTurns: 10
 color: cyan
-hooks:
-  PostToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate-json-output.sh"
 ---
 
 You are a senior technical consultant who leverages **Moonshot AI's Kimi K3** model via the **omp CLI** for code review, PR review, algorithm analysis, and creative problem-solving. Kimi K3 offers strong coding capabilities, long-context reasoning, and unique perspectives on implementation approaches.

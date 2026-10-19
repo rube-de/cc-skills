@@ -1432,11 +1432,11 @@ The council `codex-consultant` documented `codex "prompt"` and `codex --quiet "p
 
 ### Reference bundled scripts from a SKILL.md body with `${CLAUDE_SKILL_DIR}`, not `${CLAUDE_PLUGIN_ROOT}`
 
-The `feature-discovery` skill instructs the model to invoke the `Workflow` tool with the bundled engine's path: `Workflow({ scriptPath: "…/scripts/feature-discovery.workflow.js" })`. The first draft used `${CLAUDE_PLUGIN_ROOT}/skills/feature-discovery/scripts/…`, copying the pattern seen in `hooks.json` and agent frontmatter across the repo. That path never resolves from a skill body: `${CLAUDE_PLUGIN_ROOT}` is a **harness-config-only** substitution (documented for `hooks.json`/`.mcp.json` command values), and it is **absent** from the skill-body substitution set. The model would have emitted the literal unexpanded `${CLAUDE_PLUGIN_ROOT}/…` string as the tool argument, the file wouldn't be found, and the skill would be dead on first use for every installed user. Static gates miss this entirely — `validate-plugins.mjs` only checks frontmatter + marketplace structure, and `node --check` only performs a parse-level syntax check (and, per the harness-execution-model entry below, not even a fully reliable one for this specific engine).
+The `feature-discovery` skill instructs the model to invoke the `Workflow` tool with the bundled engine's path: `Workflow({ scriptPath: "…/scripts/feature-discovery.workflow.js" })`. The first draft used `${CLAUDE_PLUGIN_ROOT}/skills/feature-discovery/scripts/…`, copying the pattern seen in `hooks.json` and agent frontmatter across the repo (the agent-frontmatter copies never ran; see the plugin-agent entry below). That path never resolves from a skill body: `${CLAUDE_PLUGIN_ROOT}` is a **harness-config-only** substitution (documented for `hooks.json`/`.mcp.json` command values), and it is **absent** from the skill-body substitution set. The model would have emitted the literal unexpanded `${CLAUDE_PLUGIN_ROOT}/…` string as the tool argument, the file wouldn't be found, and the skill would be dead on first use for every installed user. Static gates miss this entirely — `validate-plugins.mjs` only checks frontmatter + marketplace structure, and `node --check` only performs a parse-level syntax check (and, per the harness-execution-model entry below, not even a fully reliable one for this specific engine).
 
 **Root pattern:** the two variables live in different substitution tables. `${CLAUDE_PLUGIN_ROOT}` is expanded by the harness inside config files it processes itself; a SKILL.md body is rendered with a *different* set — `$ARGUMENTS`, `${CLAUDE_SESSION_ID}`, `${CLAUDE_EFFORT}`, `${CLAUDE_SKILL_DIR}`, `${CLAUDE_PROJECT_DIR}`. Render-time substitution happens *before* the SKILL.md text enters the conversation, so a variable from the skill-body table reaches even non-shell contexts (tool-call argument values, `allowed-tools` frontmatter) already resolved. A variable outside that table does not.
 
-**Rule:** To hand a bundled file's path to a tool (or a shell command) from a SKILL.md body, use `${CLAUDE_SKILL_DIR}` — the directory containing that `SKILL.md` (for plugin skills, the skill's subdirectory *within* the plugin, not the plugin root). Reserve `${CLAUDE_PLUGIN_ROOT}` for `hooks.json` and agent/MCP config. Because `${CLAUDE_SKILL_DIR}` already points at the skill dir, do not re-append the `skills/<name>/` segment.
+**Rule:** To hand a bundled file's path to a tool (or a shell command) from a SKILL.md body, use `${CLAUDE_SKILL_DIR}` — the directory containing that `SKILL.md` (for plugin skills, the skill's subdirectory *within* the plugin, not the plugin root). Reserve `${CLAUDE_PLUGIN_ROOT}` for the config files the harness expands it in: `hooks.json` commands and MCP server definitions (`.mcp.json` or the manifest's `mcpServers`). Agent frontmatter is not one of them: a plugin agent can't declare hooks or MCP servers at all (see the next entry). Because `${CLAUDE_SKILL_DIR}` already points at the skill dir, do not re-append the `skills/<name>/` segment.
 
 **Bad pattern (harness-config variable in a skill body — emitted literally, file not found):**
 ```
@@ -1451,6 +1451,32 @@ Workflow({ scriptPath: "${CLAUDE_SKILL_DIR}/scripts/feature-discovery.workflow.j
 Corollary: `allowed-tools` is additive pre-approval, never a block — a misspelled tool name there triggers a permission prompt rather than silently failing, so it won't manifest as a "dead skill." The dead-skill failure mode comes from the path variable, not the tool list.
 
 > Source: `feature-discovery` plugin port (SKILL.md `scripts/feature-discovery.workflow.js` invocation); verified against Claude Code skills reference (`code.claude.com/docs/en/skills.md`, `plugins-reference.md`).
+
+### Plugin agents can't carry hooks, MCP servers or a permission mode, and unparseable frontmatter drops every field
+
+Seven agents shipped since the monorepo import (`82cd607`) declared behavior that never ran. The four council consultants registered a PostToolUse hook (`validate-json-output.sh`) in their frontmatter, two council subagents set `permissionMode: bypassPermissions`, and cdt's researcher set `mcpServers: context7`. Claude Code ignores `hooks`, `mcpServers`, `permissionMode` and `initialPrompt` for agents loaded from a plugin ("For security reasons, plugin subagents don't support…" — sub-agents docs; plugin components docs → Agents → Ignored fields). The hook script was dead twice over: it read `.tool_output` (PostToolUse input carries `tool_response`) and always exited 0, and Claude never sees stderr from a hook that exits 0.
+
+The researcher was worse off. Its multi-line double-quoted `description` had continuation lines at column 0, which Claude Code's YAML parser rejects ("YAML Parse error: Unexpected character"; `Bun.YAML.parse` fails identically, while `yq` and js-yaml accept it). An agent whose frontmatter doesn't parse still loads, named after its file, with **every** field dropped: no `tools` allowlist (so it inherited every tool, Bash included), no `model`, no `maxTurns`, no `memory`, and a generic description.
+
+Nothing caught either problem. `validate-plugins.mjs` didn't look at agents and read SKILL.md frontmatter with regexes, which can't see a parse failure. `claude plugin validate` reports the parse error but passes ignored fields, and it skips `hooks/hooks.json` for plugins without a `.claude-plugin/plugin.json`.
+
+**Bad pattern (plugin agent frontmatter, all three fields ignored):**
+```yaml
+hooks:
+  PostToolUse:
+    - matcher: "Bash"
+      hooks: [{ type: command, command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate.sh" }]
+permissionMode: bypassPermissions
+mcpServers: context7
+```
+
+**Good pattern:** register hooks in the plugin's `hooks/hooks.json` (with an `agent_type` guard if the hook is only meant for one agent; plugin agents report `<plugin>:<agent>`), declare MCP servers in the plugin's `.mcp.json`, and grant a server's tools through the allowlist. A server bundled in the plugin's own `.mcp.json` is named `mcp__plugin_<plugin>_<server>__*` (e.g. `mcp__plugin_cdt_context7__*`); the bare `mcp__<server>__*` only matches a server the user configured. cdt's researcher lists both forms for a server it doesn't bundle: `tools: Read, …, WebFetch, mcp__context7__*, mcp__plugin_context7_context7__*` (user-configured, or installed through the context7 plugin). A live probe confirmed an unresolved `mcp__<server>__*` entry is skipped silently, so listing a server the user may not have is safe. Write long descriptions on one line with `\n` escapes (the council agents' style), or indent every continuation line.
+
+**Rule:** `validate-plugins.mjs` now parses every `agents/*.md` frontmatter with `Bun.YAML.parse` and rejects the four ignored fields (`scripts/agent-frontmatter.mjs`). Validate frontmatter with the parser Claude Code uses, never with a lenient one or regexes, because a lenient parser hides exactly the failure that drops every field.
+
+The "hook remains as defense-in-depth" notes in the council entries above describe the consultant hook that never ran; orchestrator validation (`skills/council/SKILL.md` → Response Validation) was always the only gate.
+
+> Source: [Issue #282](https://github.com/rube-de/cc-skills/issues/282); `scripts/agent-frontmatter.mjs`, `scripts/validate-plugins.mjs`; docs `code.claude.com/docs/en/sub-agents` (Choose the subagent scope; `tools` MCP entries), `code.claude.com/docs/en/plugins/components` (Agents → Ignored fields, Frontmatter that doesn't parse).
 
 ### Guard every fan-out result before the next phase consumes it - a happy-path return isn't proof the data is real
 

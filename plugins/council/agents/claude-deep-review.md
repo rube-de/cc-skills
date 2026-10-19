@@ -5,7 +5,6 @@ tools: Read, Grep, Glob, Bash
 disallowedTools: Write, Edit, NotebookEdit
 model: opus
 maxTurns: 15
-permissionMode: bypassPermissions
 skills:
   - council-reference
 color: red

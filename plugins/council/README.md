@@ -4,7 +4,7 @@
 [![Skills](https://img.shields.io/badge/Skills-3-blue.svg)](#skills--commands)
 [![Agents](https://img.shields.io/badge/Agents-7-green.svg)](#dual-layer-review-system)
 [![Commands](https://img.shields.io/badge/Commands-1-purple.svg)](#skills--commands)
-[![Hooks](https://img.shields.io/badge/Hooks-2-orange.svg)](#hooks)
+[![Hooks](https://img.shields.io/badge/Hooks-1-orange.svg)](#hooks)
 
 Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) and specialized Claude subagents for consensus-driven code reviews, plan validation, and architectural decisions.
 
@@ -28,6 +28,8 @@ Orchestrate multiple AI consultants (Gemini 3.8 Flash, Codex, GLM-5.3, Kimi K3) 
 |----------|-------|-------|
 | claude-deep-review | Opus (or Sonnet via config) | Security, bugs, performance — traces input paths, follows call chains |
 | claude-codebase-context | Sonnet | Quality, compliance, history, documentation — compares against project conventions |
+
+With the `native` backend, both subagents' Bash calls follow your session's permission rules. A plugin agent can't set its own permission mode, so commands your settings don't allow will prompt.
 
 **Layer 3 — Scoring** (noise reduction — optional / conditional via config):
 | Agent | Model | Role |
@@ -81,7 +83,8 @@ Before any external consultant is contacted, council runs `gitleaks detect` and 
 | Hook | Trigger | Purpose |
 |------|---------|---------|
 | `preflight.sh` | SessionStart | Check configuration and CLI availability for enabled consultants |
-| `validate-json-output.sh` | PostToolUse (Bash) | Validate consultant output matches expected JSON schema |
+
+Consultant responses are validated by the orchestrator after collection (see `skills/council/SKILL.md` → Response Validation), not by a hook.
 
 ## How It Works
 
@@ -122,7 +125,7 @@ This is a **Claude Code plugin** with hooks, agents, and scripts. Full plugin in
 
 ### Plugin Install (Recommended)
 
-Installs everything: skills, agents, hooks (preflight checks, JSON validation), and scripts.
+Installs everything: skills, agents, hooks (preflight checks), and scripts.
 
 ```bash
 # 1. Add the marketplace (once)
@@ -146,7 +149,6 @@ npx skills add rube-de/cc-skills --skill council
 > [!WARNING]
 > **What you lose with skill-only install:**
 > - `preflight.sh` — no automatic CLI availability check on session start
-> - `validate-json-output.sh` — no PostToolUse JSON validation for consultant output
 > - Agent `.md` definitions — subagent types (codex-consultant, gemini-consultant, etc.) won't be registered
 > - `/council:config` command & scripts — consultant enablement configuration and subscription management won't be available (council falls back to default consultants)
 ### Configuration & Subscriptions
@@ -171,7 +173,7 @@ Pass `--global` to any command to persist settings across all repositories in `~
 
 ### Prerequisites
 
-`jq` (or `jaq`) is required for configuration parsing and JSON validation hooks. At least one external CLI (or subscription) is recommended:
+`jq` (or `jaq`) is required for configuration parsing. At least one external CLI (or subscription) is recommended:
 
 ```bash
 # Check capability detection
@@ -183,7 +185,7 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | Component | Required | Purpose |
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
-| jq (or jaq) | Yes | JSON configuration and validation hooks |
+| jq (or jaq) | Yes | JSON configuration parsing |
 | codex CLI | Recommended | Codex consultant |
 | omp CLI | Recommended | Gemini, GLM-5.3, and Kimi consultants (3 of 4) |
 ## Troubleshooting
@@ -194,7 +196,7 @@ The plugin operates in partial-success mode — it proceeds with whichever consu
 | Consultant returns empty output | Rate limiting or timeout | Automatic retry with exponential backoff; check API quotas |
 | Low confidence scores | Vague review scope | Use concern-specific mode: `/council review security` |
 | Too many false positives | Broad review on large diff | Use `/council quick` for parallel triage (2-agent lightweight review) |
-| JSON validation warnings | Consultant output malformed | PostToolUse hook retries; check CLI version |
+| `<consultant>: INVALID — invalid_response_format` | Consultant reply wasn't the expected JSON | The orchestrator counts it as failed and continues with the others (no retry); check the CLI version |
 | Pre-flight warning on start | CLI not in PATH | Verify installation: `which codex omp` |
 
 ## References

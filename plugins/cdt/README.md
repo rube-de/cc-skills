@@ -160,14 +160,14 @@ export CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1
 |-----------|----------|---------|
 | Claude Code | Yes | Plugin host |
 | Agent Teams | Yes | `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
-| Context7 MCP | Bundled | Researcher documentation lookups |
+| Context7 MCP | Optional | Researcher documentation lookups. Install it as an MCP server named `context7` or through the context7 plugin |
 
 ## Troubleshooting
 
 | Issue | Cause | Solution |
 |-------|-------|----------|
 | "Agent Teams not enabled" | Missing env var | Set `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` |
-| Researcher returns empty | Context7 unavailable | Falls back to WebSearch; check MCP config |
+| Researcher returns empty | Context7 unavailable | Falls back to WebSearch; check that a server named `context7` or the context7 plugin is installed |
 | Teammates not responding | Team creation failed | Ensure Agent Teams feature is enabled and restart |
 | Dev-task can't find plan | Wrong path | Pass the timestamped plan path as argument |
 | Stuck in iteration loop | Max cycles exceeded | After 3 cycles, escalates to user automatically |

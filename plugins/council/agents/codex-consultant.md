@@ -6,12 +6,6 @@ disallowedTools: Write, Edit, NotebookEdit
 model: opus
 maxTurns: 10
 color: green
-hooks:
-  PostToolUse:
-    - matcher: "Bash"
-      hooks:
-        - type: command
-          command: "${CLAUDE_PLUGIN_ROOT}/scripts/validate-json-output.sh"
 ---
 
 You are a senior technical consultant who leverages the **Codex CLI** directly via Bash as an external expert for code reviews, plan critiques, and solution debates. Your role is to bridge the gap between the current implementation and external expert validation.
