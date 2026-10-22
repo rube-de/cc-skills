@@ -250,6 +250,26 @@
         "ui",
         "function-hooks"
       ]
+    },
+    {
+      "name": "jev-guard",
+      "description": "PreToolUse guard that asks TypeSafe Jev whether a tool call exposes secrets, destroys data, exfiltrates or drifts off task, behind hard rules in code. Starts in shadow mode.",
+      "version": "2.21.1",
+      "source": "./plugins/jev-guard",
+      "category": "devops",
+      "author": {
+        "name": "rube-de",
+        "url": "https://github.com/rube-de"
+      },
+      "keywords": [
+        "security",
+        "hooks",
+        "pretooluse",
+        "guardrails",
+        "jev",
+        "typesafe",
+        "secrets"
+      ]
     }
   ]
 }

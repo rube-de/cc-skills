@@ -1,0 +1,9 @@
+{
+  "name": "jev-guard",
+  "description": "PreToolUse guard: hard rules in code for secret files and destructive commands, then TypeSafe Jev judges whether a tool call exposes secrets, destroys data, exfiltrates or drifts off task. Starts in shadow mode.",
+  "author": {
+    "name": "rube-de",
+    "url": "https://github.com/rube-de"
+  },
+  "license": "MIT"
+}
