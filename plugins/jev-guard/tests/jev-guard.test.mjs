@@ -304,6 +304,8 @@ describe("Bash text rules see through spelling", () => {
       // A one-off -c runs the program it names, unless the key is a known harmless one.
       "git -c core.fsmonitor=/tmp/x status",
       "git --config-env=core.sshCommand=CMD fetch",
+      "git {-c,core.fsmonitor=/tmp/x} status",
+      "git clone {-c,core.hooksPath=/tmp/h} https://example.com/r.git",
       "claude mcp add tools -- node x.js",
       "claude config set -g autoUpdates false",
     ];
@@ -318,6 +320,8 @@ describe("Bash text rules see through spelling", () => {
       "git config --list --show-origin",
       "git config get user.name",
       "git -c commit.gpgsign=false commit -m wip",
+      'git -c commit.gpgsign=false commit -m "fix: a quoted message"',
+      "echo $(git rev-parse HEAD)",
       "git clone --depth 1 https://example.com/r.git",
       "npm config set x y",
     ];

@@ -406,6 +406,8 @@ git_changes_config() {  # reads CMD_N and T_CMD
     done
     sub=""
     while ((++i < n)); do
+      # Braces, globs, $ and backticks can expand into options: git {-c,core.fsmonitor=x} status
+      case "${words[i]}" in *[]{}\$*?[\`]*) found=0 ;; esac
       case "${words[i]}" in
         -c | --config-env)  # git -c core.fsmonitor=x status runs x
           ((i++))
@@ -421,7 +423,7 @@ git_changes_config() {  # reads CMD_N and T_CMD
       init | clone)  # clone -c core.hooksPath=... writes the new repo's config, and its checkout runs hooks
         for ((j = i + 1; j < n; j++)); do
           case "${words[j]}" in
-            --[ct]* | -c* | -[!-]*c*) found=0 ;;  # --config, --template and their prefixes; -c, -ckey=x, -qc
+            --[ct]* | -c* | -[!-]*c* | *[]{}\$*?[\`]*) found=0 ;;  # --config, --template, prefixes, -qc, expansions
           esac
         done
         ;;
