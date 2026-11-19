@@ -217,10 +217,11 @@ resolve "${TMPDIR:-/tmp}" && TMP_R=$R
 resolve "$KEY_FILE" && KEY_R=$R
 resolve "$CONFIG" && CONFIG_R=$R
 
+# In a case pattern, "${1%/}"/* never matches in bash 5.2 when $1 is "/"; a plain variable does.
 own_folder() {  # resolved-dir — can the folder be guarded as a whole? Not if it is /, home, or holds the project
-  local d
+  local d dir=${1%/}
   for d in "$HOME_R" "$PROJECT_R" "$CWD_R"; do
-    case "$d/" in "${1%/}"/*) return 1 ;; esac
+    case "$d/" in "$dir"/*) return 1 ;; esac
   done
   return 0
 }
@@ -264,23 +265,33 @@ secret_path() {  # resolved-path — live secret stores; templates like .env.exa
 }
 
 search_reaches_secret() {  # resolved-path — a Grep there reads a secret store; HIT = which one
-  local f
+  local f dir=${1%/}
   secret_path "$1" && HIT=$1 && return 0
   for f in "${SECRET_DIRS[@]}" "${SECRET_FILES[@]}"; do
-    case "$f/" in "${1%/}"/*) HIT=$f && return 0 ;; esac
+    case "$f/" in "$dir"/*) HIT=$f && return 0 ;; esac
   done
   return 1
 }
 
-# Files that change what the agent may do or what runs later. Project agents can set hooks and a
-# permission mode, and skills and commands can grant tools with allowed-tools.
-control_path() {  # resolved-path
-  case "$1" in
-    "$CONFIG_R" | "$HOME_R"/.claude/settings*.json | */.claude/settings*.json | "$HOME_R"/.claude.json | \
-      */.claude/hooks/* | */.claude/agents/* | */.claude/skills/* | */.claude/commands/* | */.mcp.json | \
-      */.git/hooks/* | */.git/config | */.git/info/* | */.husky/* | */.envrc | */.vscode/tasks.json | */.vscode/settings.json | \
-      "$HOME_R"/.zshrc | "$HOME_R"/.zprofile | "$HOME_R"/.bashrc | "$HOME_R"/.bash_profile | "$HOME_R"/.profile | "$HOME_R"/.ssh/*) return 0 ;;
-  esac
+# Files that change what Claude may do or what runs later, as globs under any folder or under home.
+# Project agents can set hooks and a permission mode, skills and commands can grant tools with
+# allowed-tools, and ~/.gitconfig can name hooks and an fsmonitor. Edit and Write ask before
+# changing one, and Bash asks before naming one, so the two can't drift apart.
+ANY_CONTROL=('.claude/settings*.json' .claude/hooks .claude/agents .claude/skills .claude/commands .mcp.json .envrc
+  .husky .git/hooks .git/config .git/info .git/modules .vscode/tasks.json .vscode/settings.json)
+HOME_CONTROL=(.claude.json .claude/plugins .zshrc .zshenv .zprofile .bashrc .bash_profile .profile .gitconfig .config/git)
+resolve "$ROOT" && ROOT_R=$R  # the guard's own code, and its state: a fake back-off file would switch Jev off
+resolve "$DATA" && DATA_R=$R
+
+control_path() {  # resolved-path. ~/.ssh is here but not in the Bash lists: `ssh -i ~/.ssh/key` names it to read.
+  local c
+  case "$1" in "$CONFIG_R" | "$ROOT_R" | "$ROOT_R"/* | "$DATA_R" | "$DATA_R"/* | "$HOME_R"/.ssh | "$HOME_R"/.ssh/*) return 0 ;; esac
+  for c in "${ANY_CONTROL[@]}"; do
+    case "$1" in */$c | */$c/*) return 0 ;; esac
+  done
+  for c in "${HOME_CONTROL[@]}"; do
+    case "$1" in "$HOME_R"/$c | "$HOME_R"/$c/*) return 0 ;; esac
+  done
   return 1
 }
 
@@ -324,7 +335,7 @@ spell() {  # path... — SPELL = how a cleaned-up command names each: ~/rel (or 
 }
 
 mentions() {  # text... — CMD_N names one of them, or a path under it
-  local t pre='(^|[/[:space:];&|(`=<>:])' post='([/[:space:];&|)`<>*?]|$)'
+  local t pre='(^|[][/[:space:];&|(`=<>:{},])' post='([][/[:space:];&|)`<>*?{},]|$)'
   for t in "$@"; do
     [[ $CMD_N =~ $pre"$t"$post ]] && return 0
   done
@@ -370,14 +381,22 @@ bash_control() {  # CONTROL = why the command needs the user's OK, or empty. Rea
   lex=$LEX lex_dir=${LEX%/*}
   spell "$CONFIG_R" "$lex"
   SPELL+=("${dir##*/}/${CONFIG_R##*/}" "${lex_dir##*/}/${lex##*/}")
+  local c
   if mentions "${SPELL[@]}"; then
     CONTROL="touches the guard's own config ($CONFIG)."
   elif own_folder "$dir" && spell "$dir" "$lex_dir" && mentions "${SPELL[@]}"; then
     CONTROL="touches the folder that holds the guard's config ($CONFIG)."
-  elif [[ $CMD_N == *.claude/settings* ]]; then
-    CONTROL="touches Claude Code's settings, which decide what runs without asking and which hooks run."
-  elif [[ $CMD_N =~ claude[[:space:]]+plugins?[[:space:]]+(disable|uninstall|remove|rm)([[:space:]]|$) ]]; then
-    CONTROL="disables or removes a Claude Code plugin, which can switch this guard off."
+  elif spell "$ROOT_R" "$ROOT" "$DATA_R" "$DATA" && mentions "${SPELL[@]}"; then
+    CONTROL="touches the guard's own code or state."
+  elif [[ $CMD_N =~ claude[[:space:]]+plugins?[[:space:]]+(marketplace[[:space:]]+)?(disable|uninstall|remove|rm)([[:space:]]|$) ]]; then
+    CONTROL="disables or removes a Claude Code plugin or marketplace, which can switch this guard off."
+  else
+    for c in "${ANY_CONTROL[@]}" "${HOME_CONTROL[@]}"; do
+      if [[ $CMD_N == *$c* ]]; then
+        CONTROL="names $c, which changes what Claude may do or what runs later. Claude can read it with the Read tool."
+        break
+      fi
+    done
   fi
   [ -n "$CONTROL" ]
 }
@@ -552,9 +571,12 @@ case "$TOOL" in
     pass
     ;;
   Grep)
+    # Templates are dropped from the glob before the check, so {.env.example,.env} still counts as .env.
+    g=${T_GLOB//.env.example/}
+    g=${g//.env.sample/}
+    g=${g//.env.template/}
     shopt -s nocasematch
-    case "$T_GLOB" in
-      *.env.example* | *.env.sample* | *.env.template*) ;;
+    case "$g" in
       *.env* | id_* | */id_* | *[{,]id_* | *.pem* | *.key | *.key[},]* | *.p12* | *.pfx* | *[{,]pem[},]* | *[{,]key[},]* | \
         *[{,]p12[},]* | *[{,]pfx[},]* | *credential* | *netrc* | *npmrc* | *pypirc*)
         rule deny "searching inside secret files ($T_GLOB) would print their values." ;;
@@ -570,7 +592,7 @@ case "$TOOL" in
     resolve "$T_PATH"
     folded same_path "$R" "$KEY_R" && rule deny "that file holds the jev-guard API key."
     folded secret_path "$R" && rule ask "writes to a secret file ($T_PATH)."
-    folded control_path "$R" && rule ask "changes agent settings, hooks, skills, the guard's config, git hooks or shell startup files ($T_PATH)."
+    folded control_path "$R" && rule ask "changes what Claude may do or what runs later: settings, hooks, skills, git hooks, shell startup files or the guard itself ($T_PATH)."
     inside_workspace "$R" && pass
     ask_jev
     ;;

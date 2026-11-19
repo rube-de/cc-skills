@@ -150,6 +150,12 @@ describe("hard rules (no Jev call)", () => {
       expect({ f, decision: r.decision }).toEqual({ f, decision: "ask" });
     }
     expect((await run("Write", { file_path: `${PROJECT}/.claude/files/report.md`, content: "x" })).out).toBe("");
+    for (const f of [".gitconfig", ".zshenv", ".config/git/config", ".claude/plugins/cache/m/jev-guard/1.0.0/scripts/jev-guard.sh", "data/down-s1"]) {
+      const r = await run("Write", { file_path: `${home}/${f}`, content: "x" });
+      expect({ f, decision: r.decision }).toEqual({ f, decision: "ask" });
+    }
+    expect((await run("Write", { file_path: `${PROJECT}/.git/modules/sub/hooks/post-checkout`, content: "x" })).decision).toBe("ask");
+    expect((await run("Edit", { file_path: SCRIPT, old_string: "a", new_string: "b" })).decision).toBe("ask"); // the guard itself
     expect(requests).toHaveLength(0);
   });
 
@@ -260,12 +266,24 @@ describe("Bash text rules see through spelling", () => {
       'echo x > "$HOME/.config/jev-guard/config.json"',
       "echo '{}' > .claude/settings.local.json",
       "claude plugin disable jev-guard@rube-cc-skills",
+      "claude plugin marketplace remove rube-cc-skills",
+      "printf '#!/bin/sh\\n' > .git/hooks/pre-commit",
+      "echo '{}' > .mcp.json",
+      "echo 'export X=1' >> ~/.zshenv",
+      `echo '99 9999999999' > ${home}/data/down-s1`,
     ];
     for (const command of commands) {
       const r = await bash(command);
       expect({ command, decision: r.decision }).toEqual({ command, decision: "ask" });
     }
     expect(requests).toHaveLength(0);
+  });
+
+  test("see a path inside a brace or bracket list", async () => {
+    expect((await bash("cat {~/key,/dev/null}")).decision).toBe("deny");
+    expect((await bash("cat [~/key]")).decision).toBe("deny");
+    expect((await run("Grep", { pattern: "x", glob: "{.env.example,.env}" })).decision).toBe("deny");
+    expect((await run("Grep", { pattern: "x", glob: "**/.env.example" })).out).toBe("");
   });
 
   test("leave a repo's own jev-guard folder to Jev", async () => {
@@ -276,6 +294,9 @@ describe("Bash text rules see through spelling", () => {
       expect((await bash(command, keyDir)).decision).toBeUndefined();
     }
     expect(requests).toHaveLength(3);
+    // ~/.ssh is named by everyday reads; Edit and Write still ask before changing it.
+    expect((await bash("ssh-keygen -lf ~/.ssh/id_ed25519.pub", keyDir)).decision).toBeUndefined();
+    expect(requests).toHaveLength(4);
   });
 });
 
@@ -303,10 +324,13 @@ describe("fast pass", () => {
       expect((await bash(command)).out).toBe("");
     }
     expect(requests).toHaveLength(0);
-    // --output writes a file anywhere; --no-index reads any file on disk. Both go to Jev.
-    for (const command of ["git diff --output=../../.zshrc", "git log --output=/tmp/x", "git diff --no-index /etc/hosts /dev/null"]) {
+    // --output writes a file anywhere; --no-index reads any file on disk. Both go to Jev,
+    // unless the file is one the hard rules guard.
+    for (const command of ["git diff --output=/tmp/x.patch", "git log --output=/tmp/x", "git diff --no-index /etc/hosts /dev/null"]) {
       await bash(command);
     }
+    expect(requests).toHaveLength(3);
+    expect((await bash("git diff --output=../../.zshrc")).decision).toBe("ask");
     expect(requests).toHaveLength(3);
   });
 
