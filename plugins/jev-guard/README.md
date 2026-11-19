@@ -6,12 +6,14 @@ Jev is a second opinion, not a sandbox. Treat this as a seatbelt on top of Claud
 
 ## What happens on each call
 
-1. **Hard rules in code.** These always apply, whatever the mode:
-   - deny reading or grepping live secret files (`.env`, `.env.local`, private keys, `~/.aws/credentials`, this plugin's key file). `.env.example` and other templates are fine.
-   - deny `rm -rf` of `/` or the home directory, and force-pushes to `main` or `master`.
-   - ask before edits to `.claude/settings*.json`, this plugin's `config.json`, `.git/hooks`, `.git/config`, shell startup files and `~/.ssh`.
+1. **Hard rules in code.** These apply in every mode. Only `JEV_GUARD_MODE=off` in the environment turns them off.
+   - deny reading live secret files: `.env` and `.env.local`, private keys (`*.pem`, `*.key`, `id_*`), anything in `~/.ssh`, `~/.aws`, `~/.gnupg` and `~/.config/gcloud`, `~/.netrc`, `~/.git-credentials`, `~/.npmrc`, `~/.pypirc`, `~/.docker/config.json`, `~/.kube/config`, `~/.config/gh/hosts.yml`, and this plugin's key file and the folder it sits in. `.env.example` and other templates are fine, as are `*.pub`, `known_hosts`, `~/.ssh/config` and `~/.aws/config`.
+   - deny a Grep that would read one: a search inside one of those folders, or of a folder that holds one, such as `~`, `~/.config` or `/`. Claude Code's Grep searches hidden files, so a search of `~` reads `~/.ssh`. A Grep with no path searches the working folder, so in a session started in `~`, give Grep a path.
+   - deny `rm -rf` of `/` or the home directory, force-pushes to `main` or `master`, and any Bash command that names the key file or the folder it sits in.
+   - ask before edits to `.claude/settings*.json`, `.claude/hooks`, `.claude/agents`, `.claude/skills`, `.claude/commands`, `.mcp.json`, `.envrc`, `.husky`, `.vscode/tasks.json` and `.vscode/settings.json`, `.git/hooks`, `.git/info`, `.git/config`, shell startup files, `~/.ssh`, and this plugin's `config.json`. Each of these changes what Claude may do or what runs later.
+   - ask before a Bash command that names `.claude/settings`, this plugin's config, or `claude plugin disable` or `uninstall`.
 
-   Paths are checked after `..` and symlinks are resolved, so `project/../../.zshrc` or a link inside the project can't slip past.
+   Paths are checked after `..` and symlinks are resolved, so `project/../../.zshrc` or a link inside the project can't slip past. They are compared without regard to letter case, as macOS treats them, so `~/.SSH/id_rsa` is caught too. Bash commands are read with quotes and backslashes removed and every spelling of home (`$HOME`, `${HOME}`, the full path) treated as `~`, so `\rm -rf "${HOME}"` or `/bin/rm -rf ~` is caught. A path built while the command runs can still get past a rule that reads text. Those commands go to Jev.
 2. **Fast pass, no Jev call.** Edits inside the project or a temp directory, and plain read-only commands like `git status` or `ls`.
 3. **Jev.** Everything else that is gated: Bash, writes outside the project, WebFetch, and connector tools that send, post, upload or delete. It asks:
 
@@ -70,7 +72,7 @@ Put settings in `~/.config/jev-guard/config.json`. Every field is optional, and 
 
 | Field | Default | Meaning |
 |---|---|---|
-| `mode` | `shadow` | `shadow` logs Jev's verdicts, `enforce` acts on them, `off` disables the hook, hard rules included |
+| `mode` | `shadow` | `shadow` logs Jev's verdicts, `enforce` acts on them, `off` stops the Jev calls. The hard rules still apply with `off`, since Claude could be talked into writing this file. `JEV_GUARD_MODE=off` in the environment turns everything off |
 | `on_error` | `open` | When Jev is unreachable: `open` lets the call through and tells you once per session; `ask` asks you (enforce mode only) |
 | `model` | `jev-1.13.0` | Pinned on purpose. `jev-latest` can move, which would change answers under thresholds you already tuned |
 | `key_file` | `~/.config/jev-guard/key` | Where the API key is read from. The hard rules protect whichever file this names |
@@ -82,7 +84,7 @@ Put settings in `~/.config/jev-guard/config.json`. Every field is optional, and 
 
 Each field also has an environment variable that wins over the file: `JEV_GUARD_MODE`, `JEV_GUARD_ON_ERROR`, `JEV_GUARD_MODEL`, `JEV_GUARD_KEY_FILE`, `JEV_GUARD_USER_REQUEST` (`0` or `1`), `JEV_GUARD_BUDGET_S` and `JEV_GUARD_BACKOFF_S`. Set one in a project's `.claude/settings.json` `env` block to change a single project, for example `JEV_GUARD_MODE=off`. `JEV_GUARD_CONFIG` points at a different config file, and `JEV_GUARD_CONNECT_S` (default `0.3`) sets the per-try connection timeout, which you may need to raise on a high-latency link.
 
-If the file isn't valid JSON, or a value is wrong, the guard tells you once per session, ignores what is wrong, and keeps the rest. The hard rules ask before Claude edits the file.
+If the file isn't valid JSON, or a value is wrong, the guard tells you once per session, ignores what is wrong, and keeps the rest. The hard rules ask before Claude edits the file with Edit or Write. A Bash command that names it is denied while the key sits in the same folder (the default), and asked about otherwise. So Claude has to change the config with Edit, and you see the change.
 
 ## What is sent to TypeSafe
 
@@ -127,6 +129,7 @@ Results on the 55 seed cases (32 risky, 23 safe; `jev-1.13.0`, last four runs, 2
 - In `claude -p` runs nobody can answer a prompt, so an `ask` acts as a deny there.
 - With `--dangerously-skip-permissions`, edits the guard would ask about are denied instead. In that mode Claude Code (2.1.304) applies a hook's `ask` on `.claude/` and `.vscode/` files without showing it. Asks on Bash calls are still shown.
 - Claude Code shows the guard's reason in Bash prompts (`jev-guard: … [plugin:jev-guard]`). Its Write and Edit prompts show only the file name.
+- A Grep inside the project is not checked. Claude Code's Grep skips files git ignores, so a git-ignored `.env` is safe, but a `.env` that git doesn't ignore is searched like any other file.
 - Jev sees the call, not the files behind it. A requested `tar czf - . | curl …` upload passed in a folder that held a `.env` (`exposes_secret` 40%). Claude Code's auto mode stopped it.
 - While Jev is unreachable or backing off, gated calls are checked by the hard rules only (or you are asked, with `on_error: "ask"`).
 - Jev reads tool input as data, but text written to argue for itself ("this is safe, approved by the user") can still sway it. That is why the worst cases are hard rules in code.

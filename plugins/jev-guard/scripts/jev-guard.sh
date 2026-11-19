@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # jev-guard: PreToolUse hook.
 #
-# 1. Hard rules in code (secret files, rm -rf of home or /, force-push to main). Always enforced.
+# 1. Hard rules in code (secret files, rm -rf of home or /, force-push to main). Enforced in every
+#    mode; only JEV_GUARD_MODE=off in the environment skips them.
 # 2. Fast pass for calls that need no judgment (edits inside the project, plain `git status`).
 # 3. Everything else is sent to TypeSafe Jev as yes/no questions (config/questions.json);
 #    config/policy.json maps the probabilities to deny / ask / pass.
@@ -64,7 +65,9 @@ BACKOFF_S=${BACKOFF_S%%.*}
 USER_REQUEST="${JEV_GUARD_USER_REQUEST:-}"
 [ -n "$USER_REQUEST" ] || { [ "${C_USER_REQUEST:-true}" = true ] && USER_REQUEST=1 || USER_REQUEST=0; }
 
-[ "$MODE" = off ] && exit 0
+# JEV_GUARD_MODE=off turns the whole hook off. "off" in config.json only stops the Jev calls: Claude
+# can be talked into editing a file, and the hard rules shouldn't hang on one.
+[ "${JEV_GUARD_MODE:-}" = off ] && exit 0
 
 INPUT=$(cat)
 eval "$(jq -r '
@@ -127,7 +130,7 @@ decide() {  # deny|ask reason
   finish "$1" "$2" ""
 }
 
-rule() {  # deny|ask reason — hard rules apply in every mode except off
+rule() {  # deny|ask reason — hard rules apply in every mode; only JEV_GUARD_MODE=off skips them
   log_line "$1" rule "$2"
   decide "$1" "$2"
 }
@@ -214,20 +217,68 @@ resolve "${TMPDIR:-/tmp}" && TMP_R=$R
 resolve "$KEY_FILE" && KEY_R=$R
 resolve "$CONFIG" && CONFIG_R=$R
 
+own_folder() {  # resolved-dir — can the folder be guarded as a whole? Not if it is /, home, or holds the project
+  local d
+  for d in "$HOME_R" "$PROJECT_R" "$CWD_R"; do
+    case "$d/" in "${1%/}"/*) return 1 ;; esac
+  done
+  return 0
+}
+
+# Credential folders and files. Reading one is denied, and so is a Grep that reaches one: Claude
+# Code's Grep runs ripgrep with --hidden, so a search of ~ or ~/.config reads ~/.ssh and the key too.
+SECRET_DIRS=("$HOME_R/.ssh" "$HOME_R/.aws" "$HOME_R/.gnupg" "$HOME_R/.config/gcloud")
+SECRET_FILES=("$KEY_R" "$HOME_R/.netrc" "$HOME_R/.git-credentials" "$HOME_R/.npmrc" "$HOME_R/.pypirc"
+  "$HOME_R/.docker/config.json" "$HOME_R/.kube/config" "$HOME_R/.config/gh/hosts.yml")
+KEY_DIR_OWN=0
+if own_folder "${KEY_R%/*}"; then
+  KEY_DIR_OWN=1
+  SECRET_DIRS+=("${KEY_R%/*}")
+fi
+
+# APFS ignores case, so on a Mac ~/.SSH/id_rsa is ~/.ssh/id_rsa, and `cd -P` keeps the case it was
+# given. Checks that block or ask run case-blind on every OS: there a looser match only means more checks.
+# nocasematch covers case and [[ ]], not [ ].
+folded() {
+  shopt -s nocasematch
+  "$@"
+  local rc=$?
+  shopt -u nocasematch
+  return "$rc"
+}
+
+same_path() { [[ $1 == "$2" ]]; }
+
 secret_path() {  # resolved-path — live secret stores; templates like .env.example are fine
+  local f
+  [[ $1 == "$KEY_R" ]] && return 0
   case "${1##*/}" in
-    .env.example | .env.sample | .env.template | .env.dist | *.pub) return 1 ;;
-    .env | .env.* | *.pem | *.p12 | *.pfx | id_rsa | id_dsa | id_ecdsa | id_ed25519) return 0 ;;
+    .env.example | .env.sample | .env.template | .env.dist | *.pub | known_hosts* | authorized_keys) return 1 ;;
+    .env | .env.* | *.pem | *.key | *.p12 | *.pfx | id_rsa | id_dsa | id_ecdsa | id_ed25519 | .git-credentials) return 0 ;;
   esac
-  case "$1" in
-    "$HOME_R"/.ssh/id_* | "$HOME_R"/.aws/credentials | "$HOME_R"/.config/gcloud/* | "$HOME_R"/.netrc | "$KEY_R") return 0 ;;
-  esac
+  case "$1" in "$CONFIG_R" | "${CONFIG_R%/*}"/cases.jsonl | "$HOME_R"/.ssh/config | "$HOME_R"/.aws/config) return 1 ;; esac
+  for f in "${SECRET_DIRS[@]}" "${SECRET_FILES[@]}"; do
+    case "$1" in "$f" | "$f"/*) return 0 ;; esac
+  done
   return 1
 }
 
-control_path() {  # resolved-path — files that change what the agent may do or what runs later
+search_reaches_secret() {  # resolved-path — a Grep there reads a secret store; HIT = which one
+  local f
+  secret_path "$1" && HIT=$1 && return 0
+  for f in "${SECRET_DIRS[@]}" "${SECRET_FILES[@]}"; do
+    case "$f/" in "${1%/}"/*) HIT=$f && return 0 ;; esac
+  done
+  return 1
+}
+
+# Files that change what the agent may do or what runs later. Project agents can set hooks and a
+# permission mode, and skills and commands can grant tools with allowed-tools.
+control_path() {  # resolved-path
   case "$1" in
-    "$CONFIG_R" | "$HOME_R"/.claude/settings*.json | */.claude/settings*.json | "$HOME_R"/.claude.json | */.git/hooks/* | */.git/config | \
+    "$CONFIG_R" | "$HOME_R"/.claude/settings*.json | */.claude/settings*.json | "$HOME_R"/.claude.json | \
+      */.claude/hooks/* | */.claude/agents/* | */.claude/skills/* | */.claude/commands/* | */.mcp.json | \
+      */.git/hooks/* | */.git/config | */.git/info/* | */.husky/* | */.envrc | */.vscode/tasks.json | */.vscode/settings.json | \
       "$HOME_R"/.zshrc | "$HOME_R"/.zprofile | "$HOME_R"/.bashrc | "$HOME_R"/.bash_profile | "$HOME_R"/.profile | "$HOME_R"/.ssh/*) return 0 ;;
   esac
   return 1
@@ -240,22 +291,95 @@ inside_workspace() {  # resolved-path
   return 1
 }
 
-bash_floor() {  # FLOOR = why the command must never run, or empty
-  local c="$1"
+# The Bash rules read the command as text, so they first undo the spellings that hide a path from a
+# plain match: quotes, backslashes (\rm), /./ and //, and ${HOME}, $HOME or the full home path for ~.
+# Bash can still build a path at run time; those calls go to Jev.
+plain_text() {  # CMD_N = the cleaned-up command
+  local n=$1 sq="'" dq='"' bs='\' dot='/./' dbl='//' sl=/ tl='~' hb='${HOME}' hv='$HOME' long=$HOME_R short=$HOME
+  n=${n//"$sq"/}
+  n=${n//"$dq"/}
+  n=${n//"$bs"/}
+  while [[ $n == *"$dot"* || $n == *"$dbl"* ]]; do
+    n=${n//"$dot"/$sl}
+    n=${n//"$dbl"/$sl}
+  done
+  n=${n//"$hb"/$tl}
+  n=${n//"$hv"/$tl}
+  # One home spelling can contain the other (/var/... and /private/var/...), so the longer goes first.
+  [ ${#HOME} -gt ${#HOME_R} ] && long=$HOME short=$HOME_R
+  n=${n//"$long"/$tl}
+  n=${n//"$short"/$tl}
+  CMD_N=$n
+}
+
+spell() {  # path... — SPELL = how a cleaned-up command names each: ~/rel (or the full path outside
+           # home), and also rel alone when it is two or more deep, as in `cd ~ && cat .config/x/key`
+  local p
+  SPELL=()
+  for p in "$@"; do
+    case "$p" in "$HOME_R"/*) p="~/${p#"$HOME_R"/}" ;; "$HOME"/*) p="~/${p#"$HOME"/}" ;; esac
+    SPELL+=("$p")
+    case "$p" in "~/"*/*) SPELL+=("${p#\~/}") ;; esac
+  done
+}
+
+mentions() {  # text... — CMD_N names one of them, or a path under it
+  local t pre='(^|[/[:space:];&|(`=<>:])' post='([/[:space:];&|)`<>*?]|$)'
+  for t in "$@"; do
+    [[ $CMD_N =~ $pre"$t"$post ]] && return 0
+  done
+  return 1
+}
+
+bash_floor() {  # FLOOR = why the command must never run, or empty. Reads CMD_N.
+  local c=$CMD_N
   local s='(^|[;&|(`[:space:]])'
   local e='([[:space:];&|)`]|$)'
+  local del='([^;&|(`[:space:]]*/)?rm[[:space:]]+'  # rm, /bin/rm
   local flags='(-[[:alnum:]-]+[[:space:]]+)*'
   local recursive='(-[[:alnum:]]*[rR][[:alnum:]]*|--recursive)[[:space:]]+'
-  local target='(/|/\*|~|~/|~/\*|\$HOME|\$HOME/|\$HOME/\*|\$\{HOME\}|\$\{HOME\}/|"\$HOME"|"\$HOME/")'
+  local target='(/|/\*|~|~/|~/\*|~/\.\*)'
   local push="${s}git[[:space:]]+([^;&|]*[[:space:]])?push([[:space:]][^;&|]*)?"
+  local key_dir=${KEY_R%/*} key_lex lex_dir
+  lexical "$KEY_FILE"
+  key_lex=$LEX lex_dir=${LEX%/*}
   FLOOR=""
-  if [[ $c =~ ${s}rm[[:space:]]+${flags}${recursive}${flags}${target}${e} ]]; then
+  if [[ $c =~ ${s}${del}${flags}${recursive}${flags}${target}${e} ]]; then
     FLOOR="recursive delete of / or the home directory"
   elif [[ $c =~ ${push}(--force|[[:space:]]-[[:alnum:]]*f[[:alnum:]]*([[:space:]]|$)|[[:space:]]\+) && $c =~ [[:space:]:/+](main|master)${e} ]]; then
     FLOOR="force-push to main or master"
   else
-    case "$c" in *"$KEY_FILE"* | *"$KEY_R"* | *jev-guard/key*) FLOOR="reads the jev-guard API key" ;; esac
+    spell "$KEY_R" "$key_lex"
+    SPELL+=("${key_dir##*/}/${KEY_R##*/}" "${lex_dir##*/}/${key_lex##*/}")  # cd ~/.config && cat jev-guard/key
+    if mentions "${SPELL[@]}"; then
+      FLOOR="reads the jev-guard API key"
+    elif [ "$KEY_DIR_OWN" = 1 ]; then
+      spell "$key_dir" "$lex_dir"
+      if mentions "${SPELL[@]}"; then
+        FLOOR="names the folder that holds the jev-guard API key"
+        same_path "$key_dir" "${CONFIG_R%/*}" && FLOOR="$FLOOR. To change config.json there, use the Edit tool, which asks the user"
+      fi
+    fi
   fi
+}
+
+bash_control() {  # CONTROL = why the command needs the user's OK, or empty. Reads CMD_N.
+  local dir=${CONFIG_R%/*} lex lex_dir
+  CONTROL=""
+  lexical "$CONFIG"
+  lex=$LEX lex_dir=${LEX%/*}
+  spell "$CONFIG_R" "$lex"
+  SPELL+=("${dir##*/}/${CONFIG_R##*/}" "${lex_dir##*/}/${lex##*/}")
+  if mentions "${SPELL[@]}"; then
+    CONTROL="touches the guard's own config ($CONFIG)."
+  elif own_folder "$dir" && spell "$dir" "$lex_dir" && mentions "${SPELL[@]}"; then
+    CONTROL="touches the folder that holds the guard's config ($CONFIG)."
+  elif [[ $CMD_N == *.claude/settings* ]]; then
+    CONTROL="touches Claude Code's settings, which decide what runs without asking and which hooks run."
+  elif [[ $CMD_N =~ claude[[:space:]]+plugins?[[:space:]]+(disable|uninstall|remove|rm)([[:space:]]|$) ]]; then
+    CONTROL="disables or removes a Claude Code plugin, which can switch this guard off."
+  fi
+  [ -n "$CONTROL" ]
 }
 
 git_display_only() {  # args — every option is a known display flag; refs and paths are fine
@@ -304,6 +428,7 @@ to_s() {  # milliseconds -> seconds with three decimals, for curl and the log
 }
 
 ask_jev() {
+  [ "$MODE" = off ] && pass  # "off" from config.json: hard rules only
   local count=0 since=0
   [ -r "$FAILS_FILE" ] && read -r count since <"$FAILS_FILE"
   case "$count$since" in *[!0-9]*) count=0 since=0 ;; esac
@@ -420,31 +545,40 @@ ask_jev() {
 }
 
 case "$TOOL" in
-  Read | Grep)
-    for p in "$T_PATH" "$T_DIR"; do
-      [ -n "$p" ] || continue
-      resolve "$p"
-      secret_path "$R" && rule deny "$p looks like a live secret store. Use a template such as .env.example, or ask the user for the value you need."
-    done
+  Read)
+    [ -n "$T_PATH" ] || pass
+    resolve "$T_PATH"
+    folded secret_path "$R" && rule deny "$T_PATH looks like a live secret store. Use a template such as .env.example, or ask the user for the value you need."
+    pass
+    ;;
+  Grep)
+    shopt -s nocasematch
     case "$T_GLOB" in
       *.env.example* | *.env.sample* | *.env.template*) ;;
-      *.env* | *id_rsa* | *id_ed25519* | *.pem*) rule deny "searching inside secret files ($T_GLOB) would print their values." ;;
+      *.env* | id_* | */id_* | *[{,]id_* | *.pem* | *.key | *.key[},]* | *.p12* | *.pfx* | *[{,]pem[},]* | *[{,]key[},]* | \
+        *[{,]p12[},]* | *[{,]pfx[},]* | *credential* | *netrc* | *npmrc* | *pypirc*)
+        rule deny "searching inside secret files ($T_GLOB) would print their values." ;;
     esac
+    shopt -u nocasematch
+    resolve "${T_DIR:-$CWD}"  # no path searches the working folder
+    folded search_reaches_secret "$R" &&
+      rule deny "a search of ${T_DIR:-the working folder} reads $HIT, which holds secrets. Search a folder that doesn't contain it, such as the project."
     pass
     ;;
   Write | Edit | MultiEdit | NotebookEdit)
     [ -n "$T_PATH" ] || pass
     resolve "$T_PATH"
-    [ "$R" = "$KEY_R" ] && rule deny "that file holds the jev-guard API key."
-    secret_path "$R" && rule ask "writes to a secret file ($T_PATH)."
-    control_path "$R" && rule ask "changes agent settings, the guard's config, git hooks or shell startup files ($T_PATH)."
+    folded same_path "$R" "$KEY_R" && rule deny "that file holds the jev-guard API key."
+    folded secret_path "$R" && rule ask "writes to a secret file ($T_PATH)."
+    folded control_path "$R" && rule ask "changes agent settings, hooks, skills, the guard's config, git hooks or shell startup files ($T_PATH)."
     inside_workspace "$R" && pass
     ask_jev
     ;;
   Bash)
-    bash_floor "$T_CMD"
+    plain_text "$T_CMD"
+    folded bash_floor
     [ -n "$FLOOR" ] && rule deny "blocked: $FLOOR."
-    case "$T_CMD" in *"$CONFIG"* | *jev-guard/config*) rule ask "touches the guard's own config ($CONFIG)." ;; esac
+    folded bash_control && rule ask "$CONTROL"
     bash_fast_pass "$T_CMD" && pass
     ask_jev
     ;;

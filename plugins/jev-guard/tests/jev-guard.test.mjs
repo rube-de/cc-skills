@@ -143,6 +143,16 @@ describe("hard rules (no Jev call)", () => {
     expect((await run("Write", { file_path: `${PROJECT}/.claude/settings.json`, content: "{}" })).decision).toBe("ask");
   });
 
+  test("asks before writes that change what runs later or what the agent may do", async () => {
+    const files = [".mcp.json", ".envrc", ".husky/pre-commit", ".claude/hooks/check.sh", ".claude/skills/x/SKILL.md", ".claude/agents/a.md", ".claude/commands/c.md", ".vscode/tasks.json", ".git/info/attributes"];
+    for (const f of files) {
+      const r = await run("Write", { file_path: `${PROJECT}/${f}`, content: "x" });
+      expect({ f, decision: r.decision }).toEqual({ f, decision: "ask" });
+    }
+    expect((await run("Write", { file_path: `${PROJECT}/.claude/files/report.md`, content: "x" })).out).toBe("");
+    expect(requests).toHaveLength(0);
+  });
+
   // Claude Code applies a hook's ask on .claude/ edits unseen when permissions are skipped.
   test("denies instead of asking about edits when permissions are skipped", async () => {
     const skipped = { permission_mode: "bypassPermissions" };
@@ -162,6 +172,110 @@ describe("hard rules (no Jev call)", () => {
     // Bash asks are still shown to the user in that mode.
     expect((await bash("rm -rf ./build", skipped)).decision).toBe("ask");
     expect((await run("Read", { file_path: `${PROJECT}/src/a.ts` }, skipped)).out).toBe("");
+  });
+});
+
+describe("secret stores", () => {
+  test("denies reading other credential files, and passes the public ones next to them", async () => {
+    const secret = [".docker/config.json", ".kube/config", ".npmrc", ".git-credentials", ".config/gh/hosts.yml", ".ssh/deploy_custom", ".gnupg/private-keys-v1.d/a.key"];
+    for (const f of secret) {
+      const r = await run("Read", { file_path: `${home}/${f}` });
+      expect({ f, decision: r.decision }).toEqual({ f, decision: "deny" });
+    }
+    expect((await run("Read", { file_path: `${PROJECT}/certs/server.key` })).decision).toBe("deny");
+    for (const f of [".ssh/config", ".ssh/known_hosts", ".ssh/id_ed25519.pub", ".aws/config"]) {
+      expect((await run("Read", { file_path: `${home}/${f}` })).out).toBe("");
+    }
+  });
+
+  // Claude Code's Grep runs ripgrep with --hidden, so a search of a parent folder reads ~/.ssh too.
+  test("denies a Grep that reaches a secret folder, from inside it or from a parent", async () => {
+    for (const path of [`${home}/.ssh`, `${home}/.aws/`, home, `${home}/.config`, `${home}/..`, "/"]) {
+      const r = await run("Grep", { pattern: "BEGIN", path });
+      expect({ path, decision: r.decision }).toEqual({ path, decision: "deny" });
+    }
+    expect((await run("Grep", { pattern: "x" }, { cwd: home })).reason).toContain("the working folder");
+    expect((await run("Grep", { pattern: "x", path: `${PROJECT}/src` })).out).toBe("");
+    expect((await run("Grep", { pattern: "x" })).out).toBe("");
+    expect((await run("Grep", { pattern: "x", path: `${home}/.ssh/config` })).out).toBe("");
+    expect(requests).toHaveLength(0);
+  });
+
+  test("guards the key's own folder, but not the config.json in it", async () => {
+    const keyDir = { env: { JEV_GUARD_KEY_FILE: join(home, ".config", "jev-guard", "key") } };
+    expect((await run("Grep", { pattern: ".", path: `${home}/.config/jev-guard` }, keyDir)).decision).toBe("deny");
+    expect((await run("Read", { file_path: `${home}/.config/jev-guard/key.old` }, keyDir)).decision).toBe("deny");
+    expect((await run("Read", { file_path: `${home}/.config/jev-guard/config.json` }, keyDir)).out).toBe("");
+  });
+
+  test("denies Grep globs aimed at secret files", async () => {
+    for (const glob of ["**/*credentials*", "id_*", "**/id_*", "*.{pem,crt}", "**/*.key", ".npmrc"]) {
+      const r = await run("Grep", { pattern: "x", glob });
+      expect({ glob, decision: r.decision }).toEqual({ glob, decision: "deny" });
+    }
+    expect((await run("Grep", { pattern: "x", glob: "**/valid_*.ts" })).out).toBe("");
+  });
+
+  // APFS ignores case, so on a Mac these are the same files as their lower-case spelling.
+  test("matches secret and control paths in any letter case", async () => {
+    expect((await run("Read", { file_path: `${home}/.AWS/credentials` })).decision).toBe("deny");
+    expect((await run("Read", { file_path: `${PROJECT}/.ENV` })).decision).toBe("deny");
+    expect((await run("Read", { file_path: join(home, "KEY") })).decision).toBe("deny");
+    expect((await run("Grep", { pattern: "x", path: `${home}/.SSH` })).decision).toBe("deny");
+    expect((await run("Write", { file_path: `${home}/.config/JEV-GUARD/config.json`, content: "{}" })).decision).toBe("ask");
+    expect((await run("Write", { file_path: `${PROJECT}/.Claude/Settings.json`, content: "{}" })).decision).toBe("ask");
+  });
+});
+
+describe("Bash text rules see through spelling", () => {
+  test("deny a recursive delete of / or home however it is written", async () => {
+    const commands = ["/bin/rm -rf ~", "\\rm -rf ~", 'rm -rf "${HOME}"', 'rm -rf "$HOME"/*', "rm -rf ~/.*", "rm -rf ~/./", `rm -rf ${home}/`, "sudo /usr/bin/rm -r -f /"];
+    for (const command of commands) {
+      const r = await bash(command, { env: { JEV_GUARD_MODE: "shadow" } });
+      expect({ command, decision: r.decision }).toEqual({ command, decision: "deny" });
+    }
+    expect(requests).toHaveLength(0);
+    expect((await bash("rm -rf ~/.cache")).out).toBe(""); // a folder inside home goes to Jev
+    expect(requests).toHaveLength(1);
+  });
+
+  test("deny any command that names the key or its folder, and say how to edit a config kept there", async () => {
+    const keyDir = { env: { JEV_GUARD_KEY_FILE: join(home, ".config", "jev-guard", "key") } };
+    const commands = ["cat ~/.config/jev-guard/k*", "cd ~/.config/jev-guard && cat k*", "cat $HOME/.config/./jev-guard/key", "cd ~/.config && cat jev-guard/key", "ls ~/.config/jev-guard"];
+    for (const command of commands) {
+      const r = await bash(command, keyDir);
+      expect({ command, decision: r.decision }).toEqual({ command, decision: "deny" });
+    }
+    const edit = await bash(`echo '{"mode":"off"}' > ~/.config/jev-guard/config.json`, keyDir);
+    expect(edit.decision).toBe("deny");
+    expect(edit.reason).toContain("use the Edit tool");
+    expect((await run("Write", { file_path: join(home, ".config", "jev-guard", "config.json"), content: "{}" }, keyDir)).decision).toBe("ask");
+    expect(requests).toHaveLength(0);
+  });
+
+  test("ask before Bash touches the config or Claude Code's settings", async () => {
+    const commands = [
+      "echo x > ~/.config/jev-guard/./config.json",
+      "cd ~/.config/jev-guard && echo '{}' > config.json",
+      'echo x > "$HOME/.config/jev-guard/config.json"',
+      "echo '{}' > .claude/settings.local.json",
+      "claude plugin disable jev-guard@rube-cc-skills",
+    ];
+    for (const command of commands) {
+      const r = await bash(command);
+      expect({ command, decision: r.decision }).toEqual({ command, decision: "ask" });
+    }
+    expect(requests).toHaveLength(0);
+  });
+
+  test("leave a repo's own jev-guard folder to Jev", async () => {
+    mkdirSync(join(home, ".config", "jev-guard"), { recursive: true });
+    writeFileSync(join(home, ".config", "jev-guard", "key"), "test-key\n");
+    const keyDir = { env: { JEV_GUARD_KEY_FILE: join(home, ".config", "jev-guard", "key") } };
+    for (const command of ["bun test plugins/jev-guard/tests", "cat plugins/jev-guard/config/policy.json", "rg key plugins/jev-guard"]) {
+      expect((await bash(command, keyDir)).decision).toBeUndefined();
+    }
+    expect(requests).toHaveLength(3);
   });
 });
 
@@ -429,6 +543,14 @@ describe("config.json", () => {
     await bash("npm test", { key: null, env: { JEV_GUARD_KEY_FILE: undefined } });
     expect(requests[0].auth).toBe("Bearer from-config");
     expect((await run("Read", { file_path: join(home, "secrets", "jev") }, { env: { JEV_GUARD_KEY_FILE: undefined } })).decision).toBe("deny");
+  });
+
+  test('"off" stops Jev but keeps the hard rules; only JEV_GUARD_MODE=off turns them off', async () => {
+    writeConfig({ mode: "off" });
+    expect((await run("Read", { file_path: `${PROJECT}/.env` }, { env: unset })).decision).toBe("deny");
+    expect((await bash("npm test", { env: unset })).out).toBe("");
+    expect(requests).toHaveLength(0);
+    expect((await run("Read", { file_path: `${PROJECT}/.env` }, { env: { JEV_GUARD_MODE: "off" } })).out).toBe("");
   });
 
   test("asks before Claude changes the config", async () => {
