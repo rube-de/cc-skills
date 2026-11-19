@@ -374,6 +374,59 @@ bash_floor() {  # FLOOR = why the command must never run, or empty. Reads CMD_N.
   fi
 }
 
+# `git config core.hooksPath x` writes .git/config without naming it, so git calls are read by their
+# words: any `git config` except a read (--get*, --list, get, list, or a key alone) changes config.
+git_changes_config() {  # reads CMD_N
+  local seg w i j n sub nonopt first found=1 words=()
+  local IFS=$'\n;&|'
+  set -f
+  for seg in $CMD_N; do
+    IFS=$' \t'
+    words=($seg)
+    IFS=$'\n;&|'
+    n=${#words[@]}
+    for ((i = 0; i < n; i++)); do
+      case "${words[i]}" in git | */git | *\(git | *\`git) break ;; esac  # also $(git and `git
+    done
+    sub=""
+    while ((++i < n)); do
+      case "${words[i]}" in
+        -C | -c | --git-dir | --work-tree | --namespace | --exec-path | --config-env) ((i++)) ;;
+        -*) ;;
+        *) sub=${words[i]} && break ;;
+      esac
+    done
+    nonopt=0 first=""
+    case "$sub" in
+      init | clone)
+        for ((j = i + 1; j < n; j++)); do
+          case "${words[j]}" in --template | --template=*) found=0 ;; esac
+        done
+        ;;
+      config)
+        for ((j = i + 1; j < n; j++)); do
+          case "${words[j]}" in
+            --get | --get-all | --get-regexp | --get-urlmatch | --get-color | --get-colorbool | --list | -l) nonopt=-99 ;;
+            --add | --unset | --unset-all | --replace-all | --rename-section | --remove-section | --edit | -e) found=0 ;;
+            -f | --file | --blob | --type | --default | --comment | --value | --url) ((j++)) ;;
+            -*) ;;
+            *) [ -z "$first" ] && first=${words[j]}
+              nonopt=$((nonopt + 1)) ;;
+          esac
+        done
+        case "$first" in
+          get | list) ;;
+          set | unset | rename-section | remove-section | edit) found=0 ;;
+          *) [ "$nonopt" -ge 2 ] && found=0 ;;
+        esac
+        ;;
+    esac
+    [ "$found" = 0 ] && break
+  done
+  set +f
+  return "$found"
+}
+
 bash_control() {  # CONTROL = why the command needs the user's OK, or empty. Reads CMD_N.
   local dir=${CONFIG_R%/*} lex lex_dir
   CONTROL=""
@@ -390,6 +443,10 @@ bash_control() {  # CONTROL = why the command needs the user's OK, or empty. Rea
     CONTROL="touches the guard's own code or state."
   elif [[ $CMD_N =~ claude[[:space:]]+plugins?[[:space:]]+(marketplace[[:space:]]+)?(disable|uninstall|remove|rm)([[:space:]]|$) ]]; then
     CONTROL="disables or removes a Claude Code plugin or marketplace, which can switch this guard off."
+  elif [[ $CMD_N =~ claude[[:space:]]+(mcp[[:space:]]+(add|add-json|add-from-claude-desktop|remove)|config[[:space:]]+(set|add|remove))([[:space:]]|$) ]]; then
+    CONTROL="changes Claude Code's MCP servers or settings."
+  elif git_changes_config; then
+    CONTROL="changes git config or copies hooks from a template. Git config can name programs git runs (core.hooksPath, core.fsmonitor, core.pager, aliases)."
   else
     for c in "${ANY_CONTROL[@]}" "${HOME_CONTROL[@]}"; do
       if [[ $CMD_N == *$c* ]]; then

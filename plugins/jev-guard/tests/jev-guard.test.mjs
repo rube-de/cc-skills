@@ -279,6 +279,30 @@ describe("Bash text rules see through spelling", () => {
     expect(requests).toHaveLength(0);
   });
 
+  // These change control files without naming them.
+  test("ask before git config writes and Claude Code config commands, and let reads through", async () => {
+    const writes = [
+      "git config core.hooksPath /tmp/h",
+      "git --no-pager -C sub config --global core.fsmonitor /tmp/x",
+      "cd x && git config set core.pager less",
+      "git config --unset core.editor",
+      'echo $(git config alias.x "!sh -c id")',
+      "git init --template=/tmp/t repo",
+      "claude mcp add tools -- node x.js",
+      "claude config set -g autoUpdates false",
+    ];
+    for (const command of writes) {
+      const r = await bash(command);
+      expect({ command, decision: r.decision }).toEqual({ command, decision: "ask" });
+    }
+    expect(requests).toHaveLength(0);
+    const reads = ["git config user.email", "git config --get core.hooksPath", "git config --list --show-origin", "git config get user.name", "npm config set x y"];
+    for (const command of reads) {
+      expect((await bash(command)).decision).toBeUndefined();
+    }
+    expect(requests).toHaveLength(reads.length);
+  });
+
   test("see a path inside a brace or bracket list", async () => {
     expect((await bash("cat {~/key,/dev/null}")).decision).toBe("deny");
     expect((await bash("cat [~/key]")).decision).toBe("deny");
