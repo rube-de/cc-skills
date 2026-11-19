@@ -375,12 +375,25 @@ bash_floor() {  # FLOOR = why the command must never run, or empty. Reads CMD_N.
 }
 
 # `git config core.hooksPath x` writes .git/config without naming it, so git calls are read by their
-# words: any `git config` except a read (--get*, --list, get, list, or a key alone) changes config.
-# Splitting into words is only exact without quoting: `git config core.fsmonitor ";x"` would split at
-# the `;`. So in a command with quotes, backslashes, $ or brackets, every `git config` counts as a write.
+# words, and a git call counts as a change unless it is plainly a read. Splitting into words is only
+# exact for plain text: quotes can hide a separator (`";x"`), and braces or globs can turn one word
+# into two (`{core.fsmonitor,/tmp/x}`). So a command with any character outside a short safe set
+# makes every `git config` in it a change, and options count only when spelled exactly, since git
+# also takes prefixes (`--conf`) and bundled short options (`-qc`).
+git_safe_key() {  # key=value — a one-off -c setting that runs nothing
+  case "$1" in
+    user.name=* | user.email=* | commit.gpgsign=* | tag.gpgsign=* | color.* | advice.* | core.quotepath=* | \
+      core.autocrlf=* | init.defaultbranch=* | pull.rebase=* | push.default=*) return 0 ;;
+  esac
+  return 1
+}
+
 git_changes_config() {  # reads CMD_N and T_CMD
-  local seg w i j n sub nonopt first limit found=1 quoted=0 words=()
-  case "$T_CMD" in *[\"\'\\\$\`\(\)]*) quoted=1 ;; esac
+  local seg w i j n sub nonopt first limit found=1 plain=1 words=()
+  local safe='[A-Za-z0-9 ._/=:@+,%;&|-]' space=$'[\t\n]' rest
+  rest=${T_CMD//$safe/}
+  rest=${rest//$space/}
+  [ -n "$rest" ] && plain=0
   local IFS=$'\n;&|'
   set -f
   for seg in $CMD_N; do
@@ -394,7 +407,11 @@ git_changes_config() {  # reads CMD_N and T_CMD
     sub=""
     while ((++i < n)); do
       case "${words[i]}" in
-        -C | -c | --git-dir | --work-tree | --namespace | --exec-path | --config-env) ((i++)) ;;
+        -c | --config-env)  # git -c core.fsmonitor=x status runs x
+          ((i++))
+          git_safe_key "${words[i]:-}" || found=0 ;;
+        --config-env=*) git_safe_key "${words[i]#--config-env=}" || found=0 ;;
+        -C | --git-dir | --work-tree | --namespace | --exec-path) ((i++)) ;;
         -*) ;;
         *) sub=${words[i]} && break ;;
       esac
@@ -403,16 +420,21 @@ git_changes_config() {  # reads CMD_N and T_CMD
     case "$sub" in
       init | clone)  # clone -c core.hooksPath=... writes the new repo's config, and its checkout runs hooks
         for ((j = i + 1; j < n; j++)); do
-          case "${words[j]}" in --template | --template=* | -c | --config | --config=*) found=0 ;; esac
+          case "${words[j]}" in
+            --[ct]* | -c* | -[!-]*c*) found=0 ;;  # --config, --template and their prefixes; -c, -ckey=x, -qc
+          esac
         done
         ;;
       config)
-        [ "$quoted" = 1 ] && found=0
+        [ "$plain" = 0 ] && found=0
         for ((j = i + 1; j < n; j++)); do
           case "${words[j]}" in
-            --add | --unset | --unset-all | --replace-all | --rename-section | --remove-section | --edit | -e) found=0 ;;
-            -f | --file | --blob | --type | --default | --comment | --value | --url) ((j++)) ;;
-            -*) ;;
+            -f | --file | --blob | --type | --default) ((j++)) ;;
+            --get | --get-all | --get-regexp | --get-urlmatch | --get-color | --get-colorbool | --list | -l | --global | \
+              --local | --system | --worktree | --show-origin | --show-scope | --null | -z | --name-only | --includes | \
+              --no-includes | --all | --bool | --int | --bool-or-int | --path | --expiry-date | --file=* | --blob=* | \
+              --type=* | --default=*) ;;
+            -*) found=0 ;;  # a write flag, or a prefix git would expand
             *) [ -z "$first" ] && first=${words[j]}
               nonopt=$((nonopt + 1)) ;;
           esac

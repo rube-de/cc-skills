@@ -292,8 +292,18 @@ describe("Bash text rules see through spelling", () => {
       "git config core.pager less --get",
       'git config core.fsmonitor ";/tmp/x"',
       "git config core.fsmonitor \\;/tmp/x",
+      // Shell expansion turns one word into a key and a value; git expands option prefixes.
+      "git config {core.fsmonitor,/tmp/x}",
+      "git config c*",
+      "git config --unse core.hooksPath",
       "git init --template=/tmp/t repo",
       "git clone -c core.hooksPath=/tmp/h https://example.com/r.git",
+      "git clone --conf core.hooksPath=/tmp/h https://example.com/r.git",
+      "git clone --temp=/tmp/t https://example.com/r.git",
+      "git clone -qc core.hooksPath=/tmp/h https://example.com/r.git",
+      // A one-off -c runs the program it names, unless the key is a known harmless one.
+      "git -c core.fsmonitor=/tmp/x status",
+      "git --config-env=core.sshCommand=CMD fetch",
       "claude mcp add tools -- node x.js",
       "claude config set -g autoUpdates false",
     ];
@@ -302,7 +312,15 @@ describe("Bash text rules see through spelling", () => {
       expect({ command, decision: r.decision }).toEqual({ command, decision: "ask" });
     }
     expect(requests).toHaveLength(0);
-    const reads = ["git config user.email", "git config --get core.hooksPath", "git config --list --show-origin", "git config get user.name", "npm config set x y"];
+    const reads = [
+      "git config user.email",
+      "git config --get core.hooksPath",
+      "git config --list --show-origin",
+      "git config get user.name",
+      "git -c commit.gpgsign=false commit -m wip",
+      "git clone --depth 1 https://example.com/r.git",
+      "npm config set x y",
+    ];
     for (const command of reads) {
       expect((await bash(command)).decision).toBeUndefined();
     }
