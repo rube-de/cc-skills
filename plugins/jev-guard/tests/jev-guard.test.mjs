@@ -287,7 +287,13 @@ describe("Bash text rules see through spelling", () => {
       "cd x && git config set core.pager less",
       "git config --unset core.editor",
       'echo $(git config alias.x "!sh -c id")',
+      // Quoting can hide a value: one that looks like a read flag, or that splits at a separator.
+      'git config core.pager "less --get"',
+      "git config core.pager less --get",
+      'git config core.fsmonitor ";/tmp/x"',
+      "git config core.fsmonitor \\;/tmp/x",
       "git init --template=/tmp/t repo",
+      "git clone -c core.hooksPath=/tmp/h https://example.com/r.git",
       "claude mcp add tools -- node x.js",
       "claude config set -g autoUpdates false",
     ];

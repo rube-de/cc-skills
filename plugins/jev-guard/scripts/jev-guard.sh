@@ -376,8 +376,11 @@ bash_floor() {  # FLOOR = why the command must never run, or empty. Reads CMD_N.
 
 # `git config core.hooksPath x` writes .git/config without naming it, so git calls are read by their
 # words: any `git config` except a read (--get*, --list, get, list, or a key alone) changes config.
-git_changes_config() {  # reads CMD_N
-  local seg w i j n sub nonopt first found=1 words=()
+# Splitting into words is only exact without quoting: `git config core.fsmonitor ";x"` would split at
+# the `;`. So in a command with quotes, backslashes, $ or brackets, every `git config` counts as a write.
+git_changes_config() {  # reads CMD_N and T_CMD
+  local seg w i j n sub nonopt first limit found=1 quoted=0 words=()
+  case "$T_CMD" in *[\"\'\\\$\`\(\)]*) quoted=1 ;; esac
   local IFS=$'\n;&|'
   set -f
   for seg in $CMD_N; do
@@ -398,15 +401,15 @@ git_changes_config() {  # reads CMD_N
     done
     nonopt=0 first=""
     case "$sub" in
-      init | clone)
+      init | clone)  # clone -c core.hooksPath=... writes the new repo's config, and its checkout runs hooks
         for ((j = i + 1; j < n; j++)); do
-          case "${words[j]}" in --template | --template=*) found=0 ;; esac
+          case "${words[j]}" in --template | --template=* | -c | --config | --config=*) found=0 ;; esac
         done
         ;;
       config)
+        [ "$quoted" = 1 ] && found=0
         for ((j = i + 1; j < n; j++)); do
           case "${words[j]}" in
-            --get | --get-all | --get-regexp | --get-urlmatch | --get-color | --get-colorbool | --list | -l) nonopt=-99 ;;
             --add | --unset | --unset-all | --replace-all | --rename-section | --remove-section | --edit | -e) found=0 ;;
             -f | --file | --blob | --type | --default | --comment | --value | --url) ((j++)) ;;
             -*) ;;
@@ -414,11 +417,12 @@ git_changes_config() {  # reads CMD_N
               nonopt=$((nonopt + 1)) ;;
           esac
         done
+        limit=1  # a key alone, or one after --get or --list. Read flags don't count, so a value can't pose as one
         case "$first" in
-          get | list) ;;
+          get | list) limit=2 ;;
           set | unset | rename-section | remove-section | edit) found=0 ;;
-          *) [ "$nonopt" -ge 2 ] && found=0 ;;
         esac
+        [ "$nonopt" -gt "$limit" ] && found=0
         ;;
     esac
     [ "$found" = 0 ] && break
