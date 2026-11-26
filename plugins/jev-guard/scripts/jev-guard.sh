@@ -389,7 +389,8 @@ git_safe_key() {  # key=value — a one-off -c setting that runs nothing
 }
 
 git_changes_config() {  # reads CMD_N and T_CMD
-  local seg w i j n sub nonopt first limit found=1 plain=1 words=()
+  local seg i j n start sub nonopt first limit found=1 plain=1 fold=0 words=()
+  shopt -q nocasematch && fold=1
   local safe='[A-Za-z0-9 ._/=:@+,%;&|-]' space=$'[\t\n]' rest
   rest=${T_CMD//$safe/}
   rest=${rest//$space/}
@@ -401,13 +402,16 @@ git_changes_config() {  # reads CMD_N and T_CMD
     words=($seg)
     IFS=$'\n;&|'
     n=${#words[@]}
+    [ "$fold" = 1 ] && shopt -s nocasematch  # GIT runs git on macOS
     for ((i = 0; i < n; i++)); do
-      case "${words[i]}" in git | */git | *\(git | *\`git) break ;; esac  # also $(git and `git
+      case "${words[i]}" in
+        git | */git | *\(git | *\`git) break ;;  # also $(git and `git
+        *[{,]git[,}]*) found=0 ;;                # {git,-c,core.fsmonitor=x,status}
+      esac
     done
-    sub=""
+    shopt -u nocasematch  # but git's options and subcommands keep their case: -C is not -c
+    start=$i sub=""
     while ((++i < n)); do
-      # Braces, globs, $ and backticks can expand into options: git {-c,core.fsmonitor=x} status
-      case "${words[i]}" in *[]{}\$*?[\`]*) found=0 ;; esac
       case "${words[i]}" in
         -c | --config-env)  # git -c core.fsmonitor=x status runs x
           ((i++))
@@ -417,6 +421,11 @@ git_changes_config() {  # reads CMD_N and T_CMD
         -*) ;;
         *) sub=${words[i]} && break ;;
       esac
+    done
+    # Braces, globs, $ and backticks can expand into options, in an option's argument too:
+    # git {-c,core.fsmonitor=x} status, git -C {/tmp,-c,core.fsmonitor=x} status
+    for ((j = start + 1; j <= i && j < n; j++)); do
+      case "${words[j]}" in *[]{}\$*?[\`]*) found=0 ;; esac
     done
     nonopt=0 first=""
     case "$sub" in
@@ -452,6 +461,7 @@ git_changes_config() {  # reads CMD_N and T_CMD
     [ "$found" = 0 ] && break
   done
   set +f
+  [ "$fold" = 1 ] && shopt -s nocasematch
   return "$found"
 }
 
