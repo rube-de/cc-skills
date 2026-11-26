@@ -308,6 +308,7 @@ describe("Bash text rules see through spelling", () => {
       "git -C {/tmp,-c,core.fsmonitor=/tmp/x} status",
       "git -c {user.name=x,-c,core.fsmonitor=/tmp/x} status",
       "{git,-c,core.fsmonitor=/tmp/x,status}",
+      "{/usr/bin/git,-c,core.fsmonitor=/tmp/x,status}",
       "GIT -c core.fsmonitor=/tmp/x status",
       "git clone {-c,core.hooksPath=/tmp/h} https://example.com/r.git",
       "claude mcp add tools -- node x.js",

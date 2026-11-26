@@ -406,7 +406,7 @@ git_changes_config() {  # reads CMD_N and T_CMD
     for ((i = 0; i < n; i++)); do
       case "${words[i]}" in
         git | */git | *\(git | *\`git) break ;;  # also $(git and `git
-        *[{,]git[,}]*) found=0 ;;                # {git,-c,core.fsmonitor=x,status}
+        *[{,/]git[,}]*) found=0 ;;               # {git,-c,core.fsmonitor=x,status}, {/usr/bin/git,...}
       esac
     done
     shopt -u nocasematch  # but git's options and subcommands keep their case: -C is not -c
