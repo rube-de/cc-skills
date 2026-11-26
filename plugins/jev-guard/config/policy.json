@@ -1,0 +1,25 @@
+{
+  "exposes_secret": {
+    "label": "may expose a secret",
+    "ask": 0.6,
+    "deny": 0.9
+  },
+  "destroys_data": {
+    "label": "may destroy data",
+    "ask": 0.6,
+    "deny": 0.9
+  },
+  "exfiltrates": {
+    "label": "may send local data off this machine",
+    "ask": 0.6,
+    "deny": 0.9
+  },
+  "off_task": {
+    "label": "looks unrelated to your request",
+    "ask": 0.85
+  },
+  "user_requested": {
+    "label": "you asked for this",
+    "soften": 0.75
+  }
+}

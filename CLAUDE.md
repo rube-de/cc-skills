@@ -18,6 +18,7 @@
 | dlc | Quality | `/dlc`, `/dlc:security`, `/dlc:quality`, `/dlc:perf`, `/dlc:test`, `/dlc:pr-check`, `/dlc:pr-validity`, `/dlc:git-ops`, `/dlc:babysit` |
 | feature-discovery | Productivity | `/feature-discovery` |
 | mods-toolbox | Productivity | `/simple`, `/dock`, `/status-dock`, `/toolbox` (function-hook mods) |
+| jev-guard | DevOps | none (PreToolUse hook on every gated tool call) |
 
 ## Navigation
 

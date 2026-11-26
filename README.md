@@ -21,6 +21,7 @@ A monorepo of [Claude Code](https://docs.anthropic.com/en/docs/claude-code) plug
 | [dlc](./plugins/dlc/) | Quality | Plugin or Skill | Dev Life Cycle quality gates: security scans, code quality, performance analysis, test coverage, and PR review compliance |
 | [feature-discovery](./plugins/feature-discovery/) | Productivity | Plugin only | Multi-agent roadmap discovery: map the product, research competitors, ideate across value lenses, then rank and spec a validated roadmap (requires the Workflow tool) |
 | [mods-toolbox](./plugins/mods-toolbox/) | Productivity | Plugin only | Function-hook mods: Clean View, a calm view for non-technical users that hides tool calls, diffs and command output behind a progress checklist above the prompt, the Agent Dock, which splits each request across a chosen team of parallel helpers shown as live cards, and the Status Line Dock, which builds the status line from blocks with a live preview, with one Toolbox popup for their settings and Claude's model and effort (Claude Code 2.1.291+) |
+| [jev-guard](./plugins/jev-guard/) | DevOps | Plugin only | Checks Claude's tool calls before they run: hard rules in code for secret files, `rm -rf ~` and force-pushes to main, then TypeSafe's Jev model for the rest. Starts in shadow mode (needs a TypeSafe API key) |
 
 > **Plugin vs Skill**: Plugins use the full Claude Code plugin system (hooks, agents, commands, scripts). Skills install only SKILL.md definitions via [skills.sh](https://skills.sh). Plugins that rely on hooks, commands, or agent definitions need plugin install. See each plugin's README for details.
 
@@ -67,6 +68,7 @@ claude plugin install ci-review@rube-cc-skills
 claude plugin install dlc@rube-cc-skills
 claude plugin install feature-discovery@rube-cc-skills
 claude plugin install mods-toolbox@rube-cc-skills   # changes how Claude Code looks and works; not in the loops below
+claude plugin install jev-guard@rube-cc-skills      # checks every tool call; not in the loops below
 
 # Or install all at once
 for p in council cdt pm plugin-dev temporal doppler oasis-dev ci-review jules-review dlc feature-discovery; do claude plugin install "$p@rube-cc-skills"; done
@@ -203,6 +205,12 @@ cc-skills/
 │   │   └── skills/          # dlc, security, quality, perf, test, pr-check, pr-validity, git-ops
 │   ├── feature-discovery/   # Multi-agent roadmap discovery
 │   │   └── skills/          # feature-discovery + workflow script
+│   ├── jev-guard/           # PreToolUse guard: hard rules + TypeSafe Jev judgments
+│   │   ├── config/          # Jev questions and deny/ask thresholds
+│   │   ├── eval/            # labeled cases, eval runner and threshold sweep
+│   │   ├── hooks/           # PreToolUse registration
+│   │   ├── scripts/         # jev-guard.sh + jq request/verdict filters
+│   │   └── tests/           # bun tests against a local API stand-in
 │   └── mods-toolbox/        # Function-hook mods: Clean View checklist + Agent Dock + Status Line Dock + Toolbox popup
 │       ├── hooks/           # register.tsx + clean-view.tsx, dock.tsx and status-line-dock.tsx hooks modules
 │       ├── renderer/        # sh + jq status line renderer the Status Line Dock installs

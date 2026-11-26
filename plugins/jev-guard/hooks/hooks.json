@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Read|Grep|Write|Edit|MultiEdit|NotebookEdit|WebFetch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/jev-guard.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.*(send|forward|reply|post|upload|share|delete|trash|publish)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}/scripts/jev-guard.sh\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
